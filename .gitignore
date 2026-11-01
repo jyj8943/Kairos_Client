@@ -61,3 +61,12 @@ sysinfo.txt
 # Crashlytics generated file
 crashlytics-build.properties
 
+
+# User-specific editor settings
+/[Uu]ser[Ss]ettings/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Local MCP server config (Claude Code)
+.mcp.json
