@@ -70,3 +70,6 @@ crashlytics-build.properties
 
 # Local MCP server config (Claude Code)
 .mcp.json
+
+# Claude Code project instructions (local only)
+CLAUDE.md
