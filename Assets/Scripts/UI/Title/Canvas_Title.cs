@@ -28,11 +28,11 @@ public class Canvas_Title : MonoBehaviour
     }
 
     /// <summary>
-    /// 에디터 씬으로 이동한다. 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
+    /// 에디터 곡 고르기 씬으로 이동한다. 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
     /// </summary>
     private void OnClickEditor()
     {
-        if (GameManager.Scene.Load(GameConstants.Scenes.Editor))
+        if (GameManager.Scene.Load(GameConstants.Scenes.EditorSongSelect))
             SetMenuInteractable(false);
     }
 

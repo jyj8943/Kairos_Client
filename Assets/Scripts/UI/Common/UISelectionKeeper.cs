@@ -15,6 +15,14 @@ public class UISelectionKeeper : MonoBehaviour
     private GameObject lastSelected;
 
     /// <summary>
+    /// 기본 Selectable을 바꾼다. 목록을 동적으로 만드는 화면에서 첫 항목을 지정할 때 쓴다.
+    /// </summary>
+    public void SetDefaultSelectable(Selectable selectable)
+    {
+        defaultSelectable = selectable;
+    }
+
+    /// <summary>
     /// 매 프레임 현재 선택을 기억하고, 선택이 비어 있으면 복구한다.
     /// </summary>
     private void Update()
