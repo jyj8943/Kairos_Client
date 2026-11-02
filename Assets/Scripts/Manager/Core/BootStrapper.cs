@@ -33,6 +33,7 @@ public static class Bootstrapper
         Init(GameManager.Scene);  // 씬 전환 준비 (마지막)
 
         GameManager.IsInitialized = true;
+        Debug.Log("[Bootstrapper] 전역 매니저 초기화 완료");
     }
 
     private static void Init(IGameModule module)

@@ -11,4 +11,11 @@ public static class GameConstants
         /// <summary>전역 매니저 프리팹: Assets/Resources/Prefabs/Managers_DontDestroy.prefab</summary>
         public const string ManagersPrefab = "Prefabs/Managers_DontDestroy";
     }
+
+    /// <summary>씬 이름 (Build Profiles에 등록된 씬 파일 이름과 같아야 한다)</summary>
+    public static class Scenes
+    {
+        public const string Title = "TitleScene";
+        public const string Editor = "EditorScene";
+    }
 }
