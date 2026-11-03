@@ -43,6 +43,31 @@ public static class BeatGridMath
     }
 
     /// <summary>
+    /// tick을 박으로 바꾼다 (beat = tick ÷ TicksPerBeat).
+    /// </summary>
+    public static float TickToBeat(int tick)
+    {
+        return (float)tick / GameConstants.Editor.TicksPerBeat;
+    }
+
+    /// <summary>
+    /// 박을 가장 가까운 tick으로 바꾼다. 채보를 불러올 때 쓴다.
+    /// </summary>
+    public static int BeatToTick(float beat)
+    {
+        return Mathf.RoundToInt(beat * GameConstants.Editor.TicksPerBeat);
+    }
+
+    /// <summary>
+    /// beat를 스냅 n의 가장 가까운 선으로 반올림한 tick. (스냅 한 칸 = TicksPerBeat ÷ n 틱)
+    /// </summary>
+    public static int SnapBeatToTick(float beat, int snapDivision)
+    {
+        int ticksPerSnap = GameConstants.Editor.TicksPerBeat / snapDivision;
+        return Mathf.RoundToInt(beat * snapDivision) * ticksPerSnap;
+    }
+
+    /// <summary>
     /// 스냅 한 칸씩 이동한 beat. 스냅 위치에 있지 않으면 진행 방향의 다음 스냅 위치로 간다.
     /// </summary>
     /// <param name="steps">양수면 뒤 시간(위), 음수면 앞 시간(아래)</param>

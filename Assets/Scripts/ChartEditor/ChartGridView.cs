@@ -69,6 +69,48 @@ public class ChartGridView : MonoBehaviour
     /// <summary>박자선 풀의 전체 인스턴스 수 (확인용)</summary>
     public int PooledLineCount => linePool != null ? linePool.TotalCount : 0;
 
+    /// <summary>현재 beat·스냅·높이 배율·크기가 바뀌어 선을 다시 배치한 뒤 호출된다 (노트 표시 갱신용)</summary>
+    public event System.Action OnViewChanged;
+
+    /// <summary>그리드 영역 (Img_Grid). 클릭 위치 변환의 기준이다</summary>
+    public RectTransform GridRect => gridRect;
+
+    /// <summary>현재 위치 선의 높이 (그리드 아래에서부터, 그리드 로컬 단위)</summary>
+    public float CurrentLineY => gridRect.rect.height * currentLineRatio;
+
+    /// <summary>라인 한 칸의 폭 (그리드 로컬 단위)</summary>
+    public float LaneWidth => gridRect.rect.width / GameConstants.Editor.LaneCount;
+
+    /// <summary>보이는 구간 위아래로 미리 배치하는 박 수</summary>
+    public float MarginBeats => marginMeasures * GameConstants.Editor.BeatsPerMeasure;
+
+    /// <summary>
+    /// beat의 y 위치 (그리드 아래에서부터). 선·노트 배치에 같은 값을 쓴다.
+    /// </summary>
+    public float BeatToLocalY(float beat)
+    {
+        return CurrentLineY + BeatGridMath.BeatToY(beat, CurrentBeat, GameConstants.Editor.PixelsPerBeat, GridHeightScale);
+    }
+
+    /// <summary>
+    /// y 위치(그리드 아래에서부터)의 beat. BeatToLocalY의 반대 변환이다.
+    /// </summary>
+    public float LocalYToBeat(float y)
+    {
+        return BeatGridMath.YToBeat(y - CurrentLineY, CurrentBeat, GameConstants.Editor.PixelsPerBeat, GridHeightScale);
+    }
+
+    /// <summary>
+    /// 지금 화면에 배치하는 구간(위아래 여유 포함)의 beat 범위. 0 ~ 곡 길이로 제한한다.
+    /// </summary>
+    public void GetVisibleBeatRange(out float minBeat, out float maxBeat)
+    {
+        float height = gridRect.rect.height;
+        float beatHeight = GameConstants.Editor.PixelsPerBeat * GridHeightScale;
+        minBeat = Mathf.Max(0f, CurrentBeat - CurrentLineY / beatHeight - MarginBeats);
+        maxBeat = Mathf.Min(TotalBeats, CurrentBeat + (height - CurrentLineY) / beatHeight + MarginBeats);
+    }
+
     /// <summary>
     /// 곡 길이로 그리드를 초기화한다. 0박, 기본 스냅, 기본 높이에서 시작한다.
     /// </summary>
@@ -135,16 +177,9 @@ public class ChartGridView : MonoBehaviour
     /// </summary>
     private void Refresh()
     {
-        float height = gridRect.rect.height;
-        float currentLineY = height * currentLineRatio;
-        float pixelsPerBeat = GameConstants.Editor.PixelsPerBeat;
-        float beatHeight = pixelsPerBeat * GridHeightScale;
-        float marginBeats = marginMeasures * GameConstants.Editor.BeatsPerMeasure;
+        currentLine.anchoredPosition = new Vector2(currentLine.anchoredPosition.x, CurrentLineY);
 
-        currentLine.anchoredPosition = new Vector2(currentLine.anchoredPosition.x, currentLineY);
-
-        float minBeat = Mathf.Max(0f, CurrentBeat - currentLineY / beatHeight - marginBeats);
-        float maxBeat = Mathf.Min(TotalBeats, CurrentBeat + (height - currentLineY) / beatHeight + marginBeats);
+        GetVisibleBeatRange(out float minBeat, out float maxBeat);
 
         // 선은 0박부터 센 스냅 칸 번호(정수)로 순회해 부동소수 오차 없이 종류를 판정한다
         int n = SnapDivision;
@@ -157,7 +192,7 @@ public class ChartGridView : MonoBehaviour
         for (int i = firstIndex; i <= lastIndex; i++)
         {
             float beat = (float)i / n;
-            float y = currentLineY + BeatGridMath.BeatToY(beat, CurrentBeat, pixelsPerBeat, GridHeightScale);
+            float y = BeatToLocalY(beat);
             GridLineType type = BeatGridMath.GetLineType(i, n);
             GridLineStyle style = GetStyle(type);
 
@@ -178,6 +213,8 @@ public class ChartGridView : MonoBehaviour
 
         linePool.EndFrame();
         labelPool.EndFrame();
+
+        OnViewChanged?.Invoke();
     }
 
     /// <summary>
@@ -213,8 +250,8 @@ public class ChartGridView : MonoBehaviour
     private void PrewarmPools()
     {
         int maxSnap = 1;
-        foreach (int snap in GameConstants.Editor.SnapDivisions)
-            maxSnap = Mathf.Max(maxSnap, snap);
+        foreach (GameConstants.Editor.SnapOption option in GameConstants.Editor.SnapOptions)
+            maxSnap = Mathf.Max(maxSnap, option.Division);
 
         float minBeatHeight = GameConstants.Editor.PixelsPerBeat * GameConstants.Editor.MinGridHeight;
         float visibleBeats = gridRect.rect.height / minBeatHeight

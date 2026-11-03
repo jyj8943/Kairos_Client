@@ -32,10 +32,26 @@ public static class GameConstants
         /// <summary>라인 수 (4키)</summary>
         public const int LaneCount = 4;
 
-        /// <summary>박자 스냅 선택지. 1/n은 1박을 n칸으로 나눈다</summary>
-        public static readonly int[] SnapDivisions = { 1, 2, 3, 4, 6, 8, 12, 16 };
+        /// <summary>편집 중 위치 단위. 1박 = 48틱 (모든 스냅 선택지가 정수로 나누어떨어진다)</summary>
+        public const int TicksPerBeat = 48;
 
-        /// <summary>박자 스냅 기본값 (1/4 = 16분음표)</summary>
+        /// <summary>
+        /// 박자 스냅 선택지. Division n은 1박을 n칸으로 나눈다 (스냅 한 칸 = TicksPerBeat ÷ n 틱).
+        /// 드롭다운 옵션은 이 순서와 표시 이름으로 만든다.
+        /// </summary>
+        public static readonly SnapOption[] SnapOptions =
+        {
+            new SnapOption(1, "4분음표 · 1박 1칸"),
+            new SnapOption(2, "8분음표 · 1박 2칸"),
+            new SnapOption(3, "셋잇단 8분 · 1박 3칸"),
+            new SnapOption(4, "16분음표 · 1박 4칸"),
+            new SnapOption(6, "셋잇단 16분 · 1박 6칸"),
+            new SnapOption(8, "32분음표 · 1박 8칸"),
+            new SnapOption(12, "셋잇단 32분 · 1박 12칸"),
+            new SnapOption(16, "64분음표 · 1박 16칸"),
+        };
+
+        /// <summary>박자 스냅 기본값 (n = 4, 16분음표)</summary>
         public const int DefaultSnapDivision = 4;
 
         /// <summary>그리드 높이 x1.0일 때 1박의 높이 (1920×1080 기준 px)</summary>
@@ -46,5 +62,18 @@ public static class GameConstants
         public const float MaxGridHeight = 4f;
         public const float GridHeightStep = 0.25f;
         public const float DefaultGridHeight = 1f;
+
+        /// <summary>박자 스냅 선택지 하나: 1박을 나누는 칸 수와 드롭다운 표시 이름</summary>
+        public readonly struct SnapOption
+        {
+            public readonly int Division;
+            public readonly string Label;
+
+            public SnapOption(int division, string label)
+            {
+                Division = division;
+                Label = label;
+            }
+        }
     }
 }
