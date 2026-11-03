@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 
 /// <summary>
 /// 그리드 클릭으로 노트를 추가·삭제한다. EditorScene.unity의 GridArea에 붙이고, EditorScene이 Init()을 호출한다.
+/// - 노트는 직접 바꾸지 않고 ChartEditSession.AddNote / RemoveNote를 거친다.
 /// - 클릭은 EventSystem 포인터 이벤트로 받는다. Img_Grid가 클릭을 받아 부모인 GridArea로 전달한다 (노트 오브젝트는 클릭을 받지 않음).
 /// - 숏노트 도구일 때만 동작한다: 왼쪽 클릭 추가, 오른쪽 클릭 삭제.
 /// - 위치는 클릭한 x의 라인 칸, 클릭한 y를 지금 스냅의 가장 가까운 선으로 반올림한 tick이다.
@@ -11,30 +12,30 @@ using UnityEngine.EventSystems;
 public class EditorNotePlacer : MonoBehaviour, IPointerClickHandler
 {
     private ChartGridView grid;
-    private ChartEditData data;
+    private ChartEditSession session;
     private Func<EditorTool> getCurrentTool;
 
     /// <summary>
-    /// 그리드·노트 데이터와 지금 고른 도구를 읽을 함수를 받는다.
+    /// 그리드·편집 세션과 지금 고른 도구를 읽을 함수를 받는다.
     /// </summary>
-    public void Init(ChartGridView grid, ChartEditData data, Func<EditorTool> getCurrentTool)
+    public void Init(ChartGridView grid, ChartEditSession session, Func<EditorTool> getCurrentTool)
     {
         this.grid = grid;
-        this.data = data;
+        this.session = session;
         this.getCurrentTool = getCurrentTool;
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (grid == null || data == null || getCurrentTool == null) return;
+        if (grid == null || session == null || getCurrentTool == null) return;
         if (getCurrentTool() != EditorTool.ShortNote) return;
 
         if (!TryGetGridPosition(eventData, out int lane, out int tick)) return;
 
         if (eventData.button == PointerEventData.InputButton.Left)
-            data.TryAdd(lane, tick);
+            session.AddNote(lane, tick);
         else if (eventData.button == PointerEventData.InputButton.Right)
-            data.TryRemove(lane, tick);
+            session.RemoveNote(lane, tick);
     }
 
     /// <summary>
@@ -57,6 +58,6 @@ public class EditorNotePlacer : MonoBehaviour, IPointerClickHandler
 
         lane = Mathf.Clamp(Mathf.FloorToInt(x / grid.LaneWidth), 0, GameConstants.Editor.LaneCount - 1);
         tick = BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision);
-        return tick >= 0 && tick <= data.TotalTicks;
+        return tick >= 0 && tick <= session.Data.TotalTicks;
     }
 }

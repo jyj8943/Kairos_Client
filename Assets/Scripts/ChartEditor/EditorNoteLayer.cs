@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// 편집 중인 노트 표시. EditorScene.unity의 Notes에 붙이고, EditorScene이 Init()을 호출한다.
 /// - ChartEditData가 바뀌거나 그리드가 다시 배치될 때(스크롤·높이 변경) 보이는 구간(위아래 여유 1마디)의 노트만 배치한다.
-/// - 노트 오브젝트는 풀에서 재사용한다. 데이터는 읽기만 하고 바꾸지 않는다.
+/// - 노트 오브젝트는 풀에서 재사용한다. ChartEditSession.Data는 읽기만 하고 바꾸지 않는다.
 /// </summary>
 public class EditorNoteLayer : MonoBehaviour
 {
@@ -31,14 +31,14 @@ public class EditorNoteLayer : MonoBehaviour
     public int PooledNoteCount => notePool != null ? notePool.TotalCount : 0;
 
     /// <summary>
-    /// 그리드와 노트 데이터를 받아 이벤트를 구독하고 한 번 배치한다.
+    /// 그리드와 편집 세션을 받아 이벤트를 구독하고 한 번 배치한다.
     /// </summary>
-    public void Init(ChartGridView grid, ChartEditData data)
+    public void Init(ChartGridView grid, ChartEditSession session)
     {
         Unsubscribe();
 
         this.grid = grid;
-        this.data = data;
+        data = session.Data;
 
         if (notePool == null)
         {

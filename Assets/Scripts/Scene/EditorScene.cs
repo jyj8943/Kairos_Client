@@ -6,6 +6,9 @@ using UnityEngine;
 /// </summary>
 public class EditorScene : SceneBase
 {
+    [Header("편집 세션")]
+    [SerializeField] private ChartEditSession session;
+
     [Header("화면")]
     [SerializeField] private ChartGridView grid;
     [SerializeField] private EditorNoteLayer noteLayer;
@@ -19,33 +22,30 @@ public class EditorScene : SceneBase
     [SerializeField] private float testSongLengthSeconds = 144f;
 
     /// <summary>
-    /// 에디터 씬 초기화. 곡 고르기 씬이 넘긴 채보 정보를 받고,
-    /// 편집 데이터(ChartEditData)를 만든 뒤 그리드 → 노트 표시 → 클릭 처리 → Canvas_Editor 순으로 Init한다.
+    /// 에디터 씬 초기화. 곡 고르기 씬이 넘긴 채보 정보를 받아
+    /// 편집 세션 → 그리드 → 노트 표시 → 클릭 처리 → Canvas_Editor 순으로 Init한다.
     /// </summary>
     protected override IEnumerator Init()
     {
         Debug.Log("[EditorScene] Init");
 
+        // 채보 정보가 없으면(씬을 직접 실행) 세션이 테스트 기본값을 쓰고 경고를 남긴다
         EditorEntryData entry = GameManager.Scene.TakeSceneData<EditorEntryData>();
-        if (entry == null)
-            Debug.LogWarning("[EditorScene] 넘겨받은 채보 정보가 없습니다. (EditorScene을 직접 실행한 경우)");
-        else
-            Debug.Log($"[EditorScene] songId={entry.songId}, chartName={entry.chartName}, level={entry.level}, chartId={entry.chartId ?? "(새 채보)"}");
 
-        if (grid == null || noteLayer == null || notePlacer == null || canvas == null)
+        if (session == null || grid == null || noteLayer == null || notePlacer == null || canvas == null)
         {
-            Debug.LogError("[EditorScene] grid, noteLayer, notePlacer, canvas 중 연결되지 않은 것이 있습니다.", this);
+            Debug.LogError("[EditorScene] session, grid, noteLayer, notePlacer, canvas 중 연결되지 않은 것이 있습니다.", this);
             yield break;
         }
 
-        // TODO: 채보 데이터 연결 시 교체 (불러온 채보의 노트를 BeatGridMath.BeatToTick으로 넣는다)
-        float totalBeats = BeatGridMath.SecondsToBeats(testSongLengthSeconds, testBpm);
-        ChartEditData data = new ChartEditData(BeatGridMath.BeatToTick(totalBeats), GameConstants.Editor.LaneCount);
+        // TODO: 채보 데이터 연결 시 교체 (테스트 BPM·곡 길이 대신 songId의 곡 정보를 쓴다)
+        session.Init(entry, testBpm, testSongLengthSeconds);
 
+        float totalBeats = BeatGridMath.SecondsToBeats(testSongLengthSeconds, testBpm);
         grid.Init(totalBeats);
-        noteLayer.Init(grid, data);
-        notePlacer.Init(grid, data, () => canvas.CurrentTool);
-        canvas.Init(grid, data);
+        noteLayer.Init(grid, session);
+        notePlacer.Init(grid, session, () => canvas.CurrentTool);
+        canvas.Init(grid, session);
     }
 
     /// <summary>

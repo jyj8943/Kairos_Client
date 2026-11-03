@@ -9,6 +9,10 @@ using System.Collections.Generic;
 public class ChartEditData
 {
     private readonly List<EditorNote> notes = new List<EditorNote>();
+    private readonly System.Collections.ObjectModel.ReadOnlyCollection<EditorNote> readOnlyNotes;
+
+    /// <summary>노트 전체를 (tick, lane) 순으로 읽는다. 바깥에서 목록을 바꿀 수 없다</summary>
+    public IReadOnlyList<EditorNote> Notes => readOnlyNotes;
 
     /// <summary>노트가 추가·삭제되면 호출된다</summary>
     public event Action OnChanged;
@@ -26,6 +30,7 @@ public class ChartEditData
     {
         TotalTicks = Math.Max(0, totalTicks);
         LaneCount = laneCount;
+        readOnlyNotes = notes.AsReadOnly();
     }
 
     /// <summary>

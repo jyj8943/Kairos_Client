@@ -73,13 +73,14 @@ public class Canvas_Editor : MonoBehaviour
 
     /// <summary>
     /// 그리드·노트 상태로 박자 스냅 드롭다운과 표시 텍스트를 맞추고, 드롭다운·노트 변경을 구독한다.
+    /// 노트는 ChartEditSession.Data를 읽기만 한다.
     /// </summary>
-    public void Init(ChartGridView grid, ChartEditData data)
+    public void Init(ChartGridView grid, ChartEditSession session)
     {
         this.grid = grid;
 
-        if (this.data != null) this.data.OnChanged -= RefreshNoteCountText;
-        this.data = data;
+        if (data != null) data.OnChanged -= RefreshNoteCountText;
+        data = session.Data;
         data.OnChanged += RefreshNoteCountText;
 
         InitBeatSnapDropdown();
