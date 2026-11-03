@@ -6,8 +6,18 @@ using UnityEngine;
 /// </summary>
 public class EditorScene : SceneBase
 {
+    [Header("화면")]
+    [SerializeField] private ChartGridView grid;
+    [SerializeField] private Canvas_Editor canvas;
+
+    // TODO: 채보 데이터 연결 시 교체 (넘겨받은 songId의 곡 정보·채보의 BPM과 곡 길이를 쓴다)
+    [Header("테스트 데이터")]
+    [SerializeField] private float testBpm = 150f;
+    [Tooltip("곡 길이 (초)")]
+    [SerializeField] private float testSongLengthSeconds = 144f;
+
     /// <summary>
-    /// 에디터 씬 초기화. 곡 고르기 씬이 넘긴 채보 정보를 받는다.
+    /// 에디터 씬 초기화. 곡 고르기 씬이 넘긴 채보 정보를 받고, 그리드 → Canvas_Editor 순으로 Init한다.
     /// </summary>
     protected override IEnumerator Init()
     {
@@ -19,19 +29,31 @@ public class EditorScene : SceneBase
         else
             Debug.Log($"[EditorScene] songId={entry.songId}, chartName={entry.chartName}, level={entry.level}, chartId={entry.chartId ?? "(새 채보)"}");
 
-        // 이후 아래 순서로 초기화한다.
-        // 1. 넘겨받은 songId로 곡 정보 불러오기
-        // 2. 에디터 UI Init
-        // 3. 그리드·타임라인 Init
+        if (grid == null || canvas == null)
+        {
+            Debug.LogError("[EditorScene] grid 또는 canvas가 연결되지 않았습니다.", this);
+            yield break;
+        }
 
-        yield break;
+        float totalBeats = BeatGridMath.SecondsToBeats(testSongLengthSeconds, testBpm);
+        grid.Init(totalBeats);
+        canvas.Init(grid);
     }
 
     /// <summary>
-    /// 초기화가 끝난 뒤 호출된다.
+    /// 초기화가 끝나면 휠 입력을 받는다.
     /// </summary>
     protected override void OnEnter()
     {
         Debug.Log("[EditorScene] OnEnter");
+        if (canvas != null) canvas.EnableInput();
+    }
+
+    /// <summary>
+    /// 씬을 떠나기 직전 입력 구독을 해제한다.
+    /// </summary>
+    public override void OnExit()
+    {
+        if (canvas != null) canvas.DisableInput();
     }
 }

@@ -990,6 +990,74 @@
                     "isPartOfComposite": false
                 }
             ]
+        },
+        {
+            "name": "ChartEditor",
+            "id": "bb319345-74be-4289-9da7-99099f3a9520",
+            "actions": [
+                {
+                    "name": "Scroll",
+                    "type": "PassThrough",
+                    "id": "af08db56-3de8-4214-a78d-1f5e8e08c1ac",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ZoomModifier",
+                    "type": "Button",
+                    "id": "1f47d748-5bb5-481e-8237-3a7db36a294a",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Point",
+                    "type": "PassThrough",
+                    "id": "3368aace-1dce-421f-b538-1548c36e0914",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "9e09473c-3d01-4196-ba28-417a46516e3f",
+                    "path": "<Mouse>/scroll/y",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Scroll",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6b3b8177-046e-4a0b-9289-5d662f295462",
+                    "path": "<Keyboard>/ctrl",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "ZoomModifier",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ad5dd433-9254-4874-b32a-9d1b8e56e82d",
+                    "path": "<Pointer>/position",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Point",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": [
