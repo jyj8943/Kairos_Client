@@ -77,3 +77,6 @@ CLAUDE.md
 # Paid assets / copyrighted music & SFX (local only, not distributed via git)
 /[Aa]ssets/[Ee]xternals/
 /[Aa]ssets/[Ee]xternals.meta
+
+# Local build scripts with PC-specific paths (local only)
+/[Tt]ools/
