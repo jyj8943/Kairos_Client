@@ -65,6 +65,53 @@ public class ChartEditData
         return true;
     }
 
+    /// <summary>
+    /// 노트 전체를 한 번에 바꾼다 (채보 불러오기용). (tick, lane) 순으로 정렬하고 OnChanged는 한 번만 보낸다.
+    /// 범위 밖이거나 같은 라인·같은 tick에 겹치는 노트는 넣지 않는다.
+    /// </summary>
+    /// <returns>넣지 못한 노트 수</returns>
+    public int ReplaceAll(IEnumerable<EditorNote> newNotes)
+    {
+        notes.Clear();
+        ShortCount = 0;
+        LongCount = 0;
+
+        int skipped = 0;
+        if (newNotes != null)
+        {
+            foreach (EditorNote note in newNotes)
+            {
+                if (!IsInRange(note.Lane, note.Tick) || note.EndTick < note.Tick || note.EndTick > TotalTicks)
+                {
+                    skipped++;
+                    continue;
+                }
+                notes.Add(note);
+            }
+        }
+
+        notes.Sort((a, b) => a.Tick != b.Tick ? a.Tick.CompareTo(b.Tick) : a.Lane.CompareTo(b.Lane));
+
+        // 정렬 뒤 바로 앞과 같은 자리면 겹친 노트다
+        for (int i = notes.Count - 1; i > 0; i--)
+        {
+            if (notes[i].Tick == notes[i - 1].Tick && notes[i].Lane == notes[i - 1].Lane)
+            {
+                notes.RemoveAt(i);
+                skipped++;
+            }
+        }
+
+        foreach (EditorNote note in notes)
+        {
+            if (note.IsLong) LongCount++;
+            else ShortCount++;
+        }
+
+        OnChanged?.Invoke();
+        return skipped;
+    }
+
     /// <summary>같은 라인·같은 tick에 노트가 있으면 true</summary>
     public bool Contains(int lane, int tick)
     {

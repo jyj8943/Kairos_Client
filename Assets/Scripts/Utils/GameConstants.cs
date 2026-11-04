@@ -76,4 +76,43 @@ public static class GameConstants
             }
         }
     }
+
+    /// <summary>채보 파일 형식과 저장 위치 (기획서 2-2, 2-4)</summary>
+    public static class Chart
+    {
+        /// <summary>지금 쓰는 채보 형식 버전. 이 값과 다른 파일은 읽지 않는다</summary>
+        public const int CurrentVersion = 1;
+
+        /// <summary>나만의 채보 폴더: persistentDataPath/MyCharts/{songId}/</summary>
+        public const string CustomFolder = "MyCharts";
+
+        /// <summary>공식 채보 폴더: streamingAssetsPath/Charts/{songId}/</summary>
+        public const string OfficialFolder = "Charts";
+
+        public const string FileExtension = ".json";
+
+        /// <summary>저장 중 임시 파일 확장자 ({chartId}.json.tmp)</summary>
+        public const string TempExtension = ".tmp";
+
+        /// <summary>읽지 못한 파일을 백업할 때 붙이는 확장자 ({chartId}.json.broken)</summary>
+        public const string BrokenExtension = ".broken";
+
+        /// <summary>백업 파일 이름이 이미 있을 때 뒤에 붙이는 시간 형식</summary>
+        public const string BrokenBackupTimeFormat = "yyyyMMdd_HHmmss";
+
+        /// <summary>새 나만의 채보 ID: my_yyyyMMdd_HHmmss_xxxx</summary>
+        public const string CustomIdPrefix = "my_";
+        public const string CustomIdDateFormat = "yyyyMMdd_HHmmss";
+        public const int CustomIdRandomLength = 4;
+        public const string CustomIdRandomChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+        /// <summary>같은 ID가 있을 때 다시 만드는 최대 횟수</summary>
+        public const int CustomIdMaxAttempts = 100;
+
+        /// <summary>
+        /// beat → tick 변환에서 허용하는 반올림 오차 (틱). 넘으면 스냅 칸에서 벗어난 위치로 보고 경고한다.
+        /// float 저장 오차(셋잇단 1/3박 등)는 이보다 훨씬 작다.
+        /// </summary>
+        public const float MaxTickRoundingError = 0.01f;
+    }
 }

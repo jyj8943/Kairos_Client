@@ -81,7 +81,14 @@ public class ChartEditSession : MonoBehaviour
         Debug.Log($"[ChartEditSession] 시작: songId={SongId}, chartName={ChartName}, level={Level}, " +
                   $"chartId={ChartId ?? "(새 채보)"}, bpm={Bpm}, 곡 끝 tick={totalTicks}");
 
-        // TODO: Load(chartId) — chartId가 있으면 JSON을 불러와 ChartEditData에 넣는다 (beat → BeatGridMath.BeatToTick)
+        // 내 채보 열기: chartId가 있으면 파일을 불러와 세션을 채운다. 실패하면 빈 채보로 둔다
+        if (!string.IsNullOrEmpty(ChartId))
+        {
+            if (ChartRepository.TryLoad(SongId, ChartId, ChartType.Custom, out ChartData chart, out string error))
+                ApplyChartData(chart);
+            else
+                Debug.LogWarning($"[ChartEditSession] 채보를 불러오지 못해 빈 채보로 시작합니다: {error}", this);
+        }
     }
 
     private void OnDestroy()
@@ -118,8 +125,123 @@ public class ChartEditSession : MonoBehaviour
         return true;
     }
 
-    // TODO: Save() — ChartData로 바꿔 JSON 저장, 저장 후 SetDirty(false)
+    /// <summary>
+    /// 세션의 채보 정보와 노트를 채보 파일 형식으로 바꾼다 (beat = tick ÷ TicksPerBeat).
+    /// 새 채보(chartId 없음)면 새 ID를 만들어 세션에 기록한다.
+    /// </summary>
+    /// <returns>바꾼 채보. 새 ID를 만들지 못하면 null</returns>
+    public ChartData ToChartData()
+    {
+        if (string.IsNullOrEmpty(ChartId))
+        {
+            string newId = ChartRepository.CreateNewCustomChartId(SongId);
+            if (newId == null) return null;
+
+            ChartId = newId;
+            RefreshDebugView();
+        }
+
+        return new ChartData
+        {
+            version = GameConstants.Chart.CurrentVersion,
+            chartId = ChartId,
+            songId = SongId,
+            type = ChartData.TypeCustom,
+            chartName = ChartName,
+            difficulty = string.Empty,
+            author = string.Empty,
+            keyCount = Data.LaneCount,
+            level = Level,
+            timingPoints = new List<TimingPointData> { new TimingPointData { beat = 0f, bpm = Bpm } },
+            notes = Data.ToNoteDataList()
+        };
+    }
+
+    /// <summary>
+    /// 불러온 채보로 세션을 채운다. 노트는 tick = beat × TicksPerBeat를 반올림해 한 번에 바꾸고, 수정 여부는 false가 된다.
+    /// 채보의 songId가 세션의 곡과 다르면 적용하지 않는다.
+    /// </summary>
+    public void ApplyChartData(ChartData chart)
+    {
+        if (chart == null)
+        {
+            Debug.LogError("[ChartEditSession] 적용할 채보가 없습니다.", this);
+            return;
+        }
+
+        if (chart.songId != SongId)
+        {
+            Debug.LogError($"[ChartEditSession] 다른 곡의 채보라 적용하지 않습니다: 세션 songId={SongId}, 채보 songId={chart.songId}", this);
+            return;
+        }
+
+        ChartId = chart.chartId;
+        ChartName = chart.chartName;
+        Level = chart.level;
+
+        if (chart.timingPoints != null && chart.timingPoints.Count > 0)
+        {
+            Bpm = chart.timingPoints[0].bpm;
+            if (chart.timingPoints.Count > 1)
+                Debug.LogWarning($"[ChartEditSession] BPM 변속은 아직 지원하지 않아 첫 BPM({Bpm})만 씁니다: chartId={ChartId}", this);
+        }
+
+        List<EditorNote> notes = new List<EditorNote>();
+        int roundedCount = 0;
+        if (chart.notes != null)
+        {
+            foreach (NoteData note in chart.notes)
+            {
+                int tick = ToTick(note.beat, ref roundedCount);
+                int endTick = note.type == NoteData.TypeLong ? ToTick(note.endBeat, ref roundedCount) : tick;
+                notes.Add(new EditorNote(note.lane, tick, endTick));
+            }
+        }
+
+        if (roundedCount > 0)
+            Debug.LogWarning($"[ChartEditSession] 반올림 오차가 {GameConstants.Chart.MaxTickRoundingError}틱을 넘는 위치가 {roundedCount}개 있습니다: chartId={ChartId}", this);
+
+        int skipped = Data.ReplaceAll(notes);
+        if (skipped > 0)
+            Debug.LogWarning($"[ChartEditSession] 곡 범위 밖이거나 겹쳐서 넣지 못한 노트가 {skipped}개 있습니다: chartId={ChartId}", this);
+
+        IsDirty = false;
+        RefreshDebugView();
+        OnDirtyChanged?.Invoke(false);
+    }
+
+    /// <summary>
+    /// 채보를 나만의 채보로 저장한다. 성공하면 수정 여부가 false가 된다.
+    /// (버튼·Ctrl+S 연결은 아직 하지 않았다)
+    /// </summary>
+    /// <param name="error">실패 이유. 성공하면 빈 문자열</param>
+    public bool TrySave(out string error)
+    {
+        ChartData chart = ToChartData();
+        if (chart == null)
+        {
+            error = "새 채보 ID를 만들지 못했습니다.";
+            return false;
+        }
+
+        if (!ChartRepository.TrySave(chart, out error)) return false;
+
+        SetDirty(false);
+        return true;
+    }
+
     // TODO: CreateTestPlayData() / Restore() — 테스트 플레이로 넘길 데이터 만들기와 돌아왔을 때 복원
+
+    /// <summary>
+    /// beat를 tick으로 반올림한다. 반올림 오차가 허용값을 넘으면 count를 늘린다.
+    /// </summary>
+    private static int ToTick(float beat, ref int roundedCount)
+    {
+        float exact = beat * GameConstants.Editor.TicksPerBeat;
+        int tick = BeatGridMath.BeatToTick(beat);
+        if (Mathf.Abs(exact - tick) > GameConstants.Chart.MaxTickRoundingError) roundedCount++;
+        return tick;
+    }
 
     private void SetDirty(bool dirty)
     {
