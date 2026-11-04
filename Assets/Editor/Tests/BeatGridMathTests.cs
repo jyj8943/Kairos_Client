@@ -52,4 +52,52 @@ public class BeatGridMathTests
         Assert.AreEqual(88, BeatGridMath.BeatToMeasure(criticalVelocity));
         Assert.AreEqual(128, BeatGridMath.BeatToMeasure(dMinorDescent));
     }
+
+    /// <summary>1박 높이 = 250px × 60 ÷ BPM × 배율: 150.61 BPM 약 99.6px, 216 BPM 약 69.4px, x2.0이면 두 배</summary>
+    [Test]
+    public void BeatHeight_DependsOnBpm()
+    {
+        Assert.AreEqual(GameConstants.Editor.PixelsPerSecond * 60f / 150.61f, BeatGridMath.GetBeatHeight(150.61f, 1f), 1e-3);
+        Assert.AreEqual(99.6f, BeatGridMath.GetBeatHeight(150.61f, 1f), 0.05f);
+        Assert.AreEqual(69.4f, BeatGridMath.GetBeatHeight(216f, 1f), 0.05f);
+        Assert.AreEqual(BeatGridMath.GetBeatHeight(216f, 1f) * 2f, BeatGridMath.GetBeatHeight(216f, 2f), 1e-3);
+
+        // 216 BPM의 1박은 150.61 BPM의 약 70% 높이 (같은 1초 = 같은 높이)
+        Assert.AreEqual(150.61f / 216f, BeatGridMath.GetBeatHeight(216f, 1f) / BeatGridMath.GetBeatHeight(150.61f, 1f), 1e-4);
+    }
+
+    /// <summary>BeatToY → YToBeat 왕복이 같은 박을 돌려준다 (두 BPM, 여러 배율)</summary>
+    [TestCase(150.61f, 0.5f)]
+    [TestCase(150.61f, 1f)]
+    [TestCase(216f, 1.75f)]
+    [TestCase(216f, 4f)]
+    public void BeatToY_RoundTrip(float bpm, float scale)
+    {
+        float beatHeight = BeatGridMath.GetBeatHeight(bpm, scale);
+        float[] beats = { 0f, 3.25f, 10f + 1f / 3f, 87.9375f };
+        foreach (float current in new[] { 0f, 12.5f })
+        {
+            foreach (float beat in beats)
+            {
+                float y = BeatGridMath.BeatToY(beat, current, beatHeight);
+                Assert.AreEqual(beat, BeatGridMath.YToBeat(y, current, beatHeight), 1e-4, $"beat {beat}, current {current}");
+            }
+        }
+
+        // 1박 위의 y 차이는 1박 높이
+        Assert.AreEqual(beatHeight, BeatGridMath.BeatToY(13.5f, 12.5f, beatHeight), 1e-3);
+    }
+
+    /// <summary>선 간격 안내: 216 BPM·1/16·x1.0은 약 4.3px라 안내, x2.0은 약 8.7px라 숨김</summary>
+    [Test]
+    public void DenseGridHint_Threshold()
+    {
+        Assert.AreEqual(69.444f / 16f, BeatGridMath.GetSnapLineSpacing(216f, 1f, 16), 0.01f);
+        Assert.IsTrue(BeatGridMath.IsSnapLineSpacingTooSmall(216f, 1f, 16));
+        Assert.IsFalse(BeatGridMath.IsSnapLineSpacingTooSmall(216f, 2f, 16));
+
+        // 150.61 BPM·1/16·x1.0은 약 6.2px로 기준(6px) 이상이라 숨김
+        Assert.IsFalse(BeatGridMath.IsSnapLineSpacingTooSmall(150.61f, 1f, 16));
+        Assert.IsFalse(BeatGridMath.IsSnapLineSpacingTooSmall(216f, 1f, 4));
+    }
 }

@@ -29,19 +29,47 @@ public static class BeatGridMath
     }
 
     /// <summary>
-    /// beat의 y 위치. (beat − 현재 beat) × 1박당 픽셀 × 그리드 높이 배율
+    /// 그리드에서 1박의 높이 (px) = 1초 높이(PixelsPerSecond) × 60 ÷ BPM × 그리드 높이 배율.
+    /// BPM이 높을수록 1박이 낮아져, 노트 밀도가 인게임(시간 기준 낙하)과 같아진다.
+    /// 변속이 생기면 이 함수를 구간별 BPM으로 부르도록 바꾼다 (BPM은 여기서만 쓴다).
     /// </summary>
-    public static float BeatToY(float beat, float currentBeat, float pixelsPerBeat, float heightScale)
+    public static float GetBeatHeight(float bpm, float heightScale)
     {
-        return (beat - currentBeat) * pixelsPerBeat * heightScale;
+        return GameConstants.Editor.PixelsPerSecond * 60f / bpm * heightScale;
+    }
+
+    /// <summary>
+    /// beat의 y 위치. (beat − 현재 beat) × 1박 높이
+    /// </summary>
+    /// <param name="beatHeight">1박 높이 (GetBeatHeight)</param>
+    public static float BeatToY(float beat, float currentBeat, float beatHeight)
+    {
+        return (beat - currentBeat) * beatHeight;
     }
 
     /// <summary>
     /// y 위치의 beat. BeatToY의 반대 변환이다.
     /// </summary>
-    public static float YToBeat(float y, float currentBeat, float pixelsPerBeat, float heightScale)
+    /// <param name="beatHeight">1박 높이 (GetBeatHeight)</param>
+    public static float YToBeat(float y, float currentBeat, float beatHeight)
     {
-        return currentBeat + y / (pixelsPerBeat * heightScale);
+        return currentBeat + y / beatHeight;
+    }
+
+    /// <summary>
+    /// 지금 스냅의 선 간격 (px) = 1박 높이 ÷ 스냅 칸 수.
+    /// </summary>
+    public static float GetSnapLineSpacing(float bpm, float heightScale, int snapDivision)
+    {
+        return GetBeatHeight(bpm, heightScale) / snapDivision;
+    }
+
+    /// <summary>
+    /// 선 간격이 MinSnapLineSpacingPixels보다 좁으면 true ("선 간격이 좁습니다" 안내를 보여줄지).
+    /// </summary>
+    public static bool IsSnapLineSpacingTooSmall(float bpm, float heightScale, int snapDivision)
+    {
+        return GetSnapLineSpacing(bpm, heightScale, snapDivision) < GameConstants.Editor.MinSnapLineSpacingPixels;
     }
 
     /// <summary>

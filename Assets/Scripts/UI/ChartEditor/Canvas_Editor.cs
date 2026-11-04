@@ -42,6 +42,8 @@ public class Canvas_Editor : MonoBehaviour
     [Header("오른쪽 패널")]
     [SerializeField] private TMP_Dropdown beatSnapDropdown;
     [SerializeField] private TMP_Text gridHeightText;
+    [Tooltip("선 간격이 좁을 때 보여주는 안내 (Txt_GridHeightHint). 기준은 GameConstants.Editor.MinSnapLineSpacingPixels")]
+    [SerializeField] private TMP_Text gridHeightHintText;
     [Tooltip("곡 BPM 표시 (Input_Bpm). 이번에는 표시만 하고 수정할 수 없다")]
     [SerializeField] private TMP_InputField bpmInput;
     [SerializeField] private TMP_Text noteCountText;
@@ -197,6 +199,7 @@ public class Canvas_Editor : MonoBehaviour
     {
         bpmInput.text = SongData.FormatBpm(session.Bpm);
         RefreshTimeline();
+        RefreshGridHeightText();
     }
 
     /// <summary>
@@ -405,6 +408,7 @@ public class Canvas_Editor : MonoBehaviour
         if (index < 0 || index >= snaps.Length) return;
 
         grid.SetSnap(snaps[index].Division);
+        RefreshGridHeightText();
     }
 
     /// <summary>
@@ -440,12 +444,17 @@ public class Canvas_Editor : MonoBehaviour
     }
 
     /// <summary>
-    /// "x1.5 (Ctrl+휠)" 형식으로 그리드 높이 배율을 표시한다.
+    /// "x1.5 (Ctrl+휠)" 형식으로 그리드 높이 배율을 표시하고, 지금 스냅의 선 간격이 좁으면 안내를 보여준다.
+    /// 스냅·그리드 높이·BPM이 바뀔 때 부른다.
     /// </summary>
     private void RefreshGridHeightText()
     {
         string scale = grid.GridHeightScale.ToString("0.0#", CultureInfo.InvariantCulture);
         gridHeightText.text = $"x{scale} (Ctrl+휠)";
+
+        bool tooDense = BeatGridMath.IsSnapLineSpacingTooSmall(grid.Bpm, grid.GridHeightScale, grid.SnapDivision);
+        gridHeightHintText.text = GameConstants.Editor.DenseGridHint;
+        gridHeightHintText.gameObject.SetActive(tooDense);
     }
 
     /// <summary>

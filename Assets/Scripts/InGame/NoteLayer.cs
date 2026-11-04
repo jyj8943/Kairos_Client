@@ -3,19 +3,23 @@ using UnityEngine;
 
 /// <summary>
 /// 인게임 노트 표시. InGameScene.unity의 "Gear/Notes"에 붙이고, InGameScene이 Init()을 호출한 뒤 매 프레임 Refresh()를 부른다.
-/// - 노트 y = 판정선 y + (노트 시간 − 곡 시간) × 스크롤 속도.
+/// - 노트 y = 판정선 y + (노트 시간 − 곡 시간) × 낙하 속도. 낙하 속도 = 기본 낙하 속도 × 배속 (GameConstants.Play).
 /// - 노트 오브젝트는 풀로 재사용한다. 화면에 들어오기 직전에 꺼내고, 판정(키로 친 것)되거나 화면 아래로 벗어나면 돌려놓는다.
 /// - 풀은 Init에서 채보를 보고 동시에 보일 최대 수만큼 미리 만든다. 플레이 중 Instantiate·Destroy와 매 프레임 할당이 없다.
 /// </summary>
 public class NoteLayer : MonoBehaviour
 {
     [SerializeField] private NoteView notePrefab;
-    [Tooltip("노트가 내려오는 속도 (월드 단위/초). 기본값은 판정선부터 화면 위까지 약 1.2초")]
-    [Min(0.1f)] [SerializeField] private float scrollSpeed = 7f;
     [Tooltip("화면 위아래 밖에 두는 여유 (월드 단위). 노트가 화면 끝에서 갑자기 나타나거나 사라지지 않게 한다")]
     [Min(0f)] [SerializeField] private float screenMargin = 0.5f;
     [Tooltip("미리 만드는 노트 수에 더하는 여유")]
     [Min(0)] [SerializeField] private int extraPoolCount = 8;
+
+    /// <summary>
+    /// 노트 낙하 속도 (월드 유닛/초) = 기본 낙하 속도 × 배속.
+    /// TODO: 배속 설정을 만들면 진입 데이터의 배속을 곱한다 (지금은 1.0 고정)
+    /// </summary>
+    private static float ScrollSpeed => GameConstants.Play.DefaultScrollSpeed * GameConstants.Play.DefaultScrollMultiplier;
 
     private readonly Stack<NoteView> pool = new Stack<NoteView>();
     private readonly List<int> activeNotes = new List<int>();
@@ -48,11 +52,11 @@ public class NoteLayer : MonoBehaviour
         viewByNote = new NoteView[judge.TotalCount];
         nextSpawnIndex = 0;
 
-        spawnAheadSeconds = (gear.ScreenTopY + screenMargin - gear.JudgeLineY) / scrollSpeed;
+        spawnAheadSeconds = (gear.ScreenTopY + screenMargin - gear.JudgeLineY) / ScrollSpeed;
         despawnY = gear.ScreenBottomY - screenMargin;
 
         // 화면에 동시에 있는 노트: 나타난 뒤 화면 아래로 사라질 때까지의 시간 안에 있는 노트 수의 최대값
-        float visibleSeconds = spawnAheadSeconds + (gear.JudgeLineY - despawnY) / scrollSpeed;
+        float visibleSeconds = spawnAheadSeconds + (gear.JudgeLineY - despawnY) / ScrollSpeed;
         int needed = CountMaxNotesInWindow(judge.Notes, visibleSeconds) + extraPoolCount;
         while (PooledCount < needed) pool.Push(CreateView());
         GrowCount = 0;
@@ -84,7 +88,7 @@ public class NoteLayer : MonoBehaviour
         {
             int index = activeNotes[i];
             PlayNote note = notes[index];
-            float y = gear.JudgeLineY + (float)((note.Time - songTime) * scrollSpeed);
+            float y = gear.JudgeLineY + (float)((note.Time - songTime) * ScrollSpeed);
 
             if (y < despawnY)
             {

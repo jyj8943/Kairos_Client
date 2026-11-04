@@ -57,6 +57,15 @@ public static class GameConstants
         /// <summary>마지막 노트 뒤 결과까지 기다리는 시간 (초)</summary>
         public const double EndPaddingSeconds = 1.0;
 
+        /// <summary>
+        /// 인게임 기본 낙하 속도 (월드 유닛/초). 판정선부터 화면 위까지 약 1.2초가 보인다.
+        /// 화면 높이 10유닛 = 1080px이라 약 756px/초 (에디터 그리드 PixelsPerSecond의 약 3배).
+        /// </summary>
+        public const float DefaultScrollSpeed = 7f;
+
+        /// <summary>배속. TODO: 배속 설정(곡 선택 화면)을 만들면 그 값으로 바꾼다 (지금은 1.0 고정)</summary>
+        public const float DefaultScrollMultiplier = 1f;
+
         /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
         public const double TestPlayLeadInSeconds = 2.0;
 
@@ -128,8 +137,15 @@ public static class GameConstants
         /// <summary>박자 스냅 기본값 (n = 4, 16분음표)</summary>
         public const int DefaultSnapDivision = 4;
 
-        /// <summary>그리드 높이 x1.0일 때 1박의 높이 (1920×1080 기준 px)</summary>
-        public const float PixelsPerBeat = 100f;
+        /// <summary>
+        /// 그리드 높이 x1.0일 때 1초의 높이 (1920×1080 기준 px). 1박 높이는 곡 BPM에 따라 달라진다
+        /// (1박 = PixelsPerSecond × 60 ÷ BPM, 150.61 BPM이면 약 99.6px). 인게임처럼 시간 기준으로 밀도를 보여준다.
+        /// </summary>
+        public const float PixelsPerSecond = 250f;
+
+        /// <summary>지금 스냅의 선 간격이 이보다 좁으면(px) "선 간격이 좁습니다" 안내를 보여준다</summary>
+        public const float MinSnapLineSpacingPixels = 6f;
+        public const string DenseGridHint = "선 간격이 좁습니다 · Ctrl+휠로 넓히기";
 
         /// <summary>그리드 높이 배율 범위와 Ctrl+휠 한 칸의 변화량</summary>
         public const float MinGridHeight = 0.5f;

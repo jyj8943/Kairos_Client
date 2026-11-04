@@ -64,6 +64,12 @@ public class ChartGridView : MonoBehaviour
     /// <summary>그리드 높이 배율</summary>
     public float GridHeightScale { get; private set; }
 
+    /// <summary>1박 높이 계산에 쓰는 BPM (편집 중인 채보 BPM). 변속이 생기면 구간별 BPM으로 바꾼다</summary>
+    public float Bpm { get; private set; }
+
+    /// <summary>지금 BPM·그리드 높이 배율의 1박 높이 (그리드 로컬 단위). 1초 = PixelsPerSecond × 배율</summary>
+    public float BeatHeight => BeatGridMath.GetBeatHeight(Bpm, GridHeightScale);
+
     /// <summary>곡 전체 마디 수</summary>
     public int TotalMeasures => Mathf.Max(1, Mathf.CeilToInt(TotalBeats / GameConstants.Editor.BeatsPerMeasure));
 
@@ -96,7 +102,7 @@ public class ChartGridView : MonoBehaviour
     /// </summary>
     public float BeatToLocalY(float beat)
     {
-        return CurrentLineY + BeatGridMath.BeatToY(beat, CurrentBeat, GameConstants.Editor.PixelsPerBeat, GridHeightScale);
+        return CurrentLineY + BeatGridMath.BeatToY(beat, CurrentBeat, BeatHeight);
     }
 
     /// <summary>
@@ -104,7 +110,7 @@ public class ChartGridView : MonoBehaviour
     /// </summary>
     public float LocalYToBeat(float y)
     {
-        return BeatGridMath.YToBeat(y - CurrentLineY, CurrentBeat, GameConstants.Editor.PixelsPerBeat, GridHeightScale);
+        return BeatGridMath.YToBeat(y - CurrentLineY, CurrentBeat, BeatHeight);
     }
 
     /// <summary>
@@ -113,17 +119,19 @@ public class ChartGridView : MonoBehaviour
     public void GetVisibleBeatRange(out float minBeat, out float maxBeat)
     {
         float height = gridRect.rect.height;
-        float beatHeight = GameConstants.Editor.PixelsPerBeat * GridHeightScale;
+        float beatHeight = BeatHeight;
         minBeat = Mathf.Max(0f, CurrentBeat - CurrentLineY / beatHeight - MarginBeats);
         maxBeat = Mathf.Min(TotalBeats, CurrentBeat + (height - CurrentLineY) / beatHeight + MarginBeats);
     }
 
     /// <summary>
-    /// 곡 길이로 그리드를 초기화한다. 0박, 기본 스냅, 기본 높이에서 시작한다.
+    /// 곡 길이와 BPM으로 그리드를 초기화한다. 0박, 기본 스냅, 기본 높이에서 시작한다.
     /// </summary>
-    public void Init(float totalBeats)
+    /// <param name="bpm">1박 높이 계산에 쓰는 BPM (편집 중인 채보 BPM)</param>
+    public void Init(float totalBeats, float bpm)
     {
         TotalBeats = Mathf.Max(0f, totalBeats);
+        Bpm = bpm > 0f ? bpm : 120f;
         CurrentBeat = 0f;
         SnapDivision = GameConstants.Editor.DefaultSnapDivision;
         GridHeightScale = GameConstants.Editor.DefaultGridHeight;
@@ -175,6 +183,24 @@ public class ChartGridView : MonoBehaviour
     public void SetCurrentBeat(float beat)
     {
         CurrentBeat = Mathf.Clamp(beat, 0f, TotalBeats);
+        Refresh();
+    }
+
+    /// <summary>
+    /// 1박 높이 계산에 쓰는 BPM을 바꾼다 (BPM 조정 도구). 선이 촘촘해질 수 있으므로 선 풀도 다시 채운다.
+    /// </summary>
+    public void SetBpm(float bpm)
+    {
+        if (bpm <= 0f)
+        {
+            Debug.LogWarning($"[ChartGridView] BPM은 0보다 커야 합니다: {bpm}", this);
+            return;
+        }
+
+        Bpm = bpm;
+        if (!isInitialized) return;
+
+        PrewarmPools();
         Refresh();
     }
 
@@ -287,8 +313,9 @@ public class ChartGridView : MonoBehaviour
         foreach (GameConstants.Editor.SnapOption option in GameConstants.Editor.SnapOptions)
             maxSnap = Mathf.Max(maxSnap, option.Division);
 
-        float minBeatHeight = GameConstants.Editor.PixelsPerBeat * GameConstants.Editor.MinGridHeight;
-        float visibleBeats = gridRect.rect.height / minBeatHeight
+        // 풀 크기 계산용: 지금 BPM에서 가장 낮은 그리드 높이 배율일 때의 1박 높이 (화면 규칙이 아니다)
+        float poolMinBeatHeight = BeatGridMath.GetBeatHeight(Bpm, GameConstants.Editor.MinGridHeight);
+        float visibleBeats = gridRect.rect.height / poolMinBeatHeight
                              + 2f * marginMeasures * GameConstants.Editor.BeatsPerMeasure;
 
         linePool.Prewarm(Mathf.CeilToInt(visibleBeats * maxSnap) + 2);

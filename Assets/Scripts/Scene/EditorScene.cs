@@ -96,7 +96,8 @@ public class EditorScene : SceneBase
                       $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}", this);
         }
 
-        grid.Init(session.TotalBeats);
+        // 1박 높이는 편집에 쓰는 BPM(채보를 열었으면 채보 BPM)으로 정한다
+        grid.Init(session.TotalBeats, session.Bpm);
         if (restore != null)
         {
             grid.SetSnap(restore.snapDivision);
@@ -245,6 +246,7 @@ public class EditorScene : SceneBase
         float currentSeconds = BeatGridMath.BeatToSeconds(grid.CurrentBeat, session.Bpm, session.OffsetMs);
 
         session.SetTiming(bpm, offsetMs);
+        grid.SetBpm(session.Bpm);
         grid.SetTotalBeats(session.TotalBeats);
         grid.SetCurrentBeat(BeatGridMath.SecondsToBeat(currentSeconds, session.Bpm, session.OffsetMs));
         canvas.RefreshTiming();
