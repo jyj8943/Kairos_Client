@@ -4,6 +4,7 @@ using UnityEngine;
 /// <summary>
 /// 에디터 곡 고르기 씬 진입점. EditorSongSelectScene.unity 루트의 "EditorSongSelectScene" 오브젝트에 붙인다.
 /// - 곡 목록은 GameManager.Songs에서 받는다.
+/// - 에디터에서 나오면 EditorSongSelectEntryData의 곡을 고른 상태로 시작한다.
 /// </summary>
 public class EditorSongSelectScene : SceneBase
 {
@@ -23,7 +24,9 @@ public class EditorSongSelectScene : SceneBase
             yield break;
         }
 
-        canvas.Init(GameManager.Songs.Songs);
+        // 에디터에서 나온 경우 방금 편집한 곡을 고른 상태로 시작한다
+        EditorSongSelectEntryData entry = GameManager.Scene.TakeSceneData<EditorSongSelectEntryData>();
+        canvas.Init(GameManager.Songs.Songs, entry?.songId);
     }
 
     /// <summary>

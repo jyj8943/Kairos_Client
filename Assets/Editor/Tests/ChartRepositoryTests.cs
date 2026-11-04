@@ -217,9 +217,12 @@ public class ChartRepositoryTests
             AssertTicks(source, ticks);
             Assert.IsFalse(source.IsDirty);
 
-            // 파일 저장 → 새 세션이 chartId로 불러오기
+            // 파일 저장 → 새 세션에 파일을 읽어 적용 (EditorScene이 내 채보를 여는 순서와 같다)
             Assert.IsTrue(source.TrySave(out string saveError), saveError);
             ChartEditSession target = CreateSession(targetObject, source.ChartId);
+            Assert.IsTrue(ChartRepository.TryLoad(TestSongId, source.ChartId, ChartType.Custom, out ChartData loaded, out string loadError), loadError);
+            target.ApplyChartData(loaded);
+            Assert.AreEqual(source.ChartId, target.ChartId);
             AssertTicks(target, ticks);
             Assert.AreEqual(source.ChartName, target.ChartName);
             Assert.AreEqual(source.Level, target.Level);

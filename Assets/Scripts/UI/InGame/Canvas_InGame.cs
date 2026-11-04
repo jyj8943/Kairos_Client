@@ -1,36 +1,22 @@
-using System;
-using System.Globalization;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 /// <summary>
 /// 인게임 화면 UI (기획서 3-4 최소 형태). InGameScene이 Init()을 호출한다.
-/// - 플레이 중: 곡 정보(제목·채보 이름·Lv), 판정 글자, 콤보, 점수, 안내 문구.
-/// - 끝나면 결과 패널(Img_ResultPanel): 점수·랭크·판정별 개수·최대 콤보·정확도·FULL COMBO/ALL PERFECT, 다시 하기·나가기 버튼.
+/// - 곡 정보(제목·채보 이름·Lv), 판정 글자, 콤보, 점수, 안내 문구, 테스트 플레이 표시.
+/// - 결과는 결과 씬(ResultScene)이 보여준다.
 /// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다.
 /// </summary>
 public class Canvas_InGame : MonoBehaviour
 {
-    [Header("플레이 중")]
     [SerializeField] private TMP_Text songInfoText;
     [SerializeField] private TMP_Text judgeText;
     [SerializeField] private TMP_Text comboText;
     [SerializeField] private TMP_Text scoreText;
     [Tooltip("불러오기 실패 등 안내 문구 (Txt_Message)")]
     [SerializeField] private TMP_Text messageText;
-
-    [Header("결과")]
-    [SerializeField] private GameObject resultPanel;
-    [SerializeField] private TMP_Text resultScoreText;
-    [SerializeField] private TMP_Text resultRankText;
-    [SerializeField] private TMP_Text resultJudgesText;
-    [SerializeField] private TMP_Text resultComboText;
-    [SerializeField] private TMP_Text resultAccuracyText;
-    [SerializeField] private TMP_Text resultBadgeText;
-    [SerializeField] private Button retryButton;
-    [SerializeField] private Button exitButton;
+    [Tooltip("테스트 플레이 표시 (Txt_TestPlay). 테스트 플레이일 때만 켠다")]
+    [SerializeField] private TMP_Text testPlayText;
 
     [Header("판정 색")]
     [SerializeField] private Color perfectColor = new Color32(0xFF, 0xD5, 0x4F, 0xFF);
@@ -38,28 +24,19 @@ public class Canvas_InGame : MonoBehaviour
     [SerializeField] private Color goodColor = new Color32(0x9C, 0xCC, 0x65, 0xFF);
     [SerializeField] private Color missColor = new Color32(0xEF, 0x53, 0x50, 0xFF);
 
-    private Action onRetry;
-    private Action onExit;
-
     /// <summary>
-    /// 곡 정보를 표시하고 결과 패널을 닫은 상태로 시작한다.
+    /// 곡 정보와 테스트 플레이 표시를 채우고 점수·콤보를 비운다.
     /// </summary>
-    public void Init(string songTitle, string chartName, int level, Action onRetry, Action onExit)
+    public void Init(string songTitle, string chartName, int level, bool isTestPlay)
     {
-        this.onRetry = onRetry;
-        this.onExit = onExit;
-
         songInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, songTitle, chartName, level);
         judgeText.text = string.Empty;
         comboText.text = string.Empty;
         scoreText.SetText("{0}", 0);
         messageText.text = string.Empty;
-        resultPanel.SetActive(false);
 
-        retryButton.onClick.RemoveListener(OnClickRetry);
-        retryButton.onClick.AddListener(OnClickRetry);
-        exitButton.onClick.RemoveListener(OnClickExit);
-        exitButton.onClick.AddListener(OnClickExit);
+        testPlayText.text = GameConstants.Play.TestPlayInGameText;
+        testPlayText.gameObject.SetActive(isTestPlay);
     }
 
     /// <summary>
@@ -68,7 +45,6 @@ public class Canvas_InGame : MonoBehaviour
     public void ShowMessage(string message)
     {
         messageText.text = message;
-        resultPanel.SetActive(false);
     }
 
     /// <summary>
@@ -88,52 +64,5 @@ public class Canvas_InGame : MonoBehaviour
         else comboText.text = string.Empty;
 
         scoreText.SetText("{0}", score);
-    }
-
-    /// <summary>
-    /// 결과 패널을 연다.
-    /// </summary>
-    public void ShowResult(ScoreCalculator score)
-    {
-        resultPanel.SetActive(true);
-
-        resultScoreText.text = score.Score.ToString("N0", CultureInfo.InvariantCulture);
-        resultRankText.text = score.Rank.ToString();
-        resultJudgesText.text =
-            $"{GameConstants.Play.PerfectText}  {score.PerfectCount}\n" +
-            $"{GameConstants.Play.GreatText}  {score.GreatCount}\n" +
-            $"{GameConstants.Play.GoodText}  {score.GoodCount}\n" +
-            $"{GameConstants.Play.MissText}  {score.MissCount}";
-        resultComboText.text = $"MAX COMBO  {score.MaxCombo}";
-        resultAccuracyText.text = $"정확도  {score.Accuracy.ToString("0.00", CultureInfo.InvariantCulture)}%";
-
-        if (score.IsAllPerfect) resultBadgeText.text = GameConstants.Play.AllPerfectText;
-        else if (score.IsFullCombo) resultBadgeText.text = GameConstants.Play.FullComboText;
-        else resultBadgeText.text = string.Empty;
-
-        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(retryButton.gameObject);
-    }
-
-    /// <summary>결과 버튼을 막는다 (씬 이동을 시작한 뒤 중복 실행 방지)</summary>
-    public void SetResultInteractable(bool interactable)
-    {
-        retryButton.interactable = interactable;
-        exitButton.interactable = interactable;
-    }
-
-    private void OnDestroy()
-    {
-        if (retryButton != null) retryButton.onClick.RemoveListener(OnClickRetry);
-        if (exitButton != null) exitButton.onClick.RemoveListener(OnClickExit);
-    }
-
-    private void OnClickRetry()
-    {
-        onRetry?.Invoke();
-    }
-
-    private void OnClickExit()
-    {
-        onExit?.Invoke();
     }
 }

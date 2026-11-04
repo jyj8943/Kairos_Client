@@ -9,6 +9,7 @@ using UnityEngine.UI;
 /// 에디터 곡 고르기 화면 UI. EditorSongSelectScene이 Init()을 호출한다.
 /// - 곡 목록은 받은 순서(SongDatabase 순서)대로 Btn_SongItem 프리팹을 생성해 채운다.
 /// - 곡 아이템으로 곡을 고르고, 새 채보 정보(이름·레벨)를 입력해 편집 씬으로 넘어간다.
+/// - 고른 곡의 내 채보(커스텀 채보)를 최신순으로 보여주고, 누르면 그 채보를 편집 씬에서 연다.
 /// - ESC는 InputManager 없이 입력 에셋의 UI/Cancel 액션으로 받는다.
 /// </summary>
 public class Canvas_EditorSongSelect : MonoBehaviour
@@ -21,6 +22,11 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     [Header("내 채보")]
     [SerializeField] private TMP_Text myChartTitleText;
     [SerializeField] private TMP_Text myChartEmptyText;
+    [SerializeField] private Btn_MyChartItem myChartItemPrefab;
+    [Tooltip("ScrollView_MyChart")]
+    [SerializeField] private ScrollRect myChartScrollRect;
+    [Tooltip("ScrollView_MyChart/Viewport/Content")]
+    [SerializeField] private RectTransform myChartContent;
 
     [Header("새 채보 만들기")]
     [SerializeField] private TMP_InputField chartNameInput;
@@ -34,14 +40,21 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     [SerializeField] private InputActionReference cancelAction;
 
     private readonly List<Btn_SongItem> songItems = new List<Btn_SongItem>();
+
+    /// <summary>내 채보 항목 풀. 곡을 바꿀 때 앞에서부터 다시 쓰고 남는 것은 끈다</summary>
+    private readonly List<Btn_MyChartItem> myChartItemPool = new List<Btn_MyChartItem>();
+    private readonly List<Btn_MyChartItem> activeMyChartItems = new List<Btn_MyChartItem>();
+    private readonly Vector3[] worldCorners = new Vector3[4];
+    private GameObject lastSelected;
     private Btn_SongItem chosenItem;
     private SongData chosenSong;
     private bool isInputEnabled;
 
     /// <summary>
-    /// 곡 목록을 만들고, 내비게이션과 버튼 리스너를 연결한 뒤 첫 곡을 고른 상태로 시작한다.
+    /// 곡 목록을 만들고, 내비게이션과 버튼 리스너를 연결한 뒤 처음 곡을 고른 상태로 시작한다.
     /// </summary>
-    public void Init(IReadOnlyList<SongData> songs)
+    /// <param name="initialSongId">처음에 고를 곡 (에디터에서 나온 경우). 없거나 목록에 없으면 첫 곡</param>
+    public void Init(IReadOnlyList<SongData> songs, string initialSongId = null)
     {
         errorText.text = string.Empty;
 
@@ -55,11 +68,25 @@ public class Canvas_EditorSongSelect : MonoBehaviour
 
         if (songItems.Count == 0) return;
 
-        Btn_SongItem firstItem = songItems[0];
+        Btn_SongItem firstItem = songItems.Find(view => view.Song.SongId == initialSongId) ?? songItems[0];
         OnSongChosen(firstItem.Song);
         selectionKeeper.SetDefaultSelectable(firstItem.Button);
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(firstItem.gameObject);
+    }
+
+    /// <summary>
+    /// 키보드로 내 채보 항목을 고르면 그 항목이 보이도록 스크롤한다 (선택이 바뀐 프레임에만).
+    /// </summary>
+    private void Update()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        GameObject selected = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
+        if (selected == lastSelected) return;
+
+        lastSelected = selected;
+        if (selected != null && selected.transform.parent == myChartContent)
+            ScrollToShow((RectTransform)selected.transform);
     }
 
     /// <summary>
@@ -128,10 +155,17 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     }
 
     /// <summary>
-    /// 곡 아이템끼리 위아래(순환 없음), 곡 → 채보 이름 입력창, 입력창 ↔ 레벨 ↔ 만들기 버튼을 연결한다.
+    /// 키보드 이동을 연결한다. 곡이나 내 채보 목록이 바뀔 때마다 다시 부른다.
+    /// - 곡 아이템끼리 위아래(순환 없음), 곡 → 내 채보 첫 항목 (없으면 채보 이름 입력창)
+    /// - 내 채보 항목끼리 위아래, 첫 항목 ↑ 없음, 마지막 항목 ↓ 채보 이름 입력창, ← 지금 고른 곡
+    /// - 입력창 ↔ 레벨 ↔ 만들기, 입력창 ↑ 내 채보 마지막 항목, 입력창 ← 지금 고른 곡
     /// </summary>
     private void ConnectNavigation()
     {
+        Selectable firstChart = activeMyChartItems.Count > 0 ? activeMyChartItems[0].Button : null;
+        Selectable lastChart = activeMyChartItems.Count > 0 ? activeMyChartItems[activeMyChartItems.Count - 1].Button : null;
+        Selectable chosenSongButton = chosenItem != null ? chosenItem.Button : null;
+
         for (int i = 0; i < songItems.Count; i++)
         {
             Navigation navigation = new Navigation
@@ -139,13 +173,22 @@ public class Canvas_EditorSongSelect : MonoBehaviour
                 mode = Navigation.Mode.Explicit,
                 selectOnUp = i > 0 ? songItems[i - 1].Button : null,
                 selectOnDown = i < songItems.Count - 1 ? songItems[i + 1].Button : null,
-                selectOnRight = chartNameInput
+                selectOnRight = firstChart != null ? firstChart : chartNameInput
             };
             songItems[i].Button.navigation = navigation;
         }
 
-        SetNavigation(chartNameInput, left: null, right: levelInput, up: null, down: createButton);
-        SetNavigation(levelInput, left: chartNameInput, right: null, up: null, down: createButton);
+        for (int i = 0; i < activeMyChartItems.Count; i++)
+        {
+            SetNavigation(activeMyChartItems[i].Button,
+                left: chosenSongButton,
+                right: null,
+                up: i > 0 ? activeMyChartItems[i - 1].Button : null,
+                down: i < activeMyChartItems.Count - 1 ? activeMyChartItems[i + 1].Button : (Selectable)chartNameInput);
+        }
+
+        SetNavigation(chartNameInput, left: chosenSongButton, right: levelInput, up: lastChart, down: createButton);
+        SetNavigation(levelInput, left: chartNameInput, right: null, up: lastChart, down: createButton);
         SetNavigation(createButton, left: chartNameInput, right: null, up: levelInput, down: null);
     }
 
@@ -174,22 +217,81 @@ public class Canvas_EditorSongSelect : MonoBehaviour
         chosenItem = item;
         chosenSong = song;
 
-        // 채보 이름 입력창에서 ←를 누르면 지금 고른 곡으로 돌아간다
-        Navigation navigation = chartNameInput.navigation;
-        navigation.selectOnLeft = item.Button;
-        chartNameInput.navigation = navigation;
-
         RefreshMyChartPanel();
+
+        // 내 채보 목록이 바뀌었으므로 키보드 이동을 다시 연결한다 (입력창 ← 지금 고른 곡 포함)
+        ConnectNavigation();
     }
 
     /// <summary>
-    /// 내 채보 패널을 고른 곡 기준으로 갱신한다.
-    /// TODO: 채보 JSON 저장 기능을 만든 뒤 chosenSong.SongId의 내 채보 목록을 연결한다.
+    /// 내 채보 패널을 고른 곡의 커스텀 채보로 채운다. chartId 내림차순(만든 시각이 늦은 것이 위)이다.
+    /// 항목은 풀에서 앞에서부터 다시 쓰고, 모자랄 때만 새로 만든다.
     /// </summary>
     private void RefreshMyChartPanel()
     {
         myChartTitleText.text = $"{chosenSong.Title} - 내 채보";
-        myChartEmptyText.gameObject.SetActive(true);
+
+        List<ChartData> charts = ChartRepository.GetCharts(chosenSong.SongId, ChartType.Custom);
+        charts.Sort((a, b) => string.CompareOrdinal(b.chartId, a.chartId));
+
+        activeMyChartItems.Clear();
+        for (int i = 0; i < charts.Count; i++)
+        {
+            if (i >= myChartItemPool.Count)
+            {
+                Btn_MyChartItem created = Instantiate(myChartItemPrefab, myChartContent);
+                created.name = myChartItemPrefab.name;
+                myChartItemPool.Add(created);
+            }
+
+            Btn_MyChartItem item = myChartItemPool[i];
+            item.gameObject.SetActive(true);
+            item.Init(charts[i], OpenMyChart);
+            activeMyChartItems.Add(item);
+        }
+
+        for (int i = charts.Count; i < myChartItemPool.Count; i++)
+            myChartItemPool[i].gameObject.SetActive(false);
+
+        myChartEmptyText.gameObject.SetActive(charts.Count == 0);
+        myChartScrollRect.verticalNormalizedPosition = 1f;
+    }
+
+    /// <summary>
+    /// 내 채보를 편집 씬에서 연다. 채보 이름·레벨은 편집 씬이 파일에서 읽는다.
+    /// </summary>
+    private void OpenMyChart(ChartData chart)
+    {
+        EditorEntryData data = new EditorEntryData
+        {
+            songId = chart.songId,
+            chartName = chart.chartName,
+            level = chart.level,
+            chartId = chart.chartId
+        };
+
+        if (GameManager.Scene.Load(GameConstants.Scenes.Editor, data))
+            SetInteractable(false);
+    }
+
+    /// <summary>
+    /// 항목이 Viewport 밖에 있으면 보이도록 내 채보 목록을 스크롤한다.
+    /// </summary>
+    private void ScrollToShow(RectTransform item)
+    {
+        RectTransform viewport = myChartScrollRect.viewport;
+        item.GetWorldCorners(worldCorners);
+        float itemBottom = viewport.InverseTransformPoint(worldCorners[0]).y;
+        float itemTop = viewport.InverseTransformPoint(worldCorners[1]).y;
+        Rect view = viewport.rect;
+
+        Vector2 position = myChartContent.anchoredPosition;
+        if (itemTop > view.yMax) position.y -= itemTop - view.yMax;
+        else if (itemBottom < view.yMin) position.y += view.yMin - itemBottom;
+        else return;
+
+        myChartScrollRect.StopMovement();
+        myChartContent.anchoredPosition = position;
     }
 
     /// <summary>
@@ -281,6 +383,8 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     private void SetInteractable(bool interactable)
     {
         foreach (Btn_SongItem item in songItems)
+            item.Button.interactable = interactable;
+        foreach (Btn_MyChartItem item in activeMyChartItems)
             item.Button.interactable = interactable;
 
         chartNameInput.interactable = interactable;

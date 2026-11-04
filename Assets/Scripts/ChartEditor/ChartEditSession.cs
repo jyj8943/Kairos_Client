@@ -103,15 +103,7 @@ public class ChartEditSession : MonoBehaviour
         Debug.Log($"[ChartEditSession] 시작: songId={SongId}, chartName={ChartName}, level={Level}, " +
                   $"chartId={ChartId ?? "(새 채보)"}, bpm={Bpm}, offsetMs={OffsetMs}, 곡 길이={SongLengthSeconds:0.###}초, " +
                   $"곡 끝 {TotalBeats:0.###}박 (tick {totalTicks})");
-
-        // 내 채보 열기: chartId가 있으면 파일을 불러와 세션을 채운다. 실패하면 빈 채보로 둔다
-        if (!string.IsNullOrEmpty(ChartId))
-        {
-            if (ChartRepository.TryLoad(SongId, ChartId, ChartType.Custom, out ChartData chart, out string error))
-                ApplyChartData(chart);
-            else
-                Debug.LogWarning($"[ChartEditSession] 채보를 불러오지 못해 빈 채보로 시작합니다: {error}", this);
-        }
+        // 내 채보 열기(chartId 있음)는 EditorScene이 파일을 읽어 ApplyChartData로 채운다
     }
 
     private void OnDestroy()
@@ -164,6 +156,14 @@ public class ChartEditSession : MonoBehaviour
             RefreshDebugView();
         }
 
+        return BuildChartData();
+    }
+
+    /// <summary>
+    /// 세션의 채보 정보와 노트를 그대로 채보 형식으로 만든다. 새 ID를 만들지 않는다 (새 채보면 chartId가 null).
+    /// </summary>
+    public ChartData BuildChartData()
+    {
         return new ChartData
         {
             version = GameConstants.Chart.CurrentVersion,
@@ -253,7 +253,55 @@ public class ChartEditSession : MonoBehaviour
         return true;
     }
 
-    // TODO: CreateTestPlayData() / Restore() — 테스트 플레이로 넘길 데이터 만들기와 돌아왔을 때 복원
+    /// <summary>
+    /// 테스트 플레이로 넘길 데이터를 만든다. 저장하지 않고, 수정 여부도 그대로 둔다.
+    /// 노트가 없거나 시작 박 뒤(같은 박 포함)에 노트가 없으면 null과 이유를 돌려준다.
+    /// </summary>
+    /// <param name="startBeat">시작 위치 (그리드의 현재 위치 선 박)</param>
+    /// <param name="snapDivision">돌아왔을 때 되돌릴 박자 스냅</param>
+    /// <param name="gridHeightScale">돌아왔을 때 되돌릴 그리드 높이 배율</param>
+    /// <param name="tool">돌아왔을 때 되돌릴 도구</param>
+    public TestPlayData CreateTestPlayData(float startBeat, int snapDivision, float gridHeightScale, EditorTool tool, out string error)
+    {
+        if (Data.Notes.Count == 0)
+        {
+            error = GameConstants.Editor.TestPlayNoNotesMessage;
+            return null;
+        }
+
+        int startTick = BeatGridMath.BeatToTick(startBeat);
+        if (Data.Notes[Data.Notes.Count - 1].Tick < startTick)
+        {
+            error = GameConstants.Editor.TestPlayNoNotesAfterMessage;
+            return null;
+        }
+
+        ChartData chart = BuildChartData();
+        error = string.Empty;
+        return new TestPlayData
+        {
+            songId = SongId,
+            chart = chart,
+            startBeat = startBeat,
+            editorState = new EditorRestoreState
+            {
+                chart = chart,
+                isDirty = IsDirty,
+                currentBeat = startBeat,
+                snapDivision = snapDivision,
+                gridHeightScale = gridHeightScale,
+                tool = tool
+            }
+        };
+    }
+
+    /// <summary>
+    /// 테스트 플레이에서 돌아와 상태를 되돌릴 때 수정 여부를 되돌린다 (ApplyChartData가 false로 만들기 때문).
+    /// </summary>
+    public void RestoreDirty(bool dirty)
+    {
+        SetDirty(dirty);
+    }
 
     /// <summary>
     /// beat를 tick으로 반올림한다. 반올림 오차가 허용값을 넘으면 count를 늘린다.

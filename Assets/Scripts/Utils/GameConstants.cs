@@ -19,6 +19,7 @@ public static class GameConstants
         public const string EditorSongSelect = "EditorSongSelectScene";
         public const string Editor = "EditorScene";
         public const string InGame = "InGameScene";
+        public const string Result = "ResultScene";
     }
 
     /// <summary>인게임 플레이 규칙 (기획서 2-1). 판정 범위 기본값은 잠정치이며 InGameScene 인스펙터에서 조정한다</summary>
@@ -55,6 +56,23 @@ public static class GameConstants
 
         /// <summary>마지막 노트 뒤 결과까지 기다리는 시간 (초)</summary>
         public const double EndPaddingSeconds = 1.0;
+
+        /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
+        public const double TestPlayLeadInSeconds = 2.0;
+
+        /// <summary>음원 중간부터 예약 재생할 때 두는 최소 지연 (초). 오디오 버퍼보다 길어야 시작이 늦지 않는다</summary>
+        public const double ScheduleLatencySeconds = 0.1;
+
+        /// <summary>테스트 플레이 표시와 결과 화면 돌아가기 버튼 문구</summary>
+        public const string TestPlayLabel = "테스트 플레이";
+        public const string TestPlayInGameText = "테스트 플레이 · ESC 에디터로";
+        public const string ReturnToEditorLabel = "에디터로 돌아가기";
+        public const string ReturnToSongSelectLabel = "곡 선택으로";
+        public const string RetryLabel = "다시 하기";
+
+        /// <summary>결과 버튼 단축키 표시 (버튼 문구 뒤에 붙인다)</summary>
+        public const string RetryKeyHint = " (R)";
+        public const string ReturnKeyHint = " (Enter)";
 
         /// <summary>판정 글자</summary>
         public const string PerfectText = "PERFECT";
@@ -130,6 +148,18 @@ public static class GameConstants
         public const string SaveStatusFailed = "저장 실패";
         public const string SaveStatusUnsaved = "저장 안 됨";
         public const string SaveTimeFormat = "HH:mm";
+
+        /// <summary>저장하지 않고 나가려 할 때 안내. 이 시간(초) 안에 한 번 더 누르면 나간다</summary>
+        public const string ExitUnsavedWarning = "저장하지 않았습니다 · 한 번 더 누르면 나갑니다";
+        public const float ExitConfirmSeconds = 3f;
+
+        /// <summary>테스트 플레이를 시작할 수 없을 때 안내. 이 시간(초)만 보여주고 저장 상태 표시로 되돌린다</summary>
+        public const string TestPlayNoNotesMessage = "노트가 없습니다 · 노트를 찍은 뒤 테스트 플레이하세요";
+        public const string TestPlayNoNotesAfterMessage = "현재 위치 뒤에 노트가 없습니다";
+        public const float StatusMessageSeconds = 3f;
+
+        /// <summary>곡 고르기의 내 채보 항목 정보: {0} 레벨, {1} 노트 수</summary>
+        public const string MyChartInfoFormat = "Lv.{0} · 노트 {1}";
 
         /// <summary>박자 스냅 선택지 하나: 1박을 나누는 칸 수와 드롭다운 표시 이름</summary>
         public readonly struct SnapOption

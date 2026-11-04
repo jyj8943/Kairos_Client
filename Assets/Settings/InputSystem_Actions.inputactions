@@ -714,6 +714,34 @@
                     "isPartOfComposite": false
                 }
             ]
+        },
+        {
+            "name": "Result",
+            "id": "604205f5-cbc6-4232-9ce7-b03fc2ed692d",
+            "actions": [
+                {
+                    "name": "Retry",
+                    "type": "Button",
+                    "id": "4a092cd8-093e-4e85-87be-aa56ac00e943",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "0f274db9-1154-4eb2-b241-7e362f01248a",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Retry",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": [

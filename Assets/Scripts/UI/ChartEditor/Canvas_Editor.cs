@@ -24,6 +24,8 @@ public class Canvas_Editor : MonoBehaviour
     [Tooltip("저장 상태 (Txt_SaveStatus). 처음에는 비워 둔다")]
     [SerializeField] private TMP_Text saveStatusText;
     [SerializeField] private Button saveButton;
+    [SerializeField] private Button exitButton;
+    [SerializeField] private Button testPlayButton;
 
     [Header("그리드")]
     [Tooltip("휠 입력을 받을 영역 (Img_Grid)")]
@@ -61,6 +63,11 @@ public class Canvas_Editor : MonoBehaviour
     private ChartEditSession session;
     private ChartEditData data;
     private Action onSaveRequested;
+    private Action onExitRequested;
+    private Action onTestPlayRequested;
+
+    /// <summary>마지막 저장 결과 문구. 나가기 안내가 끝나면 이 문구로 되돌린다</summary>
+    private string lastSaveStatus = string.Empty;
     private bool isInputEnabled;
 
     /// <summary>
@@ -88,10 +95,14 @@ public class Canvas_Editor : MonoBehaviour
     /// </summary>
     /// <param name="song">편집 중인 곡 (제목·길이 표시용)</param>
     /// <param name="onSaveRequested">Btn_Save·Ctrl+S를 누르면 부를 저장 요청 (EditorScene)</param>
-    public void Init(ChartGridView grid, ChartEditSession session, SongData song, Action onSaveRequested)
+    /// <param name="onExitRequested">Btn_Exit를 누르면 부를 나가기 요청 (EditorScene)</param>
+    /// <param name="onTestPlayRequested">Btn_TestPlay를 누르면 부를 테스트 플레이 요청 (EditorScene)</param>
+    public void Init(ChartGridView grid, ChartEditSession session, SongData song, Action onSaveRequested, Action onExitRequested, Action onTestPlayRequested)
     {
         this.grid = grid;
         this.onSaveRequested = onSaveRequested;
+        this.onExitRequested = onExitRequested;
+        this.onTestPlayRequested = onTestPlayRequested;
 
         if (data != null) data.OnChanged -= RefreshNoteCountText;
         data = session.Data;
@@ -103,10 +114,15 @@ public class Canvas_Editor : MonoBehaviour
 
         saveButton.onClick.RemoveListener(RequestSave);
         saveButton.onClick.AddListener(RequestSave);
+        exitButton.onClick.RemoveListener(RequestExit);
+        exitButton.onClick.AddListener(RequestExit);
+        testPlayButton.onClick.RemoveListener(RequestTestPlay);
+        testPlayButton.onClick.AddListener(RequestTestPlay);
 
         chartInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, song.Title, session.ChartName, session.Level);
         songLengthText.text = TimeFormat.ToMinSec(session.SongLengthSeconds);
-        saveStatusText.text = string.Empty;
+        lastSaveStatus = string.Empty;
+        saveStatusText.text = lastSaveStatus;
 
         // BPM은 표시만 한다 (선택·입력 불가)
         bpmInput.text = SongData.FormatBpm(session.Bpm);
@@ -158,9 +174,52 @@ public class Canvas_Editor : MonoBehaviour
     /// </summary>
     public void ShowSaveResult(bool saved)
     {
-        saveStatusText.text = saved
+        SetSaveStatus(saved
             ? string.Format(GameConstants.Editor.SaveStatusSaved, DateTime.Now.ToString(GameConstants.Editor.SaveTimeFormat, CultureInfo.InvariantCulture))
-            : GameConstants.Editor.SaveStatusFailed;
+            : GameConstants.Editor.SaveStatusFailed);
+    }
+
+    /// <summary>
+    /// 저장하지 않고 나가려 할 때 안내를 표시한다 ("저장하지 않았습니다 · 한 번 더 누르면 나갑니다").
+    /// </summary>
+    public void ShowExitWarning()
+    {
+        ShowStatusMessage(GameConstants.Editor.ExitUnsavedWarning);
+    }
+
+    /// <summary>
+    /// 저장 상태 자리에 안내를 잠깐 표시한다. 되돌릴 때는 RefreshSaveStatus를 부른다 (EditorScene이 시간을 잰다).
+    /// </summary>
+    public void ShowStatusMessage(string message)
+    {
+        saveStatusText.text = message;
+    }
+
+    /// <summary>
+    /// 도구 토글을 바꾼다 (테스트 플레이에서 돌아와 복원할 때).
+    /// </summary>
+    public void SetTool(EditorTool tool)
+    {
+        Toggle target = shortNoteToggle;
+        if (tool == EditorTool.LongNote) target = longNoteToggle;
+        else if (tool == EditorTool.Select) target = selectToggle;
+        else if (tool == EditorTool.Eraser) target = eraserToggle;
+
+        if (target != null) target.isOn = true;
+    }
+
+    /// <summary>
+    /// 나가기 안내를 끝내고 저장 상태 표시(마지막 저장 결과 또는 "저장 안 됨")로 되돌린다.
+    /// </summary>
+    public void RefreshSaveStatus()
+    {
+        saveStatusText.text = session != null && session.IsDirty ? GameConstants.Editor.SaveStatusUnsaved : lastSaveStatus;
+    }
+
+    private void SetSaveStatus(string status)
+    {
+        lastSaveStatus = status;
+        saveStatusText.text = status;
     }
 
     private void OnDestroy()
@@ -169,6 +228,8 @@ public class Canvas_Editor : MonoBehaviour
 
         if (beatSnapDropdown != null) beatSnapDropdown.onValueChanged.RemoveListener(OnBeatSnapChanged);
         if (saveButton != null) saveButton.onClick.RemoveListener(RequestSave);
+        if (exitButton != null) exitButton.onClick.RemoveListener(RequestExit);
+        if (testPlayButton != null) testPlayButton.onClick.RemoveListener(RequestTestPlay);
         if (data != null) data.OnChanged -= RefreshNoteCountText;
         if (session != null) session.OnDirtyChanged -= OnDirtyChanged;
     }
@@ -178,12 +239,22 @@ public class Canvas_Editor : MonoBehaviour
     /// </summary>
     private void OnDirtyChanged(bool isDirty)
     {
-        if (isDirty) saveStatusText.text = GameConstants.Editor.SaveStatusUnsaved;
+        if (isDirty) SetSaveStatus(GameConstants.Editor.SaveStatusUnsaved);
     }
 
     private void RequestSave()
     {
         onSaveRequested?.Invoke();
+    }
+
+    private void RequestExit()
+    {
+        onExitRequested?.Invoke();
+    }
+
+    private void RequestTestPlay()
+    {
+        onTestPlayRequested?.Invoke();
     }
 
     /// <summary>
