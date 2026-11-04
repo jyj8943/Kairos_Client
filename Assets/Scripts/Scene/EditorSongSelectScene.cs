@@ -3,10 +3,10 @@ using UnityEngine;
 
 /// <summary>
 /// 에디터 곡 고르기 씬 진입점. EditorSongSelectScene.unity 루트의 "EditorSongSelectScene" 오브젝트에 붙인다.
+/// - 곡 목록은 GameManager.Songs에서 받는다.
 /// </summary>
 public class EditorSongSelectScene : SceneBase
 {
-    [SerializeField] private SongDatabase songDatabase;
     [SerializeField] private Canvas_EditorSongSelect canvas;
 
     /// <summary>
@@ -14,8 +14,8 @@ public class EditorSongSelectScene : SceneBase
     /// </summary>
     protected override IEnumerator Init()
     {
-        if (songDatabase == null || songDatabase.Songs.Count == 0)
-            Debug.LogError("[EditorSongSelectScene] songDatabase가 없거나 곡이 0개입니다.", this);
+        if (GameManager.Songs.Songs.Count == 0)
+            Debug.LogError("[EditorSongSelectScene] 곡 목록이 비어 있습니다.", this);
 
         if (canvas == null)
         {
@@ -23,8 +23,7 @@ public class EditorSongSelectScene : SceneBase
             yield break;
         }
 
-        if (songDatabase != null)
-            canvas.Init(songDatabase);
+        canvas.Init(GameManager.Songs.Songs);
     }
 
     /// <summary>

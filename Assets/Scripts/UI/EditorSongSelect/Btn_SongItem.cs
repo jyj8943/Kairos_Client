@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -54,8 +53,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
 
         titleText.text = song.Title;
 
-        // 반올림하지 않는다: 정수면 "216", 소수면 둘째 자리까지 "150.61"
-        string bpmText = song.Bpm > 0f ? song.Bpm.ToString("0.##", CultureInfo.InvariantCulture) : "-";
+        string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : "-";
         infoText.text = $"BPM {bpmText} · {song.GetLengthText()}";
 
         cover.sprite = song.Cover;

@@ -8,6 +8,9 @@ public static class GameManager
     public static bool IsInitialized { get; internal set; }
     
     public static GameSceneManager Scene => GameSceneManager.Instance;
+
+    /// <summary>제공 곡 목록 (곡 찾기·검사)</summary>
+    public static SongManager Songs => SongManager.Instance;
 }
 
 /// <summary>

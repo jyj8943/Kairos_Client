@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 에디터 곡 고르기 화면 UI. EditorSongSelectScene이 Init()을 호출한다.
-/// - 곡 목록은 SongDatabase 순서대로 Btn_SongItem 프리팹을 생성해 채운다.
+/// - 곡 목록은 받은 순서(SongDatabase 순서)대로 Btn_SongItem 프리팹을 생성해 채운다.
 /// - 곡 아이템으로 곡을 고르고, 새 채보 정보(이름·레벨)를 입력해 편집 씬으로 넘어간다.
 /// - ESC는 InputManager 없이 입력 에셋의 UI/Cancel 액션으로 받는다.
 /// </summary>
@@ -41,11 +41,11 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     /// <summary>
     /// 곡 목록을 만들고, 내비게이션과 버튼 리스너를 연결한 뒤 첫 곡을 고른 상태로 시작한다.
     /// </summary>
-    public void Init(SongDatabase songDatabase)
+    public void Init(IReadOnlyList<SongData> songs)
     {
         errorText.text = string.Empty;
 
-        CreateSongItems(songDatabase);
+        CreateSongItems(songs);
         ConnectNavigation();
 
         exitButton.onClick.RemoveListener(OnClickExit);
@@ -108,14 +108,14 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     /// <summary>
     /// Content의 기존 자식을 비우고 곡마다 아이템을 생성한다.
     /// </summary>
-    private void CreateSongItems(SongDatabase songDatabase)
+    private void CreateSongItems(IReadOnlyList<SongData> songs)
     {
         for (int i = songListContent.childCount - 1; i >= 0; i--)
             Destroy(songListContent.GetChild(i).gameObject);
 
         songItems.Clear();
 
-        foreach (SongData song in songDatabase.Songs)
+        foreach (SongData song in songs)
         {
             if (song == null) continue;
 

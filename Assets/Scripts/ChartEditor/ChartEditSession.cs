@@ -11,8 +11,7 @@ using UnityEngine;
 /// </summary>
 public class ChartEditSession : MonoBehaviour
 {
-    [Header("테스트 기본값 (씬을 직접 실행해 채보 정보가 없을 때)")]
-    [SerializeField] private string testSongId = "test_song";
+    [Header("테스트 기본값 (씬을 직접 실행해 채보 정보가 없을 때. 곡은 곡 목록의 첫 곡)")]
     [SerializeField] private string testChartName = "테스트 채보";
     [SerializeField] private int testLevel = 1;
 
@@ -43,6 +42,15 @@ public class ChartEditSession : MonoBehaviour
     public int Level { get; private set; }
     public float Bpm { get; private set; }
 
+    /// <summary>음원 시작부터 0박까지의 시간 (ms). 곡 정보(SongData)의 값</summary>
+    public int OffsetMs { get; private set; }
+
+    /// <summary>곡 길이 (초). 곡 음원 길이</summary>
+    public float SongLengthSeconds { get; private set; }
+
+    /// <summary>곡 끝 위치 (박) = 곡 길이를 offset·BPM으로 바꾼 값. 0 이상</summary>
+    public float TotalBeats { get; private set; }
+
     /// <summary>편집 중인 노트. 표시용으로 읽기만 하고, 바꿀 때는 AddNote / RemoveNote를 쓴다</summary>
     public ChartEditData Data { get; private set; }
 
@@ -50,15 +58,26 @@ public class ChartEditSession : MonoBehaviour
     public bool IsDirty { get; private set; }
 
     /// <summary>
-    /// 채보 정보를 채우고 빈 노트 데이터를 만든다. 수정 여부는 false로 시작한다.
+    /// 곡 정보(BPM·offset·음원 길이)로 세션을 시작한다. EditorScene이 호출한다.
     /// </summary>
-    /// <param name="entry">곡 고르기 씬이 넘긴 채보 정보. null이면 테스트 기본값을 쓴다</param>
-    public void Init(EditorEntryData entry, float bpm, float songLengthSeconds)
+    /// <param name="entry">곡 고르기 씬이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
+    public void Init(EditorEntryData entry, SongData song)
+    {
+        Init(entry, song.SongId, song.Bpm, song.OffsetMs, song.Length);
+    }
+
+    /// <summary>
+    /// 채보 정보를 채우고 빈 노트 데이터를 만든다. 수정 여부는 false로 시작한다.
+    /// 곡 끝 tick은 곡 길이를 offset·BPM으로 바꾼 박에서 구하고, 곡 끝을 넘지 않게 내림한다.
+    /// (EditMode 테스트처럼 음원 없이 시작할 때도 이 함수를 쓴다)
+    /// </summary>
+    /// <param name="entry">곡 고르기 씬이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
+    public void Init(EditorEntryData entry, string songId, float bpm, int offsetMs, float songLengthSeconds)
     {
         if (entry == null)
         {
-            Debug.LogWarning("[ChartEditSession] 채보 정보가 없어 테스트 기본값으로 시작합니다. (EditorScene을 직접 실행한 경우)", this);
-            entry = new EditorEntryData { songId = testSongId, chartName = testChartName, level = testLevel, chartId = null };
+            Debug.LogWarning("[ChartEditSession] 채보 정보가 없어 테스트 기본 채보 이름·레벨로 시작합니다. (EditorScene을 직접 실행한 경우)", this);
+            entry = new EditorEntryData { songId = songId, chartName = testChartName, level = testLevel, chartId = null };
         }
 
         SongId = entry.songId;
@@ -66,10 +85,13 @@ public class ChartEditSession : MonoBehaviour
         ChartName = entry.chartName;
         Level = entry.level;
         Bpm = bpm;
+        OffsetMs = offsetMs;
+        SongLengthSeconds = songLengthSeconds;
+        TotalBeats = Mathf.Max(0f, BeatGridMath.SecondsToBeat(songLengthSeconds, bpm, offsetMs));
 
         if (Data != null) Data.OnChanged -= RefreshDebugNotes;
         if (Data != null) Data.OnChanged -= RefreshDebugView;
-        int totalTicks = BeatGridMath.BeatToTick(BeatGridMath.SecondsToBeats(songLengthSeconds, bpm));
+        int totalTicks = Mathf.FloorToInt(TotalBeats * GameConstants.Editor.TicksPerBeat);
         Data = new ChartEditData(totalTicks, GameConstants.Editor.LaneCount);
         Data.OnChanged += RefreshDebugView;
         Data.OnChanged += RefreshDebugNotes;
@@ -79,7 +101,8 @@ public class ChartEditSession : MonoBehaviour
         RefreshDebugNotes();
 
         Debug.Log($"[ChartEditSession] 시작: songId={SongId}, chartName={ChartName}, level={Level}, " +
-                  $"chartId={ChartId ?? "(새 채보)"}, bpm={Bpm}, 곡 끝 tick={totalTicks}");
+                  $"chartId={ChartId ?? "(새 채보)"}, bpm={Bpm}, offsetMs={OffsetMs}, 곡 길이={SongLengthSeconds:0.###}초, " +
+                  $"곡 끝 {TotalBeats:0.###}박 (tick {totalTicks})");
 
         // 내 채보 열기: chartId가 있으면 파일을 불러와 세션을 채운다. 실패하면 빈 채보로 둔다
         if (!string.IsNullOrEmpty(ChartId))

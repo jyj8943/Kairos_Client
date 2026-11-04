@@ -1021,6 +1021,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "Save",
+                    "type": "Button",
+                    "id": "416e2231-c3b2-48ed-9b5a-5fde654e398b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -1056,6 +1065,39 @@
                     "action": "Point",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "Ctrl+S",
+                    "id": "60f32cfd-4501-41ce-a086-09d853a18376",
+                    "path": "OneModifier",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Save",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "modifier",
+                    "id": "ad22d72b-f08f-4ec4-8961-372d65f98b21",
+                    "path": "<Keyboard>/ctrl",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Save",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "binding",
+                    "id": "0654e066-fce1-4d66-ba87-05f32bfdb6cd",
+                    "path": "<Keyboard>/s",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Save",
+                    "isComposite": false,
+                    "isPartOfComposite": true
                 }
             ]
         }

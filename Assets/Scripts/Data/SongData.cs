@@ -1,3 +1,4 @@
+using System.Globalization;
 using UnityEngine;
 
 /// <summary>
@@ -38,7 +39,15 @@ public class SongData : ScriptableObject
     /// </summary>
     public string GetLengthText()
     {
-        int totalSeconds = Mathf.FloorToInt(Length);
-        return $"{totalSeconds / 60}:{totalSeconds % 60:00}";
+        return TimeFormat.ToMinSec(Length);
+    }
+
+    /// <summary>
+    /// BPM 표시 문자열. 반올림하지 않는다: 정수면 "216", 소수면 둘째 자리까지 "150.61".
+    /// 곡 목록과 에디터가 같은 규칙을 쓰도록 여기서만 만든다.
+    /// </summary>
+    public static string FormatBpm(float bpm)
+    {
+        return bpm.ToString("0.##", CultureInfo.InvariantCulture);
     }
 }

@@ -11,11 +11,21 @@ public static class BeatGridMath
     private const float SnapEpsilon = 0.0001f;
 
     /// <summary>
-    /// 초를 박 수로 바꾼다. (BPM 변속이 없다고 본다)
+    /// 음원 시간(초)을 박으로 바꾼다. 0박 = 음원 시작 + offsetMs. (BPM 변속이 없다고 본다)
+    /// 박 = (초 − offsetMs ÷ 1000) × BPM ÷ 60. offset 이전 시간은 음수 박이 된다.
     /// </summary>
-    public static float SecondsToBeats(float seconds, float bpm)
+    public static float SecondsToBeat(float seconds, float bpm, int offsetMs)
     {
-        return seconds * bpm / 60f;
+        return (seconds - offsetMs / 1000f) * bpm / 60f;
+    }
+
+    /// <summary>
+    /// 박을 음원 시간(초)으로 바꾼다. SecondsToBeat의 반대 변환이다.
+    /// 초 = 박 × 60 ÷ BPM + offsetMs ÷ 1000
+    /// </summary>
+    public static float BeatToSeconds(float beat, float bpm, int offsetMs)
+    {
+        return beat * 60f / bpm + offsetMs / 1000f;
     }
 
     /// <summary>

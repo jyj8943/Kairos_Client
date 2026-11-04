@@ -63,6 +63,18 @@ public static class GameConstants
         public const float GridHeightStep = 0.25f;
         public const float DefaultGridHeight = 1f;
 
+        /// <summary>상단 바 채보 정보: {0} 곡 제목, {1} 채보 이름, {2} 레벨</summary>
+        public const string ChartInfoFormat = "{0} · {1} · Lv.{2}";
+
+        /// <summary>타임라인 정보: {0} 현재 위치 시간, {1} 곡 길이, {2} 마디 번호</summary>
+        public const string TimeInfoFormat = "{0} / {1} · 마디 {2}";
+
+        /// <summary>저장 상태 표시. Saved의 {0}에 저장 시각(SaveTimeFormat)이 들어간다</summary>
+        public const string SaveStatusSaved = "저장됨 {0}";
+        public const string SaveStatusFailed = "저장 실패";
+        public const string SaveStatusUnsaved = "저장 안 됨";
+        public const string SaveTimeFormat = "HH:mm";
+
         /// <summary>박자 스냅 선택지 하나: 1박을 나누는 칸 수와 드롭다운 표시 이름</summary>
         public readonly struct SnapOption
         {

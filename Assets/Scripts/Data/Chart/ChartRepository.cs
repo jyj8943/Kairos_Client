@@ -12,7 +12,7 @@ using UnityEngine;
 /// - 파일 이름은 chartId만 쓴다. 채보 이름은 파일 이름에 쓰지 않는다.
 /// - 저장은 임시 파일({chartId}.json.tmp)에 먼저 쓰고 다 쓰면 원래 파일과 바꿔치기한다.
 /// - 읽을 때 형식을 검사하고, JSON이 깨진 파일은 .broken으로 이름을 바꿔 백업한다.
-/// TODO: SongDatabase를 전역에서 쓰게 되면 songId가 제공 곡인지 검사한다.
+/// - 곡 검사는 호출하는 쪽에서 GameManager.Songs로 한다 (이 클래스는 파일만 다룬다).
 /// </summary>
 public static class ChartRepository
 {

@@ -285,7 +285,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9b304c858e109c4c85c260a3cb89c08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EditorSongSelectScene
-  songDatabase: {fileID: 11400000, guid: a17670204ea27b2428cc05d68c8996d5, type: 2}
   canvas: {fileID: 256362490}
 --- !u!4 &166851067
 Transform:
@@ -3462,7 +3461,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 3
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
