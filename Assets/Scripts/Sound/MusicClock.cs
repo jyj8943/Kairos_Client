@@ -133,4 +133,13 @@ public class MusicClock
     {
         return dsp - startDsp + startPosition;
     }
+
+    /// <summary>
+    /// 곡 시간을 DSP 시각으로 바꾼다 (DspToSongTime의 반대). 효과음을 박에 맞춰 예약할 때 쓴다.
+    /// 일시정지 중에는 재개 시각을 알 수 없으므로 의미가 없다.
+    /// </summary>
+    public double SongTimeToDsp(double songTime)
+    {
+        return songTime - startPosition + startDsp;
+    }
 }

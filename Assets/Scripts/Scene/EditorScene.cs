@@ -21,6 +21,17 @@ public class EditorScene : SceneBase
     [SerializeField] private EditorNotePlacer notePlacer;
     [SerializeField] private Canvas_Editor canvas;
 
+    [Header("재생")]
+    [SerializeField] private EditorPlayback playback;
+
+#if UNITY_EDITOR
+    [Header("개발용 (Unity 에디터 전용, 빌드에 포함되지 않음)")]
+    [Tooltip("BPM·offsetMs 조정 패널 (F1). EditorOnly 태그라 빌드에서 빠진다")]
+    [SerializeField] private Canvas_SongTuning songTuning;
+#endif
+
+    private SongData song;
+
     /// <summary>Init을 끝까지 마쳤으면 true. 곡을 찾지 못해 돌아가는 중이면 OnEnter에서 입력을 켜지 않는다</summary>
     private bool isReady;
 
@@ -45,14 +56,14 @@ public class EditorScene : SceneBase
         Debug.Log("[EditorScene] Init");
         isReady = false;
 
-        if (session == null || grid == null || noteLayer == null || notePlacer == null || canvas == null)
+        if (session == null || grid == null || noteLayer == null || notePlacer == null || canvas == null || playback == null)
         {
-            Debug.LogError("[EditorScene] session, grid, noteLayer, notePlacer, canvas 중 연결되지 않은 것이 있습니다.", this);
+            Debug.LogError("[EditorScene] session, grid, noteLayer, notePlacer, canvas, playback 중 연결되지 않은 것이 있습니다.", this);
             yield break;
         }
 
         EditorEntryData entry = GameManager.Scene.TakeSceneData<EditorEntryData>();
-        SongData song = FindSong(entry);
+        song = FindSong(entry);
         if (song == null || song.Bpm <= 0f)
         {
             Debug.LogError($"[EditorScene] 편집할 곡을 쓸 수 없어 곡 고르기로 돌아갑니다: songId={entry?.songId ?? "(없음)"}, " +
@@ -97,11 +108,26 @@ public class EditorScene : SceneBase
         notePlacer.Init(grid, session, () => canvas.CurrentTool);
         canvas.Init(grid, session, song, OnSaveRequested, OnExitRequested, OnTestPlayRequested);
 
+        // 재생은 정지 상태로 시작한다 (테스트 플레이에서 돌아온 경우도)
+        playback.Init(grid, session, song, () => canvas.SetPlaying(playback.IsPlaying), canvas.RefreshTimeline);
+        SubscribeCanvasEvents();
+
         if (restore != null)
         {
             canvas.SetTool(restore.tool);
             canvas.RefreshSaveStatus();
         }
+        else if (chart != null && !Mathf.Approximately(chart.timingPoints[0].bpm, song.Bpm))
+        {
+            // 곡 BPM을 바꾼 뒤 예전 채보를 연 경우. 자동으로 고치지 않고 알리기만 한다 (편집은 채보 BPM으로)
+            Debug.LogWarning($"[EditorScene] {GameConstants.Editor.BpmMismatchWarning}: 곡 {SongData.FormatBpm(song.Bpm)}, " +
+                             $"채보 {SongData.FormatBpm(chart.timingPoints[0].bpm)} (chartId={chart.chartId}). 편집은 채보 BPM으로 합니다.", this);
+            canvas.ShowStatusMessage(GameConstants.Editor.BpmMismatchWarning);
+        }
+
+#if UNITY_EDITOR
+        if (songTuning != null) songTuning.Init(song, session, ApplyTiming);
+#endif
 
         exitConfirmUntil = -1f;
         statusResetAt = -1f;
@@ -130,6 +156,9 @@ public class EditorScene : SceneBase
 
         Debug.Log("[EditorScene] OnEnter");
         canvas.EnableInput();
+#if UNITY_EDITOR
+        if (songTuning != null) songTuning.EnableInput();
+#endif
     }
 
     /// <summary>
@@ -137,7 +166,92 @@ public class EditorScene : SceneBase
     /// </summary>
     public override void OnExit()
     {
+        if (playback != null) playback.Stop(false);
         if (canvas != null) canvas.DisableInput();
+#if UNITY_EDITOR
+        if (songTuning != null) songTuning.DisableInput();
+#endif
+        UnsubscribeCanvasEvents();
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeCanvasEvents();
+    }
+
+    private void SubscribeCanvasEvents()
+    {
+        UnsubscribeCanvasEvents();
+        canvas.PlayToggleRequested += playback.Toggle;
+        canvas.ManualMoveStarting += StopPlaybackWithSnap;
+        canvas.SeekStarted += StopPlaybackWithoutSnap;
+        canvas.SeekDragged += OnSeekDragged;
+        canvas.SeekReleased += OnSeekReleased;
+        canvas.MetronomeChanged += playback.SetMetronome;
+    }
+
+    private void UnsubscribeCanvasEvents()
+    {
+        if (canvas == null || playback == null) return;
+
+        canvas.PlayToggleRequested -= playback.Toggle;
+        canvas.ManualMoveStarting -= StopPlaybackWithSnap;
+        canvas.SeekStarted -= StopPlaybackWithoutSnap;
+        canvas.SeekDragged -= OnSeekDragged;
+        canvas.SeekReleased -= OnSeekReleased;
+        canvas.MetronomeChanged -= playback.SetMetronome;
+    }
+
+    private void StopPlaybackWithSnap()
+    {
+        playback.Stop(true);
+    }
+
+    private void StopPlaybackWithoutSnap()
+    {
+        playback.Stop(false);
+    }
+
+    /// <summary>
+    /// 타임라인 슬라이더를 끄는 중: 그 시간으로 그리드를 옮긴다 (스냅에 맞추지 않음).
+    /// </summary>
+    private void OnSeekDragged(float normalized)
+    {
+        MoveToTime(normalized * session.SongLengthSeconds, false);
+    }
+
+    /// <summary>
+    /// 타임라인 슬라이더를 놓음: 그 위치의 가장 가까운 스냅 선으로 맞춘다.
+    /// </summary>
+    private void OnSeekReleased(float normalized)
+    {
+        MoveToTime(normalized * session.SongLengthSeconds, true);
+    }
+
+    private void MoveToTime(float seconds, bool snapToGrid)
+    {
+        float beat = BeatGridMath.SecondsToBeat(seconds, session.Bpm, session.OffsetMs);
+        if (snapToGrid) beat = BeatGridMath.SnapBeat(beat, grid.SnapDivision);
+        grid.SetCurrentBeat(beat);
+        canvas.RefreshTimeline();
+    }
+
+    /// <summary>
+    /// BPM·offsetMs를 바꾼다 (Unity 에디터의 조정 도구). 지금 보고 있는 시간을 유지한 채 그리드를 다시 맞추므로,
+    /// offset을 바꾸면 마디선이 음악에 대해 움직인다. 재생 중이면 그 자리에서 다시 재생한다.
+    /// </summary>
+    private void ApplyTiming(float bpm, int offsetMs)
+    {
+        float currentSeconds = BeatGridMath.BeatToSeconds(grid.CurrentBeat, session.Bpm, session.OffsetMs);
+
+        session.SetTiming(bpm, offsetMs);
+        grid.SetTotalBeats(session.TotalBeats);
+        grid.SetCurrentBeat(BeatGridMath.SecondsToBeat(currentSeconds, session.Bpm, session.OffsetMs));
+        canvas.RefreshTiming();
+        playback.Restart();
+
+        Debug.Log($"[EditorScene] 박자 정보 변경: bpm={session.Bpm}, offsetMs={session.OffsetMs}, 곡 끝 {session.TotalBeats:0.###}박, " +
+                  $"지금 {currentSeconds:0.000}초 = {grid.CurrentBeat:0.###}박", this);
     }
 
     /// <summary>
@@ -174,6 +288,7 @@ public class EditorScene : SceneBase
         }
 
         exitConfirmUntil = -1f;
+        playback.Stop(false);
         if (GameManager.Scene.Load(GameConstants.Scenes.EditorSongSelect, new EditorSongSelectEntryData { songId = session.SongId }))
             isLeaving = true;
     }
@@ -185,6 +300,9 @@ public class EditorScene : SceneBase
     private void OnTestPlayRequested()
     {
         if (!isReady || isLeaving || isSaving) return;
+
+        // 재생 중이었으면 노래를 멈추고 스냅 선에 맞춘 위치에서 테스트 플레이를 시작한다
+        playback.Stop(true);
 
         TestPlayData testPlay = session.CreateTestPlayData(grid.CurrentBeat, grid.SnapDivision, grid.GridHeightScale, canvas.CurrentTool, out string error);
         if (testPlay == null)

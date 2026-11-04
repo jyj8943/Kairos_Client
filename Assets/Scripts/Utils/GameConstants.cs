@@ -158,6 +158,27 @@ public static class GameConstants
         public const string TestPlayNoNotesAfterMessage = "현재 위치 뒤에 노트가 없습니다";
         public const float StatusMessageSeconds = 3f;
 
+        /// <summary>채보를 열 때 곡 BPM과 채보 BPM이 다르면 보여주는 경고 (자동으로 고치지 않는다)</summary>
+        public const string BpmMismatchWarning = "곡 BPM과 채보 BPM이 다릅니다";
+
+        /// <summary>에디터 재생: 재생 버튼 글자 (재생 중이 아니면 ▶, 재생 중이면 ❚❚)</summary>
+        public const string PlayIcon = "▶";
+        public const string PauseIcon = "❚❚";
+
+        /// <summary>에디터 재생: 예약 재생까지 두는 지연 (초). 오디오 버퍼보다 길어야 시작이 늦지 않는다</summary>
+        public const double PlaybackStartDelaySeconds = 0.1;
+
+        /// <summary>메트로놈: 이 시간(초) 안에 올 박의 클릭을 미리 예약한다</summary>
+        public const double MetronomeLookaheadSeconds = 0.25;
+
+        /// <summary>메트로놈 클릭 소리 (코드로 만드는 사인파). 마디 첫 박은 더 높은 소리</summary>
+        public const float MetronomeBeatFrequency = 1000f;
+        public const float MetronomeMeasureFrequency = 1600f;
+        public const float MetronomeClickSeconds = 0.03f;
+
+        /// <summary>재생 중 현재 위치 선이 박마다 밝아지는 시간 (박의 비율, 0~1)</summary>
+        public const float BeatFlashFraction = 0.15f;
+
         /// <summary>곡 고르기의 내 채보 항목 정보: {0} 레벨, {1} 노트 수</summary>
         public const string MyChartInfoFormat = "Lv.{0} · 노트 {1}";
 

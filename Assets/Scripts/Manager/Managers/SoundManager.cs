@@ -14,6 +14,8 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     [SerializeField] private AudioSource musicSource;
     [Tooltip("효과음용. 돌아가며 쓴다")]
     [SerializeField] private AudioSource[] sfxSources;
+    [Tooltip("DSP 시각에 예약하는 효과음용 (메트로놈 등). 소스 하나에 예약 하나씩, 돌아가며 쓴다")]
+    [SerializeField] private AudioSource[] scheduledSfxSources;
 
     [Header("음량 (0~1)")]
     [Range(0f, 1f)] [SerializeField] private float masterVolume = 1f;
@@ -22,6 +24,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
 
     private readonly MusicClock clock = new MusicClock();
     private int nextSfxIndex;
+    private int nextScheduledSfxIndex;
 
     /// <summary>곡 시간 (초). 노래 시작 전 준비 시간에는 음수, 재생 중이 아니면 0</summary>
     public double SongTime => clock.SongTime;
@@ -31,6 +34,15 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
 
     /// <summary>노래가 일시정지 중이면 true</summary>
     public bool IsMusicPaused => clock.IsPaused;
+
+    /// <summary>
+    /// 노래 AudioSource의 실제 재생 위치 (초, timeSamples 기준). 판정·노트 위치에는 쓰지 않고 확인용으로만 쓴다.
+    /// 재생 중이 아니면 0.
+    /// </summary>
+    public double MusicSourceTime =>
+        musicSource != null && musicSource.clip != null && musicSource.isPlaying
+            ? (double)musicSource.timeSamples / musicSource.clip.frequency
+            : 0;
 
     public float MasterVolume
     {
@@ -67,8 +79,12 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
 
         if (sfxSources == null || sfxSources.Length == 0)
             Debug.LogWarning("[SoundManager] sfxSources가 없어 효과음을 재생할 수 없습니다.", this);
+        if (scheduledSfxSources == null || scheduledSfxSources.Length == 0)
+            Debug.LogWarning("[SoundManager] scheduledSfxSources가 없어 효과음을 예약할 수 없습니다.", this);
 
         nextSfxIndex = 0;
+        nextScheduledSfxIndex = 0;
+        CancelScheduledSfx();
         StopMusic();
         ApplyVolumes();
     }
@@ -156,6 +172,46 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         if (source != null) source.PlayOneShot(clip);
     }
 
+    /// <summary>
+    /// 곡 시간을 DSP 시각으로 바꾼다. 효과음을 박에 맞춰 예약할 때 쓴다 (노래가 예약·재생 중일 때만 의미가 있다).
+    /// </summary>
+    public double GetDspTimeOfSongTime(double songTime)
+    {
+        return clock.SongTimeToDsp(songTime);
+    }
+
+    /// <summary>
+    /// 효과음을 DSP 시각에 예약 재생한다. 예약 전용 소스를 돌아가며 쓰므로,
+    /// 소스 수보다 많이 미리 예약하면 가장 오래된 예약이 덮어써진다.
+    /// </summary>
+    /// <returns>예약했으면 true</returns>
+    public bool ScheduleSfx(AudioClip clip, double dspTime)
+    {
+        if (clip == null || scheduledSfxSources == null || scheduledSfxSources.Length == 0) return false;
+
+        AudioSource source = scheduledSfxSources[nextScheduledSfxIndex];
+        nextScheduledSfxIndex = (nextScheduledSfxIndex + 1) % scheduledSfxSources.Length;
+        if (source == null) return false;
+
+        source.Stop();
+        source.clip = clip;
+        source.volume = masterVolume * sfxVolume;
+        source.PlayScheduled(dspTime);
+        return true;
+    }
+
+    /// <summary>
+    /// 예약한 효과음을 모두 취소한다 (재생 중인 것도 멈춘다).
+    /// </summary>
+    public void CancelScheduledSfx()
+    {
+        if (scheduledSfxSources == null) return;
+        foreach (AudioSource source in scheduledSfxSources)
+        {
+            if (source != null) source.Stop();
+        }
+    }
+
     /// <summary>Seek 후 예약 재생까지 두는 시간 (초). 오디오 버퍼보다 길어야 시작이 늦지 않는다</summary>
     private const double SeekStartDelaySeconds = 0.1;
 
@@ -163,10 +219,20 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     {
         if (musicSource != null) musicSource.volume = masterVolume * musicVolume;
 
-        if (sfxSources == null) return;
-        foreach (AudioSource source in sfxSources)
+        if (sfxSources != null)
         {
-            if (source != null) source.volume = masterVolume * sfxVolume;
+            foreach (AudioSource source in sfxSources)
+            {
+                if (source != null) source.volume = masterVolume * sfxVolume;
+            }
+        }
+
+        if (scheduledSfxSources != null)
+        {
+            foreach (AudioSource source in scheduledSfxSources)
+            {
+                if (source != null) source.volume = masterVolume * sfxVolume;
+            }
         }
     }
 }

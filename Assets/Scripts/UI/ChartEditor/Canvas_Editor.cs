@@ -15,6 +15,8 @@ using UnityEngine.UI;
 ///   (휠: 현재 beat를 스냅 한 칸씩 이동, Ctrl+휠: 그리드 높이 배율 변경)
 /// - 저장은 Btn_Save 클릭과 ChartEditor/Save(Ctrl+S)로 받아 EditorScene이 넘긴 저장 요청 함수를 부른다.
 ///   입력창에 글자를 쓰는 중이면 Ctrl+S를 무시한다.
+/// - 재생은 Btn_Play 클릭과 ChartEditor/PlayPause(Space), 타임라인 슬라이더, 메트로놈 토글을 이벤트로 알린다
+///   (재생 처리는 EditorPlayback이 맡는다). 입력창에 글자를 쓰는 중이면 Space를 무시한다.
 /// - 폴더 이름을 Editor로 두면 Unity 특수 폴더가 되므로 UI/ChartEditor/에 둔다.
 /// </summary>
 public class Canvas_Editor : MonoBehaviour
@@ -47,6 +49,15 @@ public class Canvas_Editor : MonoBehaviour
 
     [Header("타임라인")]
     [SerializeField] private TMP_Text timeInfoText;
+    [SerializeField] private Button playButton;
+    [Tooltip("재생 버튼 아이콘 글자 (Txt_Play). 정지 중 ▶, 재생 중 ❚❚")]
+    [SerializeField] private TMP_Text playIconText;
+    [SerializeField] private Slider_Timeline timelineSlider;
+
+    [Header("재생 설정")]
+    [Tooltip("재생 속도 (Dropdown_PlaybackSpeed). TODO: 재생 속도 기능을 만들면 연결한다 (지금은 막아 둔다)")]
+    [SerializeField] private TMP_Dropdown playbackSpeedDropdown;
+    [SerializeField] private Toggle metronomeToggle;
 
     [Header("입력")]
     [Tooltip("입력 에셋의 ChartEditor/Scroll (마우스 휠 y)")]
@@ -57,6 +68,28 @@ public class Canvas_Editor : MonoBehaviour
     [SerializeField] private InputActionReference pointAction;
     [Tooltip("입력 에셋의 ChartEditor/Save (Ctrl+S)")]
     [SerializeField] private InputActionReference saveAction;
+    [Tooltip("입력 에셋의 ChartEditor/PlayPause (Space)")]
+    [SerializeField] private InputActionReference playPauseAction;
+
+    /// <summary>재생·정지 요청 (Btn_Play·Space)</summary>
+    public event Action PlayToggleRequested;
+
+    /// <summary>휠로 위치·높이를 바꾸기 직전 (재생 중이면 먼저 정지하도록)</summary>
+    public event Action ManualMoveStarting;
+
+    /// <summary>타임라인 슬라이더를 누르기 시작함</summary>
+    public event Action SeekStarted;
+
+    /// <summary>타임라인 슬라이더를 끄는 중 (0~1)</summary>
+    public event Action<float> SeekDragged;
+
+    /// <summary>타임라인 슬라이더를 놓음 (0~1)</summary>
+    public event Action<float> SeekReleased;
+
+    /// <summary>메트로놈 켜기·끄기</summary>
+    public event Action<bool> MetronomeChanged;
+
+    private string pauseIcon = GameConstants.Editor.PauseIcon;
 
     private Canvas canvas;
     private ChartGridView grid;
@@ -125,13 +158,58 @@ public class Canvas_Editor : MonoBehaviour
         saveStatusText.text = lastSaveStatus;
 
         // BPM은 표시만 한다 (선택·입력 불가)
-        bpmInput.text = SongData.FormatBpm(session.Bpm);
+        RefreshTiming();
         bpmInput.interactable = false;
+
+        // 재생: 버튼·슬라이더·메트로놈. 재생 속도는 아직 기능이 없어 막아 둔다 (TODO)
+        playButton.onClick.RemoveListener(RequestPlayToggle);
+        playButton.onClick.AddListener(RequestPlayToggle);
+        timelineSlider.Init(() => SeekStarted?.Invoke(), value => SeekDragged?.Invoke(value), value => SeekReleased?.Invoke(value));
+        playbackSpeedDropdown.interactable = false;
+        metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
+        metronomeToggle.SetIsOnWithoutNotify(false);
+        metronomeToggle.onValueChanged.AddListener(OnMetronomeToggled);
+
+        // 폰트에 ❚ 글자가 없으면 굵은 "II"로 대신한다
+        pauseIcon = playIconText.font != null && playIconText.font.HasCharacters(GameConstants.Editor.PauseIcon)
+            ? GameConstants.Editor.PauseIcon
+            : "II";
+        SetPlaying(false);
 
         InitBeatSnapDropdown();
         RefreshGridHeightText();
-        RefreshTimeInfoText();
+        RefreshTimeline();
         RefreshNoteCountText();
+    }
+
+    /// <summary>
+    /// 재생 버튼 아이콘을 바꾼다 (정지 중 ▶, 재생 중 ❚❚).
+    /// </summary>
+    public void SetPlaying(bool playing)
+    {
+        playIconText.text = playing ? pauseIcon : GameConstants.Editor.PlayIcon;
+    }
+
+    /// <summary>
+    /// BPM 표시와 시간 표시를 세션 값으로 다시 맞춘다 (BPM·offset을 바꿨을 때).
+    /// </summary>
+    public void RefreshTiming()
+    {
+        bpmInput.text = SongData.FormatBpm(session.Bpm);
+        RefreshTimeline();
+    }
+
+    /// <summary>
+    /// "현재 시간 / 곡 길이 · 마디 N"과 타임라인 슬라이더(현재 시간 ÷ 곡 길이)를 지금 위치로 맞춘다.
+    /// 재생 중에는 매 프레임 불린다.
+    /// </summary>
+    public void RefreshTimeline()
+    {
+        RefreshTimeInfoText();
+
+        float length = session.SongLengthSeconds;
+        float current = BeatGridMath.BeatToSeconds(grid.CurrentBeat, session.Bpm, session.OffsetMs);
+        timelineSlider.SetPosition(length > 0f ? current / length : 0f);
     }
 
     /// <summary>
@@ -141,18 +219,20 @@ public class Canvas_Editor : MonoBehaviour
     {
         if (isInputEnabled) return;
 
-        if (scrollAction == null || zoomModifierAction == null || pointAction == null || saveAction == null)
+        if (scrollAction == null || zoomModifierAction == null || pointAction == null || saveAction == null || playPauseAction == null)
         {
-            Debug.LogWarning("[Canvas_Editor] 입력 액션이 연결되지 않아 휠·Ctrl+S 조작을 받을 수 없습니다.", this);
+            Debug.LogWarning("[Canvas_Editor] 입력 액션이 연결되지 않아 휠·Ctrl+S·Space 조작을 받을 수 없습니다.", this);
             return;
         }
 
         scrollAction.action.performed += OnScroll;
         saveAction.action.performed += OnSaveShortcut;
+        playPauseAction.action.performed += OnPlayPauseShortcut;
         scrollAction.action.Enable();
         zoomModifierAction.action.Enable();
         pointAction.action.Enable();
         saveAction.action.Enable();
+        playPauseAction.action.Enable();
         isInputEnabled = true;
     }
 
@@ -166,6 +246,7 @@ public class Canvas_Editor : MonoBehaviour
 
         scrollAction.action.performed -= OnScroll;
         saveAction.action.performed -= OnSaveShortcut;
+        playPauseAction.action.performed -= OnPlayPauseShortcut;
         isInputEnabled = false;
     }
 
@@ -230,6 +311,8 @@ public class Canvas_Editor : MonoBehaviour
         if (saveButton != null) saveButton.onClick.RemoveListener(RequestSave);
         if (exitButton != null) exitButton.onClick.RemoveListener(RequestExit);
         if (testPlayButton != null) testPlayButton.onClick.RemoveListener(RequestTestPlay);
+        if (playButton != null) playButton.onClick.RemoveListener(RequestPlayToggle);
+        if (metronomeToggle != null) metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
         if (data != null) data.OnChanged -= RefreshNoteCountText;
         if (session != null) session.OnDirtyChanged -= OnDirtyChanged;
     }
@@ -255,6 +338,25 @@ public class Canvas_Editor : MonoBehaviour
     private void RequestTestPlay()
     {
         onTestPlayRequested?.Invoke();
+    }
+
+    private void RequestPlayToggle()
+    {
+        PlayToggleRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Space. 입력창에 글자를 쓰는 중이면 무시한다.
+    /// </summary>
+    private void OnPlayPauseShortcut(InputAction.CallbackContext context)
+    {
+        if (IsTypingInInputField()) return;
+        RequestPlayToggle();
+    }
+
+    private void OnMetronomeToggled(bool on)
+    {
+        MetronomeChanged?.Invoke(on);
     }
 
     /// <summary>
@@ -323,8 +425,10 @@ public class Canvas_Editor : MonoBehaviour
         }
         else
         {
+            // 재생 중이면 먼저 정지한다 (정지하면 스냅 선에 맞춘 뒤 한 칸 이동)
+            ManualMoveStarting?.Invoke();
             grid.SetCurrentBeat(BeatGridMath.StepBeat(grid.CurrentBeat, grid.SnapDivision, direction));
-            RefreshTimeInfoText();
+            RefreshTimeline();
         }
     }
 

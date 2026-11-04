@@ -207,6 +207,9 @@ public class ChartEditSession : MonoBehaviour
             Bpm = chart.timingPoints[0].bpm;
             if (chart.timingPoints.Count > 1)
                 Debug.LogWarning($"[ChartEditSession] BPM 변속은 아직 지원하지 않아 첫 BPM({Bpm})만 씁니다: chartId={ChartId}", this);
+
+            // 곡 끝 박은 편집에 쓰는 BPM(채보 BPM)으로 다시 계산한다 (곡 BPM과 다를 수 있다)
+            UpdateLength();
         }
 
         List<EditorNote> notes = new List<EditorNote>();
@@ -293,6 +296,40 @@ public class ChartEditSession : MonoBehaviour
                 tool = tool
             }
         };
+    }
+
+    /// <summary>
+    /// BPM·offset을 바꾼다 (Unity 에디터의 BPM·offset 조정 도구). 노트는 박 단위라 그대로 두고 곡 끝 박만 다시 계산한다.
+    /// 다음 저장 때 채보의 timingPoints BPM에도 이 값이 들어간다.
+    /// </summary>
+    public void SetTiming(float bpm, int offsetMs)
+    {
+        if (bpm <= 0f)
+        {
+            Debug.LogWarning($"[ChartEditSession] BPM은 0보다 커야 합니다: {bpm}", this);
+            return;
+        }
+
+        bool bpmChanged = !Mathf.Approximately(Bpm, bpm);
+        Bpm = bpm;
+        OffsetMs = offsetMs;
+        UpdateLength();
+
+        // BPM이 바뀌면 저장할 채보 내용(timingPoints)이 바뀐다
+        if (bpmChanged) SetDirty(true);
+    }
+
+    /// <summary>
+    /// 곡 길이를 지금 BPM·offset으로 박·tick으로 바꿔 곡 끝을 다시 정한다.
+    /// </summary>
+    private void UpdateLength()
+    {
+        TotalBeats = Mathf.Max(0f, BeatGridMath.SecondsToBeat(SongLengthSeconds, Bpm, OffsetMs));
+        if (Data == null) return;
+
+        int outside = Data.SetTotalTicks(Mathf.FloorToInt(TotalBeats * GameConstants.Editor.TicksPerBeat));
+        if (outside > 0)
+            Debug.LogWarning($"[ChartEditSession] 곡 끝을 넘는 노트가 {outside}개 있습니다 (지우지 않았습니다): 곡 끝 {TotalBeats:0.###}박", this);
     }
 
     /// <summary>

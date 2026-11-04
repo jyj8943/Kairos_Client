@@ -41,6 +41,13 @@ public class ChartGridView : MonoBehaviour
     [SerializeField] private GridLineStyle twelfthStyle = new GridLineStyle(new Color32(0x6A, 0x1B, 0x9A, 0xFF), 2f);
     [SerializeField] private GridLineStyle laneDividerStyle = new GridLineStyle(new Color32(0x5A, 0x5A, 0x5E, 0xFF), 2f);
 
+    [Header("재생")]
+    [Tooltip("재생 중 박마다 현재 위치 선을 밝게 할 때의 색")]
+    [SerializeField] private Color currentLineFlashColor = new Color32(0xFF, 0xF3, 0xB0, 0xFF);
+
+    private Image currentLineImage;
+    private Color currentLineNormalColor;
+
     private ComponentPool<Image> linePool;
     private ComponentPool<TMP_Text> labelPool;
     private bool isInitialized;
@@ -121,6 +128,13 @@ public class ChartGridView : MonoBehaviour
         SnapDivision = GameConstants.Editor.DefaultSnapDivision;
         GridHeightScale = GameConstants.Editor.DefaultGridHeight;
 
+        if (currentLineImage == null && currentLine != null)
+        {
+            currentLineImage = currentLine.GetComponent<Image>();
+            if (currentLineImage != null) currentLineNormalColor = currentLineImage.color;
+        }
+        SetCurrentLineHighlight(0f);
+
         if (linePool == null) linePool = new ComponentPool<Image>(beatLinePrefab, beatLineParent);
         if (labelPool == null) labelPool = new ComponentPool<TMP_Text>(measureNumberPrefab, measureLabelParent);
 
@@ -162,6 +176,25 @@ public class ChartGridView : MonoBehaviour
     {
         CurrentBeat = Mathf.Clamp(beat, 0f, TotalBeats);
         Refresh();
+    }
+
+    /// <summary>
+    /// 곡 끝 박을 바꾼다 (곡 BPM·offset을 바꿨을 때). 현재 beat는 새 범위로 제한한다.
+    /// </summary>
+    public void SetTotalBeats(float totalBeats)
+    {
+        TotalBeats = Mathf.Max(0f, totalBeats);
+        CurrentBeat = Mathf.Clamp(CurrentBeat, 0f, TotalBeats);
+        if (isInitialized) Refresh();
+    }
+
+    /// <summary>
+    /// 현재 위치 선의 밝기를 바꾼다 (재생 중 박마다 밝아지게). 0은 원래 색, 1은 강조 색이다.
+    /// </summary>
+    public void SetCurrentLineHighlight(float amount)
+    {
+        if (currentLineImage == null) return;
+        currentLineImage.color = Color.Lerp(currentLineNormalColor, currentLineFlashColor, Mathf.Clamp01(amount));
     }
 
     /// <summary>
@@ -207,7 +240,8 @@ public class ChartGridView : MonoBehaviour
             {
                 TMP_Text label = labelPool.Get();
                 label.rectTransform.anchoredPosition = new Vector2(label.rectTransform.anchoredPosition.x, y);
-                label.text = string.Format(measureLabelFormat, BeatGridMath.BeatToMeasure(beat));
+                // 재생 중 매 프레임 불리므로 문자열을 새로 만들지 않는 SetText를 쓴다
+                label.SetText(measureLabelFormat, BeatGridMath.BeatToMeasure(beat));
             }
         }
 

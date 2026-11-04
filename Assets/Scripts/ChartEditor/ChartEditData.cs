@@ -18,7 +18,7 @@ public class ChartEditData
     public event Action OnChanged;
 
     /// <summary>곡 끝 tick. 노트는 0 ~ TotalTicks(포함)에만 둘 수 있다</summary>
-    public int TotalTicks { get; }
+    public int TotalTicks { get; private set; }
 
     /// <summary>라인 수</summary>
     public int LaneCount { get; }
@@ -110,6 +110,22 @@ public class ChartEditData
 
         OnChanged?.Invoke();
         return skipped;
+    }
+
+    /// <summary>
+    /// 곡 끝 tick을 바꾼다 (곡 BPM·offset을 바꿨을 때). 노트는 지우지 않는다.
+    /// </summary>
+    /// <returns>새 곡 끝을 넘는 노트 수 (경고용)</returns>
+    public int SetTotalTicks(int totalTicks)
+    {
+        TotalTicks = Math.Max(0, totalTicks);
+
+        int outside = 0;
+        foreach (EditorNote note in notes)
+        {
+            if (note.Tick > TotalTicks || note.EndTick > TotalTicks) outside++;
+        }
+        return outside;
     }
 
     /// <summary>같은 라인·같은 tick에 노트가 있으면 true</summary>
