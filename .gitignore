@@ -73,10 +73,6 @@ crashlytics-build.properties
 # Claude Code project instructions (local only)
 CLAUDE.md
 
-# Paid assets / copyrighted music & SFX (local only, not distributed via git)
-/[Aa]ssets/[Ee]xternals/
-/[Aa]ssets/[Ee]xternals.meta
-
 # Local build scripts with PC-specific paths (local only)
 /[Tt]ools/*
 # One-click build script is shared (no PC-specific paths, defaults can be overridden)

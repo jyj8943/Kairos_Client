@@ -11,8 +11,10 @@ public class SongData : ScriptableObject
     [SerializeField] private string songId;
     [SerializeField] private string title;
     [SerializeField] private string artist;
-    [Tooltip("모르면 0")]
+    [Tooltip("기본 BPM. 소수 그대로 저장 (예: 150.61). 모르면 0")]
     [SerializeField] private float bpm;
+    [Tooltip("음원 시작부터 첫 박까지의 시간 (ms)")]
+    [SerializeField] private int offsetMs;
     [SerializeField] private AudioClip clip;
     [Tooltip("선택. 없으면 회색 칸으로 표시")]
     [SerializeField] private Sprite cover;
@@ -21,6 +23,10 @@ public class SongData : ScriptableObject
     public string Title => title;
     public string Artist => artist;
     public float Bpm => bpm;
+
+    /// <summary>음원 시작부터 첫 박까지의 시간 (ms)</summary>
+    public int OffsetMs => offsetMs;
+
     public AudioClip Clip => clip;
     public Sprite Cover => cover;
 
