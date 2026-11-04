@@ -1,0 +1,32 @@
+name: Build
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Build version, e.g. 0.1.1'
+        required: true
+        default: '0.1.1'
+jobs:
+  build:
+    runs-on: [self-hosted, Windows, unity]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: false
+      - name: Build
+        shell: cmd
+        env:
+          OUT_ROOT: ${{ github.workspace }}\Builds
+          VERSION: ${{ inputs.version }}
+        run: |
+          if exist Builds rmdir /s /q Builds
+          tools\build_unity.bat %VERSION%
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kairos_v${{ inputs.version }}
+          path: |
+            Builds/*.zip
+            Builds/*.log
+          retention-days: 3

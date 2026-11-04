@@ -79,4 +79,6 @@ CLAUDE.md
 /[Aa]ssets/[Ee]xternals.meta
 
 # Local build scripts with PC-specific paths (local only)
-/[Tt]ools/
+/[Tt]ools/*
+# One-click build script is shared (no PC-specific paths, defaults can be overridden)
+!/[Tt]ools/build_unity.bat
