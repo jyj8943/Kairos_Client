@@ -31,6 +31,7 @@ public static class Bootstrapper
     private static void InitManagers()
     {
         Init(GameManager.Songs);  // 곡 목록 검사 (씬이 곡을 찾기 전에)
+        Init(GameManager.Sound);  // 노래·효과음 준비
         Init(GameManager.Scene);  // 씬 전환 준비 (마지막)
 
         GameManager.IsInitialized = true;

@@ -11,6 +11,9 @@ public static class GameManager
 
     /// <summary>제공 곡 목록 (곡 찾기·검사)</summary>
     public static SongManager Songs => SongManager.Instance;
+
+    /// <summary>노래·효과음 재생과 곡 시간 (DSP 기준)</summary>
+    public static SoundManager Sound => SoundManager.Instance;
 }
 
 /// <summary>

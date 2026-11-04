@@ -18,6 +18,62 @@ public static class GameConstants
         public const string Title = "TitleScene";
         public const string EditorSongSelect = "EditorSongSelectScene";
         public const string Editor = "EditorScene";
+        public const string InGame = "InGameScene";
+    }
+
+    /// <summary>인게임 플레이 규칙 (기획서 2-1). 판정 범위 기본값은 잠정치이며 InGameScene 인스펙터에서 조정한다</summary>
+    public static class Play
+    {
+        /// <summary>판정 범위 기본값 (±ms). MISS 범위 안에서 누르면 MISS 판정, 밖이면 빈 타격</summary>
+        public const float DefaultPerfectMs = 40f;
+        public const float DefaultGreatMs = 80f;
+        public const float DefaultGoodMs = 120f;
+        public const float DefaultMissMs = 160f;
+
+        /// <summary>만점</summary>
+        public const int MaxScore = 1000000;
+
+        /// <summary>판정별 점수 비율 (%). 정확도 계산에도 같은 값을 쓴다</summary>
+        public const int PerfectRatio = 100;
+        public const int GreatRatio = 70;
+        public const int GoodRatio = 30;
+        public const int MissRatio = 0;
+        public const int RatioBase = 100;
+
+        /// <summary>랭크 기준 점수 (이상)</summary>
+        public const int RankSScore = 950000;
+        public const int RankAScore = 900000;
+        public const int RankBScore = 800000;
+        public const int RankCScore = 700000;
+        public const int RankDScore = 600000;
+
+        /// <summary>첫 노트 전 최소 준비 시간 (초)</summary>
+        public const double LeadInSeconds = 2.0;
+
+        /// <summary>노래 시작 지연의 최소값 (초). 첫 노트가 늦어도 이만큼은 기다린다</summary>
+        public const double MinStartDelaySeconds = 1.0;
+
+        /// <summary>마지막 노트 뒤 결과까지 기다리는 시간 (초)</summary>
+        public const double EndPaddingSeconds = 1.0;
+
+        /// <summary>판정 글자</summary>
+        public const string PerfectText = "PERFECT";
+        public const string GreatText = "GREAT";
+        public const string GoodText = "GOOD";
+        public const string MissText = "MISS";
+        public const string FullComboText = "FULL COMBO";
+        public const string AllPerfectText = "ALL PERFECT";
+
+        /// <summary>
+        /// 라인별 노트 색 (A · S · ; · ' 순서). 에디터 Img_ShortNote의 기본 색과 같은 값이다.
+        /// </summary>
+        public static readonly Color32[] LaneColors =
+        {
+            new Color32(0x6E, 0xC8, 0xF5, 0xFF),
+            new Color32(0xFF, 0xFF, 0xFF, 0xFF),
+            new Color32(0xFF, 0xFF, 0xFF, 0xFF),
+            new Color32(0x6E, 0xC8, 0xF5, 0xFF)
+        };
     }
 
     /// <summary>채보 에디터 규칙</summary>
