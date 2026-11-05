@@ -8,7 +8,10 @@ using UnityEngine;
 /// - 곡 시간은 GameManager.Sound.SongTime(DSP 기준). 판정은 NoteJudge, 점수는 ScoreCalculator가 맡는다.
 /// - 곡이 끝나면(음원 길이와 마지막 노트 + 1초 중 늦은 쪽) 결과 씬으로 ResultData를 넘긴다.
 /// - 테스트 플레이(진입 데이터에 TestPlayData)면 파일 대신 넘겨받은 채보를 쓰고, 시작 박 앞의 노트는 건너뛴다.
-///   노래는 시작 위치 2초 전부터 들려준다. ESC를 누르면 결과 없이 에디터로 돌아간다.
+///   노래는 시작 위치 2초 전부터 들려준다.
+/// - ESC(팝업이 없을 때 UIManager가 OnBack을 부름)나 창 포커스를 잃으면 일시정지 메뉴(Popup_Pause)를 연다.
+///   멈추면 노래·곡 시간·노트·놓침 MISS·라인 키·자동 플레이가 모두 멈추고, "계속"을 누르면 3초 카운트다운 뒤 멈춘 위치에서 이어진다.
+///   재시작·나가기는 결과 씬을 거치지 않는다. 나가는 곳은 CreateReturnTarget()이 진입 데이터로 정한다 (곡 선택 / 테스트 플레이면 에디터).
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -18,6 +21,7 @@ public class InGameScene : SceneBase
     [SerializeField] private NoteLayer noteLayer;
     [SerializeField] private InGameInput input;
     [SerializeField] private Canvas_InGame canvas;
+    [SerializeField] private Popup_Pause pausePopup;
 
     [Header("판정 범위 (±ms, 기획서 잠정치)")]
     [SerializeField] private JudgeWindows judgeWindows = new JudgeWindows();
@@ -47,6 +51,9 @@ public class InGameScene : SceneBase
     private bool isReady;
     private bool isPlaying;
     private bool isFinished;
+    /// <summary>일시정지 메뉴가 열렸거나 재개 카운트다운 중이면 true (Update와 라인 키를 멈춘다)</summary>
+    private bool isPaused;
+    private Coroutine countdownRoutine;
 
     // 판정 오차 기록 (키로 친 판정만)
     private int hitCount;
@@ -63,11 +70,15 @@ public class InGameScene : SceneBase
     {
         isReady = false;
 
-        if (gear == null || noteLayer == null || input == null || canvas == null)
+        if (gear == null || noteLayer == null || input == null || canvas == null || pausePopup == null)
         {
-            Debug.LogError("[InGameScene] gear, noteLayer, input, canvas 중 연결되지 않은 것이 있습니다.", this);
+            Debug.LogError("[InGameScene] gear, noteLayer, input, canvas, pausePopup 중 연결되지 않은 것이 있습니다.", this);
             yield break;
         }
+
+        isPaused = false;
+        countdownRoutine = null;
+        pausePopup.Init(OnClickResume, OnClickRestart, OnClickExit);
 
         entry = GameManager.Scene.TakeSceneData<InGameEntryData>() ?? CreateTestEntry();
         if (entry.mode == InGameMode.TestPlay && entry.testPlay == null)
@@ -135,13 +146,14 @@ public class InGameScene : SceneBase
     public override void OnExit()
     {
         isPlaying = false;
+        StopCountdown();
         if (input != null) input.DisableInput();
         if (SoundManager.HasInstance) GameManager.Sound.StopMusic();
     }
 
     private void Update()
     {
-        if (!isPlaying) return;
+        if (!isPlaying || isPaused) return;
 
         double songTime = GameManager.Sound.SongTime;
 
@@ -165,7 +177,7 @@ public class InGameScene : SceneBase
     /// <param name="inputSongTime">입력 시각 (곡 시간, 초)</param>
     private void OnLanePressed(int lane, double inputSongTime)
     {
-        if (!isPlaying) return;
+        if (!isPlaying || isPaused) return;
 
         if (judge.TryHit(lane, inputSongTime, out JudgeResult result))
         {
@@ -245,19 +257,154 @@ public class InGameScene : SceneBase
         };
     }
 
+    /// <summary>일시정지할 수 있으면 true. 시작하지 못했거나(채보 로딩 실패), 결과·다른 씬으로 넘어가는 중, 씬 로딩 중이면 false</summary>
+    private bool CanPause => isReady && isPlaying && !isFinished && !GameManager.Scene.IsLoading;
+
     /// <summary>
-    /// ESC (팝업이 없을 때 UIManager가 부름). 테스트 플레이면 노래를 멈추고 결과 없이 에디터로 돌아간다.
-    /// 보통 플레이는 아직 아무것도 하지 않는다.
-    /// TODO: 일시정지 팝업을 만들면 보통 플레이는 일시정지 팝업을 연다.
+    /// ESC (팝업이 없을 때 UIManager가 부름). 보통·테스트 플레이 모두 일시정지 메뉴를 연다.
+    /// 재개 카운트다운 중이면 카운트다운을 멈추고 일시정지 메뉴를 다시 연다.
     /// </summary>
     public override void OnBack()
     {
-        if (!IsTestPlay || isFinished || !isReady) return;
+        RequestPause("ESC");
+    }
 
+    /// <summary>
+    /// 창 포커스를 잃으면 자동으로 일시정지한다.
+    /// </summary>
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus) RequestPause("창 포커스 잃음");
+    }
+
+    /// <summary>
+    /// 앱이 백그라운드로 가면 자동으로 일시정지한다.
+    /// </summary>
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus) RequestPause("앱 일시정지");
+    }
+
+    /// <summary>
+    /// 일시정지 메뉴를 연다. 이미 팝업(일시정지·확인)이 열려 있으면 그대로 둔다.
+    /// </summary>
+    private void RequestPause(string reason)
+    {
+        if (!CanPause) return;
+        if (UIManager.HasInstance && GameManager.UI.HasOpenPopup) return;
+
+        bool wasCountingDown = countdownRoutine != null;
+        StopCountdown();
+
+        if (!isPaused)
+        {
+            isPaused = true;
+            GameManager.Sound.PauseMusic();
+        }
+
+        pausePopup.Open();
+        Debug.Log($"[InGameScene] 일시정지 ({reason}{(wasCountingDown ? ", 카운트다운 중단" : "")}): 곡 시간 {GameManager.Sound.SongTime:0.###}초, " +
+                  $"노래 정지 {GameManager.Sound.IsMusicPaused}, 남은 노트 {judge.TotalCount - judge.JudgedCount}개", this);
+    }
+
+    /// <summary>
+    /// 계속 (버튼, ESC): 일시정지 메뉴를 닫고 3초 카운트다운 뒤 멈춘 위치에서 재개한다.
+    /// </summary>
+    private void OnClickResume()
+    {
+        if (isFinished || !isPaused || countdownRoutine != null) return;
+
+        pausePopup.Close();
+        countdownRoutine = StartCoroutine(CountdownAndResume());
+    }
+
+    /// <summary>
+    /// 3 → 2 → 1을 1초씩(unscaled) 보여준 뒤 노래와 곡 시간을 이어서 재개한다. 카운트다운 동안 노트·판정은 멈춰 있다.
+    /// </summary>
+    private IEnumerator CountdownAndResume()
+    {
+        for (int count = GameConstants.Pause.CountdownSeconds; count > 0; count--)
+        {
+            canvas.ShowCountdown(count);
+            yield return new WaitForSecondsRealtime(1f);
+        }
+
+        canvas.HideCountdown();
+        countdownRoutine = null;
+        isPaused = false;
+        GameManager.Sound.ResumeMusic();
+        Debug.Log($"[InGameScene] 재개: 곡 시간 {GameManager.Sound.SongTime:0.###}초", this);
+    }
+
+    /// <summary>
+    /// 카운트다운을 멈추고 숫자를 숨긴다 (일시정지 상태는 그대로).
+    /// </summary>
+    private void StopCountdown()
+    {
+        if (countdownRoutine != null)
+        {
+            StopCoroutine(countdownRoutine);
+            countdownRoutine = null;
+        }
+        if (canvas != null) canvas.HideCountdown();
+    }
+
+    /// <summary>
+    /// 재시작: 확인 팝업을 띄우고, 확인하면 같은 진입 데이터로 인게임을 다시 불러온다 (테스트 플레이면 같은 시작 위치부터).
+    /// 취소하면 일시정지 메뉴로 돌아온다.
+    /// </summary>
+    private void OnClickRestart()
+    {
+        if (isFinished) return;
+
+        GameManager.UI.Confirm(GameConstants.Confirm.RestartMessage, GameConstants.Confirm.RestartLabel, Restart);
+    }
+
+    private void Restart()
+    {
+        if (isFinished) return;
+
+        StopForLeave();
+        Debug.Log("[InGameScene] 재시작", this);
+        GameManager.Scene.Load(GameConstants.Scenes.InGame, entry.Clone());
+    }
+
+    /// <summary>
+    /// 나가기: 보통 플레이는 확인 팝업 뒤, 테스트 플레이는 확인 없이 이전 화면으로 간다 (결과 씬은 거치지 않는다).
+    /// </summary>
+    private void OnClickExit()
+    {
+        if (isFinished) return;
+
+        if (IsTestPlay)
+            ExitToReturnTarget();
+        else
+            GameManager.UI.Confirm(GameConstants.Confirm.InGameExitMessage, GameConstants.Confirm.InGameExitLabel, ExitToReturnTarget);
+    }
+
+    /// <summary>
+    /// 노래를 멈추고 진입 데이터로 정한 이전 화면(곡 선택 / 에디터)으로 간다.
+    /// </summary>
+    private void ExitToReturnTarget()
+    {
+        if (isFinished) return;
+
+        ResultReturnTarget target = CreateReturnTarget();
+        StopForLeave();
+        Debug.Log($"[InGameScene] 나가기 → {target.sceneName}", this);
+        GameManager.Scene.Load(target.sceneName, target.sceneData);
+    }
+
+    /// <summary>
+    /// 씬을 떠나기 전에 플레이를 끝내고 노래를 멈춘다 (이후 ESC·버튼·포커스 이벤트를 무시한다).
+    /// </summary>
+    private void StopForLeave()
+    {
         isFinished = true;
         isPlaying = false;
+        StopCountdown();
+        input.DisableInput();
         GameManager.Sound.StopMusic();
-        GameManager.Scene.Load(GameConstants.Scenes.Editor, entry.testPlay.CreateEditorEntry());
     }
 
 #if UNITY_EDITOR
@@ -270,7 +417,12 @@ public class InGameScene : SceneBase
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
         {
             while (isPlaying && judge.TryPeekNext(lane, out int noteIndex) && judge.Notes[noteIndex].Time <= songTime)
+            {
+                // 판정 범위 밖이라 처리되지 않으면 같은 노트를 계속 보게 되므로 멈춘다 (놓침은 CollectMisses가 처리)
+                int judgedBefore = judge.JudgedCount;
                 OnLanePressed(lane, inputTime);
+                if (judge.JudgedCount == judgedBefore) break;
+            }
         }
     }
 #endif

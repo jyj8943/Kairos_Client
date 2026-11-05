@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 인게임 화면 UI (기획서 3-4 최소 형태). InGameScene이 Init()을 호출한다.
-/// - 곡 정보(제목·채보 이름·Lv), 판정 글자, 콤보, 점수, 안내 문구, 테스트 플레이 표시.
+/// - 곡 정보(제목·채보 이름·Lv), 판정 글자, 콤보, 점수, 안내 문구, 테스트 플레이 표시, 재개 카운트다운.
 /// - 결과는 결과 씬(ResultScene)이 보여준다.
 /// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다.
 /// </summary>
@@ -17,6 +17,8 @@ public class Canvas_InGame : UIBase
     [SerializeField] private TMP_Text messageText;
     [Tooltip("테스트 플레이 표시 (Txt_TestPlay). 테스트 플레이일 때만 켠다")]
     [SerializeField] private TMP_Text testPlayText;
+    [Tooltip("일시정지 후 재개 카운트다운 숫자 (Txt_Countdown, 화면 가운데)")]
+    [SerializeField] private TMP_Text countdownText;
 
     [Header("판정 색")]
     [SerializeField] private Color perfectColor = new Color32(0xFF, 0xD5, 0x4F, 0xFF);
@@ -37,6 +39,24 @@ public class Canvas_InGame : UIBase
 
         testPlayText.text = GameConstants.Play.TestPlayInGameText;
         testPlayText.gameObject.SetActive(isTestPlay);
+        HideCountdown();
+    }
+
+    /// <summary>
+    /// 재개 카운트다운 숫자를 보여준다.
+    /// </summary>
+    public void ShowCountdown(int count)
+    {
+        countdownText.SetText("{0}", count);
+        countdownText.gameObject.SetActive(true);
+    }
+
+    /// <summary>
+    /// 재개 카운트다운 숫자를 숨긴다.
+    /// </summary>
+    public void HideCountdown()
+    {
+        if (countdownText != null) countdownText.gameObject.SetActive(false);
     }
 
     /// <summary>

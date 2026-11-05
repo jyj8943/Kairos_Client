@@ -61,7 +61,7 @@ public abstract class UIPopup : UIBase, IPointerClickHandler
     }
 
     /// <summary>
-    /// ESC가 왔을 때 할 일. 기본은 닫기. (나중에 일시정지 팝업은 "계속"으로 바꾼다)
+    /// ESC가 왔을 때 할 일. 기본은 닫기. 팝업마다 바꾼다 (Popup_Confirm: 취소, Popup_Pause: 계속).
     /// </summary>
     public virtual void OnCancelRequested()
     {

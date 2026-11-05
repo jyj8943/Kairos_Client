@@ -35,6 +35,9 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     /// <summary>노래가 일시정지 중이면 true</summary>
     public bool IsMusicPaused => clock.IsPaused;
 
+    /// <summary>노래 AudioSource가 소리를 내는 중이면 true (확인용)</summary>
+    public bool IsMusicSourcePlaying => musicSource != null && musicSource.isPlaying;
+
     /// <summary>
     /// 노래 AudioSource의 실제 재생 위치 (초, timeSamples 기준). 판정·노트 위치에는 쓰지 않고 확인용으로만 쓴다.
     /// 재생 중이 아니면 0.
@@ -116,22 +119,38 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         clock.Schedule(startDsp, startPositionSeconds, dspNow, Time.realtimeSinceStartupAsDouble);
     }
 
-    /// <summary>노래를 일시정지한다. 곡 시간도 멈춘다.</summary>
+    /// <summary>
+    /// 노래를 일시정지한다. 곡 시간도 멈춘다.
+    /// 아직 시작되지 않은 예약 재생(준비 시간)도 확실히 취소되도록 AudioSource는 Pause가 아니라 Stop한다
+    /// (재개할 때 ResumeMusic이 멈춘 위치로 다시 예약한다).
+    /// </summary>
     public void PauseMusic()
     {
         if (!clock.IsRunning || clock.IsPaused) return;
 
         clock.Pause(AudioSettings.dspTime, Time.realtimeSinceStartupAsDouble);
-        if (musicSource != null) musicSource.Pause();
+        if (musicSource != null) musicSource.Stop();
     }
 
-    /// <summary>일시정지한 노래를 이어서 재생한다.</summary>
+    /// <summary>
+    /// 일시정지한 노래를 이어서 재생한다. 곡 시간은 멈춘 값에서 이어진다.
+    /// - 준비 시간에 멈췄으면: 남은 대기 시간 뒤에 시작 위치부터 재생하도록 다시 예약한다.
+    /// - 재생 중에 멈췄으면: 멈춘 곡 시간 위치부터 재생하도록 다시 예약한다.
+    /// 예약은 최소 SeekStartDelaySeconds 뒤로 잡고, 그동안 곡 시간은 멈춘 값에 머문다.
+    /// </summary>
     public void ResumeMusic()
     {
         if (!clock.IsPaused) return;
 
-        clock.Resume(AudioSettings.dspTime, Time.realtimeSinceStartupAsDouble);
-        if (musicSource != null) musicSource.UnPause();
+        double position = clock.ResumePosition;
+        clock.Resume(AudioSettings.dspTime, Time.realtimeSinceStartupAsDouble, SeekStartDelaySeconds);
+
+        if (musicSource == null || musicSource.clip == null) return;
+        if (position >= musicSource.clip.length) return;
+
+        musicSource.Stop();
+        musicSource.time = Mathf.Clamp((float)position, 0f, musicSource.clip.length);
+        musicSource.PlayScheduled(clock.SongTimeToDsp(position));
     }
 
     /// <summary>노래를 멈추고 곡 시간을 0으로 되돌린다.</summary>

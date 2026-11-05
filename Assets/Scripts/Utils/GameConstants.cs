@@ -84,7 +84,7 @@ public static class GameConstants
 
         /// <summary>테스트 플레이 표시와 결과 화면 돌아가기 버튼 문구</summary>
         public const string TestPlayLabel = "테스트 플레이";
-        public const string TestPlayInGameText = "테스트 플레이 · ESC 에디터로";
+        public const string TestPlayInGameText = "테스트 플레이 · ESC 일시정지";
         public const string ReturnToEditorLabel = "에디터로 돌아가기";
         public const string ReturnToSongSelectLabel = "곡 선택으로";
         public const string RetryLabel = "다시 하기";
@@ -139,6 +139,33 @@ public static class GameConstants
         /// <summary>에디터 나가기 (저장하지 않은 변경이 있을 때만)</summary>
         public const string EditorExitMessage = "저장하지 않은 변경이 있습니다.\n저장하지 않고 나가시겠습니까?";
         public const string EditorExitLabel = "나가기";
+
+        /// <summary>인게임 재시작 (일시정지 메뉴)</summary>
+        public const string RestartMessage = "처음부터 다시 시작하시겠습니까?";
+        public const string RestartLabel = "재시작";
+
+        /// <summary>인게임 나가기 (일시정지 메뉴, 보통 플레이만. 테스트 플레이는 확인 없이 에디터로)</summary>
+        public const string InGameExitMessage = "플레이를 그만두고 나가시겠습니까?\n이번 기록은 저장되지 않습니다.";
+        public const string InGameExitLabel = "나가기";
+    }
+
+    /// <summary>인게임 일시정지 메뉴 (기획서 3-4, 2-1 재개 3초 카운트다운)</summary>
+    public static class Pause
+    {
+        /// <summary>팝업 제목</summary>
+        public const string Title = "일시정지";
+
+        /// <summary>버튼 이름 (위에서부터 계속 · 재시작 · 설정 · 나가기)</summary>
+        public const string ResumeLabel = "계속 (3초 후 재개)";
+        public const string RestartLabel = "재시작";
+        public const string SettingsLabel = "설정 (준비 중)";
+        public const string ExitLabel = "나가기";
+
+        /// <summary>패널 아래 조작 안내</summary>
+        public const string HintText = "ESC 계속 · ↑↓ 이동 · Enter 선택";
+
+        /// <summary>재개 카운트다운 (초, unscaled). 1초마다 숫자 하나씩 3 → 2 → 1</summary>
+        public const int CountdownSeconds = 3;
     }
 
     /// <summary>곡 선택 화면 표시 문구 (기획서 3-3)</summary>
