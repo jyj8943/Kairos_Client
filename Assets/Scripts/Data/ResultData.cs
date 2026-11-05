@@ -39,6 +39,8 @@ public class ResultData
     public int level;
 
     public bool isTestPlay;
+    /// <summary>자동 플레이로 친 결과면 true (자동 테스트)</summary>
+    public bool isAutoPlay;
 
     /// <summary>다시 하기 때 인게임에 넘길 데이터</summary>
     public InGameEntryData retryEntry;

@@ -12,6 +12,9 @@ public class TestPlayData
     /// <summary>시작 위치 (박). 이보다 앞의 노트는 건너뛴다</summary>
     public float startBeat;
 
+    /// <summary>자동 플레이로 시작하면 true (에디터의 자동 테스트). 재시작·다시 하기도 같은 값으로 시작한다</summary>
+    public bool autoPlay;
+
     /// <summary>에디터로 돌아갈 때 되돌릴 편집 상태</summary>
     public EditorRestoreState editorState;
 

@@ -105,7 +105,7 @@ public class EditorScene : SceneBase
 
         noteLayer.Init(grid, session);
         notePlacer.Init(grid, session, () => canvas.CurrentTool);
-        canvas.Init(grid, session, song, OnSaveRequested, OnExitRequested, OnTestPlayRequested);
+        canvas.Init(grid, session, song, OnSaveRequested, OnExitRequested, OnTestPlayRequested, OnAutoTestPlayRequested);
 
         // 재생은 정지 상태로 시작한다 (테스트 플레이에서 돌아온 경우도)
         playback.Init(grid, session, song, () => canvas.SetPlaying(playback.IsPlaying), canvas.RefreshTimeline);
@@ -299,17 +299,34 @@ public class EditorScene : SceneBase
     }
 
     /// <summary>
-    /// 테스트 플레이 요청 (Btn_TestPlay). 지금 편집 상태를 저장하지 않고 그대로 인게임에 넘긴다.
-    /// 시작 위치는 그리드의 현재 위치 선이다. 그 뒤에 노트가 없으면 안내만 한다.
+    /// 테스트 플레이 요청 (Btn_TestPlay).
     /// </summary>
     private void OnTestPlayRequested()
+    {
+        StartTestPlay(false);
+    }
+
+    /// <summary>
+    /// 자동 테스트 요청 (Btn_AutoTestPlay). 테스트 플레이와 같은 조건으로 들어가되 자동 플레이로 시작한다.
+    /// </summary>
+    private void OnAutoTestPlayRequested()
+    {
+        StartTestPlay(true);
+    }
+
+    /// <summary>
+    /// 테스트 플레이를 시작한다. 지금 편집 상태를 저장하지 않고 그대로 인게임에 넘긴다.
+    /// 시작 위치는 그리드의 현재 위치 선이다. 그 뒤에 노트가 없으면 안내만 한다.
+    /// </summary>
+    /// <param name="autoPlay">자동 플레이로 시작하면 true</param>
+    private void StartTestPlay(bool autoPlay)
     {
         if (!isReady || isLeaving || isSaving) return;
 
         // 재생 중이었으면 노래를 멈추고 스냅 선에 맞춘 위치에서 테스트 플레이를 시작한다
         playback.Stop(true);
 
-        TestPlayData testPlay = session.CreateTestPlayData(grid.CurrentBeat, grid.SnapDivision, grid.GridHeightScale, canvas.CurrentTool, out string error);
+        TestPlayData testPlay = session.CreateTestPlayData(grid.CurrentBeat, grid.SnapDivision, grid.GridHeightScale, canvas.CurrentTool, autoPlay, out string error);
         if (testPlay == null)
         {
             statusResetAt = Time.unscaledTime + GameConstants.Editor.StatusMessageSeconds;
@@ -326,7 +343,7 @@ public class EditorScene : SceneBase
             testPlay = testPlay
         };
 
-        Debug.Log($"[EditorScene] 테스트 플레이: songId={session.SongId}, 시작 {grid.CurrentBeat}박 (마디 {grid.CurrentMeasure}), " +
+        Debug.Log($"[EditorScene] 테스트 플레이{(autoPlay ? " (자동 플레이)" : "")}: songId={session.SongId}, 시작 {grid.CurrentBeat}박 (마디 {grid.CurrentMeasure}), " +
                   $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}", this);
 
         if (GameManager.Scene.Load(GameConstants.Scenes.InGame, data))

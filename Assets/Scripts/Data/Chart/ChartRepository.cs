@@ -8,9 +8,8 @@ using UnityEngine;
 /// <summary>
 /// 채보 파일 읽기·쓰기 창구 (기획서 2-4). 상태를 들고 있지 않는 static 클래스다.
 /// - 나만의 채보: persistentDataPath/MyCharts/{songId}/{chartId}.json
-/// - 공식 채보 읽기: Resources/Data/OfficialCharts/{songId}/{난이도}.json (난이도 = NORMAL / HARD / EXPERT, 읽기 전용)
-/// - 공식 채보 저장: streamingAssetsPath/Charts/{songId}/{chartId}.json (Unity 에디터에서만 저장)
-///   TODO: 공식 채보 저장 위치를 Resources로 옮길 것 (지금은 읽는 곳과 저장하는 곳이 다르다)
+/// - 공식 채보: Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json (난이도 = NORMAL / HARD / EXPERT)
+///   읽기는 Resources.LoadAll, 저장은 같은 파일에 쓴다 (Unity 에디터에서만 저장. 빌드에서는 읽기 전용)
 /// - 나만의 채보 파일 이름은 chartId만 쓴다. 채보 이름은 파일 이름에 쓰지 않는다.
 /// - 저장은 임시 파일({chartId}.json.tmp)에 먼저 쓰고 다 쓰면 원래 파일과 바꿔치기한다.
 /// - 읽을 때 공식·나만의 채보 모두 같은 검사(TryParseChart)를 쓴다.
@@ -32,13 +31,13 @@ public static class ChartRepository
     private static readonly HashSet<string> IssuedCustomIds = new HashSet<string>();
 
     /// <summary>
-    /// 채보 종류별 최상위 폴더 (파일 경로). 공식 채보는 저장(TrySave)할 때만 쓴다.
-    /// TODO: 공식 채보 저장 위치를 Resources로 옮길 것
+    /// 채보 종류별 최상위 폴더 (파일 경로).
+    /// 공식 채보는 프로젝트의 Assets/Resources/Data/OfficialCharts (Unity 에디터에서 저장할 때만 쓴다).
     /// </summary>
     public static string GetRootFolder(ChartType type)
     {
         return type == ChartType.Official
-            ? Path.Combine(Application.streamingAssetsPath, GameConstants.Chart.OfficialFolder)
+            ? Path.Combine(Application.dataPath, GameConstants.Chart.ResourcesFolder, GameConstants.Chart.OfficialResourcesFolder)
             : Path.Combine(Application.persistentDataPath, GameConstants.Chart.CustomFolder);
     }
 
@@ -51,7 +50,7 @@ public static class ChartRepository
     }
 
     /// <summary>
-    /// 채보 파일 경로: {곡 폴더}/{chartId}.json
+    /// 나만의 채보 파일 경로: {곡 폴더}/{chartId}.json (공식 채보는 GetOfficialChartPath)
     /// </summary>
     public static string GetChartPath(string songId, string chartId, ChartType type)
     {
@@ -59,9 +58,26 @@ public static class ChartRepository
     }
 
     /// <summary>
-    /// 채보를 저장한다. 같은 chartId 파일이 있으면 덮어쓴다.
+    /// 공식 채보 파일 경로: Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json
+    /// </summary>
+    public static string GetOfficialChartPath(string songId, string difficulty)
+    {
+        return Path.Combine(GetSongFolder(songId, ChartType.Official), difficulty + GameConstants.Chart.FileExtension);
+    }
+
+    /// <summary>
+    /// 그 곡·난이도의 공식 채보 파일이 이미 있으면 true (Unity 에디터에서 저장 전에 덮어쓰기를 물을 때 쓴다).
+    /// </summary>
+    public static bool OfficialChartExists(string songId, string difficulty)
+    {
+        return File.Exists(GetOfficialChartPath(songId, difficulty));
+    }
+
+    /// <summary>
+    /// 채보를 저장한다. 같은 파일이 있으면 덮어쓴다.
     /// - 형식 검사를 통과해야 저장한다.
-    /// - 공식 채보는 Unity 에디터에서 실행할 때만 저장할 수 있다.
+    /// - 나만의 채보는 {chartId}.json, 공식 채보는 Resources의 {난이도}.json에 쓴다.
+    /// - 공식 채보는 Unity 에디터에서 실행할 때만 저장할 수 있다. 저장 뒤 임포트(AssetDatabase)는 호출하는 쪽이 한다.
     /// </summary>
     /// <param name="error">실패 이유. 성공하면 빈 문자열</param>
     public static bool TrySave(ChartData chart, out string error)
@@ -84,7 +100,15 @@ public static class ChartRepository
         }
 #endif
 
-        string path = GetChartPath(chart.songId, chart.chartId, type);
+        if (type == ChartType.Official && Array.IndexOf(GameConstants.Chart.Difficulties, chart.difficulty) < 0)
+        {
+            error = $"공식 채보 난이도는 {string.Join("/", GameConstants.Chart.Difficulties)} 중 하나여야 합니다: {chart.difficulty}";
+            return false;
+        }
+
+        string path = type == ChartType.Official
+            ? GetOfficialChartPath(chart.songId, chart.difficulty)
+            : GetChartPath(chart.songId, chart.chartId, type);
         string tempPath = path + GameConstants.Chart.TempExtension;
 
         try

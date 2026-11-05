@@ -29,7 +29,8 @@ public class Canvas_InGame : UIBase
     /// <summary>
     /// 곡 정보와 테스트 플레이 표시를 채우고 점수·콤보를 비운다.
     /// </summary>
-    public void Init(string songTitle, string chartName, int level, bool isTestPlay)
+    /// <param name="isAutoPlay">자동 플레이면 테스트 플레이 표시에 "자동 플레이"를 함께 쓴다</param>
+    public void Init(string songTitle, string chartName, int level, bool isTestPlay, bool isAutoPlay)
     {
         songInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, songTitle, chartName, level);
         judgeText.text = string.Empty;
@@ -37,8 +38,8 @@ public class Canvas_InGame : UIBase
         scoreText.SetText("{0}", 0);
         messageText.text = string.Empty;
 
-        testPlayText.text = GameConstants.Play.TestPlayInGameText;
-        testPlayText.gameObject.SetActive(isTestPlay);
+        testPlayText.text = isAutoPlay ? GameConstants.Play.AutoTestPlayInGameText : GameConstants.Play.TestPlayInGameText;
+        testPlayText.gameObject.SetActive(isTestPlay || isAutoPlay);
         HideCountdown();
     }
 

@@ -12,6 +12,9 @@ using UnityEngine;
 /// - ESC(팝업이 없을 때 UIManager가 OnBack을 부름)나 창 포커스를 잃으면 일시정지 메뉴(Popup_Pause)를 연다.
 ///   멈추면 노래·곡 시간·노트·놓침 MISS·라인 키·자동 플레이가 모두 멈추고, "계속"을 누르면 3초 카운트다운 뒤 멈춘 위치에서 이어진다.
 ///   재시작·나가기는 결과 씬을 거치지 않는다. 나가는 곳은 CreateReturnTarget()이 진입 데이터로 정한다 (곡 선택 / 테스트 플레이면 에디터).
+/// - 자동 플레이(에디터의 자동 테스트, 테스트 플레이 전용): 노트 시간마다 키 입력과 같은 경로(OnLanePressed)로 판정·키음을 내고
+///   라인 빛남을 짧게 켰다 끈다. 자동 플레이 중에는 사용자의 라인 키를 무시한다 (ESC 일시정지는 그대로).
+///   일반 플레이(곡 선택에서 들어옴)는 진입 데이터에 testPlay가 없어 자동 플레이를 켤 수 없다.
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -38,7 +41,7 @@ public class InGameScene : SceneBase
 
 #if UNITY_EDITOR
     [Header("확인용 (Unity 에디터 전용, 빌드에 포함되지 않음)")]
-    [Tooltip("켜면 노트 시간마다 키 입력과 같은 경로로 판정 함수에 입력을 넣는다 (싱크·점수 검증용)")]
+    [Tooltip("켜면 진입 데이터와 상관없이 자동 플레이로 시작한다 (싱크·점수 검증용). 씬에는 꺼 둔 채로 저장한다")]
     [SerializeField] private bool autoPlay;
 #endif
 
@@ -58,6 +61,10 @@ public class InGameScene : SceneBase
     /// <summary>일시정지 메뉴가 열렸거나 재개 카운트다운 중이면 true (Update와 라인 키를 멈춘다)</summary>
     private bool isPaused;
     private Coroutine countdownRoutine;
+    /// <summary>자동 플레이 중이면 true (테스트 플레이의 autoPlay, 또는 Unity 에디터의 확인용 토글)</summary>
+    private bool isAutoPlay;
+    /// <summary>자동 플레이가 켠 라인 빛남을 끌 시각 (realtime, 0이면 꺼져 있음)</summary>
+    private readonly double[] autoGlowOffAt = new double[GameConstants.Editor.LaneCount];
 
     // 판정 오차 기록 (키로 친 판정만)
     private int hitCount;
@@ -120,10 +127,16 @@ public class InGameScene : SceneBase
 
         gear.Init();
         noteLayer.Init(gear, judge, entry.scrollMultiplier);
-        input.Init(OnLanePressed, gear.SetPressed);
-        canvas.Init(song.Title, chart.chartName, chart.level, IsTestPlay);
+        isAutoPlay = IsTestPlay && entry.testPlay.autoPlay;
+#if UNITY_EDITOR
+        if (autoPlay) isAutoPlay = true;
+#endif
+        System.Array.Clear(autoGlowOffAt, 0, autoGlowOffAt.Length);
 
-        Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
+        input.Init(OnUserLanePressed, OnUserLaneHeld);
+        canvas.Init(song.Title, chart.chartName, chart.level, IsTestPlay, isAutoPlay);
+
+        Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
                   $"노트 {judge.TotalCount}개{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
                   $"bpm={chart.timingPoints[0].bpm}, offsetMs={song.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
                   $"첫 노트 {firstNoteTime:0.###}초, 끝 {endTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개, " +
@@ -161,9 +174,11 @@ public class InGameScene : SceneBase
 
         double songTime = GameManager.Sound.SongTime;
 
-#if UNITY_EDITOR
-        if (autoPlay) RunAutoPlay(songTime);
-#endif
+        if (isAutoPlay)
+        {
+            RunAutoPlay(songTime);
+            UpdateAutoGlows(false);
+        }
 
         if (judge.CollectMisses(songTime, missResults) > 0)
         {
@@ -173,6 +188,24 @@ public class InGameScene : SceneBase
         noteLayer.Refresh(songTime);
 
         if (songTime >= endTime && judge.AllJudged) Finish();
+    }
+
+    /// <summary>
+    /// 사용자의 라인 키 눌림 (InGameInput). 자동 플레이 중에는 무시한다.
+    /// </summary>
+    private void OnUserLanePressed(int lane, double inputSongTime)
+    {
+        if (isAutoPlay) return;
+        OnLanePressed(lane, inputSongTime);
+    }
+
+    /// <summary>
+    /// 사용자의 라인 키 누름·뗌 (라인 빛남). 자동 플레이 중에는 자동 플레이가 빛남을 맡으므로 무시한다.
+    /// </summary>
+    private void OnUserLaneHeld(int lane, bool pressed)
+    {
+        if (isAutoPlay) return;
+        gear.SetPressed(lane, pressed);
     }
 
     /// <summary>
@@ -228,6 +261,7 @@ public class InGameScene : SceneBase
         result.chartName = chart.chartName;
         result.level = chart.level;
         result.isTestPlay = IsTestPlay;
+        result.isAutoPlay = isAutoPlay;
         result.retryEntry = entry.Clone();
         result.returnTarget = CreateReturnTarget();
 
@@ -302,6 +336,7 @@ public class InGameScene : SceneBase
 
         bool wasCountingDown = countdownRoutine != null;
         StopCountdown();
+        if (isAutoPlay) UpdateAutoGlows(true);
 
         if (!isPaused)
         {
@@ -414,9 +449,9 @@ public class InGameScene : SceneBase
         GameManager.Sound.StopMusic();
     }
 
-#if UNITY_EDITOR
     /// <summary>
-    /// 노트 시간이 된 라인에 키 입력과 같은 함수로 입력을 넣는다. 입력 시각은 지금 곡 시간이라 오차는 1프레임 이내다.
+    /// 자동 플레이: 노트 시간이 된 라인에 키 입력과 같은 함수(OnLanePressed)로 입력을 넣어 판정·키음을 내고,
+    /// 라인 빛남을 짧게(GameConstants.Play.AutoPlayGlowSeconds) 켠다. 입력 시각은 지금 곡 시간이라 오차는 1프레임 이내다.
     /// </summary>
     private void RunAutoPlay(double songTime)
     {
@@ -429,10 +464,28 @@ public class InGameScene : SceneBase
                 int judgedBefore = judge.JudgedCount;
                 OnLanePressed(lane, inputTime);
                 if (judge.JudgedCount == judgedBefore) break;
+
+                gear.SetPressed(lane, true);
+                autoGlowOffAt[lane] = Time.realtimeSinceStartupAsDouble + GameConstants.Play.AutoPlayGlowSeconds;
             }
         }
     }
-#endif
+
+    /// <summary>
+    /// 자동 플레이가 켠 라인 빛남을 시간이 되면 끈다.
+    /// </summary>
+    /// <param name="forceOff">true면 시간과 상관없이 모두 끈다 (일시정지할 때)</param>
+    private void UpdateAutoGlows(bool forceOff)
+    {
+        double now = Time.realtimeSinceStartupAsDouble;
+        for (int lane = 0; lane < autoGlowOffAt.Length; lane++)
+        {
+            if (autoGlowOffAt[lane] <= 0 || (!forceOff && now < autoGlowOffAt[lane])) continue;
+
+            gear.SetPressed(lane, false);
+            autoGlowOffAt[lane] = 0;
+        }
+    }
 
     private InGameEntryData CreateTestEntry()
     {

@@ -77,26 +77,27 @@ public class TestPlayRulesTests
             ChartEditSession session = owner.AddComponent<ChartEditSession>();
             session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", 150f, 0, 60f);
 
-            Assert.IsNull(session.CreateTestPlayData(0f, 4, 1f, EditorTool.ShortNote, out string emptyError), "노트가 없으면 null");
+            Assert.IsNull(session.CreateTestPlayData(0f, 4, 1f, EditorTool.ShortNote, false, out string emptyError), "노트가 없으면 null");
             Assert.IsNotEmpty(emptyError);
 
             session.AddNote(0, 0);
             session.AddNote(1, 48 * 8);
             Assert.IsTrue(session.IsDirty);
 
-            TestPlayData data = session.CreateTestPlayData(8f, 6, 1.5f, EditorTool.Eraser, out string error);
+            TestPlayData data = session.CreateTestPlayData(8f, 6, 1.5f, EditorTool.Eraser, true, out string error);
             Assert.IsNotNull(data, error);
             Assert.IsNull(session.ChartId, "새 채보에 ID를 만들지 않는다");
             Assert.IsNull(data.chart.chartId);
             Assert.IsTrue(session.IsDirty, "수정 여부 그대로");
             Assert.AreEqual(2, data.chart.notes.Count, "채보에는 모든 노트가 들어 있다 (필터는 인게임이 한다)");
             Assert.AreEqual(8f, data.startBeat);
+            Assert.IsTrue(data.autoPlay, "자동 테스트 값이 그대로 들어간다");
             Assert.IsTrue(data.editorState.isDirty);
             Assert.AreEqual(6, data.editorState.snapDivision);
             Assert.AreEqual(1.5f, data.editorState.gridHeightScale);
             Assert.AreEqual(EditorTool.Eraser, data.editorState.tool);
 
-            Assert.IsNull(session.CreateTestPlayData(8.25f, 4, 1f, EditorTool.ShortNote, out string afterError), "뒤에 노트가 없으면 null");
+            Assert.IsNull(session.CreateTestPlayData(8.25f, 4, 1f, EditorTool.ShortNote, false, out string afterError), "뒤에 노트가 없으면 null");
             Assert.AreEqual(GameConstants.Editor.TestPlayNoNotesAfterMessage, afterError);
 
             // 돌아와서 되돌리기: ApplyChartData는 수정 여부를 false로 만들고, RestoreDirty로 되돌린다

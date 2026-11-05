@@ -85,6 +85,11 @@ public static class GameConstants
         /// <summary>테스트 플레이 표시와 결과 화면 돌아가기 버튼 문구</summary>
         public const string TestPlayLabel = "테스트 플레이";
         public const string TestPlayInGameText = "테스트 플레이 · ESC 일시정지";
+        public const string AutoTestPlayInGameText = "테스트 플레이 · 자동 플레이 · ESC 일시정지";
+        public const string AutoTestPlayLabel = "테스트 플레이 · 자동 플레이";
+
+        /// <summary>자동 플레이가 노트를 칠 때 라인 빛남을 켜 두는 시간 (초, realtime)</summary>
+        public const double AutoPlayGlowSeconds = 0.08;
         public const string ReturnToEditorLabel = "에디터로 돌아가기";
         public const string ReturnToSongSelectLabel = "곡 선택으로";
         public const string RetryLabel = "다시 하기";
@@ -135,6 +140,10 @@ public static class GameConstants
         /// <summary>타이틀 게임 종료</summary>
         public const string QuitMessage = "게임을 종료하시겠습니까?";
         public const string QuitLabel = "종료하기";
+
+        /// <summary>F1 패널 공식 채보로 추가: 그 난이도 파일이 이미 있을 때 ({0} 곡 제목, {1} 난이도)</summary>
+        public const string OfficialOverwriteMessageFormat = "{0} {1} 공식 채보가 이미 있습니다.\n덮어쓰시겠습니까?";
+        public const string OfficialOverwriteLabel = "덮어쓰기";
 
         /// <summary>에디터 나가기 (저장하지 않은 변경이 있을 때만)</summary>
         public const string EditorExitMessage = "저장하지 않은 변경이 있습니다.\n저장하지 않고 나가시겠습니까?";
@@ -311,15 +320,16 @@ public static class GameConstants
         public const string CustomFolder = "MyCharts";
 
         /// <summary>
-        /// 공식 채보 저장 폴더 (Unity 에디터 저장 전용): streamingAssetsPath/Charts/{songId}/.
-        /// TODO: 공식 채보 저장 위치를 Resources로 옮길 것 (읽기는 OfficialResourcesFolder를 쓴다)
-        /// </summary>
-        public const string OfficialFolder = "Charts";
-
-        /// <summary>
-        /// 공식 채보 읽기 폴더 (Resources.Load 경로): Resources/Data/OfficialCharts/{songId}/{난이도}.json
+        /// 공식 채보 폴더 (Resources.Load 경로): Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json.
+        /// 읽기와 저장(Unity 에디터 전용)이 같은 곳을 쓴다
         /// </summary>
         public const string OfficialResourcesFolder = "Data/OfficialCharts";
+
+        /// <summary>프로젝트 안 Resources 폴더 이름 (Application.dataPath 아래). 공식 채보 저장 경로에 쓴다</summary>
+        public const string ResourcesFolder = "Resources";
+
+        /// <summary>공식 채보 작성자 (F1 패널의 공식 채보로 추가)</summary>
+        public const string OfficialAuthor = "Kairos";
 
         /// <summary>공식 채보 난이도 (낮은 것부터). 공식 채보 파일 이름이기도 하다</summary>
         public static readonly string[] Difficulties = { "NORMAL", "HARD", "EXPERT" };

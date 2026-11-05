@@ -264,7 +264,8 @@ public class ChartEditSession : MonoBehaviour
     /// <param name="snapDivision">돌아왔을 때 되돌릴 박자 스냅</param>
     /// <param name="gridHeightScale">돌아왔을 때 되돌릴 그리드 높이 배율</param>
     /// <param name="tool">돌아왔을 때 되돌릴 도구</param>
-    public TestPlayData CreateTestPlayData(float startBeat, int snapDivision, float gridHeightScale, EditorTool tool, out string error)
+    /// <param name="autoPlay">자동 플레이로 시작하면 true (자동 테스트)</param>
+    public TestPlayData CreateTestPlayData(float startBeat, int snapDivision, float gridHeightScale, EditorTool tool, bool autoPlay, out string error)
     {
         if (Data.Notes.Count == 0)
         {
@@ -286,6 +287,7 @@ public class ChartEditSession : MonoBehaviour
             songId = SongId,
             chart = chart,
             startBeat = startBeat,
+            autoPlay = autoPlay,
             editorState = new EditorRestoreState
             {
                 chart = chart,

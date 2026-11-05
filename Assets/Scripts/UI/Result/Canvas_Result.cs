@@ -65,7 +65,7 @@ public class Canvas_Result : UIBase
         accuracyText.text = $"정확도  {result.accuracy.ToString("0.00", CultureInfo.InvariantCulture)}%";
         songInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, result.songTitle, result.chartName, result.level);
 
-        testPlayText.text = GameConstants.Play.TestPlayLabel;
+        testPlayText.text = result.isAutoPlay ? GameConstants.Play.AutoTestPlayLabel : GameConstants.Play.TestPlayLabel;
         testPlayText.gameObject.SetActive(result.isTestPlay);
 
         retryLabelText.text = GameConstants.Play.RetryLabel + GameConstants.Play.RetryKeyHint;

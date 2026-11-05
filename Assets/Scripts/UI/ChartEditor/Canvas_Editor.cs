@@ -29,6 +29,8 @@ public class Canvas_Editor : UIBase
     [SerializeField] private Button saveButton;
     [SerializeField] private Button exitButton;
     [SerializeField] private Button testPlayButton;
+    [Tooltip("자동 테스트 (Btn_AutoTestPlay). 테스트 플레이를 자동 플레이로 시작한다")]
+    [SerializeField] private Button autoTestPlayButton;
 
     [Header("그리드")]
     [Tooltip("휠 입력을 받을 영역 (Img_Grid)")]
@@ -101,6 +103,7 @@ public class Canvas_Editor : UIBase
     private Action onSaveRequested;
     private Action onExitRequested;
     private Action onTestPlayRequested;
+    private Action onAutoTestPlayRequested;
 
     /// <summary>마지막 저장 결과 문구. 나가기 안내가 끝나면 이 문구로 되돌린다</summary>
     private string lastSaveStatus = string.Empty;
@@ -133,12 +136,14 @@ public class Canvas_Editor : UIBase
     /// <param name="onSaveRequested">Btn_Save·Ctrl+S를 누르면 부를 저장 요청 (EditorScene)</param>
     /// <param name="onExitRequested">Btn_Exit를 누르면 부를 나가기 요청 (EditorScene)</param>
     /// <param name="onTestPlayRequested">Btn_TestPlay를 누르면 부를 테스트 플레이 요청 (EditorScene)</param>
-    public void Init(ChartGridView grid, ChartEditSession session, SongData song, Action onSaveRequested, Action onExitRequested, Action onTestPlayRequested)
+    /// <param name="onAutoTestPlayRequested">Btn_AutoTestPlay를 누르면 부를 자동 테스트 요청 (EditorScene)</param>
+    public void Init(ChartGridView grid, ChartEditSession session, SongData song, Action onSaveRequested, Action onExitRequested, Action onTestPlayRequested, Action onAutoTestPlayRequested)
     {
         this.grid = grid;
         this.onSaveRequested = onSaveRequested;
         this.onExitRequested = onExitRequested;
         this.onTestPlayRequested = onTestPlayRequested;
+        this.onAutoTestPlayRequested = onAutoTestPlayRequested;
 
         if (data != null) data.OnChanged -= RefreshNoteCountText;
         data = session.Data;
@@ -154,6 +159,8 @@ public class Canvas_Editor : UIBase
         exitButton.onClick.AddListener(RequestExit);
         testPlayButton.onClick.RemoveListener(RequestTestPlay);
         testPlayButton.onClick.AddListener(RequestTestPlay);
+        autoTestPlayButton.onClick.RemoveListener(RequestAutoTestPlay);
+        autoTestPlayButton.onClick.AddListener(RequestAutoTestPlay);
 
         chartInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, song.Title, session.ChartName, session.Level);
         songLengthText.text = TimeFormat.ToMinSec(session.SongLengthSeconds);
@@ -307,6 +314,7 @@ public class Canvas_Editor : UIBase
         if (saveButton != null) saveButton.onClick.RemoveListener(RequestSave);
         if (exitButton != null) exitButton.onClick.RemoveListener(RequestExit);
         if (testPlayButton != null) testPlayButton.onClick.RemoveListener(RequestTestPlay);
+        if (autoTestPlayButton != null) autoTestPlayButton.onClick.RemoveListener(RequestAutoTestPlay);
         if (playButton != null) playButton.onClick.RemoveListener(RequestPlayToggle);
         if (metronomeToggle != null) metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
         if (data != null) data.OnChanged -= RefreshNoteCountText;
@@ -334,6 +342,11 @@ public class Canvas_Editor : UIBase
     private void RequestTestPlay()
     {
         onTestPlayRequested?.Invoke();
+    }
+
+    private void RequestAutoTestPlay()
+    {
+        onAutoTestPlayRequested?.Invoke();
     }
 
     private void RequestPlayToggle()
