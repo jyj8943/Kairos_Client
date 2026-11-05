@@ -294,6 +294,30 @@ public class ChartRepositoryTests
         CollectionAssert.AreEqual(expected, actual);
     }
 
+    /// <summary>공식 채보 난이도 순서는 EASY → NORMAL → HARD이고, 목록에 없는 난이도는 맨 뒤다</summary>
+    [Test]
+    public void DifficultyOrder_EasyNormalHard()
+    {
+        CollectionAssert.AreEqual(new[] { "EASY", "NORMAL", "HARD" }, GameConstants.Chart.Difficulties);
+        Assert.Less(ChartRepository.GetDifficultyOrder("EASY"), ChartRepository.GetDifficultyOrder("NORMAL"));
+        Assert.Less(ChartRepository.GetDifficultyOrder("NORMAL"), ChartRepository.GetDifficultyOrder("HARD"));
+        Assert.Greater(ChartRepository.GetDifficultyOrder("EXPERT"), ChartRepository.GetDifficultyOrder("HARD"), "없는 난이도는 맨 뒤");
+    }
+
+    /// <summary>새 구성에 없는 난이도(EXPERT)의 공식 채보는 파일을 쓰기 전에 거절한다</summary>
+    [Test]
+    public void SaveOfficial_UnknownDifficulty_Rejected()
+    {
+        ChartData chart = CreateChart(TestSongId + "_expert");
+        chart.type = ChartData.TypeOfficial;
+        chart.difficulty = "EXPERT";
+        chart.notes.Add(Short(0f, 0));
+
+        Assert.IsFalse(ChartRepository.TrySave(chart, out string error));
+        StringAssert.Contains("공식 채보 난이도", error);
+        Assert.IsFalse(Directory.Exists(ChartRepository.GetSongFolder(TestSongId, ChartType.Official)), "공식 채보 폴더를 만들지 않는다");
+    }
+
     private static ChartData CreateChart(string chartId)
     {
         return new ChartData

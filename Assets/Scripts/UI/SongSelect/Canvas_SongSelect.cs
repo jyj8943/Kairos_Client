@@ -47,7 +47,7 @@ public class Canvas_SongSelect : UIBase
     [SerializeField] private Color emptyCoverColor = new Color32(0xD4, 0xD4, 0xD8, 0xFF);
 
     [Header("공식 채보 탭")]
-    [Tooltip("NORMAL · HARD · EXPERT 순서 (GameConstants.Chart.Difficulties와 같은 순서)")]
+    [Tooltip("EASY · NORMAL · HARD 순서 (GameConstants.Chart.Difficulties와 같은 순서)")]
     [SerializeField] private Btn_Difficulty[] difficultyButtons;
     [SerializeField] private TMP_Text officialEmptyText;
 

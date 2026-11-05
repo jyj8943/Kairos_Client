@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SongData
   songId: d_minor_descent
   title: D Minor Descent
-  artist: "\uBBF8\uC815"
+  artist: Kairos
   bpm: 216
   offsetMs: 120
   clip: {fileID: 8300000, guid: 8d5ae56aee5e3614e8779fdd075df729, type: 3}

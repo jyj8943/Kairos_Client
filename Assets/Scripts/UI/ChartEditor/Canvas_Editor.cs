@@ -63,6 +63,8 @@ public class Canvas_Editor : UIBase
     [Tooltip("재생 속도 (Dropdown_PlaybackSpeed). TODO: 재생 속도 기능을 만들면 연결한다 (지금은 막아 둔다)")]
     [SerializeField] private TMP_Dropdown playbackSpeedDropdown;
     [SerializeField] private Toggle metronomeToggle;
+    [Tooltip("에디터 키음 (Toggle_KeySound). 재생 중 노트가 현재 위치 선에 닿을 때 키음을 낸다")]
+    [SerializeField] private Toggle keySoundToggle;
 
     [Header("입력")]
     [Tooltip("입력 에셋의 ChartEditor/Scroll (마우스 휠 y)")]
@@ -93,6 +95,12 @@ public class Canvas_Editor : UIBase
 
     /// <summary>메트로놈 켜기·끄기</summary>
     public event Action<bool> MetronomeChanged;
+
+    /// <summary>에디터 키음 켜기·끄기</summary>
+    public event Action<bool> KeySoundChanged;
+
+    /// <summary>에디터 키음 토글이 켜져 있으면 true</summary>
+    public bool IsKeySoundOn => keySoundToggle != null && keySoundToggle.isOn;
 
     private string pauseIcon = GameConstants.Editor.PauseIcon;
 
@@ -179,6 +187,9 @@ public class Canvas_Editor : UIBase
         metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
         metronomeToggle.SetIsOnWithoutNotify(false);
         metronomeToggle.onValueChanged.AddListener(OnMetronomeToggled);
+        keySoundToggle.onValueChanged.RemoveListener(OnKeySoundToggled);
+        keySoundToggle.SetIsOnWithoutNotify(GameConstants.Editor.KeySoundDefaultOn);
+        keySoundToggle.onValueChanged.AddListener(OnKeySoundToggled);
 
         // 폰트에 ❚ 글자가 없으면 굵은 "II"로 대신한다
         pauseIcon = playIconText.font != null && playIconText.font.HasCharacters(GameConstants.Editor.PauseIcon)
@@ -317,6 +328,7 @@ public class Canvas_Editor : UIBase
         if (autoTestPlayButton != null) autoTestPlayButton.onClick.RemoveListener(RequestAutoTestPlay);
         if (playButton != null) playButton.onClick.RemoveListener(RequestPlayToggle);
         if (metronomeToggle != null) metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
+        if (keySoundToggle != null) keySoundToggle.onValueChanged.RemoveListener(OnKeySoundToggled);
         if (data != null) data.OnChanged -= RefreshNoteCountText;
         if (session != null) session.OnDirtyChanged -= OnDirtyChanged;
     }
@@ -366,6 +378,11 @@ public class Canvas_Editor : UIBase
     private void OnMetronomeToggled(bool on)
     {
         MetronomeChanged?.Invoke(on);
+    }
+
+    private void OnKeySoundToggled(bool on)
+    {
+        KeySoundChanged?.Invoke(on);
     }
 
     /// <summary>

@@ -29,7 +29,7 @@ public class ChartData
     /// <summary>채보 이름 (한글·특수문자 가능, 파일 이름에는 쓰지 않는다)</summary>
     public string chartName;
 
-    /// <summary>난이도 이름 (NORMAL·HARD·EXPERT). 나만의 채보는 지금 빈 문자열</summary>
+    /// <summary>난이도 이름 (EASY·NORMAL·HARD). 나만의 채보는 지금 빈 문자열</summary>
     public string difficulty = string.Empty;
 
     /// <summary>만든 사람. 나만의 채보는 지금 빈 문자열</summary>

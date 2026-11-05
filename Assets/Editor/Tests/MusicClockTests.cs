@@ -166,6 +166,26 @@ public class MusicClockTests
         Assert.AreEqual(5.9, clock.SongTime, DspBufferSeconds + FrameSeconds);
     }
 
+    /// <summary>
+    /// 음원 시작 위치는 샘플 단위로 넣는다 (SoundManager.ToSamples). 범위 밖은 0 ~ 마지막 샘플로 맞춘다.
+    /// </summary>
+    [Test]
+    public void ToSamples_ClampsToClip()
+    {
+        UnityEngine.AudioClip clip = UnityEngine.AudioClip.Create("test", 48000 * 10, 1, 48000, false);
+        try
+        {
+            Assert.AreEqual(120000, SoundManager.ToSamples(clip, 2.5));
+            Assert.AreEqual(0, SoundManager.ToSamples(clip, -1.0), "음수는 0");
+            Assert.AreEqual(clip.samples - 1, SoundManager.ToSamples(clip, 999.0), "곡보다 뒤는 마지막 샘플");
+            Assert.AreEqual(0, SoundManager.ToSamples(null, 1.0), "클립이 없으면 0");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(clip);
+        }
+    }
+
     /// <summary>입력 시각 변환: 마지막 Tick보다 이른 입력은 그만큼 이른 곡 시간이 된다. 시작 위치도 더한다</summary>
     [Test]
     public void SongTimeAtRealtime_AndStartPosition()

@@ -55,8 +55,19 @@ public static class GameConstants
         /// <summary>노래 시작 지연의 최소값 (초). 첫 노트가 늦어도 이만큼은 기다린다</summary>
         public const double MinStartDelaySeconds = 1.0;
 
-        /// <summary>마지막 노트 뒤 결과까지 기다리는 시간 (초)</summary>
-        public const double EndPaddingSeconds = 1.0;
+        /// <summary>
+        /// 모든 노트가 판정된 뒤 결과 씬으로 넘어가기까지 기다리는 시간 (초, 곡 시간 기준).
+        /// 이 동안 노래는 계속 흐르고, 일시정지는 받지 않는다 (결과로 넘어가는 중)
+        /// </summary>
+        public const double ResultDelaySeconds = 3.0;
+
+        /// <summary>
+        /// 곡 시간(MusicClock)과 실제 음원 재생 위치의 차이가 이보다 크면 진단 경고를 남긴다 (초, 약 2프레임. Unity 에디터 전용 진단)
+        /// </summary>
+        public const double SyncWarningSeconds = 0.034;
+
+        /// <summary>싱크 진단 경고를 같은 판에서 다시 남기기까지의 간격 (초, realtime)</summary>
+        public const double SyncWarningIntervalSeconds = 1.0;
 
         /// <summary>
         /// 인게임 기본 낙하 속도 (월드 유닛/초). 판정선부터 화면 위까지 약 1.2초가 보인다.
@@ -285,6 +296,12 @@ public static class GameConstants
         /// <summary>메트로놈: 이 시간(초) 안에 올 박의 클릭을 미리 예약한다</summary>
         public const double MetronomeLookaheadSeconds = 0.25;
 
+        /// <summary>에디터 키음: 이 시간(초) 안에 현재 위치 선에 닿을 노트의 키음을 미리 예약한다</summary>
+        public const double KeySoundLookaheadSeconds = 0.25;
+
+        /// <summary>에디터 키음 토글(Toggle_KeySound) 기본값</summary>
+        public const bool KeySoundDefaultOn = true;
+
         /// <summary>메트로놈 클릭 소리 (코드로 만드는 사인파). 마디 첫 박은 더 높은 소리</summary>
         public const float MetronomeBeatFrequency = 1000f;
         public const float MetronomeMeasureFrequency = 1600f;
@@ -332,7 +349,7 @@ public static class GameConstants
         public const string OfficialAuthor = "Kairos";
 
         /// <summary>공식 채보 난이도 (낮은 것부터). 공식 채보 파일 이름이기도 하다</summary>
-        public static readonly string[] Difficulties = { "NORMAL", "HARD", "EXPERT" };
+        public static readonly string[] Difficulties = { "EASY", "NORMAL", "HARD" };
 
         public const string FileExtension = ".json";
 

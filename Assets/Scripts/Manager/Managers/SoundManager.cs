@@ -35,6 +35,9 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     /// <summary>노래가 일시정지 중이면 true</summary>
     public bool IsMusicPaused => clock.IsPaused;
 
+    /// <summary>재개 직후 곡 시간을 붙잡아 두는 중이면 true (이때는 곡 시간과 음원 위치가 일부러 다르다)</summary>
+    public bool IsClockHolding => clock.IsHolding;
+
     /// <summary>PlaySfx로 효과음을 재생한 횟수 (확인용, 게임 실행 후 누적)</summary>
     public int SfxPlayCount { get; private set; }
 
@@ -50,6 +53,24 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
                 if (source != null && source.isPlaying) count++;
             }
             return count;
+        }
+    }
+
+    /// <summary>예약 효과음 소스가 모두 쓰는 중이라 다른 예약을 덮어쓴 횟수 (확인용, 0이어야 정상)</summary>
+    public int ScheduledSfxOverwriteCount { get; private set; }
+
+    /// <summary>지금 예약됐거나 소리를 내는 중인 예약 효과음 소스 수 (확인용)</summary>
+    public int ActiveScheduledSfxCount
+    {
+        get
+        {
+            int active = 0;
+            if (scheduledSfxSources == null) return 0;
+            foreach (AudioSource source in scheduledSfxSources)
+            {
+                if (source != null && source.isPlaying) active++;
+            }
+            return active;
         }
     }
 
@@ -130,9 +151,10 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
             return;
         }
 
+        // 이전 재생·정지 상태와 상관없이 지정한 위치에서 시작하도록, 멈춘 뒤 클립을 다시 넣고 시작 위치를 샘플 단위로 넣는다
         musicSource.Stop();
         musicSource.clip = clip;
-        musicSource.time = Mathf.Clamp((float)startPositionSeconds, 0f, clip.length);
+        musicSource.timeSamples = ToSamples(clip, startPositionSeconds);
 
         double dspNow = AudioSettings.dspTime;
         double startDsp = dspNow + System.Math.Max(0, delaySeconds);
@@ -170,7 +192,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         if (position >= musicSource.clip.length) return;
 
         musicSource.Stop();
-        musicSource.time = Mathf.Clamp((float)position, 0f, musicSource.clip.length);
+        musicSource.timeSamples = ToSamples(musicSource.clip, position);
         musicSource.PlayScheduled(clock.SongTimeToDsp(position));
     }
 
@@ -224,16 +246,36 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     }
 
     /// <summary>
-    /// 효과음을 DSP 시각에 예약 재생한다. 예약 전용 소스를 돌아가며 쓰므로,
-    /// 소스 수보다 많이 미리 예약하면 가장 오래된 예약이 덮어써진다.
+    /// 효과음을 DSP 시각에 예약 재생한다 (메트로놈·에디터 키음). 예약 전용 소스를 돌아가며 쓴다.
+    /// - 다음 차례부터 쉬고 있는 소스(예약·재생 중이 아닌 것)를 먼저 찾아 쓴다.
+    /// - 모두 쓰는 중이면 다음 차례 소스를 덮어쓰고(그 예약은 빠진다) ScheduledSfxOverwriteCount를 늘린다.
     /// </summary>
     /// <returns>예약했으면 true</returns>
     public bool ScheduleSfx(AudioClip clip, double dspTime)
     {
         if (clip == null || scheduledSfxSources == null || scheduledSfxSources.Length == 0) return false;
 
-        AudioSource source = scheduledSfxSources[nextScheduledSfxIndex];
-        nextScheduledSfxIndex = (nextScheduledSfxIndex + 1) % scheduledSfxSources.Length;
+        int count = scheduledSfxSources.Length;
+        int chosen = -1;
+        for (int i = 0; i < count; i++)
+        {
+            int index = (nextScheduledSfxIndex + i) % count;
+            AudioSource candidate = scheduledSfxSources[index];
+            if (candidate != null && !candidate.isPlaying)
+            {
+                chosen = index;
+                break;
+            }
+        }
+
+        if (chosen < 0)
+        {
+            chosen = nextScheduledSfxIndex;
+            ScheduledSfxOverwriteCount++;
+        }
+
+        nextScheduledSfxIndex = (chosen + 1) % count;
+        AudioSource source = scheduledSfxSources[chosen];
         if (source == null) return false;
 
         source.Stop();
@@ -253,6 +295,17 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         {
             if (source != null) source.Stop();
         }
+    }
+
+    /// <summary>
+    /// 음원 안 위치(초)를 샘플 위치로 바꾼다. 0 ~ 마지막 샘플로 맞춘다.
+    /// </summary>
+    public static int ToSamples(AudioClip clip, double positionSeconds)
+    {
+        if (clip == null || clip.samples <= 0) return 0;
+
+        long samples = (long)System.Math.Round(positionSeconds * clip.frequency);
+        return (int)System.Math.Max(0, System.Math.Min(clip.samples - 1, samples));
     }
 
     /// <summary>Seek 후 예약 재생까지 두는 시간 (초). 오디오 버퍼보다 길어야 시작이 늦지 않는다</summary>

@@ -8,7 +8,7 @@ using UnityEngine;
 /// <summary>
 /// 채보 파일 읽기·쓰기 창구 (기획서 2-4). 상태를 들고 있지 않는 static 클래스다.
 /// - 나만의 채보: persistentDataPath/MyCharts/{songId}/{chartId}.json
-/// - 공식 채보: Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json (난이도 = NORMAL / HARD / EXPERT)
+/// - 공식 채보: Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json (난이도 = EASY / NORMAL / HARD)
 ///   읽기는 Resources.LoadAll, 저장은 같은 파일에 쓴다 (Unity 에디터에서만 저장. 빌드에서는 읽기 전용)
 /// - 나만의 채보 파일 이름은 chartId만 쓴다. 채보 이름은 파일 이름에 쓰지 않는다.
 /// - 저장은 임시 파일({chartId}.json.tmp)에 먼저 쓰고 다 쓰면 원래 파일과 바꿔치기한다.
@@ -171,7 +171,7 @@ public static class ChartRepository
 
     /// <summary>
     /// 곡의 채보를 모두 읽는다. 없으면 빈 목록. 읽지 못한 파일은 경고만 남기고 건너뛴다.
-    /// - 공식 채보: Resources에서 읽고 난이도 순(NORMAL → HARD → EXPERT)
+    /// - 공식 채보: Resources에서 읽고 난이도 순(EASY → NORMAL → HARD)
     /// - 나만의 채보: 곡 폴더의 파일을 읽고 chartId 순
     /// </summary>
     public static List<ChartData> GetCharts(string songId, ChartType type)

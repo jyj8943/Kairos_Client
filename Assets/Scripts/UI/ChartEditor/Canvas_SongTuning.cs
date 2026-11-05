@@ -30,7 +30,7 @@ public class Canvas_SongTuning : MonoBehaviour
     [SerializeField] private TMP_Text statusText;
 
     [Header("공식 채보로 추가")]
-    [Tooltip("난이도 (NORMAL / HARD / EXPERT, GameConstants.Chart.Difficulties 순서)")]
+    [Tooltip("난이도 (EASY / NORMAL / HARD, GameConstants.Chart.Difficulties 순서)")]
     [SerializeField] private TMP_Dropdown officialDifficultyDropdown;
     [Tooltip("레벨 (1~15). 기본값은 편집 중인 채보의 레벨")]
     [SerializeField] private TMP_InputField officialLevelInput;

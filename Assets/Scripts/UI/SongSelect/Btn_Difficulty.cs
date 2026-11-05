@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 곡 선택 화면(공식 채보 탭)의 난이도 버튼 하나 (NORMAL · HARD · EXPERT + 레벨).
+/// 곡 선택 화면(공식 채보 탭)의 난이도 버튼 하나 (EASY · NORMAL · HARD + 레벨).
 /// - 고른 곡에 그 난이도 채보가 없으면 레벨을 "-"로 두고 버튼을 비활성으로 보인다.
 /// - 고른 난이도는 배경을 검게, 글자를 희게 표시한다 (Btn_SongItem과 같은 모양).
 /// </summary>

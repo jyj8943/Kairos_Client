@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SongData
   songId: critical_velocity
   title: Critical Velocity
-  artist: "\uBBF8\uC815"
+  artist: Kairos
   bpm: 150.61
   offsetMs: 18
   clip: {fileID: 8300000, guid: b0486ba82675b3a488d280ff43f77371, type: 3}

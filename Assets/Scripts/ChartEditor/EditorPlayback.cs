@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -8,10 +9,17 @@ using UnityEngine;
 /// - 정지: 노래와 예약한 클릭을 멈추고, 현재 위치를 지금 스냅의 가장 가까운 선으로 맞춘다.
 /// - 메트로놈: 켜져 있으면 다음 박의 클릭을 DSP 시각으로 미리 예약한다 (프레임마다 재생하지 않는다).
 ///   마디 첫 박은 더 높은 소리다. 현재 위치 선도 박마다 잠깐 밝아진다.
+/// - 키음: 켜져 있으면 노트가 현재 위치 선에 닿는 순간의 키음(인게임과 같은 NoteSFX)을 DSP 시각으로 미리 예약한다.
+///   같은 박 여러 라인 노트는 노트마다 한 번씩, 롱노트는 시작에서 한 번. 재생 중 노트가 바뀌면 예약을 지우고 다시 잡는다.
+///   계산(첫 노트, 예약 범위 안 노트)은 EditorKeySoundMath가 맡는다.
+/// - 메트로놈과 키음은 따로 켜고 끈다. 예약은 둘 다 SoundManager.ScheduleSfx를 쓰고, 취소(CancelScheduledSfx)도 같이 된다.
 /// - 박 ↔ 시간은 인게임과 같은 BeatGridMath(offset 포함)를 쓴다.
 /// </summary>
 public class EditorPlayback : MonoBehaviour
 {
+    [Tooltip("에디터 키음 (인게임과 같은 NoteSFX)")]
+    [SerializeField] private AudioClip keySound;
+
     private ChartGridView grid;
     private ChartEditSession session;
     private SongData song;
@@ -22,6 +30,20 @@ public class EditorPlayback : MonoBehaviour
     private AudioClip measureClick;
     private bool isMetronomeOn;
     private int nextClickBeat;
+
+    private bool isKeySoundOn;
+    private ChartEditData noteData;
+    private int nextNoteIndex;
+    private int keyPlayStartTick;
+    private readonly List<int> collectedNotes = new List<int>();
+
+    // 이번 재생에서 예약한 키음 (확인용: 노트 tick·라인과 예약 DSP 시각). 다시 계산할 때 아직 안 울린 것은 지운다
+    private readonly List<int> keyTicks = new List<int>();
+    private readonly List<int> keyLanes = new List<int>();
+    private readonly List<double> keyDsps = new List<double>();
+    private double maxKeyErrorMs;
+    private int skippedKeyCount;
+    private int rescheduleCount;
 
     /// <summary>재생을 시작한 박. 예약 지연 동안 그리드가 뒤로 가지 않게 이 박보다 앞으로는 표시하지 않는다</summary>
     private float playStartBeat;
@@ -39,6 +61,9 @@ public class EditorPlayback : MonoBehaviour
     /// <summary>메트로놈이 켜져 있으면 true</summary>
     public bool IsMetronomeOn => isMetronomeOn;
 
+    /// <summary>에디터 키음이 켜져 있으면 true</summary>
+    public bool IsKeySoundOn => isKeySoundOn;
+
     /// <summary>
     /// 그리드·세션·곡과 상태가 바뀔 때 부를 함수를 받고, 메트로놈 클릭 소리를 만든다. 정지 상태로 시작한다.
     /// </summary>
@@ -51,6 +76,14 @@ public class EditorPlayback : MonoBehaviour
         this.song = song;
         this.onPlayingChanged = onPlayingChanged;
         this.onPositionChanged = onPositionChanged;
+
+        // 재생 중 노트를 추가·삭제하면 키음 예약을 다시 잡는다
+        if (noteData != null) noteData.OnChanged -= OnNotesChanged;
+        noteData = session.Data;
+        noteData.OnChanged += OnNotesChanged;
+
+        if (keySound == null)
+            Debug.LogWarning("[EditorPlayback] keySound(NoteSFX)가 연결되지 않아 에디터 키음을 낼 수 없습니다.", this);
 
         if (beatClick == null)
             beatClick = ClickSoundFactory.Create("MetronomeBeat", GameConstants.Editor.MetronomeBeatFrequency, GameConstants.Editor.MetronomeClickSeconds);
@@ -84,14 +117,27 @@ public class EditorPlayback : MonoBehaviour
 
         IsPlaying = true;
         nextClickBeat = EditorPlaybackMath.GetFirstClickBeat(playStartBeat);
+        keyPlayStartTick = EditorKeySoundMath.BeatToFirstTick(playStartBeat);
+        nextNoteIndex = EditorKeySoundMath.FindFirstNoteAtOrAfter(noteData.Notes, keyPlayStartTick);
+        keyTicks.Clear();
+        keyLanes.Clear();
+        keyDsps.Clear();
+        maxKeyErrorMs = 0;
+        skippedKeyCount = 0;
+        rescheduleCount = 0;
         frameCount = 0;
         maxBeatTimeErrorMs = 0;
         maxClickErrorMs = 0;
         scheduledClickCount = 0;
         skippedClickCount = 0;
 
+        // 시작 위치에 있는 박·노트는 시작 지연(0.1초) 뒤에 울려야 하므로 다음 프레임을 기다리지 않고 바로 예약한다
+        double songTimeAtStart = GameManager.Sound.SongTime;
+        if (isMetronomeOn) ScheduleClicks(songTimeAtStart);
+        if (isKeySoundOn) ScheduleKeySounds(songTimeAtStart);
+
         Debug.Log($"[EditorPlayback] 재생: {playStartBeat:0.###}박 (마디 {grid.CurrentMeasure}), 음원 {start.StartPositionSeconds:0.###}초부터, 지연 {start.DelaySeconds:0.###}초, " +
-                  $"bpm={session.Bpm}, offsetMs={session.OffsetMs}, 메트로놈 {(isMetronomeOn ? "켬" : "끔")}", this);
+                  $"bpm={session.Bpm}, offsetMs={session.OffsetMs}, 메트로놈 {(isMetronomeOn ? "켬" : "끔")}, 키음 {(isKeySoundOn ? "켬" : "끔")}", this);
         onPlayingChanged?.Invoke();
     }
 
@@ -102,6 +148,19 @@ public class EditorPlayback : MonoBehaviour
     public void Stop(bool snapToGrid)
     {
         if (!IsPlaying) return;
+
+        // 확인용: 정지 순간 이미 울린 키음과 취소될 키음, 재생 구간의 노트 수
+        double dspNow = AudioSettings.dspTime;
+        float stopBeat = SoundManager.HasInstance
+            ? BeatGridMath.SecondsToBeat((float)GameManager.Sound.GetSongTimeAtRealtime(Time.realtimeSinceStartupAsDouble), session.Bpm, session.OffsetMs)
+            : grid.CurrentBeat;
+        int playedKeys = 0;
+        foreach (double dsp in keyDsps)
+        {
+            if (dsp <= dspNow) playedKeys++;
+        }
+        int rangeNotes = EditorKeySoundMath.CountNotesInRange(noteData.Notes, keyPlayStartTick,
+            Mathf.FloorToInt(stopBeat * GameConstants.Editor.TicksPerBeat));
 
         IsPlaying = false;
         if (SoundManager.HasInstance)
@@ -116,7 +175,9 @@ public class EditorPlayback : MonoBehaviour
         Debug.Log($"[EditorPlayback] 정지: {grid.CurrentBeat:0.###}박 (마디 {grid.CurrentMeasure}, " +
                   $"{BeatGridMath.BeatToSeconds(grid.CurrentBeat, session.Bpm, session.OffsetMs):0.000}초), 재생 프레임 {frameCount}개, " +
                   $"곡 시간과 그리드 박 시간 차이 최대 {maxBeatTimeErrorMs:0.###}ms, " +
-                  $"메트로놈 예약 {scheduledClickCount}개 (예약 시각 − 박 시각 최대 {maxClickErrorMs:0.###}ms, 늦어서 건너뜀 {skippedClickCount}개)", this);
+                  $"메트로놈 예약 {scheduledClickCount}개 (예약 시각 − 박 시각 최대 {maxClickErrorMs:0.###}ms, 늦어서 건너뜀 {skippedClickCount}개), " +
+                  $"키음 {(isKeySoundOn ? "켬" : "끔")}: 울림 {playedKeys}개 / 재생 구간 노트 {rangeNotes}개, 정지로 취소 {keyDsps.Count - playedKeys}개 " +
+                  $"(예약 시각 − 노트 시각 최대 {maxKeyErrorMs:0.###}ms, 늦어서 건너뜀 {skippedKeyCount}개, 노트 변경으로 다시 계산 {rescheduleCount}번)", this);
 
         onPlayingChanged?.Invoke();
         onPositionChanged?.Invoke();
@@ -139,11 +200,58 @@ public class EditorPlayback : MonoBehaviour
     public void SetMetronome(bool on)
     {
         isMetronomeOn = on;
+        if (IsPlaying) RescheduleFromNow();
+    }
+
+    /// <summary>
+    /// 에디터 키음을 켜고 끈다. 재생 중이면 예약을 지우고 지금 위치부터 다시 잡는다.
+    /// </summary>
+    public void SetKeySound(bool on)
+    {
+        isKeySoundOn = on;
+        if (IsPlaying) RescheduleFromNow();
+    }
+
+    /// <summary>
+    /// 재생 중 노트가 바뀌면 (추가·삭제·불러오기) 키음 예약을 다시 잡는다. 지운 노트 소리가 나거나 새 노트 소리가 빠지지 않게 한다.
+    /// </summary>
+    private void OnNotesChanged()
+    {
         if (!IsPlaying) return;
 
+        rescheduleCount++;
+        RescheduleFromNow();
+    }
+
+    /// <summary>
+    /// 예약한 클릭·키음을 모두 취소하고, 지금 곡 시간 이후의 것을 그 자리에서 바로 다시 예약한다
+    /// (다음 프레임까지 기다리면 그 사이에 닿는 노트·박이 늦어서 빠진다).
+    /// 이미 울린 키음 기록은 남기고, 아직 안 울린 기록만 지운다.
+    /// </summary>
+    private void RescheduleFromNow()
+    {
         GameManager.Sound.CancelScheduledSfx();
-        float beat = Mathf.Max(grid.CurrentBeat, 0f);
-        nextClickBeat = EditorPlaybackMath.GetFirstClickBeat(beat + 0.01f);
+
+        double dspNow = AudioSettings.dspTime;
+        for (int i = keyDsps.Count - 1; i >= 0; i--)
+        {
+            if (keyDsps[i] <= dspNow) continue;
+            keyTicks.RemoveAt(i);
+            keyLanes.RemoveAt(i);
+            keyDsps.RemoveAt(i);
+        }
+
+        // 다시 예약할 위치는 위에서 "아직 안 울림"을 가른 기준(dspTime)과 같은 시각에서 찾는다.
+        // (realtime으로 보간한 곡 시간은 dspTime보다 몇 ms 앞서 있어, 그 사이 노트가 취소만 되고 다시 예약되지 않는다)
+        double songTimeNow = GameManager.Sound.GetSongTimeAtRealtime(Time.realtimeSinceStartupAsDouble);
+        double songTimeAtDsp = songTimeNow - (GameManager.Sound.GetDspTimeOfSongTime(songTimeNow) - dspNow);
+        float beatAtDsp = Mathf.Max(BeatGridMath.SecondsToBeat((float)songTimeAtDsp, session.Bpm, session.OffsetMs), playStartBeat);
+        nextClickBeat = EditorPlaybackMath.GetFirstClickBeat(beatAtDsp + 0.01f);
+        nextNoteIndex = EditorKeySoundMath.FindFirstNoteAtOrAfter(noteData.Notes,
+            Mathf.FloorToInt(beatAtDsp * GameConstants.Editor.TicksPerBeat) + 1);
+
+        if (isMetronomeOn) ScheduleClicks(songTimeNow);
+        if (isKeySoundOn) ScheduleKeySounds(songTimeNow);
     }
 
     private void Update()
@@ -176,6 +284,7 @@ public class EditorPlayback : MonoBehaviour
         grid.SetCurrentLineHighlight(EditorPlaybackMath.GetBeatFlash(beat));
 
         if (isMetronomeOn) ScheduleClicks(songTime);
+        if (isKeySoundOn) ScheduleKeySounds(songTime);
 
         onPositionChanged?.Invoke();
     }
@@ -221,8 +330,53 @@ public class EditorPlayback : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 앞으로 KeySoundLookaheadSeconds 안에 현재 위치 선에 닿을 노트의 키음을 DSP 시각으로 예약한다 (노트마다 한 번).
+    /// </summary>
+    private void ScheduleKeySounds(double songTime)
+    {
+        if (keySound == null) return;
+
+        double lookaheadEnd = songTime + GameConstants.Editor.KeySoundLookaheadSeconds;
+        int endTick = Mathf.FloorToInt(BeatGridMath.SecondsToBeat((float)lookaheadEnd, session.Bpm, session.OffsetMs) * GameConstants.Editor.TicksPerBeat);
+        IReadOnlyList<EditorNote> notes = noteData.Notes;
+        nextNoteIndex = EditorKeySoundMath.CollectNotesUntil(notes, nextNoteIndex, endTick, collectedNotes);
+        if (collectedNotes.Count == 0) return;
+
+        double dspNow = AudioSettings.dspTime;
+        double sourceTime = GameManager.Sound.MusicSourceTime;
+        foreach (int index in collectedNotes)
+        {
+            EditorNote note = notes[index];
+            double noteTime = BeatGridMath.BeatToSeconds(BeatGridMath.TickToBeat(note.Tick), session.Bpm, session.OffsetMs);
+            double dsp = GameManager.Sound.GetDspTimeOfSongTime(noteTime);
+            if (dsp <= dspNow)
+            {
+                skippedKeyCount++;
+                continue;
+            }
+
+            if (!GameManager.Sound.ScheduleSfx(keySound, dsp)) continue;
+
+            keyTicks.Add(note.Tick);
+            keyLanes.Add(note.Lane);
+            keyDsps.Add(dsp);
+
+            // 확인용: 실제 음원 재생 위치로 노트의 DSP 시각을 따로 구해 예약 시각과 비교한다
+            // (음원이 이미 나오고 있을 때만. 시작 대기 중에는 음원 위치가 시작 위치에 멈춰 있어 비교하지 않는다)
+            if (sourceTime > 0 && songTime > BeatGridMath.BeatToSeconds(playStartBeat, session.Bpm, session.OffsetMs))
+            {
+                double noteDspFromSource = dspNow + (noteTime - sourceTime);
+                double errorMs = Math.Abs(dsp - noteDspFromSource) * 1000.0;
+                if (errorMs > maxKeyErrorMs) maxKeyErrorMs = errorMs;
+            }
+        }
+    }
+
     private void OnDestroy()
     {
+        if (noteData != null) noteData.OnChanged -= OnNotesChanged;
+
         if (IsPlaying)
         {
             IsPlaying = false;

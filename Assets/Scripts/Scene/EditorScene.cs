@@ -109,6 +109,7 @@ public class EditorScene : SceneBase
 
         // 재생은 정지 상태로 시작한다 (테스트 플레이에서 돌아온 경우도)
         playback.Init(grid, session, song, () => canvas.SetPlaying(playback.IsPlaying), canvas.RefreshTimeline);
+        playback.SetKeySound(canvas.IsKeySoundOn);
         SubscribeCanvasEvents();
 
         if (restore != null)
@@ -163,7 +164,7 @@ public class EditorScene : SceneBase
     /// </summary>
     public override void OnExit()
     {
-        if (playback != null) playback.Stop(false);
+        StopEditorSound(false);
         if (canvas != null) canvas.DisableInput();
 #if UNITY_EDITOR
         if (songTuning != null) songTuning.DisableInput();
@@ -176,6 +177,20 @@ public class EditorScene : SceneBase
         UnsubscribeCanvasEvents();
     }
 
+    /// <summary>
+    /// 에디터 재생을 멈추고, 재생 중이 아니었어도 노래와 예약한 메트로놈 클릭을 모두 취소한다
+    /// (테스트 플레이·나가기·씬 이동 전에 이전 소리가 남지 않게).
+    /// </summary>
+    /// <param name="snapToGrid">재생 중이었으면 현재 위치를 스냅 선에 맞춘다</param>
+    private void StopEditorSound(bool snapToGrid)
+    {
+        if (playback != null) playback.Stop(snapToGrid);
+        if (!SoundManager.HasInstance) return;
+
+        GameManager.Sound.StopMusic();
+        GameManager.Sound.CancelScheduledSfx();
+    }
+
     private void SubscribeCanvasEvents()
     {
         UnsubscribeCanvasEvents();
@@ -185,6 +200,7 @@ public class EditorScene : SceneBase
         canvas.SeekDragged += OnSeekDragged;
         canvas.SeekReleased += OnSeekReleased;
         canvas.MetronomeChanged += playback.SetMetronome;
+        canvas.KeySoundChanged += playback.SetKeySound;
     }
 
     private void UnsubscribeCanvasEvents()
@@ -197,6 +213,7 @@ public class EditorScene : SceneBase
         canvas.SeekDragged -= OnSeekDragged;
         canvas.SeekReleased -= OnSeekReleased;
         canvas.MetronomeChanged -= playback.SetMetronome;
+        canvas.KeySoundChanged -= playback.SetKeySound;
     }
 
     private void StopPlaybackWithSnap()
@@ -323,8 +340,8 @@ public class EditorScene : SceneBase
     {
         if (!isReady || isLeaving || isSaving) return;
 
-        // 재생 중이었으면 노래를 멈추고 스냅 선에 맞춘 위치에서 테스트 플레이를 시작한다
-        playback.Stop(true);
+        // 재생 중이었으면 노래를 멈추고 스냅 선에 맞춘 위치에서 테스트 플레이를 시작한다 (예약한 메트로놈 클릭도 모두 취소)
+        StopEditorSound(true);
 
         TestPlayData testPlay = session.CreateTestPlayData(grid.CurrentBeat, grid.SnapDivision, grid.GridHeightScale, canvas.CurrentTool, autoPlay, out string error);
         if (testPlay == null)

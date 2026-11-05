@@ -6,7 +6,8 @@ using UnityEngine;
 /// 인게임 씬 진입점 (숏노트 한 판). InGameScene.unity 루트의 "InGameScene" 오브젝트에 붙인다.
 /// - 진입 데이터(곡·채보)로 채보를 불러와 노트 시간을 계산하고, 노래를 준비 시간 뒤에 예약 재생한다.
 /// - 곡 시간은 GameManager.Sound.SongTime(DSP 기준). 판정은 NoteJudge, 점수는 ScoreCalculator가 맡는다.
-/// - 곡이 끝나면(음원 길이와 마지막 노트 + 1초 중 늦은 쪽) 결과 씬으로 ResultData를 넘긴다.
+/// - 모든 노트가 판정(친 판정 또는 놓침 MISS)되면 OnAllNotesJudged를 한 번 알리고, 그 곡 시간부터 3초(ResultDelaySeconds) 뒤
+///   결과 씬으로 ResultData를 넘긴다. 그 3초 동안 노래는 계속 흐르고, 결과로 넘어가는 중이라 일시정지는 받지 않는다.
 /// - 테스트 플레이(진입 데이터에 TestPlayData)면 파일 대신 넘겨받은 채보를 쓰고, 시작 박 앞의 노트는 건너뛴다.
 ///   노래는 시작 위치 2초 전부터 들려준다.
 /// - ESC(팝업이 없을 때 UIManager가 OnBack을 부름)나 창 포커스를 잃으면 일시정지 메뉴(Popup_Pause)를 연다.
@@ -54,7 +55,21 @@ public class InGameScene : SceneBase
     private ScoreCalculator score;
     private double startDelaySeconds;
     private double musicStartPosition;
-    private double endTime;
+    /// <summary>모든 노트가 판정된 곡 시간 (결과까지 기다리는 기준). 아직이면 음수</summary>
+    private double allJudgedSongTime = -1;
+    /// <summary>모든 노트가 판정돼 결과로 넘어가기를 기다리는 중이면 true</summary>
+    private bool isWaitingResult;
+#if UNITY_EDITOR
+    // 싱크 진단 (Unity 에디터 전용): 곡 시간과 실제 음원 재생 위치의 차이
+    private double maxSyncErrorSeconds;
+    private double nextSyncWarningRealtime;
+#endif
+
+    /// <summary>
+    /// 모든 노트가 판정된 순간 한 번 알린다 (결과로 넘어가기 3초 전).
+    /// TODO: FULL COMBO / ALL PERFECT 연출을 이 시점에 띄운다
+    /// </summary>
+    public event System.Action OnAllNotesJudged;
     private bool isReady;
     private bool isPlaying;
     private bool isFinished;
@@ -110,7 +125,6 @@ public class InGameScene : SceneBase
         score = new ScoreCalculator(judge.TotalCount);
 
         double firstNoteTime = judge.TotalCount > 0 ? judge.Notes[0].Time : 0;
-        double lastNoteTime = judge.TotalCount > 0 ? judge.Notes[judge.TotalCount - 1].Time : 0;
         if (IsTestPlay)
         {
             double startTime = BeatGridMath.BeatToSeconds(entry.testPlay.startBeat, chart.timingPoints[0].bpm, song.OffsetMs);
@@ -123,7 +137,12 @@ public class InGameScene : SceneBase
             musicStartPosition = 0;
             startDelaySeconds = System.Math.Max(GameConstants.Play.MinStartDelaySeconds, GameConstants.Play.LeadInSeconds - firstNoteTime);
         }
-        endTime = System.Math.Max(song.Length, lastNoteTime + GameConstants.Play.EndPaddingSeconds);
+        allJudgedSongTime = -1;
+        isWaitingResult = false;
+#if UNITY_EDITOR
+        maxSyncErrorSeconds = 0;
+        nextSyncWarningRealtime = 0;
+#endif
 
         gear.Init();
         noteLayer.Init(gear, judge, entry.scrollMultiplier);
@@ -139,7 +158,7 @@ public class InGameScene : SceneBase
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
                   $"노트 {judge.TotalCount}개{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
                   $"bpm={chart.timingPoints[0].bpm}, offsetMs={song.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
-                  $"첫 노트 {firstNoteTime:0.###}초, 끝 {endTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개, " +
+                  $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개, " +
                   $"배속 x{entry.scrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###} (기본 {GameConstants.Play.DefaultScrollSpeed})", this);
 
         isReady = true;
@@ -152,6 +171,8 @@ public class InGameScene : SceneBase
     {
         if (!isReady) return;
 
+        // 앞 씬(에디터 메트로놈 등)이 예약해 둔 효과음이 남아 울리지 않게 모두 취소한다
+        GameManager.Sound.CancelScheduledSfx();
         GameManager.Sound.PlayMusicScheduled(song.Clip, startDelaySeconds, musicStartPosition);
         input.EnableInput();
         isPlaying = true;
@@ -187,7 +208,20 @@ public class InGameScene : SceneBase
 
         noteLayer.Refresh(songTime);
 
-        if (songTime >= endTime && judge.AllJudged) Finish();
+#if UNITY_EDITOR
+        CheckSync(songTime);
+#endif
+
+        if (!isWaitingResult && judge.AllJudged)
+        {
+            isWaitingResult = true;
+            allJudgedSongTime = songTime;
+            Debug.Log($"[InGameScene] 모든 노트 판정: 곡 시간 {songTime:0.###}초, {GameConstants.Play.ResultDelaySeconds}초 뒤 결과로", this);
+            // TODO: FULL COMBO / ALL PERFECT 연출 (OnAllNotesJudged를 받아 띄운다)
+            OnAllNotesJudged?.Invoke();
+        }
+
+        if (isWaitingResult && songTime >= allJudgedSongTime + GameConstants.Play.ResultDelaySeconds) Finish();
     }
 
     /// <summary>
@@ -249,12 +283,16 @@ public class InGameScene : SceneBase
         isFinished = true;
         isPlaying = false;
         input.DisableInput();
+        double finishSongTime = GameManager.Sound.SongTime;
         GameManager.Sound.StopMusic();
 
-        Debug.Log($"[InGameScene] 결과: 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, " +
+        Debug.Log($"[InGameScene] 결과 (모든 노트 판정 뒤 곡 시간 {finishSongTime - allJudgedSongTime:0.000}초): 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, " +
                   $"최대 콤보 {score.MaxCombo}/{score.TotalNotes}, 정확도 {score.Accuracy:0.00}%, FC={score.IsFullCombo}, AP={score.IsAllPerfect}, " +
                   $"판정 오차(친 노트 {hitCount}개) 평균 {(hitCount > 0 ? hitErrorSumMs / hitCount : 0):0.###}ms · 최대 {hitErrorMaxMs:0.###}ms, " +
                   $"노트 풀 {noteLayer.PooledCount}개(추가 생성 {noteLayer.GrowCount})", this);
+#if UNITY_EDITOR
+        Debug.Log($"[InGameScene] 싱크 진단: 곡 시간과 음원 재생 위치 차이 최대 {maxSyncErrorSeconds * 1000:0.#}ms (경고 기준 {GameConstants.Play.SyncWarningSeconds * 1000:0}ms)", this);
+#endif
 
         ResultData result = ResultData.FromScore(score);
         result.songTitle = song.Title;
@@ -299,7 +337,7 @@ public class InGameScene : SceneBase
     }
 
     /// <summary>일시정지할 수 있으면 true. 시작하지 못했거나(채보 로딩 실패), 결과·다른 씬으로 넘어가는 중, 씬 로딩 중이면 false</summary>
-    private bool CanPause => isReady && isPlaying && !isFinished && !GameManager.Scene.IsLoading;
+    private bool CanPause => isReady && isPlaying && !isFinished && !isWaitingResult && !GameManager.Scene.IsLoading;
 
     /// <summary>
     /// ESC (팝업이 없을 때 UIManager가 부름). 보통·테스트 플레이 모두 일시정지 메뉴를 연다.
@@ -470,6 +508,32 @@ public class InGameScene : SceneBase
             }
         }
     }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// 싱크 진단 (Unity 에디터 전용): 곡 시간(MusicClock)과 실제 음원 재생 위치를 같은 순간 값으로 비교한다.
+    /// 차이가 SyncWarningSeconds보다 크면 경고 로그를 남긴다 (같은 판에서 SyncWarningIntervalSeconds마다 한 번).
+    /// 노래 시작 전, 음원이 멈췄을 때, 재개 직후 곡 시간을 붙잡아 두는 동안은 비교하지 않는다.
+    /// </summary>
+    private void CheckSync(double songTime)
+    {
+        SoundManager sound = GameManager.Sound;
+        if (!sound.IsMusicSourcePlaying || sound.IsMusicPaused || sound.IsClockHolding) return;
+        if (songTime < musicStartPosition) return;
+
+        double now = Time.realtimeSinceStartupAsDouble;
+        double clockTime = sound.GetSongTimeAtRealtime(now);
+        double sourceTime = sound.MusicSourceTime;
+        double error = sourceTime - clockTime;
+        if (System.Math.Abs(error) > maxSyncErrorSeconds) maxSyncErrorSeconds = System.Math.Abs(error);
+
+        if (System.Math.Abs(error) <= GameConstants.Play.SyncWarningSeconds || now < nextSyncWarningRealtime) return;
+
+        nextSyncWarningRealtime = now + GameConstants.Play.SyncWarningIntervalSeconds;
+        Debug.LogWarning($"[InGameScene] 싱크 진단: 곡 시간 {clockTime:0.000}초, 음원 위치 {sourceTime:0.000}초, 차이 {error * 1000:0}ms " +
+                         $"(음원 시작 위치 {musicStartPosition:0.###}초, 테스트 플레이 {IsTestPlay}, 자동 플레이 {isAutoPlay})", this);
+    }
+#endif
 
     /// <summary>
     /// 자동 플레이가 켠 라인 빛남을 시간이 되면 끈다.
