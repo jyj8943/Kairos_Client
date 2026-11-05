@@ -23,6 +23,10 @@ public class InGameScene : SceneBase
     [SerializeField] private Canvas_InGame canvas;
     [SerializeField] private Popup_Pause pausePopup;
 
+    [Header("소리")]
+    [Tooltip("라인 키를 누를 때마다 내는 키음 (NoteSFX). 판정과 상관없이 누를 때마다 난다")]
+    [SerializeField] private AudioClip keySound;
+
     [Header("판정 범위 (±ms, 기획서 잠정치)")]
     [SerializeField] private JudgeWindows judgeWindows = new JudgeWindows();
 
@@ -172,12 +176,15 @@ public class InGameScene : SceneBase
     }
 
     /// <summary>
-    /// 라인 키 입력 (InGameInput, 자동 플레이). 판정 범위 밖이면 빈 타격으로 아무것도 하지 않는다.
+    /// 라인 키 입력 (InGameInput의 키 눌림 콜백, 자동 플레이). 누를 때마다 키음을 바로 내고(빈 타격 포함) 판정한다.
+    /// 판정 범위 밖이면 빈 타격으로 키음만 난다. 일시정지·카운트다운 중에는 소리도 판정도 없다.
     /// </summary>
     /// <param name="inputSongTime">입력 시각 (곡 시간, 초)</param>
     private void OnLanePressed(int lane, double inputSongTime)
     {
         if (!isPlaying || isPaused) return;
+
+        GameManager.Sound.PlaySfx(keySound);
 
         if (judge.TryHit(lane, inputSongTime, out JudgeResult result))
         {

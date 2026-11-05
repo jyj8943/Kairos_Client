@@ -35,6 +35,27 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     /// <summary>노래가 일시정지 중이면 true</summary>
     public bool IsMusicPaused => clock.IsPaused;
 
+    /// <summary>PlaySfx로 효과음을 재생한 횟수 (확인용, 게임 실행 후 누적)</summary>
+    public int SfxPlayCount { get; private set; }
+
+    /// <summary>지금 소리를 내는 중인 효과음 AudioSource 수 (확인용)</summary>
+    public int ActiveSfxSourceCount
+    {
+        get
+        {
+            int count = 0;
+            if (sfxSources == null) return 0;
+            foreach (AudioSource source in sfxSources)
+            {
+                if (source != null && source.isPlaying) count++;
+            }
+            return count;
+        }
+    }
+
+    /// <summary>효과음 AudioSource 수 (확인용)</summary>
+    public int SfxSourceCount => sfxSources != null ? sfxSources.Length : 0;
+
     /// <summary>노래 AudioSource가 소리를 내는 중이면 true (확인용)</summary>
     public bool IsMusicSourcePlaying => musicSource != null && musicSource.isPlaying;
 
@@ -188,7 +209,10 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
 
         AudioSource source = sfxSources[nextSfxIndex];
         nextSfxIndex = (nextSfxIndex + 1) % sfxSources.Length;
-        if (source != null) source.PlayOneShot(clip);
+        if (source == null) return;
+
+        source.PlayOneShot(clip);
+        SfxPlayCount++;
     }
 
     /// <summary>

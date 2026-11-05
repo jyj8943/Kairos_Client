@@ -11,8 +11,10 @@ public class GearView : MonoBehaviour
     [Min(0.1f)] [SerializeField] private float laneWidth = 1f;
     [Tooltip("판정선 (Gear 아래 자식). 노트가 이 높이에 닿는 순간이 노트 시간이다")]
     [SerializeField] private Transform judgeLine;
-    [Tooltip("라인별 빛남 (A · S · ; · ' 순서). 키를 누르는 동안 켠다")]
+    [Tooltip("라인별 빛남 (A · S · ; · ' 순서). 키를 누르는 동안 켠다. 스프라이트는 아래가 진하고 위로 갈수록 투명한 LaneGlowGradient")]
     [SerializeField] private SpriteRenderer[] laneGlows;
+    [Tooltip("라인 빛남 색. 알파는 판정선 쪽(가장 진한 곳)의 알파다")]
+    [SerializeField] private Color glowColor = new Color32(220, 220, 220, 153);
     [Tooltip("화면 위아래 끝 계산에 쓰는 카메라")]
     [SerializeField] private Camera viewCamera;
 
@@ -28,7 +30,7 @@ public class GearView : MonoBehaviour
     public float ScreenBottomY { get; private set; }
 
     /// <summary>
-    /// 화면 끝을 계산하고 라인 빛남을 끈다.
+    /// 화면 끝을 계산하고, 라인 빛남에 색을 입힌 뒤 끈다.
     /// </summary>
     public void Init()
     {
@@ -38,6 +40,14 @@ public class GearView : MonoBehaviour
         float cameraY = viewCamera != null ? viewCamera.transform.position.y : 0f;
         ScreenTopY = cameraY + halfHeight - transform.position.y;
         ScreenBottomY = cameraY - halfHeight - transform.position.y;
+
+        if (laneGlows != null)
+        {
+            foreach (SpriteRenderer glow in laneGlows)
+            {
+                if (glow != null) glow.color = glowColor;
+            }
+        }
 
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
             SetPressed(lane, false);
