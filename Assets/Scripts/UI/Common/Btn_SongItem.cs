@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 곡 고르기 목록의 곡 아이템 하나 (Btn_SongItem 프리팹).
+/// 곡 목록의 곡 아이템 하나 (Prefabs/Common/Btn_SongItem 프리팹). 에디터 곡 고르기와 곡 선택 화면이 같이 쓴다.
 /// - 키보드나 마우스로 선택되면 곧바로 그 곡을 고른다. (클릭 없이 이동만으로 곡이 바뀜)
 /// - 고른 곡은 배경을 검게, 글자를 희게 표시한다.
 /// </summary>

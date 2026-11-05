@@ -16,6 +16,7 @@ public static class GameConstants
     public static class Scenes
     {
         public const string Title = "TitleScene";
+        public const string SongSelect = "SongSelectScene";
         public const string EditorSongSelect = "EditorSongSelectScene";
         public const string Editor = "EditorScene";
         public const string InGame = "InGameScene";
@@ -63,8 +64,17 @@ public static class GameConstants
         /// </summary>
         public const float DefaultScrollSpeed = 7f;
 
-        /// <summary>배속. TODO: 배속 설정(곡 선택 화면)을 만들면 그 값으로 바꾼다 (지금은 1.0 고정)</summary>
+        /// <summary>
+        /// 배속 범위·단위·기본값 (기획서 2-1). 곡 선택 화면에서 정하고 InGameEntryData로 넘긴다.
+        /// 0.1 단위 오차가 쌓이지 않게 곡 선택 화면은 배속 × ScrollMultiplierScale(정수)로 계산한다.
+        /// </summary>
+        public const float MinScrollMultiplier = 1f;
+        public const float MaxScrollMultiplier = 8f;
+        public const float ScrollMultiplierStep = 0.1f;
         public const float DefaultScrollMultiplier = 1f;
+
+        /// <summary>배속을 정수로 계산할 때 곱하는 값 (0.1 단위 → 10)</summary>
+        public const int ScrollMultiplierScale = 10;
 
         /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
         public const double TestPlayLeadInSeconds = 2.0;
@@ -101,6 +111,34 @@ public static class GameConstants
             new Color32(0xFF, 0xFF, 0xFF, 0xFF),
             new Color32(0x6E, 0xC8, 0xF5, 0xFF)
         };
+    }
+
+    /// <summary>곡 선택 화면 표시 문구 (기획서 3-3)</summary>
+    public static class SongSelect
+    {
+        /// <summary>값이 없을 때 표시 (최고 기록, 없는 난이도의 레벨)</summary>
+        public const string EmptyValue = "-";
+
+        /// <summary>난이도 버튼 레벨: {0} 레벨</summary>
+        public const string LevelFormat = "Lv.{0}";
+
+        /// <summary>곡 정보 줄: {0} BPM, {1} 곡 길이</summary>
+        public const string SongInfoFormat = "BPM {0} · {1}";
+
+        /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지)</summary>
+        public const string SpeedFormat = "배속 x{0:0.0} ( - / + )";
+
+        /// <summary>최고 기록 칸: {0} 값</summary>
+        public const string RecordRankFormat = "랭크 {0}";
+        public const string RecordComboFormat = "최대 콤보 {0}";
+
+        /// <summary>빈 상태 문구</summary>
+        public const string OfficialEmpty = "공식 채보가 없습니다";
+        public const string MyChartEmpty = "저장된 채보가 없습니다";
+
+        /// <summary>하단 조작 안내 (탭마다 ←→ 대상이 다르다)</summary>
+        public const string KeyHintOfficial = "↑↓ 곡 · ←→ 난이도 · Tab 탭 · ESC 타이틀";
+        public const string KeyHintMyChart = "↑↓ 곡 · ←→ 채보 · Tab 탭 · ESC 타이틀";
     }
 
     /// <summary>채보 에디터 규칙</summary>
@@ -221,8 +259,19 @@ public static class GameConstants
         /// <summary>나만의 채보 폴더: persistentDataPath/MyCharts/{songId}/</summary>
         public const string CustomFolder = "MyCharts";
 
-        /// <summary>공식 채보 폴더: streamingAssetsPath/Charts/{songId}/</summary>
+        /// <summary>
+        /// 공식 채보 저장 폴더 (Unity 에디터 저장 전용): streamingAssetsPath/Charts/{songId}/.
+        /// TODO: 공식 채보 저장 위치를 Resources로 옮길 것 (읽기는 OfficialResourcesFolder를 쓴다)
+        /// </summary>
         public const string OfficialFolder = "Charts";
+
+        /// <summary>
+        /// 공식 채보 읽기 폴더 (Resources.Load 경로): Resources/Data/OfficialCharts/{songId}/{난이도}.json
+        /// </summary>
+        public const string OfficialResourcesFolder = "Data/OfficialCharts";
+
+        /// <summary>공식 채보 난이도 (낮은 것부터). 공식 채보 파일 이름이기도 하다</summary>
+        public static readonly string[] Difficulties = { "NORMAL", "HARD", "EXPERT" };
 
         public const string FileExtension = ".json";
 

@@ -110,14 +110,15 @@ public class InGameScene : SceneBase
         endTime = System.Math.Max(song.Length, lastNoteTime + GameConstants.Play.EndPaddingSeconds);
 
         gear.Init();
-        noteLayer.Init(gear, judge);
+        noteLayer.Init(gear, judge, entry.scrollMultiplier);
         input.Init(OnLanePressed, gear.SetPressed);
         canvas.Init(song.Title, chart.chartName, chart.level, IsTestPlay);
 
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
                   $"노트 {judge.TotalCount}개{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
                   $"bpm={chart.timingPoints[0].bpm}, offsetMs={song.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
-                  $"첫 노트 {firstNoteTime:0.###}초, 끝 {endTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개", this);
+                  $"첫 노트 {firstNoteTime:0.###}초, 끝 {endTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개, " +
+                  $"배속 x{entry.scrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###} (기본 {GameConstants.Play.DefaultScrollSpeed})", this);
 
         isReady = true;
     }
@@ -228,7 +229,7 @@ public class InGameScene : SceneBase
     }
 
     /// <summary>
-    /// 결과 화면 돌아가기 버튼으로 갈 곳. 테스트 플레이면 에디터(편집 상태 복원), 아니면 곡 선택.
+    /// 결과 화면 돌아가기 버튼으로 갈 곳. 테스트 플레이면 에디터(편집 상태 복원), 아니면 곡 선택(같은 곡·탭·채보·배속).
     /// </summary>
     private ResultReturnTarget CreateReturnTarget()
     {
@@ -242,11 +243,17 @@ public class InGameScene : SceneBase
             };
         }
 
-        // TODO: 곡 선택 씬을 만들면 곡 선택 씬으로 바꾼다 (지금은 타이틀)
+        // 곡 선택으로 돌아가면 같은 곡·탭·채보·배속이 선택된 채로 시작한다
         return new ResultReturnTarget
         {
-            sceneName = GameConstants.Scenes.Title,
-            sceneData = null,
+            sceneName = GameConstants.Scenes.SongSelect,
+            sceneData = new SongSelectEntryData
+            {
+                songId = entry.songId,
+                chartType = entry.chartType,
+                chartId = chart.chartId,
+                scrollMultiplier = entry.scrollMultiplier
+            },
             buttonLabel = GameConstants.Play.ReturnToSongSelectLabel
         };
     }

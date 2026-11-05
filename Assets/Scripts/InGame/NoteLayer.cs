@@ -16,10 +16,9 @@ public class NoteLayer : MonoBehaviour
     [Min(0)] [SerializeField] private int extraPoolCount = 8;
 
     /// <summary>
-    /// 노트 낙하 속도 (월드 유닛/초) = 기본 낙하 속도 × 배속.
-    /// TODO: 배속 설정을 만들면 진입 데이터의 배속을 곱한다 (지금은 1.0 고정)
+    /// 노트 낙하 속도 (월드 유닛/초) = 기본 낙하 속도 × 배속. Init에서 정한다.
     /// </summary>
-    private static float ScrollSpeed => GameConstants.Play.DefaultScrollSpeed * GameConstants.Play.DefaultScrollMultiplier;
+    public float ScrollSpeed { get; private set; } = GameConstants.Play.DefaultScrollSpeed;
 
     private readonly Stack<NoteView> pool = new Stack<NoteView>();
     private readonly List<int> activeNotes = new List<int>();
@@ -41,12 +40,18 @@ public class NoteLayer : MonoBehaviour
     public int ActiveCount => activeNotes.Count;
 
     /// <summary>
-    /// 기어·판정을 받아 풀을 미리 채운다.
+    /// 기어·판정·배속을 받아 낙하 속도를 정하고 풀을 미리 채운다.
     /// </summary>
-    public void Init(GearView gear, NoteJudge judge)
+    /// <param name="scrollMultiplier">배속 (GameConstants.Play.MinScrollMultiplier ~ MaxScrollMultiplier 밖이면 범위 안으로 맞춘다)</param>
+    public void Init(GearView gear, NoteJudge judge, float scrollMultiplier)
     {
         this.gear = gear;
         this.judge = judge;
+
+        float multiplier = Mathf.Clamp(scrollMultiplier, GameConstants.Play.MinScrollMultiplier, GameConstants.Play.MaxScrollMultiplier);
+        if (!Mathf.Approximately(multiplier, scrollMultiplier))
+            Debug.LogWarning($"[NoteLayer] 배속 {scrollMultiplier}이(가) 범위 밖이라 {multiplier}(으)로 맞춥니다.", this);
+        ScrollSpeed = GameConstants.Play.DefaultScrollSpeed * multiplier;
 
         ReleaseAll();
         viewByNote = new NoteView[judge.TotalCount];

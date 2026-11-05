@@ -468,7 +468,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d548fd74c9337b469cd3356cf3b3fb5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Canvas_Title
+  playButton: {fileID: 2092966840}
   editorButton: {fileID: 1812960229}
+  quitButton: {fileID: 463282413}
   menuButtons:
   - {fileID: 2092966840}
   - {fileID: 1812960229}

@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 곡 고르기 화면의 내 채보 항목 하나 (Btn_MyChartItem 프리팹).
+/// 내 채보 항목 하나 (Prefabs/Common/Btn_MyChartItem 프리팹). 에디터 곡 고르기와 곡 선택 화면(나만의 채보 탭)이 같이 쓴다.
 /// - 채보 이름과 "Lv.N · 노트 N"을 표시한다.
 /// - 키보드·마우스로 선택되면 배경을 검게, 글자를 희게 강조한다 (Btn_SongItem과 같은 모양).
 /// - 곡 항목과 달리 선택만으로는 열지 않고, 클릭·Enter 때 onChosen을 부른다.
@@ -28,6 +28,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
 
     private ChartData chart;
     private Action<ChartData> onChosen;
+    private bool isChosen;
 
     /// <summary>내비게이션 연결용</summary>
     public Button Button => button;
@@ -36,6 +37,16 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
 
     private void Awake()
     {
+        CacheComponents();
+    }
+
+    /// <summary>
+    /// 버튼과 기본 색을 한 번만 가져온다. 꺼진 패널 안에서 만들어져 Awake보다 Init이 먼저 불려도 쓸 수 있게 Init에서도 부른다.
+    /// </summary>
+    private void CacheComponents()
+    {
+        if (button != null) return;
+
         button = GetComponent<Button>();
         normalBackgroundColor = background.color;
         normalNameColor = chartNameText.color;
@@ -47,6 +58,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
     /// </summary>
     public void Init(ChartData chart, Action<ChartData> onChosen)
     {
+        CacheComponents();
         this.chart = chart;
         this.onChosen = onChosen;
 
@@ -55,6 +67,17 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
 
         button.onClick.RemoveListener(OnClick);
         button.onClick.AddListener(OnClick);
+        isChosen = false;
+        SetSelected(false);
+    }
+
+    /// <summary>
+    /// 고른 채보 표시를 켜거나 끈다 (곡 선택 화면용). 켜 두면 EventSystem 선택이 풀려도 강조가 남는다.
+    /// 에디터 곡 고르기는 부르지 않으므로 선택될 때만 강조한다.
+    /// </summary>
+    public void SetChosen(bool chosen)
+    {
+        isChosen = chosen;
         SetSelected(false);
     }
 
@@ -78,10 +101,14 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
         onChosen?.Invoke(chart);
     }
 
+    /// <summary>
+    /// 선택(또는 고른 채보)이면 배경을 검게, 글자를 희게 한다.
+    /// </summary>
     private void SetSelected(bool selected)
     {
-        background.color = selected ? selectedBackgroundColor : normalBackgroundColor;
-        chartNameText.color = selected ? selectedTextColor : normalNameColor;
-        chartInfoText.color = selected ? selectedTextColor : normalInfoColor;
+        bool highlighted = selected || isChosen;
+        background.color = highlighted ? selectedBackgroundColor : normalBackgroundColor;
+        chartNameText.color = highlighted ? selectedTextColor : normalNameColor;
+        chartInfoText.color = highlighted ? selectedTextColor : normalInfoColor;
     }
 }

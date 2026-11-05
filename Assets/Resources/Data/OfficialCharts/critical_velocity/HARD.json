@@ -1,0 +1,61 @@
+{
+    "version": 1,
+    "chartId": "critical_velocity_hard",
+    "songId": "critical_velocity",
+    "type": "official",
+    "chartName": "Critical Velocity HARD",
+    "difficulty": "HARD",
+    "author": "",
+    "keyCount": 4,
+    "level": 7,
+    "timingPoints": [
+        {
+            "beat": 0.0,
+            "bpm": 150.61000061035157
+        }
+    ],
+    "notes": [
+        {
+            "beat": 0.0,
+            "lane": 0,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 0.5,
+            "lane": 1,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 1.25,
+            "lane": 2,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 2.25,
+            "lane": 3,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 3.0,
+            "lane": 0,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 3.0,
+            "lane": 1,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 4.0,
+            "lane": 2,
+            "type": "short",
+            "endBeat": 0.0
+        }
+    ]
+}

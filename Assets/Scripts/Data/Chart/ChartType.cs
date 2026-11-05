@@ -3,7 +3,7 @@
 /// </summary>
 public enum ChartType
 {
-    /// <summary>공식 채보 (빌드 안 StreamingAssets, 읽기 전용)</summary>
+    /// <summary>공식 채보 (Resources/Data/OfficialCharts/{songId}/{난이도}.json, 읽기 전용)</summary>
     Official,
 
     /// <summary>나만의 채보 (persistentDataPath/MyCharts)</summary>

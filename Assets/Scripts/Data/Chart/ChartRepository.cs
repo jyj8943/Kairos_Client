@@ -8,10 +8,13 @@ using UnityEngine;
 /// <summary>
 /// 채보 파일 읽기·쓰기 창구 (기획서 2-4). 상태를 들고 있지 않는 static 클래스다.
 /// - 나만의 채보: persistentDataPath/MyCharts/{songId}/{chartId}.json
-/// - 공식 채보: streamingAssetsPath/Charts/{songId}/{chartId}.json (Unity 에디터에서만 저장)
-/// - 파일 이름은 chartId만 쓴다. 채보 이름은 파일 이름에 쓰지 않는다.
+/// - 공식 채보 읽기: Resources/Data/OfficialCharts/{songId}/{난이도}.json (난이도 = NORMAL / HARD / EXPERT, 읽기 전용)
+/// - 공식 채보 저장: streamingAssetsPath/Charts/{songId}/{chartId}.json (Unity 에디터에서만 저장)
+///   TODO: 공식 채보 저장 위치를 Resources로 옮길 것 (지금은 읽는 곳과 저장하는 곳이 다르다)
+/// - 나만의 채보 파일 이름은 chartId만 쓴다. 채보 이름은 파일 이름에 쓰지 않는다.
 /// - 저장은 임시 파일({chartId}.json.tmp)에 먼저 쓰고 다 쓰면 원래 파일과 바꿔치기한다.
-/// - 읽을 때 형식을 검사하고, JSON이 깨진 파일은 .broken으로 이름을 바꿔 백업한다.
+/// - 읽을 때 공식·나만의 채보 모두 같은 검사(TryParseChart)를 쓴다.
+///   나만의 채보는 JSON이 깨진 파일을 .broken으로 이름을 바꿔 백업하고, 공식 채보(Resources)는 경고만 한다.
 /// - 곡 검사는 호출하는 쪽에서 GameManager.Songs로 한다 (이 클래스는 파일만 다룬다).
 /// </summary>
 public static class ChartRepository
@@ -29,7 +32,8 @@ public static class ChartRepository
     private static readonly HashSet<string> IssuedCustomIds = new HashSet<string>();
 
     /// <summary>
-    /// 채보 종류별 최상위 폴더.
+    /// 채보 종류별 최상위 폴더 (파일 경로). 공식 채보는 저장(TrySave)할 때만 쓴다.
+    /// TODO: 공식 채보 저장 위치를 Resources로 옮길 것
     /// </summary>
     public static string GetRootFolder(ChartType type)
     {
@@ -103,7 +107,16 @@ public static class ChartRepository
     }
 
     /// <summary>
+    /// 공식 채보 Resources 폴더 (Resources.Load 경로): Data/OfficialCharts/{songId}
+    /// </summary>
+    public static string GetOfficialResourcesFolder(string songId)
+    {
+        return GameConstants.Chart.OfficialResourcesFolder + "/" + songId;
+    }
+
+    /// <summary>
     /// 채보 하나를 읽는다. 파일이 없거나 형식이 맞지 않으면 false와 이유를 돌려준다.
+    /// 공식 채보는 파일 이름이 난이도라서 그 곡의 공식 채보 중 chartId가 같은 것을 찾는다.
     /// </summary>
     public static bool TryLoad(string songId, string chartId, ChartType type, out ChartData chart, out string error)
     {
@@ -113,6 +126,13 @@ public static class ChartRepository
         {
             error = $"쓸 수 없는 ID입니다: songId={songId}, chartId={chartId}";
             return false;
+        }
+
+        if (type == ChartType.Official)
+        {
+            chart = LoadOfficialCharts(songId).Find(item => item.chartId == chartId);
+            error = chart != null ? string.Empty : $"공식 채보가 없습니다: songId={songId}, chartId={chartId}";
+            return chart != null;
         }
 
         string path = GetChartPath(songId, chartId, type);
@@ -126,18 +146,21 @@ public static class ChartRepository
     }
 
     /// <summary>
-    /// 곡 폴더의 채보를 모두 읽어 chartId 순으로 돌려준다. 폴더가 없으면 빈 목록.
-    /// 읽지 못한 파일은 경고만 남기고 건너뛴다.
+    /// 곡의 채보를 모두 읽는다. 없으면 빈 목록. 읽지 못한 파일은 경고만 남기고 건너뛴다.
+    /// - 공식 채보: Resources에서 읽고 난이도 순(NORMAL → HARD → EXPERT)
+    /// - 나만의 채보: 곡 폴더의 파일을 읽고 chartId 순
     /// </summary>
     public static List<ChartData> GetCharts(string songId, ChartType type)
     {
-        List<ChartData> charts = new List<ChartData>();
-
         if (!IsSafeId(songId))
         {
             Debug.LogWarning($"{LogPrefix} 쓸 수 없는 songId입니다: {songId}");
-            return charts;
+            return new List<ChartData>();
         }
+
+        if (type == ChartType.Official) return LoadOfficialCharts(songId);
+
+        List<ChartData> charts = new List<ChartData>();
 
         string folder = GetSongFolder(songId, type);
         if (!Directory.Exists(folder)) return charts;
@@ -193,9 +216,68 @@ public static class ChartRepository
     }
 
     /// <summary>
-    /// 파일 하나를 읽고 검사한다.
-    /// - JSON이 깨졌으면 .broken으로 백업한다.
-    /// - songId·chartId가 폴더·파일 이름과 다르거나 형식이 맞지 않으면 실패한다 (파일은 그대로 둔다).
+    /// 곡 하나의 공식 채보를 Resources에서 모두 읽어 난이도 순으로 돌려준다.
+    /// - 파일 이름이 난이도(GameConstants.Chart.Difficulties)가 아니거나, JSON의 difficulty·type이 맞지 않으면 경고 후 건너뛴다.
+    /// - Resources라 깨진 파일 이름 바꾸기(.broken)는 하지 않고 경고만 한다.
+    /// </summary>
+    private static List<ChartData> LoadOfficialCharts(string songId)
+    {
+        List<ChartData> charts = new List<ChartData>();
+        string folder = GetOfficialResourcesFolder(songId);
+        TextAsset[] assets = Resources.LoadAll<TextAsset>(folder);
+
+        foreach (TextAsset asset in assets)
+        {
+            string source = $"Resources/{folder}/{asset.name}";
+
+            if (Array.IndexOf(GameConstants.Chart.Difficulties, asset.name) < 0)
+            {
+                Debug.LogWarning($"{LogPrefix} 공식 채보 파일 이름이 난이도({string.Join("/", GameConstants.Chart.Difficulties)})가 아니라 건너뜁니다: {source}");
+                continue;
+            }
+
+            if (!TryParseChart(asset.text, source, songId, null, out ChartData chart, out _, out string error))
+            {
+                Debug.LogWarning($"{LogPrefix} 공식 채보를 건너뜁니다: {error}");
+                continue;
+            }
+
+            if (chart.difficulty != asset.name)
+            {
+                Debug.LogWarning($"{LogPrefix} 파일 이름의 난이도({asset.name})와 파일의 difficulty({chart.difficulty})가 달라 건너뜁니다: {source}");
+                continue;
+            }
+
+            if (chart.type != ChartData.TypeOfficial)
+            {
+                Debug.LogWarning($"{LogPrefix} 공식 채보 폴더의 파일인데 type이 {chart.type}이라 건너뜁니다: {source}");
+                continue;
+            }
+
+            if (charts.Exists(item => item.chartId == chart.chartId))
+            {
+                Debug.LogWarning($"{LogPrefix} chartId({chart.chartId})가 겹쳐 건너뜁니다: {source}");
+                continue;
+            }
+
+            charts.Add(chart);
+        }
+
+        charts.Sort((a, b) => GetDifficultyOrder(a.difficulty).CompareTo(GetDifficultyOrder(b.difficulty)));
+        return charts;
+    }
+
+    /// <summary>
+    /// 난이도 순서 (GameConstants.Chart.Difficulties의 인덱스). 목록에 없으면 맨 뒤.
+    /// </summary>
+    public static int GetDifficultyOrder(string difficulty)
+    {
+        int index = Array.IndexOf(GameConstants.Chart.Difficulties, difficulty);
+        return index >= 0 ? index : int.MaxValue;
+    }
+
+    /// <summary>
+    /// 나만의 채보 파일 하나를 읽고 검사한다. JSON이 깨졌으면 .broken으로 백업한다 (형식만 틀린 파일은 그대로 둔다).
     /// </summary>
     private static bool TryReadFile(string path, string expectedSongId, string expectedChartId, out ChartData chart, out string error)
     {
@@ -212,6 +294,30 @@ public static class ChartRepository
             return false;
         }
 
+        if (TryParseChart(json, path, expectedSongId, expectedChartId, out chart, out bool isBrokenJson, out error))
+            return true;
+
+        if (isBrokenJson)
+        {
+            string backupPath = BackupBrokenFile(path);
+            error = $"{error} → 백업: {backupPath ?? "실패"}";
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// JSON 글자를 채보로 바꾸고 검사한다. 공식·나만의 채보가 같이 쓴다.
+    /// - songId가 폴더와 다르거나, expectedChartId가 있는데 chartId가 다르거나, 형식이 맞지 않으면 실패한다.
+    /// </summary>
+    /// <param name="source">로그에 쓸 출처 (파일 경로 또는 Resources 경로)</param>
+    /// <param name="expectedChartId">파일 이름의 chartId. 공식 채보처럼 파일 이름이 chartId가 아니면 null</param>
+    /// <param name="isBrokenJson">JSON 자체를 읽지 못했으면 true (백업 대상)</param>
+    private static bool TryParseChart(string json, string source, string expectedSongId, string expectedChartId,
+        out ChartData chart, out bool isBrokenJson, out string error)
+    {
+        chart = null;
+        isBrokenJson = false;
+
         ChartData parsed = null;
         string parseError = null;
         try
@@ -225,20 +331,20 @@ public static class ChartRepository
 
         if (parsed == null)
         {
-            string backupPath = BackupBrokenFile(path);
-            error = $"JSON을 읽지 못했습니다: {path} ({parseError ?? "빈 파일"}) → 백업: {backupPath ?? "실패"}";
+            isBrokenJson = true;
+            error = $"JSON을 읽지 못했습니다: {source} ({parseError ?? "빈 파일"})";
             return false;
         }
 
         if (parsed.songId != expectedSongId)
         {
-            error = $"폴더의 songId({expectedSongId})와 파일의 songId({parsed.songId})가 다릅니다: {path}";
+            error = $"폴더의 songId({expectedSongId})와 파일의 songId({parsed.songId})가 다릅니다: {source}";
             return false;
         }
 
-        if (parsed.chartId != expectedChartId)
+        if (expectedChartId != null && parsed.chartId != expectedChartId)
         {
-            error = $"파일 이름의 chartId({expectedChartId})와 파일의 chartId({parsed.chartId})가 다릅니다: {path}";
+            error = $"파일 이름의 chartId({expectedChartId})와 파일의 chartId({parsed.chartId})가 다릅니다: {source}";
             return false;
         }
 
@@ -246,7 +352,7 @@ public static class ChartRepository
 
         if (!Validate(parsed, out string validateError))
         {
-            error = $"{validateError}: {path}";
+            error = $"{validateError}: {source}";
             return false;
         }
 
