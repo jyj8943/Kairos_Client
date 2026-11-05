@@ -62,11 +62,11 @@ public class GearView : MonoBehaviour
     }
 
     /// <summary>
-    /// 키를 누르는 동안 라인을 빛나게 한다.
+    /// 키를 누르는 동안 라인을 빛나게 한다. 개발용 설정(DevPlaySettings.LaneGlowEnabled)이 꺼져 있으면 켜지 않는다 (끄기는 항상 한다).
     /// </summary>
     public void SetPressed(int lane, bool pressed)
     {
         if (laneGlows == null || lane < 0 || lane >= laneGlows.Length || laneGlows[lane] == null) return;
-        laneGlows[lane].enabled = pressed;
+        laneGlows[lane].enabled = pressed && DevPlaySettings.LaneGlowEnabled;
     }
 }

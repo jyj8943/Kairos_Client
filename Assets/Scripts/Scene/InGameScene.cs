@@ -42,6 +42,8 @@ public class InGameScene : SceneBase
 
 #if UNITY_EDITOR
     [Header("확인용 (Unity 에디터 전용, 빌드에 포함되지 않음)")]
+    [Tooltip("개발용 F1 패널 (빛기둥·키음 끄기). EditorOnly 오브젝트라 빌드에서 빠진다")]
+    [SerializeField] private Canvas_InGameDebug debugPanel;
     [Tooltip("켜면 진입 데이터와 상관없이 자동 플레이로 시작한다 (싱크·점수 검증용). 씬에는 꺼 둔 채로 저장한다")]
     [SerializeField] private bool autoPlay;
 #endif
@@ -145,6 +147,9 @@ public class InGameScene : SceneBase
 #endif
 
         gear.Init();
+#if UNITY_EDITOR
+        if (debugPanel != null) debugPanel.Init(gear);
+#endif
         noteLayer.Init(gear, judge, entry.scrollMultiplier);
         isAutoPlay = IsTestPlay && entry.testPlay.autoPlay;
 #if UNITY_EDITOR
@@ -175,6 +180,9 @@ public class InGameScene : SceneBase
         GameManager.Sound.CancelScheduledSfx();
         GameManager.Sound.PlayMusicScheduled(song.Clip, startDelaySeconds, musicStartPosition);
         input.EnableInput();
+#if UNITY_EDITOR
+        if (debugPanel != null) debugPanel.EnableInput();
+#endif
         isPlaying = true;
     }
 
@@ -186,6 +194,9 @@ public class InGameScene : SceneBase
         isPlaying = false;
         StopCountdown();
         if (input != null) input.DisableInput();
+#if UNITY_EDITOR
+        if (debugPanel != null) debugPanel.DisableInput();
+#endif
         if (SoundManager.HasInstance) GameManager.Sound.StopMusic();
     }
 
@@ -251,7 +262,8 @@ public class InGameScene : SceneBase
     {
         if (!isPlaying || isPaused) return;
 
-        GameManager.Sound.PlaySfx(keySound);
+        // 개발용 F1 패널에서 키음을 끄면 소리만 내지 않는다 (판정은 그대로)
+        if (DevPlaySettings.KeySoundEnabled) GameManager.Sound.PlaySfx(keySound);
 
         if (judge.TryHit(lane, inputSongTime, out JudgeResult result))
         {

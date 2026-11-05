@@ -99,6 +99,11 @@ public static class GameConstants
         public const string AutoTestPlayInGameText = "테스트 플레이 · 자동 플레이 · ESC 일시정지";
         public const string AutoTestPlayLabel = "테스트 플레이 · 자동 플레이";
 
+        /// <summary>인게임 개발용 F1 패널 상태 한 줄 ({0} 빛기둥, {1} 키음에 켬·끔이 들어간다)</summary>
+        public const string DebugStatusFormat = "빛기둥 {0} · 키음 {1}";
+        public const string DebugOnLabel = "켬";
+        public const string DebugOffLabel = "끔";
+
         /// <summary>자동 플레이가 노트를 칠 때 라인 빛남을 켜 두는 시간 (초, realtime)</summary>
         public const double AutoPlayGlowSeconds = 0.08;
         public const string ReturnToEditorLabel = "에디터로 돌아가기";
