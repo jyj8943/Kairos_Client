@@ -14,6 +14,9 @@ public static class GameManager
 
     /// <summary>노래·효과음 재생과 곡 시간 (DSP 기준)</summary>
     public static SoundManager Sound => SoundManager.Instance;
+
+    /// <summary>UI 화면 등록·팝업 스택·ESC 처리, 확인 팝업 (GameManager.UI.Confirm)</summary>
+    public static UIManager UI => UIManager.Instance;
 }
 
 /// <summary>

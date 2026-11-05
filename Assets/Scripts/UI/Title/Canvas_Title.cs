@@ -4,11 +4,11 @@ using UnityEngine.UI;
 /// <summary>
 /// 타이틀 화면 UI. TitleScene이 Init()을 호출한다.
 /// - 버튼 OnClick은 인스펙터가 아니라 Init()에서 코드로 연결한다.
-/// - 플레이 → 곡 선택, 에디터 → 에디터 곡 고르기, 종료 → 게임 종료 (Unity 에디터에서는 플레이 모드 종료).
+/// - 플레이 → 곡 선택, 에디터 → 에디터 곡 고르기, 종료 → 확인 팝업 → 게임 종료 (Unity 에디터에서는 플레이 모드 종료).
 /// - 설정 버튼 동작은 설정 창을 만들 때 추가한다.
 /// - 키보드 이동(↑↓, Enter)은 EventSystem이 맡는다.
 /// </summary>
-public class Canvas_Title : MonoBehaviour
+public class Canvas_Title : UIBase
 {
     [SerializeField] private Button playButton;
     [SerializeField] private Button editorButton;
@@ -59,9 +59,17 @@ public class Canvas_Title : MonoBehaviour
     }
 
     /// <summary>
-    /// 게임을 끝낸다. Unity 에디터에서는 플레이 모드를 끝낸다.
+    /// 확인 팝업을 띄우고, 확인하면 게임을 끝낸다.
     /// </summary>
     private void OnClickQuit()
+    {
+        GameManager.UI.Confirm(GameConstants.Confirm.QuitMessage, GameConstants.Confirm.QuitLabel, Quit);
+    }
+
+    /// <summary>
+    /// 게임을 끝낸다. Unity 에디터에서는 플레이 모드를 끝낸다.
+    /// </summary>
+    private void Quit()
     {
         Debug.Log("[Canvas_Title] 게임 종료");
         SetMenuInteractable(false);

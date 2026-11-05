@@ -44,4 +44,12 @@ public class SongSelectScene : SceneBase
     {
         if (canvas != null) canvas.DisableInput();
     }
+
+    /// <summary>
+    /// ESC (팝업이 없을 때 UIManager가 부름): 타이틀로 나간다.
+    /// </summary>
+    public override void OnBack()
+    {
+        if (canvas != null) canvas.ExitToTitle();
+    }
 }

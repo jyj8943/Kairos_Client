@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
@@ -10,9 +9,9 @@ using UnityEngine.UI;
 /// - 곡 목록은 받은 순서(SongDatabase 순서)대로 Btn_SongItem 프리팹을 생성해 채운다.
 /// - 곡 아이템으로 곡을 고르고, 새 채보 정보(이름·레벨)를 입력해 편집 씬으로 넘어간다.
 /// - 고른 곡의 내 채보(커스텀 채보)를 최신순으로 보여주고, 누르면 그 채보를 편집 씬에서 연다.
-/// - ESC는 InputManager 없이 입력 에셋의 UI/Cancel 액션으로 받는다.
+/// - ESC는 UIManager가 받는다 (입력 중이면 입력만 끝내고, 아니면 EditorSongSelectScene.OnBack → ExitToTitle).
 /// </summary>
-public class Canvas_EditorSongSelect : MonoBehaviour
+public class Canvas_EditorSongSelect : UIBase
 {
     [Header("곡 목록")]
     [SerializeField] private Btn_SongItem songItemPrefab;
@@ -36,8 +35,6 @@ public class Canvas_EditorSongSelect : MonoBehaviour
 
     [Header("나가기")]
     [SerializeField] private Button exitButton;
-    [Tooltip("입력 에셋의 UI/Cancel (ESC)")]
-    [SerializeField] private InputActionReference cancelAction;
 
     private readonly List<Btn_SongItem> songItems = new List<Btn_SongItem>();
 
@@ -48,7 +45,6 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     private GameObject lastSelected;
     private Btn_SongItem chosenItem;
     private SongData chosenSong;
-    private bool isInputEnabled;
 
     /// <summary>
     /// 곡 목록을 만들고, 내비게이션과 버튼 리스너를 연결한 뒤 처음 곡을 고른 상태로 시작한다.
@@ -89,40 +85,8 @@ public class Canvas_EditorSongSelect : MonoBehaviour
             ScrollToShow((RectTransform)selected.transform);
     }
 
-    /// <summary>
-    /// ESC 입력을 받기 시작한다. 씬의 OnEnter에서 호출한다.
-    /// </summary>
-    public void EnableInput()
-    {
-        if (isInputEnabled) return;
-
-        if (cancelAction == null)
-        {
-            Debug.LogWarning("[Canvas_EditorSongSelect] cancelAction이 연결되지 않아 ESC로 나갈 수 없습니다.", this);
-            return;
-        }
-
-        cancelAction.action.performed += OnCancel;
-        cancelAction.action.Enable();
-        isInputEnabled = true;
-    }
-
-    /// <summary>
-    /// ESC 입력 구독을 해제한다. 씬의 OnExit에서 호출한다.
-    /// 액션은 다른 곳과 함께 쓰는 입력 에셋의 것이라 Disable하지 않고 구독만 끊는다.
-    /// </summary>
-    public void DisableInput()
-    {
-        if (!isInputEnabled) return;
-
-        cancelAction.action.performed -= OnCancel;
-        isInputEnabled = false;
-    }
-
     private void OnDestroy()
     {
-        DisableInput();
-
         if (exitButton != null) exitButton.onClick.RemoveListener(OnClickExit);
         if (createButton != null) createButton.onClick.RemoveListener(OnClickCreate);
 
@@ -349,29 +313,10 @@ public class Canvas_EditorSongSelect : MonoBehaviour
     }
 
     /// <summary>
-    /// ESC: 입력창에 글자를 입력하는 중이면 입력만 끝내고, 아니면 타이틀로 나간다.
+    /// 타이틀로 나간다 (Btn_Exit, ESC → EditorSongSelectScene.OnBack).
+    /// 입력창 입력 중 ESC는 UIManager가 입력만 끝내므로 여기까지 오지 않는다.
     /// </summary>
-    private void OnCancel(InputAction.CallbackContext context)
-    {
-        TMP_InputField editingInput = GetEditingInput();
-        if (editingInput != null)
-        {
-            // 입력한 글자는 그대로 두고 편집만 끝낸다 (선택은 입력창에 남아 방향키로 이어서 이동 가능)
-            editingInput.DeactivateInputField();
-            return;
-        }
-
-        ExitToTitle();
-    }
-
-    private TMP_InputField GetEditingInput()
-    {
-        if (chartNameInput.isFocused) return chartNameInput;
-        if (levelInput.isFocused) return levelInput;
-        return null;
-    }
-
-    private void ExitToTitle()
+    public void ExitToTitle()
     {
         if (GameManager.Scene.Load(GameConstants.Scenes.Title))
             SetInteractable(false);

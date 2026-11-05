@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// 인게임 씬 진입점 (숏노트 한 판). InGameScene.unity 루트의 "InGameScene" 오브젝트에 붙인다.
@@ -19,10 +18,6 @@ public class InGameScene : SceneBase
     [SerializeField] private NoteLayer noteLayer;
     [SerializeField] private InGameInput input;
     [SerializeField] private Canvas_InGame canvas;
-
-    [Header("입력")]
-    [Tooltip("입력 에셋의 UI/Cancel (ESC). 테스트 플레이 중 에디터로 돌아간다")]
-    [SerializeField] private InputActionReference cancelAction;
 
     [Header("판정 범위 (±ms, 기획서 잠정치)")]
     [SerializeField] private JudgeWindows judgeWindows = new JudgeWindows();
@@ -52,7 +47,6 @@ public class InGameScene : SceneBase
     private bool isReady;
     private bool isPlaying;
     private bool isFinished;
-    private bool isCancelEnabled;
 
     // 판정 오차 기록 (키로 친 판정만)
     private int hitCount;
@@ -132,7 +126,6 @@ public class InGameScene : SceneBase
 
         GameManager.Sound.PlayMusicScheduled(song.Clip, startDelaySeconds, musicStartPosition);
         input.EnableInput();
-        EnableCancel();
         isPlaying = true;
     }
 
@@ -143,13 +136,7 @@ public class InGameScene : SceneBase
     {
         isPlaying = false;
         if (input != null) input.DisableInput();
-        DisableCancel();
         if (SoundManager.HasInstance) GameManager.Sound.StopMusic();
-    }
-
-    private void OnDestroy()
-    {
-        DisableCancel();
     }
 
     private void Update()
@@ -258,30 +245,12 @@ public class InGameScene : SceneBase
         };
     }
 
-    private void EnableCancel()
-    {
-        if (isCancelEnabled || cancelAction == null) return;
-
-        cancelAction.action.performed += OnCancel;
-        cancelAction.action.Enable();
-        isCancelEnabled = true;
-    }
-
     /// <summary>
-    /// 액션은 다른 곳과 함께 쓰는 입력 에셋의 것이라 Disable하지 않고 구독만 끊는다.
+    /// ESC (팝업이 없을 때 UIManager가 부름). 테스트 플레이면 노래를 멈추고 결과 없이 에디터로 돌아간다.
+    /// 보통 플레이는 아직 아무것도 하지 않는다.
+    /// TODO: 일시정지 팝업을 만들면 보통 플레이는 일시정지 팝업을 연다.
     /// </summary>
-    private void DisableCancel()
-    {
-        if (!isCancelEnabled) return;
-
-        cancelAction.action.performed -= OnCancel;
-        isCancelEnabled = false;
-    }
-
-    /// <summary>
-    /// ESC. 테스트 플레이면 노래를 멈추고 결과 없이 에디터로 돌아간다. 보통 플레이는 아직 아무것도 하지 않는다 (일시정지 메뉴는 나중에).
-    /// </summary>
-    private void OnCancel(InputAction.CallbackContext context)
+    public override void OnBack()
     {
         if (!IsTestPlay || isFinished || !isReady) return;
 

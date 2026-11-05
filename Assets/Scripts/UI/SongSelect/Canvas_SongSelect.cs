@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -11,10 +11,11 @@ using UnityEngine.UI;
 /// - 공통: 곡 목록(Btn_SongItem), 앨범 이미지, 곡 정보, 최고 기록(지금은 "-"), 배속, 시작 버튼, 탭 버튼, 조작 안내.
 /// - 공식 탭: 난이도 버튼(Btn_Difficulty) 3개. 나만의 채보 탭: 채보 목록(Btn_MyChartItem).
 /// - 조작: ↑↓ 곡(EventSystem 내비게이션), ←→ 난이도/채보, Tab 탭 전환, + / − 배속, Enter 시작, ESC 타이틀.
-///   ↑↓ 외의 키는 입력 에셋의 SongSelect 맵, ESC는 UI/Cancel로 받는다. 마우스로도 곡·탭·난이도·채보·시작을 고른다.
+///   ↑↓ 외의 키는 입력 에셋의 SongSelect 맵으로 받는다. ESC는 UIManager가 받아 SongSelectScene.OnBack → ExitToTitle.
+///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로도 곡·탭·난이도·채보·시작을 고른다.
 /// - 키보드 선택(EventSystem)은 항상 고른 곡 항목에 둔다. 마우스로 다른 것을 누르면 다음 프레임에 곡 항목으로 되돌린다.
 /// </summary>
-public class Canvas_SongSelect : MonoBehaviour
+public class Canvas_SongSelect : UIBase
 {
     private const string LogPrefix = "[Canvas_SongSelect]";
 
@@ -69,14 +70,13 @@ public class Canvas_SongSelect : MonoBehaviour
     [SerializeField] private TMP_Text keyHintText;
     [SerializeField] private Button startButton;
 
-    [Header("입력 (입력 에셋의 SongSelect 맵, ESC는 UI/Cancel)")]
+    [Header("입력 (입력 에셋의 SongSelect 맵. ESC는 UIManager)")]
     [SerializeField] private InputActionReference prevChartAction;
     [SerializeField] private InputActionReference nextChartAction;
     [SerializeField] private InputActionReference switchTabAction;
     [SerializeField] private InputActionReference speedUpAction;
     [SerializeField] private InputActionReference speedDownAction;
     [SerializeField] private InputActionReference startAction;
-    [SerializeField] private InputActionReference cancelAction;
 
     private readonly List<Btn_SongItem> songItems = new List<Btn_SongItem>();
 
@@ -168,7 +168,6 @@ public class Canvas_SongSelect : MonoBehaviour
         Subscribe(speedUpAction, OnSpeedUp);
         Subscribe(speedDownAction, OnSpeedDown);
         Subscribe(startAction, OnStartKey);
-        Subscribe(cancelAction, OnCancel);
         isInputEnabled = true;
     }
 
@@ -186,7 +185,6 @@ public class Canvas_SongSelect : MonoBehaviour
         Unsubscribe(speedUpAction, OnSpeedUp);
         Unsubscribe(speedDownAction, OnSpeedDown);
         Unsubscribe(startAction, OnStartKey);
-        Unsubscribe(cancelAction, OnCancel);
         isInputEnabled = false;
     }
 
@@ -213,7 +211,8 @@ public class Canvas_SongSelect : MonoBehaviour
     /// </summary>
     private void Update()
     {
-        if (chosenItem == null || isLeaving) return;
+        // 팝업이 열려 있으면 팝업 버튼의 선택을 빼앗지 않는다
+        if (chosenItem == null || IsShortcutBlocked) return;
 
         EventSystem eventSystem = EventSystem.current;
         if (eventSystem == null) return;
@@ -270,6 +269,7 @@ public class Canvas_SongSelect : MonoBehaviour
 
     private void OnSwitchTab(InputAction.CallbackContext context)
     {
+        if (IsShortcutBlocked) return;
         ChangeTab(currentTab == ChartType.Official ? ChartType.Custom : ChartType.Official);
     }
 
@@ -565,7 +565,7 @@ public class Canvas_SongSelect : MonoBehaviour
 
     private void MoveChart(int direction)
     {
-        if (isLeaving) return;
+        if (IsShortcutBlocked) return;
 
         if (currentTab == ChartType.Official) MoveDifficulty(direction);
         else MoveMyChart(direction);
@@ -586,7 +586,7 @@ public class Canvas_SongSelect : MonoBehaviour
     /// </summary>
     private void ChangeSpeed(int step)
     {
-        if (isLeaving) return;
+        if (IsShortcutBlocked) return;
 
         int next = Mathf.Clamp(speedSteps + step, ToSpeedSteps(GameConstants.Play.MinScrollMultiplier), ToSpeedSteps(GameConstants.Play.MaxScrollMultiplier));
         if (next == speedSteps) return;
@@ -610,10 +610,19 @@ public class Canvas_SongSelect : MonoBehaviour
 
     private void OnStartKey(InputAction.CallbackContext context)
     {
+        if (IsShortcutBlocked) return;
         StartGame();
     }
 
-    private void OnCancel(InputAction.CallbackContext context)
+    /// <summary>
+    /// 키보드 단축키를 막아야 하면 true: 씬을 떠나는 중이거나 팝업이 열려 있을 때.
+    /// </summary>
+    private bool IsShortcutBlocked => isLeaving || (UIManager.HasInstance && GameManager.UI.HasOpenPopup);
+
+    /// <summary>
+    /// 타이틀로 나간다 (ESC → SongSelectScene.OnBack).
+    /// </summary>
+    public void ExitToTitle()
     {
         if (isLeaving) return;
 

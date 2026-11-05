@@ -6,7 +6,8 @@ using UnityEngine;
 /// - 곡 고르기 씬이 넘긴 채보 정보의 songId로 곡(SongData)을 찾아 BPM·offset·곡 길이로 편집을 시작한다.
 /// - 진입 데이터에 chartId가 있으면 그 내 채보를 불러와 세션을 채운다. 실패하면 곡 고르기로 돌아간다.
 /// - 저장 요청(Btn_Save·Ctrl+S)을 받아 곡을 확인한 뒤 세션에 저장을 맡긴다.
-/// - 나가기 요청(Btn_Exit)을 받아 곡 고르기로 돌아간다 (저장 안 한 변경이 있으면 한 번 더 눌러야 나간다).
+/// - 나가기 요청(Btn_Exit)을 받아 곡 고르기로 돌아간다 (저장 안 한 변경이 있으면 확인 팝업을 띄운다).
+/// - ESC(OnBack)는 지금 아무것도 하지 않는다 (기존 동작 그대로).
 /// - 테스트 플레이 요청(Btn_TestPlay)을 받아 지금 상태를 저장하지 않고 인게임으로 넘긴다.
 ///   돌아올 때는 진입 데이터의 restore로 노트·위치·스냅·그리드 높이·도구·수정 여부를 되돌린다.
 /// </summary>
@@ -37,9 +38,6 @@ public class EditorScene : SceneBase
 
     /// <summary>저장 처리 중이면 true (연타로 겹쳐 실행되지 않게)</summary>
     private bool isSaving;
-
-    /// <summary>저장하지 않은 채로 나가기를 한 번 누른 뒤, 한 번 더 누르면 나가는 마감 시각 (unscaledTime). 없으면 −1</summary>
-    private float exitConfirmUntil = -1f;
 
     /// <summary>잠깐 보여준 안내를 저장 상태 표시로 되돌릴 시각 (unscaledTime). 없으면 −1</summary>
     private float statusResetAt = -1f;
@@ -130,21 +128,19 @@ public class EditorScene : SceneBase
         if (songTuning != null) songTuning.Init(song, session, ApplyTiming);
 #endif
 
-        exitConfirmUntil = -1f;
         statusResetAt = -1f;
         isLeaving = false;
         isReady = true;
     }
 
     /// <summary>
-    /// 잠깐 보여준 안내(나가기·테스트 플레이 안내) 시간이 지나면 저장 상태 표시를 되돌린다.
+    /// 잠깐 보여준 안내(테스트 플레이 안내 등) 시간이 지나면 저장 상태 표시를 되돌린다.
     /// </summary>
     private void Update()
     {
         if (statusResetAt < 0f || Time.unscaledTime < statusResetAt) return;
 
         statusResetAt = -1f;
-        exitConfirmUntil = -1f;
         canvas.RefreshSaveStatus();
     }
 
@@ -273,23 +269,30 @@ public class EditorScene : SceneBase
 
     /// <summary>
     /// 나가기 요청 (Btn_Exit). 곡 고르기로 돌아가며, 방금 편집한 곡이 선택된 상태로 시작한다.
-    /// 저장하지 않은 변경이 있으면 첫 클릭은 안내만 하고, ExitConfirmSeconds 안에 한 번 더 누르면 나간다.
-    /// TODO: 확인 창(저장 후 나가기 / 저장 안 하고 나가기 / 취소)을 만들면 바꾼다.
+    /// 저장하지 않은 변경(IsDirty)이 있으면 노래를 멈추고 확인 팝업을 띄운다 (취소하면 정지 상태 그대로 에디터에 남는다).
+    /// 저장했으면 바로 나간다.
     /// </summary>
     private void OnExitRequested()
     {
         if (!isReady || isLeaving || isSaving) return;
 
-        bool confirmed = exitConfirmUntil >= 0f && Time.unscaledTime < exitConfirmUntil;
-        if (session.IsDirty && !confirmed)
+        if (session.IsDirty)
         {
-            exitConfirmUntil = Time.unscaledTime + GameConstants.Editor.ExitConfirmSeconds;
-            statusResetAt = exitConfirmUntil;
-            canvas.ShowExitWarning();
+            playback.Stop(false);
+            GameManager.UI.Confirm(GameConstants.Confirm.EditorExitMessage, GameConstants.Confirm.EditorExitLabel, ExitToSongSelect);
             return;
         }
 
-        exitConfirmUntil = -1f;
+        ExitToSongSelect();
+    }
+
+    /// <summary>
+    /// 저장하지 않고 곡 고르기로 나간다.
+    /// </summary>
+    private void ExitToSongSelect()
+    {
+        if (isLeaving) return;
+
         playback.Stop(false);
         if (GameManager.Scene.Load(GameConstants.Scenes.EditorSongSelect, new EditorSongSelectEntryData { songId = session.SongId }))
             isLeaving = true;
@@ -309,7 +312,6 @@ public class EditorScene : SceneBase
         TestPlayData testPlay = session.CreateTestPlayData(grid.CurrentBeat, grid.SnapDivision, grid.GridHeightScale, canvas.CurrentTool, out string error);
         if (testPlay == null)
         {
-            exitConfirmUntil = -1f;
             statusResetAt = Time.unscaledTime + GameConstants.Editor.StatusMessageSeconds;
             canvas.ShowStatusMessage(error);
             return;
@@ -338,8 +340,7 @@ public class EditorScene : SceneBase
     {
         if (!isReady || isSaving || isLeaving) return;
 
-        // 저장하면 나가기 안내는 끝난다 (저장 결과 표시로 바뀐다)
-        exitConfirmUntil = -1f;
+        // 저장하면 잠깐 보여준 안내는 끝난다 (저장 결과 표시로 바뀐다)
         statusResetAt = -1f;
         isSaving = true;
         try

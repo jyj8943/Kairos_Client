@@ -4800,6 +4800,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e1ada7b37d49b749b823781e78e58e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Canvas_SongSelect
+  canvasGroup: {fileID: 0}
+  panel: {fileID: 0}
   songItemPrefab: {fileID: 4932646814478731043, guid: 698cb906c2bbc754883e6069bf1cd8bf, type: 3}
   songListScrollRect: {fileID: 193334124}
   songListContent: {fileID: 216440669}
@@ -4841,7 +4843,6 @@ MonoBehaviour:
   speedUpAction: {fileID: -896713141939268059, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   speedDownAction: {fileID: 1077901802230026870, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   startAction: {fileID: -249983572912640800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  cancelAction: {fileID: -1967631576421560919, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!114 &1792025320
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -397,6 +397,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e47c57deeb5c124438dcc039248b46cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Canvas_InGame
+  canvasGroup: {fileID: 0}
+  panel: {fileID: 0}
   songInfoText: {fileID: 1271489984}
   judgeText: {fileID: 1051957748}
   comboText: {fileID: 1968536808}
@@ -1890,7 +1892,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NoteLayer
   notePrefab: {fileID: 1992589664928904045, guid: 1575976177d3bab4286aeac8b56f7b8c, type: 3}
-  scrollSpeed: 7
   screenMargin: 0.5
   extraPoolCount: 8
 --- !u!1 &1678557333
@@ -2431,7 +2432,6 @@ MonoBehaviour:
   noteLayer: {fileID: 1565934377}
   input: {fileID: 1837486705}
   canvas: {fileID: 101810487}
-  cancelAction: {fileID: -1967631576421560919, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   judgeWindows:
     perfectMs: 40
     greatMs: 80

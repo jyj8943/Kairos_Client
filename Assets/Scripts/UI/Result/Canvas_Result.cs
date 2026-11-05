@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// - 버튼: 다시 하기(R), 돌아가기(Enter — 처음에 선택해 두므로 Enter로 누른다). 문구는 넘겨받은 값을 쓴다.
 /// - R은 입력 에셋의 Result/Retry로 받는다.
 /// </summary>
-public class Canvas_Result : MonoBehaviour
+public class Canvas_Result : UIBase
 {
     [Header("결과")]
     [SerializeField] private TMP_Text rankText;
@@ -129,6 +129,8 @@ public class Canvas_Result : MonoBehaviour
 
     private void OnRetryKey(InputAction.CallbackContext context)
     {
+        // 팝업이 열려 있으면 R을 받지 않는다
+        if (UIManager.HasInstance && GameManager.UI.HasOpenPopup) return;
         OnClickRetry();
     }
 

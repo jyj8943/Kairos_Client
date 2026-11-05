@@ -32,7 +32,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     }
 
     /// <summary>
-    /// 씬을 비동기로 불러온다. 현재 씬의 OnExit()을 먼저 호출하고, data는 다음 씬에 넘긴다.
+    /// 씬을 비동기로 불러온다. 현재 씬의 Exit()(OnExit + UI 해제)을 먼저 호출하고, data는 다음 씬에 넘긴다.
     /// </summary>
     /// <returns>로드를 시작했으면 true. 이미 로드 중이거나 씬이 없으면 false</returns>
     public bool Load(string sceneName, object data = null)
@@ -49,7 +49,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
             return false;
         }
 
-        if (Current != null) Current.OnExit();
+        if (Current != null) Current.Exit();
         Current = null;
 
         sceneData = data;

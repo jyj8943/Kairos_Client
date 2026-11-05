@@ -87,6 +87,9 @@ public class InGameInput : MonoBehaviour
 
     private void OnStarted(int lane, InputAction.CallbackContext context)
     {
+        // 팝업이 열려 있으면 라인 키를 받지 않는다
+        if (UIManager.HasInstance && GameManager.UI.HasOpenPopup) return;
+
         // 입력 시각(realtimeSinceStartup 기준)을 곡 시간으로 바꾼다
         double inputSongTime = GameManager.Sound.GetSongTimeAtRealtime(context.time);
         onLaneHeld?.Invoke(lane, true);

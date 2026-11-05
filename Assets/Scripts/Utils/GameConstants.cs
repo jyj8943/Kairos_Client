@@ -113,6 +113,34 @@ public static class GameConstants
         };
     }
 
+    /// <summary>UI 공통 값 (UIManager, UIBase)</summary>
+    public static class UI
+    {
+        /// <summary>열고 닫는 연출 시간 (초, unscaled)</summary>
+        public const float TransitionSeconds = 0.15f;
+
+        /// <summary>열 때 패널 시작 크기 (→ 1.0)</summary>
+        public const float TransitionStartScale = 0.9f;
+
+        /// <summary>오버레이 Canvas의 Sort Order (씬 Canvas는 0)</summary>
+        public const int OverlaySortOrder = 100;
+    }
+
+    /// <summary>확인 팝업 문구 (기획서 3-8 사용처 표). 화면 스크립트에 문구를 직접 쓰지 않고 여기 모은다</summary>
+    public static class Confirm
+    {
+        /// <summary>취소 버튼 기본 이름</summary>
+        public const string CancelLabel = "취소";
+
+        /// <summary>타이틀 게임 종료</summary>
+        public const string QuitMessage = "게임을 종료하시겠습니까?";
+        public const string QuitLabel = "종료하기";
+
+        /// <summary>에디터 나가기 (저장하지 않은 변경이 있을 때만)</summary>
+        public const string EditorExitMessage = "저장하지 않은 변경이 있습니다.\n저장하지 않고 나가시겠습니까?";
+        public const string EditorExitLabel = "나가기";
+    }
+
     /// <summary>곡 선택 화면 표시 문구 (기획서 3-3)</summary>
     public static class SongSelect
     {
@@ -202,10 +230,6 @@ public static class GameConstants
         public const string SaveStatusFailed = "저장 실패";
         public const string SaveStatusUnsaved = "저장 안 됨";
         public const string SaveTimeFormat = "HH:mm";
-
-        /// <summary>저장하지 않고 나가려 할 때 안내. 이 시간(초) 안에 한 번 더 누르면 나간다</summary>
-        public const string ExitUnsavedWarning = "저장하지 않았습니다 · 한 번 더 누르면 나갑니다";
-        public const float ExitConfirmSeconds = 3f;
 
         /// <summary>테스트 플레이를 시작할 수 없을 때 안내. 이 시간(초)만 보여주고 저장 상태 표시로 되돌린다</summary>
         public const string TestPlayNoNotesMessage = "노트가 없습니다 · 노트를 찍은 뒤 테스트 플레이하세요";

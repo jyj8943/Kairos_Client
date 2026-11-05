@@ -7,7 +7,7 @@ using UnityEngine;
 /// - 결과는 결과 씬(ResultScene)이 보여준다.
 /// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다.
 /// </summary>
-public class Canvas_InGame : MonoBehaviour
+public class Canvas_InGame : UIBase
 {
     [SerializeField] private TMP_Text songInfoText;
     [SerializeField] private TMP_Text judgeText;

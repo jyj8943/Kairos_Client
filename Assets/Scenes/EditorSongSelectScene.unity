@@ -712,6 +712,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a83cff94544229c46990eaccb579f202, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Canvas_EditorSongSelect
+  canvasGroup: {fileID: 0}
+  panel: {fileID: 0}
   songItemPrefab: {fileID: 4932646814478731043, guid: 698cb906c2bbc754883e6069bf1cd8bf, type: 3}
   songListContent: {fileID: 1493539449}
   selectionKeeper: {fileID: 256362492}
@@ -725,7 +727,6 @@ MonoBehaviour:
   errorText: {fileID: 1908497562}
   createButton: {fileID: 2008618406}
   exitButton: {fileID: 228086864}
-  cancelAction: {fileID: -1967631576421560919, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!224 &256362491
 RectTransform:
   m_ObjectHideFlags: 0

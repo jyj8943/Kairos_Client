@@ -17,9 +17,10 @@ using UnityEngine.UI;
 ///   입력창에 글자를 쓰는 중이면 Ctrl+S를 무시한다.
 /// - 재생은 Btn_Play 클릭과 ChartEditor/PlayPause(Space), 타임라인 슬라이더, 메트로놈 토글을 이벤트로 알린다
 ///   (재생 처리는 EditorPlayback이 맡는다). 입력창에 글자를 쓰는 중이면 Space를 무시한다.
+/// - 확인 팝업 등 팝업이 열려 있으면 Space·Ctrl+S·휠은 동작하지 않는다 (GameManager.UI.HasOpenPopup).
 /// - 폴더 이름을 Editor로 두면 Unity 특수 폴더가 되므로 UI/ChartEditor/에 둔다.
 /// </summary>
-public class Canvas_Editor : MonoBehaviour
+public class Canvas_Editor : UIBase
 {
     [Header("상단 바")]
     [SerializeField] private TMP_Text chartInfoText;
@@ -264,14 +265,6 @@ public class Canvas_Editor : MonoBehaviour
     }
 
     /// <summary>
-    /// 저장하지 않고 나가려 할 때 안내를 표시한다 ("저장하지 않았습니다 · 한 번 더 누르면 나갑니다").
-    /// </summary>
-    public void ShowExitWarning()
-    {
-        ShowStatusMessage(GameConstants.Editor.ExitUnsavedWarning);
-    }
-
-    /// <summary>
     /// 저장 상태 자리에 안내를 잠깐 표시한다. 되돌릴 때는 RefreshSaveStatus를 부른다 (EditorScene이 시간을 잰다).
     /// </summary>
     public void ShowStatusMessage(string message)
@@ -293,7 +286,7 @@ public class Canvas_Editor : MonoBehaviour
     }
 
     /// <summary>
-    /// 나가기 안내를 끝내고 저장 상태 표시(마지막 저장 결과 또는 "저장 안 됨")로 되돌린다.
+    /// 잠깐 보여준 안내를 끝내고 저장 상태 표시(마지막 저장 결과 또는 "저장 안 됨")로 되돌린다.
     /// </summary>
     public void RefreshSaveStatus()
     {
@@ -353,7 +346,7 @@ public class Canvas_Editor : MonoBehaviour
     /// </summary>
     private void OnPlayPauseShortcut(InputAction.CallbackContext context)
     {
-        if (IsTypingInInputField()) return;
+        if (IsShortcutBlocked()) return;
         RequestPlayToggle();
     }
 
@@ -367,8 +360,16 @@ public class Canvas_Editor : MonoBehaviour
     /// </summary>
     private void OnSaveShortcut(InputAction.CallbackContext context)
     {
-        if (IsTypingInInputField()) return;
+        if (IsShortcutBlocked()) return;
         RequestSave();
+    }
+
+    /// <summary>
+    /// 단축키를 막아야 하면 true: 팝업이 열려 있거나 입력창에 글자를 쓰는 중일 때.
+    /// </summary>
+    private static bool IsShortcutBlocked()
+    {
+        return (UIManager.HasInstance && GameManager.UI.HasOpenPopup) || IsTypingInInputField();
     }
 
     private static bool IsTypingInInputField()
@@ -417,6 +418,8 @@ public class Canvas_Editor : MonoBehaviour
     /// </summary>
     private void OnScroll(InputAction.CallbackContext context)
     {
+        if (UIManager.HasInstance && GameManager.UI.HasOpenPopup) return;
+
         float value = context.ReadValue<float>();
         if (Mathf.Approximately(value, 0f) || grid == null || !IsPointerOverGrid()) return;
 

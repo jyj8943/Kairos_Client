@@ -30,18 +30,10 @@ public class EditorSongSelectScene : SceneBase
     }
 
     /// <summary>
-    /// 초기화가 끝나면 ESC 입력을 받는다.
+    /// ESC (팝업이 없고 입력 중이 아닐 때 UIManager가 부름): 타이틀로 나간다.
     /// </summary>
-    protected override void OnEnter()
+    public override void OnBack()
     {
-        if (canvas != null) canvas.EnableInput();
-    }
-
-    /// <summary>
-    /// 씬을 떠나기 직전 입력 구독을 해제한다.
-    /// </summary>
-    public override void OnExit()
-    {
-        if (canvas != null) canvas.DisableInput();
+        if (canvas != null) canvas.ExitToTitle();
     }
 }
