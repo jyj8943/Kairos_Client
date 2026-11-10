@@ -706,6 +706,24 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "SpeedDown",
+                    "type": "Button",
+                    "id": "2c9d595e-6092-4530-a82b-7ece195a950e",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "SpeedUp",
+                    "type": "Button",
+                    "id": "3372954f-9cd6-4928-8fe5-b66e6845d9f3",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -750,6 +768,28 @@
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "Lane3",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "c63da152-e5ac-47da-9c3a-130c6c68cf05",
+                    "path": "<Keyboard>/1",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "SpeedDown",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1f9238f3-c367-415a-83ca-d5d87b37a2a4",
+                    "path": "<Keyboard>/2",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "SpeedUp",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
@@ -939,6 +979,28 @@
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "Start",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6429dd70-15aa-42b0-b32b-ca4cb3e6d9a1",
+                    "path": "<Keyboard>/2",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "SpeedUp",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "54f2d4c3-45f5-4671-970e-5369a04444c6",
+                    "path": "<Keyboard>/1",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "SpeedDown",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

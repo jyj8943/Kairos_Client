@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 인게임 씬 진입점 (숏노트·롱노트 한 판). InGameScene.unity 루트의 "InGameScene" 오브젝트에 붙인다.
@@ -20,6 +21,9 @@ using UnityEngine;
 ///   라인 빛남을 짧게 켰다 끈다. 롱노트는 시작 시각에 누르고 끝 시각에 뗀다(OnLaneReleased, 누르는 동안 빛남 유지).
 ///   자동 플레이 중에는 사용자의 라인 키를 무시한다 (ESC 일시정지는 그대로).
 ///   일반 플레이(곡 선택에서 들어옴)는 진입 데이터에 testPlay가 없어 자동 플레이를 켤 수 없다.
+/// - 배속: 1 / 2 키(Gameplay/SpeedDown·SpeedUp)로 플레이 중에도 0.1배씩 바꾼다 (누르고 있으면 0.4초 뒤부터 0.08초마다 반복).
+///   팝업(일시정지·확인)이 열려 있으면 받지 않고, 재개 카운트다운 중에는 받는다. 바꾼 배속은 진입 데이터(entry.scrollMultiplier)에 남겨
+///   재시작·다시 하기·곡 선택·에디터 복귀로 이어 넘긴다 (싱글톤에 남기지 않는다).
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -30,6 +34,10 @@ public class InGameScene : SceneBase
     [SerializeField] private InGameInput input;
     [SerializeField] private Canvas_InGame canvas;
     [SerializeField] private Popup_Pause pausePopup;
+
+    [Header("배속 키 (입력 에셋 Gameplay/SpeedDown = 1, Gameplay/SpeedUp = 2)")]
+    [SerializeField] private InputActionReference speedDownAction;
+    [SerializeField] private InputActionReference speedUpAction;
 
     [Header("소리")]
     [Tooltip("라인 키를 누를 때마다 내는 키음 (NoteSFX). 판정과 상관없이 누를 때마다 난다")]
@@ -53,6 +61,11 @@ public class InGameScene : SceneBase
 #endif
 
     private readonly List<JudgeResult> timeoutResults = new List<JudgeResult>();
+
+    // 배속 키 반복 (누른 순간 한 번, 0.4초 뒤부터 0.08초마다)
+    private readonly KeyRepeat speedDownRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
+    private readonly KeyRepeat speedUpRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
+    private bool isSpeedInputEnabled;
     private readonly List<JudgeResult> releaseResults = new List<JudgeResult>();
 
     /// <summary>재개할 때 라인 키가 눌려 있는지 묻는 함수 (한 번만 만들어 둔다)</summary>
@@ -175,14 +188,15 @@ public class InGameScene : SceneBase
         System.Array.Clear(autoGlowOffAt, 0, autoGlowOffAt.Length);
 
         input.Init(OnUserLanePressed, OnUserLaneReleased, OnUserLaneHeld);
-        canvas.Init(song.Title, chart.chartName, chart.level, IsTestPlay, isAutoPlay);
+        canvas.Init(song.Title, chart.chartName, chart.level, IsTestPlay, isAutoPlay, noteLayer.ScrollMultiplier);
+        entry.scrollMultiplier = noteLayer.ScrollMultiplier;
 
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
                   $"노트 {judge.TotalCount}개 (롱노트 {longCount}개, 유지 틱 {judge.TotalTicks}개 → 가능한 최대 콤보 {score.MaxPossibleCombo})" +
                   $"{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
                   $"bpm={timing.BpmAt(0)} (BPM 구간 {timing.PointCount}개), offsetMs={timing.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
                   $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개 (롱노트 {noteLayer.PooledLongCount}개), " +
-                  $"배속 x{entry.scrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###} (기본 {GameConstants.Play.DefaultScrollSpeed})", this);
+                  $"배속 x{noteLayer.ScrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###}유닛/초 (1.0배 {noteLayer.BaseScrollSpeed:0.###}유닛/초 = 화면 위 끝~판정선 {gear.ScreenTopY - gear.JudgeLineY:0.###}유닛 ÷ {GameConstants.Play.BaseVisibleSeconds}초)", this);
 
         isReady = true;
     }
@@ -198,6 +212,7 @@ public class InGameScene : SceneBase
         GameManager.Sound.CancelScheduledSfx();
         GameManager.Sound.PlayMusicScheduled(song.Clip, startDelaySeconds, musicStartPosition);
         input.EnableInput();
+        EnableSpeedInput();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.EnableInput();
 #endif
@@ -212,6 +227,7 @@ public class InGameScene : SceneBase
         isPlaying = false;
         StopCountdown();
         if (input != null) input.DisableInput();
+        DisableSpeedInput();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.DisableInput();
 #endif
@@ -220,6 +236,9 @@ public class InGameScene : SceneBase
 
     private void Update()
     {
+        // 배속 키 반복은 재개 카운트다운 중에도 받는다 (팝업이 열려 있으면 ChangeSpeed가 무시한다)
+        if (isPlaying) UpdateSpeedRepeat();
+
         if (!isPlaying || isPaused) return;
 
         double songTime = GameManager.Sound.SongTime;
@@ -284,6 +303,96 @@ public class InGameScene : SceneBase
     public void TestRelease(int lane, double songTime)
     {
         OnUserLaneReleased(lane, songTime);
+    }
+#endif
+
+    /// <summary>배속 키 구독을 시작한다 (OnEnter). 액션은 여러 곳이 같이 쓰므로 Disable하지 않고 구독만 끊는다.</summary>
+    private void EnableSpeedInput()
+    {
+        if (isSpeedInputEnabled) return;
+        if (speedDownAction == null || speedUpAction == null)
+        {
+            Debug.LogWarning("[InGameScene] speedDownAction·speedUpAction이 연결되지 않아 배속 키를 받지 않습니다.", this);
+            return;
+        }
+
+        speedDownAction.action.started += OnSpeedDownStarted;
+        speedDownAction.action.canceled += OnSpeedDownCanceled;
+        speedUpAction.action.started += OnSpeedUpStarted;
+        speedUpAction.action.canceled += OnSpeedUpCanceled;
+        speedDownAction.action.Enable();
+        speedUpAction.action.Enable();
+        isSpeedInputEnabled = true;
+    }
+
+    /// <summary>배속 키 구독을 끊는다 (OnExit).</summary>
+    private void DisableSpeedInput()
+    {
+        speedDownRepeat.Release();
+        speedUpRepeat.Release();
+        if (!isSpeedInputEnabled) return;
+
+        speedDownAction.action.started -= OnSpeedDownStarted;
+        speedDownAction.action.canceled -= OnSpeedDownCanceled;
+        speedUpAction.action.started -= OnSpeedUpStarted;
+        speedUpAction.action.canceled -= OnSpeedUpCanceled;
+        isSpeedInputEnabled = false;
+    }
+
+    private void OnSpeedDownStarted(InputAction.CallbackContext context) => PressSpeedKey(speedDownRepeat, -1);
+    private void OnSpeedUpStarted(InputAction.CallbackContext context) => PressSpeedKey(speedUpRepeat, 1);
+    private void OnSpeedDownCanceled(InputAction.CallbackContext context) => speedDownRepeat.Release();
+    private void OnSpeedUpCanceled(InputAction.CallbackContext context) => speedUpRepeat.Release();
+
+    /// <summary>배속 키를 누른 순간: 한 번 바꾸고 반복을 시작한다. 팝업이 열려 있으면 무시한다 (반복도 시작하지 않는다).</summary>
+    private void PressSpeedKey(KeyRepeat repeat, int delta)
+    {
+        if (!CanChangeSpeed) return;
+
+        repeat.Press(Time.realtimeSinceStartupAsDouble);
+        ChangeSpeed(delta);
+    }
+
+    /// <summary>누르고 있는 배속 키의 반복 (매 프레임).</summary>
+    private void UpdateSpeedRepeat()
+    {
+        double now = Time.realtimeSinceStartupAsDouble;
+        int down = speedDownRepeat.Tick(now);
+        int up = speedUpRepeat.Tick(now);
+        if (down + up == 0 || !CanChangeSpeed) return;
+        ChangeSpeed(up - down);
+    }
+
+    /// <summary>배속을 바꿀 수 있으면 true. 팝업(일시정지·확인)이 열려 있으면 false (재개 카운트다운 중에는 true)</summary>
+    private bool CanChangeSpeed => isReady && isPlaying && !isFinished && !(UIManager.HasInstance && GameManager.UI.HasOpenPopup);
+
+    /// <summary>
+    /// 배속을 delta 단계(0.1배)만큼 바꾼다. 범위(1.0 ~ 8.0) 끝에서는 멈춘다.
+    /// 노트 낙하 속도에 바로 반영하고, 진입 데이터에 남겨 재시작·다시 하기·곡 선택·에디터 복귀로 넘긴다.
+    /// </summary>
+    private void ChangeSpeed(int delta)
+    {
+        if (delta == 0 || !CanChangeSpeed) return;
+
+        float next = ScrollSpeedRules.StepMultiplier(noteLayer.ScrollMultiplier, delta);
+        if (Mathf.Approximately(next, noteLayer.ScrollMultiplier)) return;
+
+        noteLayer.SetScrollMultiplier(next);
+        entry.scrollMultiplier = noteLayer.ScrollMultiplier;
+        canvas.SetSpeed(noteLayer.ScrollMultiplier, true);
+        Debug.Log($"[InGameScene] 배속 x{noteLayer.ScrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###}유닛/초 (보이는 시간 {ScrollSpeedRules.VisibleSeconds(noteLayer.ScrollMultiplier):0.###}초)", this);
+    }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): 배속 키를 한 번 눌렀다 뗀 것과 같다 (키 콜백과 같은 PressSpeedKey 경로, 팝업 확인 포함).
+    /// </summary>
+    /// <param name="up">true면 2(올림), false면 1(내림)</param>
+    public void TestTapSpeedKey(bool up)
+    {
+        KeyRepeat repeat = up ? speedUpRepeat : speedDownRepeat;
+        PressSpeedKey(repeat, up ? 1 : -1);
+        repeat.Release();
     }
 #endif
 
@@ -414,7 +523,7 @@ public class InGameScene : SceneBase
             return new ResultReturnTarget
             {
                 sceneName = GameConstants.Scenes.Editor,
-                sceneData = entry.testPlay.CreateEditorEntry(),
+                sceneData = entry.testPlay.CreateEditorEntry(entry.scrollMultiplier),
                 buttonLabel = GameConstants.Play.ReturnToEditorLabel
             };
         }

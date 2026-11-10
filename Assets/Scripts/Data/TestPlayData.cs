@@ -21,8 +21,12 @@ public class TestPlayData
     /// <summary>
     /// 에디터로 돌아갈 때 넘길 진입 데이터를 만든다.
     /// </summary>
-    public EditorEntryData CreateEditorEntry()
+    /// <param name="scrollMultiplier">테스트 플레이가 끝날 때의 배속 (에디터의 테스트 플레이 배속 칸으로 되돌린다)</param>
+    public EditorEntryData CreateEditorEntry(float scrollMultiplier)
     {
+        // 테스트 플레이 중 1 / 2로 바꾼 배속을 에디터의 "테스트 플레이 배속" 칸에 되돌린다
+        if (editorState != null) editorState.scrollMultiplier = scrollMultiplier;
+
         return new EditorEntryData
         {
             songId = songId,

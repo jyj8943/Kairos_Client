@@ -21,4 +21,7 @@ public class EditorRestoreState
 
     /// <summary>왼쪽 도구</summary>
     public EditorTool tool;
+
+    /// <summary>도구 패널 "테스트 플레이 배속" (테스트 플레이 중 1 / 2로 바꿨으면 그 값)</summary>
+    public float scrollMultiplier = GameConstants.Play.DefaultScrollMultiplier;
 }

@@ -115,6 +115,7 @@ public class EditorScene : SceneBase
         if (restore != null)
         {
             canvas.SetTool(restore.tool);
+            canvas.SetTestPlaySpeed(restore.scrollMultiplier);
             canvas.RefreshSaveStatus();
         }
         else if (chart != null && !Mathf.Approximately(chart.timingPoints[0].bpm, song.Bpm))
@@ -360,17 +361,21 @@ public class EditorScene : SceneBase
             return;
         }
 
+        // 도구 패널의 테스트 플레이 배속으로 시작하고, 돌아올 때 되돌릴 수 있게 편집 상태에도 남긴다
+        float scrollMultiplier = canvas.TestPlayScrollMultiplier;
+        testPlay.editorState.scrollMultiplier = scrollMultiplier;
         InGameEntryData data = new InGameEntryData
         {
             songId = session.SongId,
             chartId = session.ChartId,
             chartType = ChartType.Custom,
             mode = InGameMode.TestPlay,
+            scrollMultiplier = scrollMultiplier,
             testPlay = testPlay
         };
 
         Debug.Log($"[EditorScene] 테스트 플레이{(autoPlay ? " (자동 플레이)" : "")}: songId={session.SongId}, 시작 {grid.CurrentBeat}박 (마디 {grid.CurrentMeasure}), " +
-                  $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}", this);
+                  $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}, 배속 x{scrollMultiplier:0.0}", this);
 
         if (GameManager.Scene.Load(GameConstants.Scenes.InGame, data))
             isLeaving = true;

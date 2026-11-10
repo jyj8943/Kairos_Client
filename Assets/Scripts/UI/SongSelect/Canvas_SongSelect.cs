@@ -112,7 +112,7 @@ public class Canvas_SongSelect : UIBase
         : (chosenMyChart != null ? chosenMyChart.Chart : null);
 
     /// <summary>지금 배속</summary>
-    public float ScrollMultiplier => (float)speedSteps / GameConstants.Play.ScrollMultiplierScale;
+    public float ScrollMultiplier => ScrollSpeedRules.FromSteps(speedSteps);
 
     /// <summary>
     /// 곡 목록과 난이도 버튼을 만들고 버튼 리스너를 연결한 뒤, 처음 상태(곡·탭·채보·배속)로 시작한다.
@@ -131,7 +131,7 @@ public class Canvas_SongSelect : UIBase
         myChartEmptyText.text = GameConstants.SongSelect.MyChartEmpty;
         ShowRecordEmpty();
 
-        speedSteps = ToSpeedSteps(entry != null ? entry.scrollMultiplier : GameConstants.Play.DefaultScrollMultiplier);
+        speedSteps = ScrollSpeedRules.ToSteps(entry != null ? entry.scrollMultiplier : GameConstants.Play.DefaultScrollMultiplier);
         SetSpeedText(ScrollMultiplier);
 
         currentTab = entry != null ? entry.chartType : ChartType.Official;
@@ -582,25 +582,18 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
-    /// 배속을 한 단계(0.1) 올리거나 내린다. 범위(1.0 ~ 8.0) 끝에서는 멈춘다.
+    /// 배속을 한 단계(0.1) 올리거나 내린다 (+ / − 또는 2 / 1). 범위(1.0 ~ 8.0) 끝에서는 멈춘다.
+    /// 인게임·에디터와 같은 ScrollSpeedRules로 정수 단계 계산을 한다.
     /// </summary>
     private void ChangeSpeed(int step)
     {
         if (IsShortcutBlocked) return;
 
-        int next = Mathf.Clamp(speedSteps + step, ToSpeedSteps(GameConstants.Play.MinScrollMultiplier), ToSpeedSteps(GameConstants.Play.MaxScrollMultiplier));
+        int next = ScrollSpeedRules.Step(speedSteps, step);
         if (next == speedSteps) return;
 
         speedSteps = next;
         SetSpeedText(ScrollMultiplier);
-    }
-
-    private static int ToSpeedSteps(float multiplier)
-    {
-        int steps = Mathf.RoundToInt(multiplier * GameConstants.Play.ScrollMultiplierScale);
-        return Mathf.Clamp(steps,
-            Mathf.RoundToInt(GameConstants.Play.MinScrollMultiplier * GameConstants.Play.ScrollMultiplierScale),
-            Mathf.RoundToInt(GameConstants.Play.MaxScrollMultiplier * GameConstants.Play.ScrollMultiplierScale));
     }
 
     private void SetSpeedText(float multiplier)

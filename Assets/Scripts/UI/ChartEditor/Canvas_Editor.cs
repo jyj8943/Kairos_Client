@@ -42,6 +42,14 @@ public class Canvas_Editor : UIBase
     [SerializeField] private Toggle selectToggle;
     [SerializeField] private Toggle eraserToggle;
 
+    [Header("왼쪽 도구: 테스트 플레이 배속 (버튼으로만 바꾼다, 단축키 없음)")]
+    [Tooltip("배속 내림 (Btn_SpeedDown, −0.1)")]
+    [SerializeField] private Button speedDownButton;
+    [Tooltip("배속 올림 (Btn_SpeedUp, +0.1)")]
+    [SerializeField] private Button speedUpButton;
+    [Tooltip("지금 테스트 플레이 배속 (Txt_Speed)")]
+    [SerializeField] private TMP_Text speedText;
+
     [Header("오른쪽 패널")]
     [SerializeField] private TMP_Dropdown beatSnapDropdown;
     [SerializeField] private TMP_Text gridHeightText;
@@ -120,6 +128,12 @@ public class Canvas_Editor : UIBase
     /// <summary>
     /// 지금 켜진 도구. 토글이 모두 꺼져 있으면 숏노트로 본다 (ToggleGroup이 하나는 켜 두므로 보통 생기지 않음).
     /// </summary>
+    /// <summary>테스트 플레이 배속 단계 (배속 × 10, ScrollSpeedRules)</summary>
+    private int testPlaySpeedSteps = ScrollSpeedRules.ToSteps(GameConstants.Play.DefaultScrollMultiplier);
+
+    /// <summary>테스트 플레이·자동 테스트 플레이에 넘길 배속 (1.0 ~ 8.0)</summary>
+    public float TestPlayScrollMultiplier => ScrollSpeedRules.FromSteps(testPlaySpeedSteps);
+
     public EditorTool CurrentTool
     {
         get
@@ -169,6 +183,20 @@ public class Canvas_Editor : UIBase
         testPlayButton.onClick.AddListener(RequestTestPlay);
         autoTestPlayButton.onClick.RemoveListener(RequestAutoTestPlay);
         autoTestPlayButton.onClick.AddListener(RequestAutoTestPlay);
+
+        // 테스트 플레이 배속: 에디터에 들어올 때마다 1.0에서 시작한다 (테스트 플레이에서 돌아오면 EditorScene이 SetTestPlaySpeed로 되돌린다)
+        if (speedDownButton != null && speedUpButton != null && speedText != null)
+        {
+            speedDownButton.onClick.RemoveListener(OnSpeedDownClicked);
+            speedDownButton.onClick.AddListener(OnSpeedDownClicked);
+            speedUpButton.onClick.RemoveListener(OnSpeedUpClicked);
+            speedUpButton.onClick.AddListener(OnSpeedUpClicked);
+        }
+        else
+        {
+            Debug.LogWarning("[Canvas_Editor] 테스트 플레이 배속 버튼·글자가 연결되지 않았습니다.", this);
+        }
+        SetTestPlaySpeed(GameConstants.Play.DefaultScrollMultiplier);
 
         chartInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, song.Title, session.ChartName, session.Level);
         songLengthText.text = TimeFormat.ToMinSec(session.SongLengthSeconds);
@@ -293,6 +321,36 @@ public class Canvas_Editor : UIBase
     /// <summary>
     /// 도구 토글을 바꾼다 (테스트 플레이에서 돌아와 복원할 때).
     /// </summary>
+    /// <summary>
+    /// 테스트 플레이 배속을 정한다 (Init의 기본값, 테스트 플레이에서 돌아와 되돌릴 때). 범위·단위 밖이면 맞춘다.
+    /// </summary>
+    public void SetTestPlaySpeed(float multiplier)
+    {
+        testPlaySpeedSteps = ScrollSpeedRules.ToSteps(multiplier);
+        RefreshSpeed();
+    }
+
+    private void OnSpeedDownClicked() => StepTestPlaySpeed(-1);
+    private void OnSpeedUpClicked() => StepTestPlaySpeed(1);
+
+    /// <summary>테스트 플레이 배속을 한 단계(0.1) 바꾼다. 범위(1.0 ~ 8.0) 끝에서는 멈춘다.</summary>
+    private void StepTestPlaySpeed(int delta)
+    {
+        int next = ScrollSpeedRules.Step(testPlaySpeedSteps, delta);
+        if (next == testPlaySpeedSteps) return;
+
+        testPlaySpeedSteps = next;
+        RefreshSpeed();
+    }
+
+    /// <summary>배속 글자를 고치고, 범위 끝이면 그쪽 버튼을 끈다.</summary>
+    private void RefreshSpeed()
+    {
+        if (speedText != null) speedText.text = string.Format(GameConstants.Editor.TestPlaySpeedFormat, TestPlayScrollMultiplier);
+        if (speedDownButton != null) speedDownButton.interactable = testPlaySpeedSteps > ScrollSpeedRules.MinSteps;
+        if (speedUpButton != null) speedUpButton.interactable = testPlaySpeedSteps < ScrollSpeedRules.MaxSteps;
+    }
+
     public void SetTool(EditorTool tool)
     {
         Toggle target = shortNoteToggle;
@@ -329,6 +387,8 @@ public class Canvas_Editor : UIBase
         if (playButton != null) playButton.onClick.RemoveListener(RequestPlayToggle);
         if (metronomeToggle != null) metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
         if (keySoundToggle != null) keySoundToggle.onValueChanged.RemoveListener(OnKeySoundToggled);
+        if (speedDownButton != null) speedDownButton.onClick.RemoveListener(OnSpeedDownClicked);
+        if (speedUpButton != null) speedUpButton.onClick.RemoveListener(OnSpeedUpClicked);
         if (data != null) data.OnChanged -= RefreshNoteCountText;
         if (session != null) session.OnDirtyChanged -= OnDirtyChanged;
     }

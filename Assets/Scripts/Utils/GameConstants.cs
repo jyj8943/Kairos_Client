@@ -70,14 +70,14 @@ public static class GameConstants
         public const double SyncWarningIntervalSeconds = 1.0;
 
         /// <summary>
-        /// 인게임 기본 낙하 속도 (월드 유닛/초). 판정선부터 화면 위까지 약 1.2초가 보인다.
-        /// 화면 높이 10유닛 = 1080px이라 약 756px/초 (에디터 그리드 PixelsPerSecond의 약 3배).
+        /// 1.0배에서 노트 중심이 화면 위 끝 → 판정선까지 걸리는 시간 (초). DJMAX RESPECT V x5.5 측정 기반 (0.489초 × 5.5).
+        /// 배속 s의 보이는 시간 = 2.69 ÷ s, 낙하 속도 = (화면 위 끝 y − 판정선 y) ÷ 2.69 × s (ScrollSpeedRules).
         /// </summary>
-        public const float DefaultScrollSpeed = 7f;
+        public const float BaseVisibleSeconds = 2.69f;
 
         /// <summary>
-        /// 배속 범위·단위·기본값 (기획서 2-1). 곡 선택 화면에서 정하고 InGameEntryData로 넘긴다.
-        /// 0.1 단위 오차가 쌓이지 않게 곡 선택 화면은 배속 × ScrollMultiplierScale(정수)로 계산한다.
+        /// 배속 범위·단위·기본값 (기획서 2-1). 곡 선택·에디터에서 정해 InGameEntryData로 넘기고, 플레이 중에도 1 / 2 키로 바꾼다.
+        /// 0.1 단위 오차가 쌓이지 않게 배속 × ScrollMultiplierScale(정수 단계)로 계산한다 (ScrollSpeedRules).
         /// </summary>
         public const float MinScrollMultiplier = 1f;
         public const float MaxScrollMultiplier = 8f;
@@ -86,6 +86,19 @@ public static class GameConstants
 
         /// <summary>배속을 정수로 계산할 때 곱하는 값 (0.1 단위 → 10)</summary>
         public const int ScrollMultiplierScale = 10;
+
+        /// <summary>인게임 배속 키(1 / 2)를 누르고 있을 때: 이 시간 뒤부터 반복 (초)</summary>
+        public const double SpeedKeyRepeatDelaySeconds = 0.4;
+
+        /// <summary>인게임 배속 키 반복 간격 (초)</summary>
+        public const double SpeedKeyRepeatIntervalSeconds = 0.08;
+
+        /// <summary>인게임 배속을 바꿀 때 기어 옆에 잠깐 보여주는 문구 형식과 시간 (초, realtime)</summary>
+        public const string SpeedChangeFormat = "x{0:0.0}";
+        public const float SpeedChangeShowSeconds = 0.8f;
+
+        /// <summary>인게임 곡 정보: {0} 곡 제목, {1} 채보 이름, {2} 레벨, {3} 배속</summary>
+        public const string InGameSongInfoFormat = "{0} · {1} · Lv.{2} · 배속 x{3:0.0}";
 
         /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
         public const double TestPlayLeadInSeconds = 2.0;
@@ -209,7 +222,7 @@ public static class GameConstants
         public const string SongInfoFormat = "BPM {0} · {1}";
 
         /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지)</summary>
-        public const string SpeedFormat = "배속 x{0:0.0} ( - / + )";
+        public const string SpeedFormat = "배속 x{0:0.0} ( 1 / 2 · - / + )";
 
         /// <summary>최고 기록 칸: {0} 값</summary>
         public const string RecordRankFormat = "랭크 {0}";
@@ -333,6 +346,9 @@ public static class GameConstants
 
         /// <summary>에디터 롱노트 몸통 불투명도 (라인 색에 곱한다). 머리·꼬리는 불투명, 몸통은 뒤 그리드 선이 비쳐 보이게 한다</summary>
         public const float LongNoteBodyAlpha = 0.45f;
+
+        /// <summary>도구 패널 "테스트 플레이 배속" 칸(Txt_Speed): {0} 배속 (버튼으로만 바꾼다, 단축키 없음)</summary>
+        public const string TestPlaySpeedFormat = "x{0:0.0}";
 
         /// <summary>곡 고르기의 내 채보 항목 정보: {0} 레벨, {1} 노트 수</summary>
         public const string MyChartInfoFormat = "Lv.{0} · 노트 {1}";

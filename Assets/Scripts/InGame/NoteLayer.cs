@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// 인게임 노트 표시. InGameScene.unity의 "Gear/Notes"에 붙이고, InGameScene이 Init()을 호출한 뒤 매 프레임 Refresh()를 부른다.
-/// - 노트 y = 판정선 y + (스크롤 거리(노트 시간) − 스크롤 거리(곡 시간)) × 낙하 속도. 낙하 속도 = 기본 낙하 속도 × 배속 (GameConstants.Play).
+/// - 노트 y = 판정선 y + (스크롤 거리(노트 시간) − 스크롤 거리(곡 시간)) × 낙하 속도.
+///   낙하 속도 = (화면 위 끝 y − 판정선 y) ÷ 2.69초 × 배속 (1.0배에서 화면 위 끝 → 판정선 2.69초, ScrollSpeedRules). 배속은 플레이 중에도 바꾼다.
 ///   스크롤 거리는 ScrollMap이 맡는다 (지금은 배속 구간이 없어 곡 시간과 같다). 판정은 계속 곡 시간 기준이다 (NoteJudge).
 /// - 숏노트는 NoteView, 롱노트는 LongNoteView를 각각 풀로 재사용한다. 화면에 들어오기 직전에 꺼내고,
 ///   판정(키로 친 것)되거나 화면 아래로 벗어나면 돌려놓는다. 플레이 중 Instantiate·Destroy와 매 프레임 할당이 없다.
@@ -24,9 +25,16 @@ public class NoteLayer : MonoBehaviour
     [Min(0)] [SerializeField] private int extraPoolCount = 8;
 
     /// <summary>
-    /// 노트 낙하 속도 (월드 유닛/초) = 기본 낙하 속도 × 배속. Init에서 정한다.
+    /// 노트 낙하 속도 (월드 유닛/초) = (화면 위 끝 y − 판정선 y) ÷ BaseVisibleSeconds(2.69초) × 배속 (ScrollSpeedRules).
+    /// Init과 SetScrollMultiplier에서 정한다.
     /// </summary>
-    public float ScrollSpeed { get; private set; } = GameConstants.Play.DefaultScrollSpeed;
+    public float ScrollSpeed { get; private set; }
+
+    /// <summary>지금 배속 (1.0 ~ 8.0)</summary>
+    public float ScrollMultiplier { get; private set; } = GameConstants.Play.DefaultScrollMultiplier;
+
+    /// <summary>1.0배의 낙하 속도 (월드 유닛/초, 확인용)</summary>
+    public float BaseScrollSpeed => gear != null ? ScrollSpeedRules.ScrollSpeed(gear.ScreenTopY - gear.JudgeLineY, 1f) : 0f;
 
     private readonly Stack<NoteView> pool = new Stack<NoteView>();
     private readonly Stack<LongNoteView> longPool = new Stack<LongNoteView>();
@@ -62,8 +70,12 @@ public class NoteLayer : MonoBehaviour
     /// <summary>지금 화면에 있는 노트 수 (확인용)</summary>
     public int ActiveCount => activeNotes.Count;
 
+    /// <summary>마지막 Refresh에서 노트 위치 계산에 쓴 곡 시간 (확인용)</summary>
+    public double LastRefreshSongTime { get; private set; }
+
     /// <summary>
     /// 기어·판정·스크롤 거리·배속을 받아 낙하 속도를 정하고 풀을 미리 채운다.
+    /// 풀 크기는 플레이 중 배속을 바꿔도 Instantiate가 없도록, 가장 많은 노트가 보이는 최저 배속(1.0) 기준으로 센다.
     /// </summary>
     /// <param name="scroll">곡 시간 → 스크롤 거리 변환 (노트 높이 계산용)</param>
     /// <param name="scrollMultiplier">배속 (GameConstants.Play.MinScrollMultiplier ~ MaxScrollMultiplier 밖이면 범위 안으로 맞춘다)</param>
@@ -73,26 +85,19 @@ public class NoteLayer : MonoBehaviour
         this.judge = judge;
         this.scroll = scroll;
 
-        float multiplier = Mathf.Clamp(scrollMultiplier, GameConstants.Play.MinScrollMultiplier, GameConstants.Play.MaxScrollMultiplier);
-        if (!Mathf.Approximately(multiplier, scrollMultiplier))
-            Debug.LogWarning($"[NoteLayer] 배속 {scrollMultiplier}이(가) 범위 밖이라 {multiplier}(으)로 맞춥니다.", this);
-        ScrollSpeed = GameConstants.Play.DefaultScrollSpeed * multiplier;
-
         ReleaseAll();
         viewByNote = new NoteView[judge.TotalCount];
         longViewByNote = new LongNoteView[judge.TotalCount];
         nextSpawnIndex = 0;
-
-        // 노트를 꺼내는 기준과 풀 크기는 곡 시간 기준이다 (스크롤 거리 = 곡 시간일 때만 맞다).
-        // 배속 변속을 넣으면 시간 대신 스크롤 거리 기준으로 바꿔야 한다.
-        spawnAheadSeconds = (gear.ScreenTopY + screenMargin - gear.JudgeLineY) / ScrollSpeed;
         despawnY = gear.ScreenBottomY - screenMargin;
 
         // 화면에 동시에 있는 노트: 나타난 뒤(시작 − spawnAhead) 화면 아래로 사라질 때까지(끝 + belowSeconds) 겹치는 수의 최대값.
-        // 롱노트는 끝 시간까지 화면에 남으므로 숏노트보다 길게 센다
-        float belowSeconds = (gear.JudgeLineY - despawnY) / ScrollSpeed;
-        int neededShort = CountMaxOverlap(judge.Notes, false, spawnAheadSeconds, belowSeconds) + extraPoolCount;
-        int neededLong = CountMaxOverlap(judge.Notes, true, spawnAheadSeconds, belowSeconds);
+        // 롱노트는 끝 시간까지 화면에 남으므로 숏노트보다 길게 센다. 최저 배속일 때 이 구간이 가장 길다
+        float slowestSpeed = SpeedFor(GameConstants.Play.MinScrollMultiplier);
+        float poolSpawnAhead = (gear.ScreenTopY + screenMargin - gear.JudgeLineY) / slowestSpeed;
+        float belowSeconds = (gear.JudgeLineY - despawnY) / slowestSpeed;
+        int neededShort = CountMaxOverlap(judge.Notes, false, poolSpawnAhead, belowSeconds) + extraPoolCount;
+        int neededLong = CountMaxOverlap(judge.Notes, true, poolSpawnAhead, belowSeconds);
         if (neededLong > 0) neededLong += extraPoolCount;
 
         if (neededLong > 0 && longNotePrefab == null)
@@ -103,6 +108,33 @@ public class NoteLayer : MonoBehaviour
         GrowCount = 0;
 
         noteSize = GetNoteSize(notePrefab);
+        SetScrollMultiplier(scrollMultiplier);
+    }
+
+    /// <summary>
+    /// 배속을 바꾼다 (Init, 플레이 중 1 / 2 키). 낙하 속도와 노트를 꺼내는 기준 시간을 다시 계산한다.
+    /// 노트 y는 매 프레임 곡 시간으로 다시 계산하므로 다음 Refresh부터 새 속도로 그려지고 튀지 않는다.
+    /// 느리게 바꾸면 더 일찍 보여야 하는 노트는 다음 Refresh(같은 프레임의 Update)에서 바로 꺼낸다.
+    /// </summary>
+    /// <param name="multiplier">배속 (범위 밖이면 범위 안으로 맞춘다)</param>
+    public void SetScrollMultiplier(float multiplier)
+    {
+        float clamped = ScrollSpeedRules.FromSteps(ScrollSpeedRules.ToSteps(multiplier));
+        if (Mathf.Abs(clamped - multiplier) > 0.0001f)
+            Debug.LogWarning($"[NoteLayer] 배속 {multiplier}이(가) 범위·단위 밖이라 {clamped}(으)로 맞춥니다.", this);
+
+        ScrollMultiplier = clamped;
+        ScrollSpeed = SpeedFor(clamped);
+
+        // 노트를 꺼내는 기준은 곡 시간 기준이다 (스크롤 거리 = 곡 시간일 때만 맞다).
+        // 배속 변속을 넣으면 시간 대신 스크롤 거리 기준으로 바꿔야 한다.
+        spawnAheadSeconds = (gear.ScreenTopY + screenMargin - gear.JudgeLineY) / ScrollSpeed;
+    }
+
+    /// <summary>배속의 낙하 속도 (유닛/초) = 화면 위 끝 ~ 판정선 거리 ÷ 2.69초 × 배속</summary>
+    private float SpeedFor(float multiplier)
+    {
+        return ScrollSpeedRules.ScrollSpeed(gear.ScreenTopY - gear.JudgeLineY, multiplier);
     }
 
     /// <summary>
@@ -111,6 +143,7 @@ public class NoteLayer : MonoBehaviour
     public void Refresh(double songTime)
     {
         if (judge == null) return;
+        LastRefreshSongTime = songTime;
 
         IReadOnlyList<PlayNote> notes = judge.Notes;
         double songPosition = scroll.PositionAt(songTime);
