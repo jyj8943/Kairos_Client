@@ -41,7 +41,7 @@ public class NoteLayer : MonoBehaviour
     private float spawnAheadSeconds;
     private float despawnY;
 
-    /// <summary>숏노트 크기 (월드 단위) = Note 프리팹 스프라이트 크기 × 스케일. 롱노트 막대 폭·위아래 여유에 쓴다</summary>
+    /// <summary>숏노트 크기 (월드 단위) = Note 프리팹의 그리는 크기(Sliced면 size) × 스케일. 롱노트 막대 폭·위아래 여유에 쓴다</summary>
     private Vector2 noteSize;
 
     /// <summary>숏노트 크기 (월드 단위, 확인용)</summary>
@@ -102,10 +102,7 @@ public class NoteLayer : MonoBehaviour
         while (longNotePrefab != null && PooledLongCount < neededLong) longPool.Push(CreateLongView());
         GrowCount = 0;
 
-        SpriteRenderer noteRenderer = notePrefab.GetComponent<SpriteRenderer>();
-        Vector2 spriteSize = noteRenderer != null && noteRenderer.sprite != null ? (Vector2)noteRenderer.sprite.bounds.size : Vector2.one;
-        Vector3 scale = notePrefab.transform.localScale;
-        noteSize = new Vector2(spriteSize.x * scale.x, spriteSize.y * scale.y);
+        noteSize = GetNoteSize(notePrefab);
     }
 
     /// <summary>
@@ -262,6 +259,23 @@ public class NoteLayer : MonoBehaviour
         view.gameObject.SetActive(false);
         PooledLongCount++;
         return view;
+    }
+
+    /// <summary>
+    /// 숏노트 크기 (월드 단위) = 그리는 크기 × 스케일. Sliced·Tiled면 SpriteRenderer.size, Simple이면 스프라이트 크기가 그리는 크기다.
+    /// </summary>
+    private static Vector2 GetNoteSize(NoteView prefab)
+    {
+        SpriteRenderer renderer = prefab.GetComponent<SpriteRenderer>();
+        Vector2 drawSize = Vector2.one;
+        if (renderer != null)
+        {
+            if (renderer.drawMode != SpriteDrawMode.Simple) drawSize = renderer.size;
+            else if (renderer.sprite != null) drawSize = renderer.sprite.bounds.size;
+        }
+
+        Vector3 scale = prefab.transform.localScale;
+        return new Vector2(drawSize.x * scale.x, drawSize.y * scale.y);
     }
 
     /// <summary>

@@ -6,7 +6,7 @@ using UnityEngine;
 /// - ChartEditData가 바뀌거나 그리드가 다시 배치될 때(스크롤·높이 변경) 보이는 구간(위아래 여유 1마디)의 노트만 배치한다.
 ///   보이는 구간 앞에서 시작해 구간 안으로 들어오는 롱노트도 배치한다 (ChartEditData.GetRange).
 /// - 숏노트는 Img_ShortNote, 롱노트는 Img_LongNote를 각각 풀에서 재사용한다. ChartEditSession.Data는 읽기만 하고 바꾸지 않는다.
-/// - 롱노트는 하나로 이어진 막대다. 시작과 끝의 y를 각각 그리드(BeatGridMath.BeatToY, 시간 기준)로 구해 (변속이 들어가도 맞다)
+/// - 롱노트는 반투명 몸통 + 불투명 머리·꼬리(숏노트와 같은 모양)다. 시작과 끝의 y를 각각 그리드(BeatGridMath.BeatToY, 시간 기준)로 구해 (변속이 들어가도 맞다)
 ///   아래 끝 = 시작 틱 숏노트의 아래 가장자리, 위 끝 = 끝 틱 숏노트의 위 가장자리로 놓는다. 최소 높이는 숏노트 높이.
 /// - 롱노트 드래그 미리보기(반투명)도 여기서 그린다 (EditorNotePlacer가 SetPreview / ClearPreview를 부른다).
 /// </summary>
@@ -16,7 +16,7 @@ public class EditorNoteLayer : MonoBehaviour
     [SerializeField] private Img_LongNote longNotePrefab;
 
     [Tooltip("노트 높이 (그리드 높이 배율과 관계없이 고정, 1920×1080 기준 px). 롱노트 막대는 위아래로 이 절반씩 더 길다")]
-    [Min(1f)] [SerializeField] private float noteHeight = 16f;
+    [Min(1f)] [SerializeField] private float noteHeight = 22f;
 
     [Tooltip("라인 칸 좌우 여백 (px)")]
     [Min(0f)] [SerializeField] private float laneHorizontalPadding = 2f;
@@ -53,6 +53,48 @@ public class EditorNoteLayer : MonoBehaviour
 
     /// <summary>드래그 미리보기를 보여주는 중이면 true (확인용)</summary>
     public bool IsPreviewVisible => hasPreview;
+
+    /// <summary>노트 높이 (그리드 로컬 px)</summary>
+    public float NoteHeight => noteHeight;
+
+    /// <summary>지우기 위치 검색용 결과 목록 (클릭할 때마다 새로 만들지 않는다)</summary>
+    private readonly List<EditorNote> hitCandidates = new List<EditorNote>();
+
+    /// <summary>
+    /// 라인에서 y(그리드 아래에서부터)에 그려진 노트를 찾는다 (지우기용). 스냅과 상관없이 화면에 보이는 모양 기준이다.
+    /// - 숏노트: 중심 y ± 노트 높이 ÷ 2 안
+    /// - 롱노트: 막대 아래 끝(시작 y − 노트 높이 ÷ 2) ~ 위 끝(끝 y + 노트 높이 ÷ 2) 안
+    /// 여러 개가 걸리면(노트 높이가 스냅 선 간격보다 클 때) 중심(롱노트는 시작 ~ 끝 구간)에 가장 가까운 노트를 고른다.
+    /// </summary>
+    /// <returns>찾았으면 true</returns>
+    public bool TryFindNoteAtLocalY(int lane, float y, out EditorNote found)
+    {
+        found = default;
+        if (grid == null || data == null) return false;
+
+        float half = noteHeight * 0.5f;
+        int fromTick = Mathf.FloorToInt(grid.LocalYToBeat(y - half) * GameConstants.Editor.TicksPerBeat) - 1;
+        int toTick = Mathf.CeilToInt(grid.LocalYToBeat(y + half) * GameConstants.Editor.TicksPerBeat) + 1;
+        data.GetRange(fromTick, toTick, hitCandidates);
+
+        float bestDistance = float.MaxValue;
+        foreach (EditorNote note in hitCandidates)
+        {
+            if (note.Lane != lane) continue;
+
+            float startY = grid.BeatToLocalY(BeatGridMath.TickToBeat(note.Tick));
+            float endY = note.IsLong ? grid.BeatToLocalY(BeatGridMath.TickToBeat(note.EndTick)) : startY;
+            if (y < startY - half || y > Mathf.Max(endY + half, startY + half)) continue;
+
+            // 시작 ~ 끝 구간 안이면 0, 밖이면 가까운 끝까지의 거리
+            float distance = y < startY ? startY - y : (y > endY ? y - endY : 0f);
+            if (distance >= bestDistance) continue;
+
+            bestDistance = distance;
+            found = note;
+        }
+        return bestDistance < float.MaxValue;
+    }
 
     /// <summary>
     /// 그리드와 편집 세션을 받아 이벤트를 구독하고 한 번 배치한다.
@@ -195,6 +237,9 @@ public class EditorNoteLayer : MonoBehaviour
 
         float bottom = startY - noteHeight * 0.5f;
         float top = Mathf.Max(endY + noteHeight * 0.5f, bottom + noteHeight);
+
+        // 머리(아래 끝에 붙음)·꼬리(위 끝에 붙음)는 숏노트 높이라, 시작·끝 틱에 숏노트를 놓았을 때와 같은 자리에 온다
+        view.SetCapHeight(noteHeight);
 
         // 피벗이 아래 가운데라 anchoredPosition.y가 아래 끝이다
         RectTransform rect = view.RectTransform;

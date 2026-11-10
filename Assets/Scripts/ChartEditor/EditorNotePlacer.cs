@@ -10,7 +10,7 @@ using UnityEngine.EventSystems;
 /// - 숏노트 도구: 왼쪽 클릭 = 숏노트. 같은 라인에서 1/4박 이상 드래그하면 롱노트, 그보다 짧은 드래그는 클릭으로 본다 (기획서 2-3).
 /// - 롱노트 도구: 왼쪽 버튼을 누른 칸 = 시작, 놓은 칸 = 끝. 위아래 어느 쪽으로 끌어도 작은 쪽이 시작이다.
 ///   드래그하는 동안 끝을 스냅 칸에 맞춘 반투명 미리보기를 보여준다 (EditorNoteLayer).
-/// - 오른쪽 클릭(숏노트·롱노트 도구), 지우개 도구의 왼쪽 클릭: 그 자리를 덮는 노트를 지운다 (롱노트는 어느 부분이든).
+/// - 오른쪽 클릭(숏노트·롱노트 도구), 지우개 도구의 왼쪽 클릭: 화면에 그려진 노트를 지운다 (숏노트는 가장자리까지, 롱노트는 어느 부분이든. 노트가 겹쳐 보이면 가까운 쪽).
 /// - 배치가 실패하면(너무 짧음, 겹침) 이유를 상태 표시줄에 잠깐 보여준다.
 /// </summary>
 public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IPointerClickHandler
@@ -110,7 +110,14 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
             : eventData.button == PointerEventData.InputButton.Left && tool == EditorTool.Eraser;
         if (!erase) return;
 
-        // 스냅 선 위치(숏노트를 누른 자리)를 먼저 보고, 없으면 가리킨 tick 그대로(롱노트 몸통 중간) 본다
+        // 화면에 그려진 노트를 먼저 본다 (노트가 스냅 선 간격보다 커도 가장자리를 누르면 그 노트가 지워지게)
+        if (noteLayer != null && TryGetLocalPoint(eventData, out float x, out float y) && x >= 0f && x < grid.GridRect.rect.width)
+        {
+            int pointLane = Mathf.Clamp(Mathf.FloorToInt(x / grid.LaneWidth), 0, GameConstants.Editor.LaneCount - 1);
+            if (noteLayer.TryFindNoteAtLocalY(pointLane, y, out EditorNote drawn) && session.RemoveNote(pointLane, drawn.Tick)) return;
+        }
+
+        // 그 밖에는 스냅 선 위치(숏노트를 누른 자리)를 보고, 없으면 가리킨 tick 그대로(롱노트 몸통 중간) 본다
         if (TryGetGridPosition(eventData, out int lane, out int snappedTick) && session.RemoveNote(lane, snappedTick)) return;
         if (TryGetGridPosition(eventData, out lane, out int rawTick, false)) session.RemoveNote(lane, rawTick);
     }

@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// 인게임 숏노트 하나 (Note 프리팹, SpriteRenderer). NoteLayer가 풀에서 꺼내 Init()과 SetPosition()을 호출한다.
-/// - 라인 색은 GameConstants.Play.LaneColors (에디터 Img_ShortNote와 같은 값).
+/// - 스프라이트는 ShortNote (Draw Mode Sliced, size 0.94 × 0.22, 스케일 1). 크기는 프리팹의 size로 정하고 여기서는 바꾸지 않는다.
+/// - 라인 색은 GameConstants.Play.LaneColors (에디터 Img_ShortNote와 같은 값)를 스프라이트에 곱한다.
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class NoteView : MonoBehaviour

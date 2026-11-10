@@ -331,6 +331,9 @@ public static class GameConstants
         /// <summary>롱노트 드래그 미리보기의 불투명도 (0~1)</summary>
         public const float LongNotePreviewAlpha = 0.45f;
 
+        /// <summary>에디터 롱노트 몸통 불투명도 (라인 색에 곱한다). 머리·꼬리는 불투명, 몸통은 뒤 그리드 선이 비쳐 보이게 한다</summary>
+        public const float LongNoteBodyAlpha = 0.45f;
+
         /// <summary>곡 고르기의 내 채보 항목 정보: {0} 레벨, {1} 노트 수</summary>
         public const string MyChartInfoFormat = "Lv.{0} · 노트 {1}";
 
