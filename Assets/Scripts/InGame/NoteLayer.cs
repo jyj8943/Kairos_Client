@@ -8,8 +8,9 @@ using UnityEngine;
 /// - 숏노트는 NoteView, 롱노트는 LongNoteView를 각각 풀로 재사용한다. 화면에 들어오기 직전에 꺼내고,
 ///   판정(키로 친 것)되거나 화면 아래로 벗어나면 돌려놓는다. 플레이 중 Instantiate·Destroy와 매 프레임 할당이 없다.
 /// - 롱노트 (롱노트 판정 세부 규칙 4)
-///   - 머리·꼬리 y를 시작·끝 시간의 스크롤 거리로 각각 구하고 그 사이를 몸통으로 채운다.
-///   - 누르는 동안(Held): 머리를 판정선에 붙이고 몸통은 판정선 ~ 꼬리만 그려 점점 짧아진다.
+///   - 하나로 이어진 막대(LongNoteView)다. 머리(시작)·꼬리(끝) y를 시작·끝 시간의 스크롤 거리로 각각 구해 넘기면,
+///     막대는 시작 숏노트의 아래 가장자리 ~ 끝 숏노트의 위 가장자리를 채운다.
+///   - 누르는 동안(Held): 머리를 판정선에 붙이고 위 끝만 내려오며 막대가 점점 짧아진다.
 ///   - 끝 판정이 나면(Done) 바로 돌려놓는다. 시작 MISS(Missed)면 회색으로 바꿔 꼬리가 화면 아래로 벗어나면 돌려놓는다.
 /// - 풀은 Init에서 채보를 보고 동시에 보일 최대 수만큼 미리 만든다 (롱노트는 끝까지 화면에 남는 시간을 넣어 센다).
 /// </summary>
@@ -39,6 +40,12 @@ public class NoteLayer : MonoBehaviour
     private int nextSpawnIndex;
     private float spawnAheadSeconds;
     private float despawnY;
+
+    /// <summary>숏노트 크기 (월드 단위) = Note 프리팹 스프라이트 크기 × 스케일. 롱노트 막대 폭·위아래 여유에 쓴다</summary>
+    private Vector2 noteSize;
+
+    /// <summary>숏노트 크기 (월드 단위, 확인용)</summary>
+    public Vector2 NoteSize => noteSize;
 
     /// <summary>미리 만든 노트 오브젝트 수 (숏노트 + 롱노트, 확인용)</summary>
     public int PooledCount => PooledShortCount + PooledLongCount;
@@ -94,6 +101,11 @@ public class NoteLayer : MonoBehaviour
         while (PooledShortCount < neededShort) pool.Push(CreateView());
         while (longNotePrefab != null && PooledLongCount < neededLong) longPool.Push(CreateLongView());
         GrowCount = 0;
+
+        SpriteRenderer noteRenderer = notePrefab.GetComponent<SpriteRenderer>();
+        Vector2 spriteSize = noteRenderer != null && noteRenderer.sprite != null ? (Vector2)noteRenderer.sprite.bounds.size : Vector2.one;
+        Vector3 scale = notePrefab.transform.localScale;
+        noteSize = new Vector2(spriteSize.x * scale.x, spriteSize.y * scale.y);
     }
 
     /// <summary>
@@ -116,7 +128,7 @@ public class NoteLayer : MonoBehaviour
             {
                 if (longNotePrefab == null) continue;
                 LongNoteView longView = longPool.Count > 0 ? longPool.Pop() : GrowLong();
-                longView.Init(notes[index].Lane);
+                longView.Init(notes[index].Lane, noteSize);
                 longView.gameObject.SetActive(true);
                 longViewByNote[index] = longView;
             }

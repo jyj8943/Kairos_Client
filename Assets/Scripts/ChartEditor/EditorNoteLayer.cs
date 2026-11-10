@@ -6,7 +6,8 @@ using UnityEngine;
 /// - ChartEditData가 바뀌거나 그리드가 다시 배치될 때(스크롤·높이 변경) 보이는 구간(위아래 여유 1마디)의 노트만 배치한다.
 ///   보이는 구간 앞에서 시작해 구간 안으로 들어오는 롱노트도 배치한다 (ChartEditData.GetRange).
 /// - 숏노트는 Img_ShortNote, 롱노트는 Img_LongNote를 각각 풀에서 재사용한다. ChartEditSession.Data는 읽기만 하고 바꾸지 않는다.
-/// - 롱노트 높이는 시작과 끝의 y를 각각 그리드(BeatGridMath.BeatToY, 시간 기준)로 구해 그 사이를 채운다 (변속이 들어가도 맞다).
+/// - 롱노트는 하나로 이어진 막대다. 시작과 끝의 y를 각각 그리드(BeatGridMath.BeatToY, 시간 기준)로 구해 (변속이 들어가도 맞다)
+///   아래 끝 = 시작 틱 숏노트의 아래 가장자리, 위 끝 = 끝 틱 숏노트의 위 가장자리로 놓는다. 최소 높이는 숏노트 높이.
 /// - 롱노트 드래그 미리보기(반투명)도 여기서 그린다 (EditorNotePlacer가 SetPreview / ClearPreview를 부른다).
 /// </summary>
 public class EditorNoteLayer : MonoBehaviour
@@ -14,7 +15,7 @@ public class EditorNoteLayer : MonoBehaviour
     [SerializeField] private Img_ShortNote shortNotePrefab;
     [SerializeField] private Img_LongNote longNotePrefab;
 
-    [Tooltip("노트 높이 (그리드 높이 배율과 관계없이 고정, 1920×1080 기준 px). 롱노트 머리·꼬리 높이도 같다")]
+    [Tooltip("노트 높이 (그리드 높이 배율과 관계없이 고정, 1920×1080 기준 px). 롱노트 막대는 위아래로 이 절반씩 더 길다")]
     [Min(1f)] [SerializeField] private float noteHeight = 16f;
 
     [Tooltip("라인 칸 좌우 여백 (px)")]
@@ -184,16 +185,20 @@ public class EditorNoteLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// 롱노트를 시작 y ~ 끝 y 사이에 놓는다. 머리·꼬리 중심이 각각 시작·끝 박선 위에 오도록 위아래로 노트 높이 절반씩 늘린다.
+    /// 롱노트 막대를 놓는다. 아래 끝 = 시작 y − 숏노트 높이 ÷ 2 (시작 틱 숏노트의 아래 가장자리),
+    /// 위 끝 = 끝 y + 숏노트 높이 ÷ 2 (끝 틱 숏노트의 위 가장자리). 높이는 숏노트 높이보다 작아지지 않는다.
     /// </summary>
     private void PlaceLong(Img_LongNote view, int lane, int startTick, int endTick, float laneWidth, float width)
     {
         float startY = grid.BeatToLocalY(BeatGridMath.TickToBeat(startTick));
         float endY = grid.BeatToLocalY(BeatGridMath.TickToBeat(endTick));
 
-        view.SetCapHeight(noteHeight);
+        float bottom = startY - noteHeight * 0.5f;
+        float top = Mathf.Max(endY + noteHeight * 0.5f, bottom + noteHeight);
+
+        // 피벗이 아래 가운데라 anchoredPosition.y가 아래 끝이다
         RectTransform rect = view.RectTransform;
-        rect.sizeDelta = new Vector2(width, endY - startY + noteHeight);
-        rect.anchoredPosition = new Vector2((lane + 0.5f) * laneWidth, startY - noteHeight * 0.5f);
+        rect.sizeDelta = new Vector2(width, top - bottom);
+        rect.anchoredPosition = new Vector2((lane + 0.5f) * laneWidth, bottom);
     }
 }
