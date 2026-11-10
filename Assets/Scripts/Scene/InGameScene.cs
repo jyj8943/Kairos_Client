@@ -234,6 +234,16 @@ public class InGameScene : SceneBase
         if (SoundManager.HasInstance) GameManager.Sound.StopMusic();
     }
 
+    /// <summary>
+    /// 인게임 도중 Play를 멈추거나 PlayMode 테스트가 인게임에서 끝나면 OnExit가 불리지 않는다.
+    /// 입력 에셋의 액션은 도메인 리로드를 끈 설정에서 Play를 넘어 남으므로, 여기서도 배속 키 구독을 끊는다 (이미 끊었으면 아무것도 하지 않는다).
+    /// 라인 키(InGameInput)·개발용 패널(Canvas_InGameDebug)은 각자 OnDestroy에서 끊는다.
+    /// </summary>
+    private void OnDestroy()
+    {
+        DisableSpeedInput();
+    }
+
     private void Update()
     {
         // 배속 키 반복은 재개 카운트다운 중에도 받는다 (팝업이 열려 있으면 ChangeSpeed가 무시한다)
@@ -339,8 +349,29 @@ public class InGameScene : SceneBase
         isSpeedInputEnabled = false;
     }
 
-    private void OnSpeedDownStarted(InputAction.CallbackContext context) => PressSpeedKey(speedDownRepeat, -1);
-    private void OnSpeedUpStarted(InputAction.CallbackContext context) => PressSpeedKey(speedUpRepeat, 1);
+#if UNITY_EDITOR
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): 배속 키 콜백(누름)이 불린 횟수. 모든 InGameScene 인스턴스가 같이 센다 (Play 종료 뒤 남은 구독 확인용).
+    /// 도메인 리로드를 끈 설정이라 Play를 넘어 값이 남으므로 테스트가 직접 0으로 맞춘다.
+    /// </summary>
+    public static int TestSpeedKeyCallbackCount;
+#endif
+
+    private void OnSpeedDownStarted(InputAction.CallbackContext context)
+    {
+#if UNITY_EDITOR
+        TestSpeedKeyCallbackCount++;
+#endif
+        PressSpeedKey(speedDownRepeat, -1);
+    }
+
+    private void OnSpeedUpStarted(InputAction.CallbackContext context)
+    {
+#if UNITY_EDITOR
+        TestSpeedKeyCallbackCount++;
+#endif
+        PressSpeedKey(speedUpRepeat, 1);
+    }
     private void OnSpeedDownCanceled(InputAction.CallbackContext context) => speedDownRepeat.Release();
     private void OnSpeedUpCanceled(InputAction.CallbackContext context) => speedUpRepeat.Release();
 
