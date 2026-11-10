@@ -263,6 +263,30 @@ public class InGameScene : SceneBase
         OnLanePressed(lane, inputSongTime);
     }
 
+#if UNITY_EDITOR
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터, 빌드에서 빠진다): 판정 결과가 점수에 들어가기 직전마다 알린다 (시작·틱·종합 판정을 테스트가 기록하게).
+    /// </summary>
+    public System.Action<JudgeResult> TestJudgeObserver;
+
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): 라인 키 누름을 사용자 입력과 같은 경로(OnUserLanePressed)로 넣는다. 입력 시각은 넘긴 곡 시간을 그대로 쓴다.
+    /// 테스트 어셈블리(Assembly-CSharp-Editor)에서 부를 수 있게 public이다.
+    /// </summary>
+    public void TestPress(int lane, double songTime)
+    {
+        OnUserLanePressed(lane, songTime);
+    }
+
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): 라인 키 뗌을 사용자 입력과 같은 경로(OnUserLaneReleased)로 넣는다.
+    /// </summary>
+    public void TestRelease(int lane, double songTime)
+    {
+        OnUserLaneReleased(lane, songTime);
+    }
+#endif
+
     /// <summary>
     /// 사용자의 라인 키 뗌 (InGameInput). 자동 플레이 중에는 무시한다.
     /// </summary>
@@ -323,6 +347,9 @@ public class InGameScene : SceneBase
     /// </summary>
     private void ApplyJudge(JudgeResult result)
     {
+#if UNITY_EDITOR
+        TestJudgeObserver?.Invoke(result);
+#endif
         score.Apply(result);
         if (result.ShowsJudgeText) canvas.ShowJudge(result.Type, score.Combo, score.Score);
         else canvas.ShowCombo(score.Combo, score.Score);
