@@ -199,7 +199,7 @@ public static class GameConstants
         /// <summary>버튼 이름 (위에서부터 계속 · 재시작 · 설정 · 나가기)</summary>
         public const string ResumeLabel = "계속 (3초 후 재개)";
         public const string RestartLabel = "재시작";
-        public const string SettingsLabel = "설정 (준비 중)";
+        public const string SettingsLabel = "설정";
         public const string ExitLabel = "나가기";
 
         /// <summary>패널 아래 조작 안내</summary>
@@ -207,6 +207,70 @@ public static class GameConstants
 
         /// <summary>재개 카운트다운 (초, unscaled). 1초마다 숫자 하나씩 3 → 2 → 1</summary>
         public const int CountdownSeconds = 3;
+    }
+
+    /// <summary>설정 창(Popup_Settings) 문구·값 범위 (기획서 3-7, 2-4). 기능(적용·저장)은 다음 작업</summary>
+    public static class Settings
+    {
+        public const string Title = "설정";
+        public const string CloseLabel = "×";
+        public const string TabSound = "사운드";
+        public const string TabGame = "게임";
+        public const string TabScreen = "화면";
+
+        public const string MasterVolumeLabel = "메인 음량";
+        public const string MusicVolumeLabel = "음악 음량";
+        public const string SfxVolumeLabel = "효과음 음량";
+
+        public const string OffsetLabel = "판정 오프셋";
+        public const string OffsetRangeHint = "-200 ~ +200ms, 5ms 단위";
+        public const string MeasureOffsetLabel = "오프셋 측정하기";
+        public const string DefaultSpeedLabel = "기본 배속";
+
+        public const string ResolutionLabel = "해상도";
+        public const string WindowModeLabel = "창 모드";
+
+        /// <summary>◀ ▶ 버튼 글자 (폰트에 있는 글자만 쓴다. U+2212 −는 폰트에 없어 ASCII -를 쓴다)</summary>
+        public const string StepDownLabel = "◀";
+        public const string StepUpLabel = "▶";
+
+        public const string HintText = "↑↓ 항목 · ←→ 값 조절 · Tab 탭 전환 · ESC 닫기 (자동 저장)";
+
+        /// <summary>음량 범위 (정수)와 처음 값</summary>
+        public const int MinVolume = 0;
+        public const int MaxVolume = 100;
+        public const int DefaultVolume = 100;
+
+        /// <summary>판정 오프셋 범위·단위 (ms)와 표시 형식: 양수 "+15 ms", 0 "0 ms", 음수 "-15 ms"</summary>
+        public const int MinOffsetMs = -200;
+        public const int MaxOffsetMs = 200;
+        public const int OffsetStepMs = 5;
+        public const string OffsetPositiveFormat = "+{0} ms";
+        public const string OffsetZeroText = "0 ms";
+        public const string OffsetNegativeFormat = "-{0} ms";
+
+        /// <summary>기본 배속 표시: {0} 배속</summary>
+        public const string DefaultSpeedFormat = "x{0:0.0}";
+
+        /// <summary>해상도 선택지 (고정 목록. 실제 모니터 해상도 목록은 기능 작업 때)과 기본값</summary>
+        public static readonly Vector2Int[] Resolutions =
+        {
+            new Vector2Int(1280, 720),
+            new Vector2Int(1600, 900),
+            new Vector2Int(1920, 1080),
+            new Vector2Int(2560, 1440)
+        };
+        public static readonly Vector2Int DefaultResolution = new Vector2Int(1920, 1080);
+        public const string ResolutionFormat = "{0} × {1}";
+
+        /// <summary>창 모드 선택지 (FullScreenMode 순서와 함께 쓴다)와 표시 이름</summary>
+        public static readonly FullScreenMode[] WindowModes =
+        {
+            FullScreenMode.ExclusiveFullScreen,
+            FullScreenMode.Windowed,
+            FullScreenMode.FullScreenWindow
+        };
+        public static readonly string[] WindowModeLabels = { "전체 화면", "창 모드", "테두리 없는 창" };
     }
 
     /// <summary>곡 선택 화면 표시 문구 (기획서 3-3)</summary>

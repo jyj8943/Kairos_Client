@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// UI 화면 등록, 팝업 스택, ESC 처리를 맡는 전역 매니저. Managers_DontDestroy 프리팹의 "UIManager"에 붙인다.
-/// - 오버레이 Canvas(Canvas_Overlay)를 가진다. 공용 팝업(Popup_Confirm)은 여기 두고 Init에서 등록한다.
+/// - 오버레이 Canvas(Canvas_Overlay)를 가진다. 공용 팝업(Popup_Confirm, Popup_Settings)은 여기 두고 Init에서 등록한다.
 /// - 씬 Canvas는 SceneBase가 Init 전에 Register하고, 씬을 떠날 때 Unregister한다. 화면은 타입으로 찾는다 (Get&lt;T&gt;).
 /// - ESC(UI/Cancel)는 여기서만 받는다. 처리 순서 (앞 단계에서 처리하면 뒤로 넘기지 않는다):
 ///   1. 씬 로딩 중이면 무시 2. 열린 TMP_Dropdown이 있으면 무시 3. 포커스된 TMP_InputField가 있으면 입력만 끝낸다
@@ -71,6 +71,10 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
         Popup_Confirm confirm = Get<Popup_Confirm>();
         if (confirm != null) confirm.Init();
         else Debug.LogError($"{LogPrefix} Popup_Confirm이 오버레이 Canvas 아래에 없습니다.", this);
+
+        Popup_Settings settings = Get<Popup_Settings>();
+        if (settings != null) settings.Init();
+        else Debug.LogError($"{LogPrefix} Popup_Settings가 오버레이 Canvas 아래에 없습니다.", this);
 
         EnableCancel();
     }
@@ -230,6 +234,26 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
         }
 
         return popup.Show(message, confirmText, GameConstants.Confirm.CancelLabel, onConfirm, onCancel);
+    }
+
+    // ───── 설정 창 ─────
+
+    /// <summary>
+    /// 공용 설정 창을 연다 (타이틀·일시정지 메뉴 등 어디서든). 다른 팝업 위에서 열면 닫을 때 그 팝업으로 돌아간다.
+    /// </summary>
+    /// <returns>열었으면 true. 설정 창이 없거나 이미 열려 있으면 false</returns>
+    public bool OpenSettings()
+    {
+        Popup_Settings popup = Get<Popup_Settings>();
+        if (popup == null)
+        {
+            Debug.LogError($"{LogPrefix} Popup_Settings가 없어 설정 창을 열 수 없습니다.", this);
+            return false;
+        }
+        if (popup.IsOpen) return false;
+
+        popup.Show();
+        return true;
     }
 
     // ───── ESC ─────

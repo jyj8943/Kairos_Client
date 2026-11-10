@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// - 버튼은 위에서부터 계속 · 재시작 · 설정 · 나가기. 처음 선택은 계속, ↑↓로 이동, Enter 실행.
 /// - ESC(팝업이 열려 있을 때 UIManager가 부름)는 "계속"과 같다. 바깥 클릭은 무시한다.
 /// - 버튼을 누르면 InGameScene이 넘긴 콜백만 부른다. 돌아갈 곳(곡 선택·에디터)은 이 팝업이 알지 않는다.
-/// - 설정 버튼은 설정 창이 아직 없어 눌리지 않게 둔다.
+/// - 설정 버튼은 공용 설정 창(GameManager.UI.OpenSettings)을 이 메뉴 위에 연다. 설정을 닫으면 이 메뉴로 돌아온다 (인게임은 멈춘 그대로).
 /// </summary>
 public class Popup_Pause : UIPopup
 {
@@ -53,15 +53,15 @@ public class Popup_Pause : UIPopup
         restartButton.onClick.AddListener(OnClickRestart);
         exitButton.onClick.RemoveListener(OnClickExit);
         exitButton.onClick.AddListener(OnClickExit);
+        settingsButton.onClick.RemoveListener(OnClickSettings);
+        settingsButton.onClick.AddListener(OnClickSettings);
+        settingsButton.interactable = true;
 
-        // TODO: 설정 창을 만들면 settingsButton을 켜고 설정 창 열기를 연결한다
-        settingsButton.interactable = false;
-
-        // 설정 버튼은 꺼져 있어 ↑↓ 이동에서 건너뛴다 (재시작 ↔ 나가기)
+        // ↑↓: 계속 → 재시작 → 설정 → 나가기
         resumeButton.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnDown = restartButton };
-        restartButton.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = resumeButton, selectOnDown = exitButton };
-        settingsButton.navigation = new Navigation { mode = Navigation.Mode.None };
-        exitButton.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = restartButton };
+        restartButton.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = resumeButton, selectOnDown = settingsButton };
+        settingsButton.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = restartButton, selectOnDown = exitButton };
+        exitButton.navigation = new Navigation { mode = Navigation.Mode.Explicit, selectOnUp = settingsButton };
 
         HideImmediate();
     }
@@ -77,6 +77,14 @@ public class Popup_Pause : UIPopup
         if (resumeButton != null) resumeButton.onClick.RemoveListener(OnClickResume);
         if (restartButton != null) restartButton.onClick.RemoveListener(OnClickRestart);
         if (exitButton != null) exitButton.onClick.RemoveListener(OnClickExit);
+        if (settingsButton != null) settingsButton.onClick.RemoveListener(OnClickSettings);
+    }
+
+    /// <summary>설정: 공용 설정 창을 이 메뉴 위에 연다 (맨 위 팝업일 때만)</summary>
+    private void OnClickSettings()
+    {
+        if (!IsOpen || GameManager.UI.TopPopup != this) return;
+        GameManager.UI.OpenSettings();
     }
 
     private void OnClickResume()
