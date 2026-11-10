@@ -81,6 +81,14 @@ public class Canvas_InGame : UIBase
             default: judgeText.text = GameConstants.Play.MissText; judgeText.color = missColor; break;
         }
 
+        ShowCombo(combo, score);
+    }
+
+    /// <summary>
+    /// 판정 글자는 그대로 두고 콤보·점수만 바꾼다 (롱노트 시작 판정·유지 틱).
+    /// </summary>
+    public void ShowCombo(int combo, int score)
+    {
         if (combo > 0) comboText.SetText("{0}", combo);
         else comboText.text = string.Empty;
 

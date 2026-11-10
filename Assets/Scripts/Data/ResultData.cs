@@ -28,6 +28,9 @@ public class ResultData
     public int maxCombo;
     public int totalNotes;
 
+    /// <summary>끝까지 잘 쳤을 때의 최대 콤보 = 노트 수 + 롱노트 전체 유지 틱 수</summary>
+    public int maxPossibleCombo;
+
     /// <summary>정확도 (%)</summary>
     public double accuracy;
 
@@ -63,6 +66,7 @@ public class ResultData
             missCount = score.MissCount,
             maxCombo = score.MaxCombo,
             totalNotes = score.TotalNotes,
+            maxPossibleCombo = score.MaxPossibleCombo,
             accuracy = score.Accuracy,
             isFullCombo = score.IsFullCombo,
             isAllPerfect = score.IsAllPerfect

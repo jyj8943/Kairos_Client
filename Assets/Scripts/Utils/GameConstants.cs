@@ -122,6 +122,12 @@ public static class GameConstants
         public const string FullComboText = "FULL COMBO";
         public const string AllPerfectText = "ALL PERFECT";
 
+        /// <summary>인게임 롱노트 몸통 색 = 라인 색 × 이 값 (머리·꼬리보다 조금 어둡게, 에디터와 같은 값)</summary>
+        public const float LongNoteBodyBrightness = 0.6f;
+
+        /// <summary>시작 MISS 롱노트의 비활성 색 (끝까지 이 색으로 내려간다)</summary>
+        public static readonly Color32 LongNoteMissedColor = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
+
         /// <summary>
         /// 라인별 노트 색 (A · S · ; · ' 순서). 에디터 Img_ShortNote의 기본 색과 같은 값이다.
         /// </summary>

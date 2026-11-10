@@ -61,7 +61,7 @@ public class Canvas_Result : UIBase
             $"{GameConstants.Play.GreatText}  {result.greatCount}\n" +
             $"{GameConstants.Play.GoodText}  {result.goodCount}\n" +
             $"{GameConstants.Play.MissText}  {result.missCount}";
-        maxComboText.text = $"MAX COMBO  {result.maxCombo} / {result.totalNotes}";
+        maxComboText.text = $"MAX COMBO  {result.maxCombo} / {result.maxPossibleCombo}";
         accuracyText.text = $"정확도  {result.accuracy.ToString("0.00", CultureInfo.InvariantCulture)}%";
         songInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, result.songTitle, result.chartName, result.level);
 

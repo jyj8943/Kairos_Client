@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 인게임 씬 진입점 (숏노트 한 판). InGameScene.unity 루트의 "InGameScene" 오브젝트에 붙인다.
+/// 인게임 씬 진입점 (숏노트·롱노트 한 판). InGameScene.unity 루트의 "InGameScene" 오브젝트에 붙인다.
 /// - 진입 데이터(곡·채보)로 채보를 불러와 노트 시간을 계산하고, 노래를 준비 시간 뒤에 예약 재생한다.
 /// - 곡 시간은 GameManager.Sound.SongTime(DSP 기준). 판정은 NoteJudge, 점수는 ScoreCalculator가 맡는다.
 /// - 모든 노트가 판정(친 판정 또는 놓침 MISS)되면 OnAllNotesJudged를 한 번 알리고, 그 곡 시간부터 3초(ResultDelaySeconds) 뒤
@@ -13,8 +13,12 @@ using UnityEngine;
 /// - ESC(팝업이 없을 때 UIManager가 OnBack을 부름)나 창 포커스를 잃으면 일시정지 메뉴(Popup_Pause)를 연다.
 ///   멈추면 노래·곡 시간·노트·놓침 MISS·라인 키·자동 플레이가 모두 멈추고, "계속"을 누르면 3초 카운트다운 뒤 멈춘 위치에서 이어진다.
 ///   재시작·나가기는 결과 씬을 거치지 않는다. 나가는 곳은 CreateReturnTarget()이 진입 데이터로 정한다 (곡 선택 / 테스트 플레이면 에디터).
+/// - 롱노트 (롱노트 판정 세부 규칙): 키를 뗄 때 OnLaneReleased로 끝 판정을 낸다. 판정 글자는 숏노트와 롱노트 종합 판정 때만 띄우고,
+///   롱노트 시작·유지 틱은 콤보만 올린다. 키음은 누를 때와 롱노트 끝 판정 때(뗄 때, 늦게 떼 자동 GOOD이 나는 순간) 낸다.
+///   일시정지 중 뗀 것은 무시하고, 재개 카운트다운이 끝나는 순간 누르고 있던 롱노트의 키가 안 눌려 있으면 그 순간 뗀 것으로 본다.
 /// - 자동 플레이(에디터의 자동 테스트, 테스트 플레이 전용): 노트 시간마다 키 입력과 같은 경로(OnLanePressed)로 판정·키음을 내고
-///   라인 빛남을 짧게 켰다 끈다. 자동 플레이 중에는 사용자의 라인 키를 무시한다 (ESC 일시정지는 그대로).
+///   라인 빛남을 짧게 켰다 끈다. 롱노트는 시작 시각에 누르고 끝 시각에 뗀다(OnLaneReleased, 누르는 동안 빛남 유지).
+///   자동 플레이 중에는 사용자의 라인 키를 무시한다 (ESC 일시정지는 그대로).
 ///   일반 플레이(곡 선택에서 들어옴)는 진입 데이터에 testPlay가 없어 자동 플레이를 켤 수 없다.
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
@@ -48,7 +52,11 @@ public class InGameScene : SceneBase
     [SerializeField] private bool autoPlay;
 #endif
 
-    private readonly List<JudgeResult> missResults = new List<JudgeResult>();
+    private readonly List<JudgeResult> timeoutResults = new List<JudgeResult>();
+    private readonly List<JudgeResult> releaseResults = new List<JudgeResult>();
+
+    /// <summary>재개할 때 라인 키가 눌려 있는지 묻는 함수 (한 번만 만들어 둔다)</summary>
+    private System.Func<int, bool> isLaneHeldForResume;
 
     private InGameEntryData entry;
     private SongData song;
@@ -89,6 +97,9 @@ public class InGameScene : SceneBase
     /// <summary>자동 플레이가 켠 라인 빛남을 끌 시각 (realtime, 0이면 꺼져 있음)</summary>
     private readonly double[] autoGlowOffAt = new double[GameConstants.Editor.LaneCount];
 
+    /// <summary>롱노트 끝 판정 키음을 낸 수 (확인용)</summary>
+    private int longEndKeySoundCount;
+
     // 판정 오차 기록 (키로 친 판정만)
     private int hitCount;
     private double hitErrorSumMs;
@@ -125,12 +136,11 @@ public class InGameScene : SceneBase
             yield break;
         }
 
-        List<PlayNote> notes = BuildNotes(out int skippedLong, out int skippedBefore);
-        if (skippedLong > 0)
-            Debug.LogWarning($"[InGameScene] 롱노트는 아직 지원하지 않아 {skippedLong}개를 건너뜁니다.", this);
+        List<PlayNote> notes = BuildNotes(out int longCount, out int skippedBefore);
 
         judge = new NoteJudge(notes, GameConstants.Editor.LaneCount, judgeWindows);
-        score = new ScoreCalculator(judge.TotalCount);
+        score = new ScoreCalculator(judge.TotalCount, judge.TotalTicks);
+        if (isLaneHeldForResume == null) isLaneHeldForResume = IsLaneHeldForResume;
 
         double firstNoteTime = judge.TotalCount > 0 ? judge.Notes[0].Time : 0;
         if (IsTestPlay)
@@ -164,13 +174,14 @@ public class InGameScene : SceneBase
 #endif
         System.Array.Clear(autoGlowOffAt, 0, autoGlowOffAt.Length);
 
-        input.Init(OnUserLanePressed, OnUserLaneHeld);
+        input.Init(OnUserLanePressed, OnUserLaneReleased, OnUserLaneHeld);
         canvas.Init(song.Title, chart.chartName, chart.level, IsTestPlay, isAutoPlay);
 
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
-                  $"노트 {judge.TotalCount}개{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
+                  $"노트 {judge.TotalCount}개 (롱노트 {longCount}개, 유지 틱 {judge.TotalTicks}개 → 가능한 최대 콤보 {score.MaxPossibleCombo})" +
+                  $"{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
                   $"bpm={timing.BpmAt(0)} (BPM 구간 {timing.PointCount}개), offsetMs={timing.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
-                  $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개, " +
+                  $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개 (롱노트 {noteLayer.PooledLongCount}개), " +
                   $"배속 x{entry.scrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###} (기본 {GameConstants.Play.DefaultScrollSpeed})", this);
 
         isReady = true;
@@ -219,9 +230,10 @@ public class InGameScene : SceneBase
             UpdateAutoGlows(false);
         }
 
-        if (judge.CollectMisses(songTime, missResults) > 0)
+        // 놓친 MISS, 누르고 있는 롱노트의 유지 틱, 늦게 떼 자동 GOOD
+        if (judge.CollectTimeouts(songTime, timeoutResults) > 0)
         {
-            for (int i = 0; i < missResults.Count; i++) ApplyJudge(missResults[i]);
+            for (int i = 0; i < timeoutResults.Count; i++) ApplyJudge(timeoutResults[i]);
         }
 
         noteLayer.Refresh(songTime);
@@ -252,6 +264,15 @@ public class InGameScene : SceneBase
     }
 
     /// <summary>
+    /// 사용자의 라인 키 뗌 (InGameInput). 자동 플레이 중에는 무시한다.
+    /// </summary>
+    private void OnUserLaneReleased(int lane, double releaseSongTime)
+    {
+        if (isAutoPlay) return;
+        OnLaneReleased(lane, releaseSongTime);
+    }
+
+    /// <summary>
     /// 사용자의 라인 키 누름·뗌 (라인 빛남). 자동 플레이 중에는 자동 플레이가 빛남을 맡으므로 무시한다.
     /// </summary>
     private void OnUserLaneHeld(int lane, bool pressed)
@@ -274,17 +295,48 @@ public class InGameScene : SceneBase
 
         if (judge.TryHit(lane, inputSongTime, out JudgeResult result))
         {
-            noteLayer.OnNoteHit(result.NoteIndex);
+            // 롱노트 시작(LongStart)은 누르는 동안 계속 그리고, 시작 MISS는 회색으로 내려보낸다
+            if (result.Kind == JudgeKind.Short) noteLayer.OnNoteHit(result.NoteIndex);
             ApplyJudge(result);
         }
     }
 
+    /// <summary>
+    /// 라인 키 뗌 (InGameInput의 키 뗌 콜백, 자동 플레이). 누르고 있던 롱노트가 있으면 뗀 시각까지의 틱과 끝·종합 판정을 낸다.
+    /// 일시정지·카운트다운 중에 뗀 것은 무시한다 (재개하는 순간 키 상태로 다시 본다, 세부 규칙 5).
+    /// </summary>
+    /// <param name="releaseSongTime">뗀 시각 (곡 시간, 초)</param>
+    private void OnLaneReleased(int lane, double releaseSongTime)
+    {
+        if (!isPlaying || isPaused) return;
+
+        releaseResults.Clear();
+        if (!judge.TryRelease(lane, releaseSongTime, releaseResults)) return;
+
+        for (int i = 0; i < releaseResults.Count; i++) ApplyJudge(releaseResults[i]);
+    }
+
+    /// <summary>
+    /// 판정 결과를 점수·화면·소리에 반영한다.
+    /// - 판정 글자는 숏노트와 롱노트 종합 판정 때만, 롱노트 시작·틱은 콤보·점수만 바꾼다.
+    /// - 롱노트 끝 판정(시작 MISS는 끝 판정이 없어 빼고)은 키음을 내고 노트를 바로 돌려놓는다.
+    /// </summary>
     private void ApplyJudge(JudgeResult result)
     {
-        score.Add(result.Type);
-        canvas.ShowJudge(result.Type, score.Combo, score.Score);
+        score.Apply(result);
+        if (result.ShowsJudgeText) canvas.ShowJudge(result.Type, score.Combo, score.Score);
+        else canvas.ShowCombo(score.Combo, score.Score);
 
-        if (!result.IsHit) return;
+        if (result.Kind == JudgeKind.LongFinal && judge.GetLongState(result.NoteIndex) == LongNoteState.Done)
+        {
+            // 끝 판정 키음: 뗄 때, 또는 끝 + GOOD 범위에서 자동 GOOD이 나는 순간
+            if (DevPlaySettings.KeySoundEnabled) GameManager.Sound.PlaySfx(keySound);
+            noteLayer.OnNoteHit(result.NoteIndex);
+            longEndKeySoundCount++;
+        }
+
+        // 판정 오차 기록은 누른 판정(숏노트, 롱노트 시작)만 센다
+        if (!result.IsHit || (result.Kind != JudgeKind.Short && result.Kind != JudgeKind.LongStart)) return;
 
         double error = System.Math.Abs(result.DeltaMs);
         hitCount++;
@@ -306,7 +358,7 @@ public class InGameScene : SceneBase
         GameManager.Sound.StopMusic();
 
         Debug.Log($"[InGameScene] 결과 (모든 노트 판정 뒤 곡 시간 {finishSongTime - allJudgedSongTime:0.000}초): 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, " +
-                  $"최대 콤보 {score.MaxCombo}/{score.TotalNotes}, 정확도 {score.Accuracy:0.00}%, FC={score.IsFullCombo}, AP={score.IsAllPerfect}, " +
+                  $"최대 콤보 {score.MaxCombo}/{score.MaxPossibleCombo} (노트 {score.TotalNotes} + 유지 틱 {score.TotalTicks}), 롱노트 끝 키음 {longEndKeySoundCount}번, 정확도 {score.Accuracy:0.00}%, FC={score.IsFullCombo}, AP={score.IsAllPerfect}, " +
                   $"판정 오차(친 노트 {hitCount}개) 평균 {(hitCount > 0 ? hitErrorSumMs / hitCount : 0):0.###}ms · 최대 {hitErrorMaxMs:0.###}ms, " +
                   $"노트 풀 {noteLayer.PooledCount}개(추가 생성 {noteLayer.GrowCount})", this);
 #if UNITY_EDITOR
@@ -432,7 +484,14 @@ public class InGameScene : SceneBase
         countdownRoutine = null;
         isPaused = false;
         GameManager.Sound.ResumeMusic();
-        Debug.Log($"[InGameScene] 재개: 곡 시간 {GameManager.Sound.SongTime:0.###}초", this);
+
+        // 누르고 있던 롱노트: 카운트다운이 끝난 이 순간 키가 안 눌려 있으면 지금 뗀 것으로 본다 (카운트다운 중 누름·뗌은 보지 않는다)
+        double resumeSongTime = GameManager.Sound.SongTime;
+        releaseResults.Clear();
+        int released = judge.ResolveHeldOnResume(resumeSongTime, isLaneHeldForResume, releaseResults);
+        for (int i = 0; i < releaseResults.Count; i++) ApplyJudge(releaseResults[i]);
+
+        Debug.Log($"[InGameScene] 재개: 곡 시간 {resumeSongTime:0.###}초{(released > 0 ? $", 키를 뗀 롱노트 {released}개 끝 판정" : "")}", this);
     }
 
     /// <summary>
@@ -509,23 +568,46 @@ public class InGameScene : SceneBase
     /// <summary>
     /// 자동 플레이: 노트 시간이 된 라인에 키 입력과 같은 함수(OnLanePressed)로 입력을 넣어 판정·키음을 내고,
     /// 라인 빛남을 짧게(GameConstants.Play.AutoPlayGlowSeconds) 켠다. 입력 시각은 지금 곡 시간이라 오차는 1프레임 이내다.
+    /// 롱노트는 끝 시간이 되면 OnLaneReleased로 떼고, 누르는 동안은 라인 빛남을 켜 둔다.
     /// </summary>
     private void RunAutoPlay(double songTime)
     {
-        double inputTime = GameManager.Sound.GetSongTimeAtRealtime(Time.realtimeSinceStartupAsDouble);
+        double now = Time.realtimeSinceStartupAsDouble;
+        double inputTime = GameManager.Sound.GetSongTimeAtRealtime(now);
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
         {
+            // 누르고 있는 롱노트: 끝 시간이 되면 뗀다. 그 전에는 빛남을 계속 켜 둔다 (일시정지로 꺼졌을 때도 다시 켠다)
+            if (judge.TryGetHeld(lane, out int heldIndex))
+            {
+                if (judge.Notes[heldIndex].EndTime > songTime)
+                {
+                    gear.SetPressed(lane, true);
+                    autoGlowOffAt[lane] = double.MaxValue;
+                    continue;
+                }
+
+                OnLaneReleased(lane, inputTime);
+                autoGlowOffAt[lane] = now + GameConstants.Play.AutoPlayGlowSeconds;
+            }
+
             while (isPlaying && judge.TryPeekNext(lane, out int noteIndex) && judge.Notes[noteIndex].Time <= songTime)
             {
-                // 판정 범위 밖이라 처리되지 않으면 같은 노트를 계속 보게 되므로 멈춘다 (놓침은 CollectMisses가 처리)
-                int judgedBefore = judge.JudgedCount;
+                // 판정 범위 밖이라 처리되지 않으면 같은 노트를 계속 보게 되므로 멈춘다 (놓침은 CollectTimeouts가 처리)
                 OnLanePressed(lane, inputTime);
-                if (judge.JudgedCount == judgedBefore) break;
+                if (judge.TryPeekNext(lane, out int after) && after == noteIndex) break;
 
                 gear.SetPressed(lane, true);
-                autoGlowOffAt[lane] = Time.realtimeSinceStartupAsDouble + GameConstants.Play.AutoPlayGlowSeconds;
+                bool holding = judge.TryGetHeld(lane, out _);
+                autoGlowOffAt[lane] = holding ? double.MaxValue : now + GameConstants.Play.AutoPlayGlowSeconds;
+                if (holding) break;
             }
         }
+    }
+
+    /// <summary>재개할 때 라인 키가 눌려 있는지. 자동 플레이는 누르고 있던 롱노트를 계속 누르고 있는 것으로 본다.</summary>
+    private bool IsLaneHeldForResume(int lane)
+    {
+        return isAutoPlay || input.IsLanePressed(lane);
     }
 
 #if UNITY_EDITOR
@@ -619,9 +701,10 @@ public class InGameScene : SceneBase
 
     /// <summary>
     /// 채보 노트를 시간(초)으로 바꾼다. 에디터와 같은 TimingMap 변환 (offsetMs 포함, timingPoints 전체 구간).
-    /// 테스트 플레이면 시작 박 앞의 노트는 건너뛴다 (전체 노트 수에도 넣지 않는다).
+    /// 롱노트는 끝 시간과 유지 틱 시간(LongNoteTicks, 시작 + 1/4박 ~ 끝 − 1/4박 이하)도 같이 계산한다.
+    /// 테스트 플레이면 시작 박 앞의 노트(시작이 앞인 롱노트 포함)는 건너뛴다 (전체 노트 수에도 넣지 않는다).
     /// </summary>
-    private List<PlayNote> BuildNotes(out int skippedLong, out int skippedBefore)
+    private List<PlayNote> BuildNotes(out int longCount, out int skippedBefore)
     {
         IReadOnlyList<NoteData> source = chart.notes;
         skippedBefore = 0;
@@ -633,12 +716,14 @@ public class InGameScene : SceneBase
         }
 
         List<PlayNote> notes = new List<PlayNote>(source.Count);
-        skippedLong = 0;
+        longCount = 0;
         foreach (NoteData note in source)
         {
             if (note.type == NoteData.TypeLong)
             {
-                skippedLong++;
+                longCount++;
+                notes.Add(new PlayNote(note.lane, timing.BeatToSeconds(note.beat), timing.BeatToSeconds(note.endBeat),
+                    LongNoteTicks.GetTickTimes(timing, note.beat, note.endBeat)));
                 continue;
             }
             notes.Add(new PlayNote(note.lane, timing.BeatToSeconds(note.beat)));

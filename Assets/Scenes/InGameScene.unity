@@ -3444,6 +3444,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NoteLayer
   notePrefab: {fileID: 1992589664928904045, guid: 1575976177d3bab4286aeac8b56f7b8c, type: 3}
+  longNotePrefab: {fileID: 2978484308532196764, guid: 755c6734368de2d4384d381f168db10a, type: 3}
   screenMargin: 0.5
   extraPoolCount: 8
 --- !u!1 &1581789392

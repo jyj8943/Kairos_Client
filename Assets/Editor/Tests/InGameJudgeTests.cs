@@ -75,11 +75,11 @@ public class InGameJudgeTests
         NoteJudge judge = new NoteJudge(new[] { new PlayNote(0, 1.0), new PlayNote(3, 1.5) }, 4, DefaultWindows());
         List<JudgeResult> misses = new List<JudgeResult>();
 
-        Assert.AreEqual(0, judge.CollectMisses(1.12, misses));
-        Assert.AreEqual(1, judge.CollectMisses(1.121, misses));
+        Assert.AreEqual(0, judge.CollectTimeouts(1.12, misses));
+        Assert.AreEqual(1, judge.CollectTimeouts(1.121, misses));
         Assert.AreEqual(JudgeType.Miss, misses[0].Type);
         Assert.IsFalse(misses[0].IsHit);
-        Assert.AreEqual(2, judge.CollectMisses(10.0, new List<JudgeResult>()) + 1, "남은 노트 하나만 더 MISS");
+        Assert.AreEqual(2, judge.CollectTimeouts(10.0, new List<JudgeResult>()) + 1, "남은 노트 하나만 더 MISS");
         Assert.IsTrue(judge.AllJudged);
     }
 
