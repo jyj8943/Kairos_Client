@@ -230,7 +230,7 @@ public class Canvas_Editor : UIBase
         RefreshTimeInfoText();
 
         float length = session.SongLengthSeconds;
-        float current = BeatGridMath.BeatToSeconds(grid.CurrentBeat, session.Bpm, session.OffsetMs);
+        float current = (float)session.Timing.BeatToSeconds(grid.CurrentBeat);
         timelineSlider.SetPosition(length > 0f ? current / length : 0f);
     }
 
@@ -485,7 +485,8 @@ public class Canvas_Editor : UIBase
         string scale = grid.GridHeightScale.ToString("0.0#", CultureInfo.InvariantCulture);
         gridHeightText.text = $"x{scale} (Ctrl+휠)";
 
-        bool tooDense = BeatGridMath.IsSnapLineSpacingTooSmall(grid.Bpm, grid.GridHeightScale, grid.SnapDivision);
+        // 선 간격은 현재 위치의 BPM으로 본다
+        bool tooDense = BeatGridMath.IsSnapLineSpacingTooSmall(session.Timing.BpmAt(grid.CurrentBeat), grid.GridHeightScale, grid.SnapDivision);
         gridHeightHintText.text = GameConstants.Editor.DenseGridHint;
         gridHeightHintText.gameObject.SetActive(tooDense);
     }
@@ -503,7 +504,7 @@ public class Canvas_Editor : UIBase
     /// </summary>
     private void RefreshTimeInfoText()
     {
-        float currentSeconds = BeatGridMath.BeatToSeconds(grid.CurrentBeat, session.Bpm, session.OffsetMs);
+        float currentSeconds = (float)session.Timing.BeatToSeconds(grid.CurrentBeat);
         timeInfoText.text = string.Format(GameConstants.Editor.TimeInfoFormat,
             TimeFormat.ToMinSecMillis(currentSeconds), TimeFormat.ToMinSec(session.SongLengthSeconds), grid.CurrentMeasure);
     }

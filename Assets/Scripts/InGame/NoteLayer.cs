@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// 인게임 노트 표시. InGameScene.unity의 "Gear/Notes"에 붙이고, InGameScene이 Init()을 호출한 뒤 매 프레임 Refresh()를 부른다.
-/// - 노트 y = 판정선 y + (노트 시간 − 곡 시간) × 낙하 속도. 낙하 속도 = 기본 낙하 속도 × 배속 (GameConstants.Play).
+/// - 노트 y = 판정선 y + (스크롤 거리(노트 시간) − 스크롤 거리(곡 시간)) × 낙하 속도. 낙하 속도 = 기본 낙하 속도 × 배속 (GameConstants.Play).
+///   스크롤 거리는 ScrollMap이 맡는다 (지금은 배속 구간이 없어 곡 시간과 같다). 판정은 계속 곡 시간 기준이다 (NoteJudge).
 /// - 노트 오브젝트는 풀로 재사용한다. 화면에 들어오기 직전에 꺼내고, 판정(키로 친 것)되거나 화면 아래로 벗어나면 돌려놓는다.
 /// - 풀은 Init에서 채보를 보고 동시에 보일 최대 수만큼 미리 만든다. 플레이 중 Instantiate·Destroy와 매 프레임 할당이 없다.
 /// </summary>
@@ -26,6 +27,7 @@ public class NoteLayer : MonoBehaviour
 
     private GearView gear;
     private NoteJudge judge;
+    private ScrollMap scroll;
     private int nextSpawnIndex;
     private float spawnAheadSeconds;
     private float despawnY;
@@ -40,13 +42,15 @@ public class NoteLayer : MonoBehaviour
     public int ActiveCount => activeNotes.Count;
 
     /// <summary>
-    /// 기어·판정·배속을 받아 낙하 속도를 정하고 풀을 미리 채운다.
+    /// 기어·판정·스크롤 거리·배속을 받아 낙하 속도를 정하고 풀을 미리 채운다.
     /// </summary>
+    /// <param name="scroll">곡 시간 → 스크롤 거리 변환 (노트 높이 계산용)</param>
     /// <param name="scrollMultiplier">배속 (GameConstants.Play.MinScrollMultiplier ~ MaxScrollMultiplier 밖이면 범위 안으로 맞춘다)</param>
-    public void Init(GearView gear, NoteJudge judge, float scrollMultiplier)
+    public void Init(GearView gear, NoteJudge judge, ScrollMap scroll, float scrollMultiplier)
     {
         this.gear = gear;
         this.judge = judge;
+        this.scroll = scroll;
 
         float multiplier = Mathf.Clamp(scrollMultiplier, GameConstants.Play.MinScrollMultiplier, GameConstants.Play.MaxScrollMultiplier);
         if (!Mathf.Approximately(multiplier, scrollMultiplier))
@@ -57,6 +61,8 @@ public class NoteLayer : MonoBehaviour
         viewByNote = new NoteView[judge.TotalCount];
         nextSpawnIndex = 0;
 
+        // 노트를 꺼내는 기준과 풀 크기는 곡 시간 기준이다 (스크롤 거리 = 곡 시간일 때만 맞다).
+        // 배속 변속을 넣으면 시간 대신 스크롤 거리 기준으로 바꿔야 한다.
         spawnAheadSeconds = (gear.ScreenTopY + screenMargin - gear.JudgeLineY) / ScrollSpeed;
         despawnY = gear.ScreenBottomY - screenMargin;
 
@@ -75,6 +81,7 @@ public class NoteLayer : MonoBehaviour
         if (judge == null) return;
 
         IReadOnlyList<PlayNote> notes = judge.Notes;
+        double songPosition = scroll.PositionAt(songTime);
 
         while (nextSpawnIndex < notes.Count && notes[nextSpawnIndex].Time - songTime <= spawnAheadSeconds)
         {
@@ -93,7 +100,7 @@ public class NoteLayer : MonoBehaviour
         {
             int index = activeNotes[i];
             PlayNote note = notes[index];
-            float y = gear.JudgeLineY + (float)((note.Time - songTime) * ScrollSpeed);
+            float y = gear.JudgeLineY + (float)((scroll.PositionAt(note.Time) - songPosition) * ScrollSpeed);
 
             if (y < despawnY)
             {

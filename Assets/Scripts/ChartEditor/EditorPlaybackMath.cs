@@ -30,10 +30,12 @@ public static class EditorPlaybackMath
     /// - 0보다 앞(offset 이전)이면: 음원 0초부터 재생하고, 모자란 시간만큼 더 기다린다.
     /// 어느 쪽이든 재생을 예약한 순간의 곡 시간은 (시작 시간 − 최소 지연)이다.
     /// </summary>
-    public static PlayStart GetPlayStart(float beat, float bpm, int offsetMs)
+    /// <param name="beat">재생을 시작할 박</param>
+    /// <param name="timing">박 ↔ 시간 변환 (offset 포함)</param>
+    public static PlayStart GetPlayStart(float beat, TimingMap timing)
     {
         double delay = GameConstants.Editor.PlaybackStartDelaySeconds;
-        double startTime = BeatGridMath.BeatToSeconds(beat, bpm, offsetMs);
+        double startTime = timing.BeatToSeconds(beat);
 
         if (startTime >= 0) return new PlayStart(startTime, delay);
         return new PlayStart(0, delay - startTime);

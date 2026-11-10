@@ -4,6 +4,7 @@ using UnityEngine;
 /// 박(beat) 기준 그리드 계산 모음. 상태가 없는 순수 함수만 둔다.
 /// - 에디터 그리드 표시뿐 아니라 노트 배치·인게임에서도 다시 쓴다.
 /// - 위로 갈수록 뒤 시간이다. y는 현재 위치 선을 0으로 한 값이다.
+/// - 박 ↔ 시간은 TimingMap이 맡는다. 그리드 높이는 시간 기준(BeatToY·YToBeat)이고, tick·스냅·마디 계산은 박 기준이다.
 /// </summary>
 public static class BeatGridMath
 {
@@ -11,27 +12,8 @@ public static class BeatGridMath
     private const float SnapEpsilon = 0.0001f;
 
     /// <summary>
-    /// 음원 시간(초)을 박으로 바꾼다. 0박 = 음원 시작 + offsetMs. (BPM 변속이 없다고 본다)
-    /// 박 = (초 − offsetMs ÷ 1000) × BPM ÷ 60. offset 이전 시간은 음수 박이 된다.
-    /// </summary>
-    public static float SecondsToBeat(float seconds, float bpm, int offsetMs)
-    {
-        return (seconds - offsetMs / 1000f) * bpm / 60f;
-    }
-
-    /// <summary>
-    /// 박을 음원 시간(초)으로 바꾼다. SecondsToBeat의 반대 변환이다.
-    /// 초 = 박 × 60 ÷ BPM + offsetMs ÷ 1000
-    /// </summary>
-    public static float BeatToSeconds(float beat, float bpm, int offsetMs)
-    {
-        return beat * 60f / bpm + offsetMs / 1000f;
-    }
-
-    /// <summary>
-    /// 그리드에서 1박의 높이 (px) = 1초 높이(PixelsPerSecond) × 60 ÷ BPM × 그리드 높이 배율.
-    /// BPM이 높을수록 1박이 낮아져, 노트 밀도가 인게임(시간 기준 낙하)과 같아진다.
-    /// 변속이 생기면 이 함수를 구간별 BPM으로 부르도록 바꾼다 (BPM은 여기서만 쓴다).
+    /// BPM 하나일 때 그리드에서 1박의 높이 (px) = 1초 높이(PixelsPerSecond) × 60 ÷ BPM × 그리드 높이 배율.
+    /// 그리드 배치는 시간 기준(BeatToY)이라 여기서는 스냅 선 간격 안내·선 풀 크기 계산에만 쓴다.
     /// </summary>
     public static float GetBeatHeight(float bpm, float heightScale)
     {
@@ -39,26 +21,30 @@ public static class BeatGridMath
     }
 
     /// <summary>
-    /// beat의 y 위치. (beat − 현재 beat) × 1박 높이
+    /// beat의 y 위치 (현재 위치 선 = 0). 시간 기준이라 BPM 변속이 있어도 인게임 낙하(시간 기준)와 노트 간격이 같다.
+    /// y = (BeatToSeconds(beat) − BeatToSeconds(currentBeat)) × PixelsPerSecond × 그리드 높이 배율
+    /// (BPM이 하나면 (beat − currentBeat) × GetBeatHeight(bpm, heightScale)와 같다)
     /// </summary>
-    /// <param name="beatHeight">1박 높이 (GetBeatHeight)</param>
-    public static float BeatToY(float beat, float currentBeat, float beatHeight)
+    public static float BeatToY(TimingMap timing, float beat, float currentBeat, float heightScale)
     {
-        return (beat - currentBeat) * beatHeight;
+        double seconds = timing.BeatToSeconds(beat) - timing.BeatToSeconds(currentBeat);
+        return (float)(seconds * GameConstants.Editor.PixelsPerSecond * heightScale);
     }
 
     /// <summary>
-    /// y 위치의 beat. BeatToY의 반대 변환이다.
+    /// y 위치(현재 위치 선 = 0)의 beat. BeatToY의 반대 변환이다.
+    /// beat = SecondsToBeat(BeatToSeconds(currentBeat) + y ÷ (PixelsPerSecond × 그리드 높이 배율))
     /// </summary>
-    /// <param name="beatHeight">1박 높이 (GetBeatHeight)</param>
-    public static float YToBeat(float y, float currentBeat, float beatHeight)
+    public static float YToBeat(TimingMap timing, float y, float currentBeat, float heightScale)
     {
-        return currentBeat + y / beatHeight;
+        double seconds = timing.BeatToSeconds(currentBeat) + y / ((double)GameConstants.Editor.PixelsPerSecond * heightScale);
+        return (float)timing.SecondsToBeat(seconds);
     }
 
     /// <summary>
     /// 지금 스냅의 선 간격 (px) = 1박 높이 ÷ 스냅 칸 수.
     /// </summary>
+    /// <param name="bpm">선 간격을 볼 위치의 BPM (TimingMap.BpmAt(현재 박))</param>
     public static float GetSnapLineSpacing(float bpm, float heightScale, int snapDivision)
     {
         return GetBeatHeight(bpm, heightScale) / snapDivision;
@@ -67,6 +53,7 @@ public static class BeatGridMath
     /// <summary>
     /// 선 간격이 MinSnapLineSpacingPixels보다 좁으면 true ("선 간격이 좁습니다" 안내를 보여줄지).
     /// </summary>
+    /// <param name="bpm">선 간격을 볼 위치의 BPM (TimingMap.BpmAt(현재 박))</param>
     public static bool IsSnapLineSpacingTooSmall(float bpm, float heightScale, int snapDivision)
     {
         return GetSnapLineSpacing(bpm, heightScale, snapDivision) < GameConstants.Editor.MinSnapLineSpacingPixels;

@@ -13,7 +13,7 @@ public class EditorPlaybackMathTests
     [Test]
     public void PlayStart_AtBeatZero()
     {
-        EditorPlaybackMath.PlayStart start = EditorPlaybackMath.GetPlayStart(0f, 150.61f, 18);
+        EditorPlaybackMath.PlayStart start = EditorPlaybackMath.GetPlayStart(0f, TimingMap.Single(150.61f, 18));
         Assert.AreEqual(0.018, start.StartPositionSeconds, Tolerance);
         Assert.AreEqual(Delay, start.DelaySeconds, Tolerance);
     }
@@ -22,7 +22,7 @@ public class EditorPlaybackMathTests
     [Test]
     public void PlayStart_BeforeOffset()
     {
-        EditorPlaybackMath.PlayStart start = EditorPlaybackMath.GetPlayStart(0f, 120f, -120);
+        EditorPlaybackMath.PlayStart start = EditorPlaybackMath.GetPlayStart(0f, TimingMap.Single(120f, -120));
         Assert.AreEqual(0.0, start.StartPositionSeconds, Tolerance);
         Assert.AreEqual(Delay + 0.12, start.DelaySeconds, 1e-5);
     }
@@ -31,7 +31,7 @@ public class EditorPlaybackMathTests
     [Test]
     public void PlayStart_MiddleOfSong()
     {
-        EditorPlaybackMath.PlayStart start = EditorPlaybackMath.GetPlayStart(128f, 216f, 120);
+        EditorPlaybackMath.PlayStart start = EditorPlaybackMath.GetPlayStart(128f, TimingMap.Single(216f, 120));
         Assert.AreEqual(128.0 * 60.0 / 216.0 + 0.12, start.StartPositionSeconds, 1e-4);
         Assert.AreEqual(Delay, start.DelaySeconds, Tolerance);
     }
@@ -66,7 +66,7 @@ public class EditorPlaybackMathTests
         MusicClock clock = new MusicClock();
         clock.Schedule(1000.1, 30.0, 1000.0, 5.0); // 음원 30초 위치를 DSP 1000.1에 재생
 
-        double beatTime = BeatGridMath.BeatToSeconds(77, 150.61f, 18);
+        double beatTime = TimingMap.Single(150.61f, 18).BeatToSeconds(77);
         double dsp = clock.SongTimeToDsp(beatTime);
         Assert.AreEqual(1000.1 + (beatTime - 30.0), dsp, 1e-9);
     }
@@ -109,6 +109,8 @@ public class EditorPlaybackMathTests
 
             Assert.AreEqual(240f, session.Bpm);
             Assert.AreEqual(500, session.OffsetMs);
+            Assert.AreEqual(240f, session.Timing.BpmAt(0), "Timing도 새 BPM으로 다시 만든다");
+            Assert.AreEqual(500, session.Timing.OffsetMs);
             Assert.AreEqual((60f - 0.5f) * 240f / 60f, session.TotalBeats, 1e-3);
             Assert.AreEqual(Mathf.FloorToInt(session.TotalBeats * GameConstants.Editor.TicksPerBeat), session.Data.TotalTicks);
             Assert.AreEqual(48 * 10, session.Data.Notes[0].Tick, "노트 tick은 그대로");

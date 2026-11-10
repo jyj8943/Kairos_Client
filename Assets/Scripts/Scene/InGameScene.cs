@@ -53,6 +53,12 @@ public class InGameScene : SceneBase
     private InGameEntryData entry;
     private SongData song;
     private ChartData chart;
+
+    /// <summary>채보 timingPoints와 곡 offset으로 만든 박 ↔ 시간 변환. TryLoad에서 만든다</summary>
+    private TimingMap timing;
+
+    /// <summary>곡 시간 → 스크롤 거리 (노트 높이 계산용). 지금은 배속 구간이 없다</summary>
+    private ScrollMap scrollMap;
     private NoteJudge judge;
     private ScoreCalculator score;
     private double startDelaySeconds;
@@ -129,7 +135,7 @@ public class InGameScene : SceneBase
         double firstNoteTime = judge.TotalCount > 0 ? judge.Notes[0].Time : 0;
         if (IsTestPlay)
         {
-            double startTime = BeatGridMath.BeatToSeconds(entry.testPlay.startBeat, chart.timingPoints[0].bpm, song.OffsetMs);
+            double startTime = timing.BeatToSeconds(entry.testPlay.startBeat);
             TestPlayRules.MusicStart start = TestPlayRules.GetMusicStart(startTime);
             musicStartPosition = start.StartPositionSeconds;
             startDelaySeconds = start.DelaySeconds;
@@ -150,7 +156,8 @@ public class InGameScene : SceneBase
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.Init(gear);
 #endif
-        noteLayer.Init(gear, judge, entry.scrollMultiplier);
+        scrollMap = new ScrollMap();
+        noteLayer.Init(gear, judge, scrollMap, entry.scrollMultiplier);
         isAutoPlay = IsTestPlay && entry.testPlay.autoPlay;
 #if UNITY_EDITOR
         if (autoPlay) isAutoPlay = true;
@@ -162,7 +169,7 @@ public class InGameScene : SceneBase
 
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
                   $"노트 {judge.TotalCount}개{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
-                  $"bpm={chart.timingPoints[0].bpm}, offsetMs={song.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
+                  $"bpm={timing.BpmAt(0)} (BPM 구간 {timing.PointCount}개), offsetMs={timing.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
                   $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개, " +
                   $"배속 x{entry.scrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###} (기본 {GameConstants.Play.DefaultScrollSpeed})", this);
 
@@ -595,9 +602,14 @@ public class InGameScene : SceneBase
             if (!ChartRepository.TryLoad(entry.songId, entry.chartId, entry.chartType, out chart, out error)) return false;
         }
 
-        if (chart.timingPoints == null || chart.timingPoints.Count == 0 || chart.timingPoints[0].bpm <= 0f)
+        // BPM 구간이 없거나 0 이하인 구간이 있으면 TimingMap이 ArgumentException을 던진다
+        try
         {
-            error = $"BPM이 없거나 0 이하입니다: {chart.chartId}";
+            timing = TimingMap.FromChart(chart, song.OffsetMs);
+        }
+        catch (System.ArgumentException e)
+        {
+            error = $"BPM이 없거나 0 이하입니다: {chart.chartId} ({e.Message})";
             return false;
         }
 
@@ -606,12 +618,11 @@ public class InGameScene : SceneBase
     }
 
     /// <summary>
-    /// 채보 노트를 시간(초)으로 바꾼다. 에디터와 같은 BeatGridMath 변환 (offsetMs 포함, BPM은 timingPoints[0]).
+    /// 채보 노트를 시간(초)으로 바꾼다. 에디터와 같은 TimingMap 변환 (offsetMs 포함, timingPoints 전체 구간).
     /// 테스트 플레이면 시작 박 앞의 노트는 건너뛴다 (전체 노트 수에도 넣지 않는다).
     /// </summary>
     private List<PlayNote> BuildNotes(out int skippedLong, out int skippedBefore)
     {
-        float bpm = chart.timingPoints[0].bpm;
         IReadOnlyList<NoteData> source = chart.notes;
         skippedBefore = 0;
         if (IsTestPlay)
@@ -630,7 +641,7 @@ public class InGameScene : SceneBase
                 skippedLong++;
                 continue;
             }
-            notes.Add(new PlayNote(note.lane, BeatGridMath.BeatToSeconds(note.beat, bpm, song.OffsetMs)));
+            notes.Add(new PlayNote(note.lane, timing.BeatToSeconds(note.beat)));
         }
         return notes;
     }

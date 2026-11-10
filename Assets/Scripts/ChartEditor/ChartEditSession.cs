@@ -45,6 +45,12 @@ public class ChartEditSession : MonoBehaviour
     /// <summary>음원 시작부터 0박까지의 시간 (ms). 곡 정보(SongData)의 값</summary>
     public int OffsetMs { get; private set; }
 
+    /// <summary>
+    /// 박 ↔ 시간 변환 (편집 중인 BPM·offset). Init·ApplyChartData·SetTiming에서 다시 만든다.
+    /// 에디터는 BPM 구간 1개만 편집하므로 지금은 항상 구간 1개(0박부터 Bpm)다.
+    /// </summary>
+    public TimingMap Timing { get; private set; }
+
     /// <summary>곡 길이 (초). 곡 음원 길이</summary>
     public float SongLengthSeconds { get; private set; }
 
@@ -86,8 +92,9 @@ public class ChartEditSession : MonoBehaviour
         Level = entry.level;
         Bpm = bpm;
         OffsetMs = offsetMs;
+        Timing = TimingMap.Single(Bpm, OffsetMs);
         SongLengthSeconds = songLengthSeconds;
-        TotalBeats = Mathf.Max(0f, BeatGridMath.SecondsToBeat(songLengthSeconds, bpm, offsetMs));
+        TotalBeats = Mathf.Max(0f, (float)Timing.SecondsToBeat(songLengthSeconds));
 
         if (Data != null) Data.OnChanged -= RefreshDebugNotes;
         if (Data != null) Data.OnChanged -= RefreshDebugView;
@@ -209,6 +216,7 @@ public class ChartEditSession : MonoBehaviour
                 Debug.LogWarning($"[ChartEditSession] BPM 변속은 아직 지원하지 않아 첫 BPM({Bpm})만 씁니다: chartId={ChartId}", this);
 
             // 곡 끝 박은 편집에 쓰는 BPM(채보 BPM)으로 다시 계산한다 (곡 BPM과 다를 수 있다)
+            Timing = TimingMap.Single(Bpm, OffsetMs);
             UpdateLength();
         }
 
@@ -315,6 +323,7 @@ public class ChartEditSession : MonoBehaviour
         bool bpmChanged = !Mathf.Approximately(Bpm, bpm);
         Bpm = bpm;
         OffsetMs = offsetMs;
+        Timing = TimingMap.Single(Bpm, OffsetMs);
         UpdateLength();
 
         // BPM이 바뀌면 저장할 채보 내용(timingPoints)이 바뀐다
@@ -322,11 +331,11 @@ public class ChartEditSession : MonoBehaviour
     }
 
     /// <summary>
-    /// 곡 길이를 지금 BPM·offset으로 박·tick으로 바꿔 곡 끝을 다시 정한다.
+    /// 곡 길이를 지금 박 ↔ 시간 변환(Timing)으로 박·tick으로 바꿔 곡 끝을 다시 정한다.
     /// </summary>
     private void UpdateLength()
     {
-        TotalBeats = Mathf.Max(0f, BeatGridMath.SecondsToBeat(SongLengthSeconds, Bpm, OffsetMs));
+        TotalBeats = Mathf.Max(0f, (float)Timing.SecondsToBeat(SongLengthSeconds));
         if (Data == null) return;
 
         int outside = Data.SetTotalTicks(Mathf.FloorToInt(TotalBeats * GameConstants.Editor.TicksPerBeat));

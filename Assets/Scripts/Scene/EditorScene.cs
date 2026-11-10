@@ -94,8 +94,8 @@ public class EditorScene : SceneBase
                       $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}", this);
         }
 
-        // 1박 높이는 편집에 쓰는 BPM(채보를 열었으면 채보 BPM)으로 정한다
-        grid.Init(session.TotalBeats, session.Bpm);
+        // 그리드 높이는 편집에 쓰는 박 ↔ 시간 변환(채보를 열었으면 채보 BPM)으로 정한다
+        grid.Init(session.TotalBeats, session.Timing);
         if (restore != null)
         {
             grid.SetSnap(restore.snapDivision);
@@ -244,7 +244,7 @@ public class EditorScene : SceneBase
 
     private void MoveToTime(float seconds, bool snapToGrid)
     {
-        float beat = BeatGridMath.SecondsToBeat(seconds, session.Bpm, session.OffsetMs);
+        float beat = (float)session.Timing.SecondsToBeat(seconds);
         if (snapToGrid) beat = BeatGridMath.SnapBeat(beat, grid.SnapDivision);
         grid.SetCurrentBeat(beat);
         canvas.RefreshTimeline();
@@ -256,12 +256,13 @@ public class EditorScene : SceneBase
     /// </summary>
     private void ApplyTiming(float bpm, int offsetMs)
     {
-        float currentSeconds = BeatGridMath.BeatToSeconds(grid.CurrentBeat, session.Bpm, session.OffsetMs);
+        // 바꾸기 전 Timing으로 지금 보고 있는 시간을 구해 두고, 바꾼 뒤 Timing으로 박을 다시 구한다
+        float currentSeconds = (float)session.Timing.BeatToSeconds(grid.CurrentBeat);
 
         session.SetTiming(bpm, offsetMs);
-        grid.SetBpm(session.Bpm);
+        grid.SetTiming(session.Timing);
         grid.SetTotalBeats(session.TotalBeats);
-        grid.SetCurrentBeat(BeatGridMath.SecondsToBeat(currentSeconds, session.Bpm, session.OffsetMs));
+        grid.SetCurrentBeat((float)session.Timing.SecondsToBeat(currentSeconds));
         canvas.RefreshTiming();
         playback.Restart();
 
