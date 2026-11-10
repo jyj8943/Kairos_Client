@@ -25,7 +25,8 @@ public static class TestPlayRules
     }
 
     /// <summary>
-    /// 시작 박 이상인 노트만 남긴 목록을 만든다 (원래 목록은 바꾸지 않는다). 박이 같으면 포함한다.
+    /// 시작 박 이상에서 시작하는 노트만 남긴 목록을 만든다 (원래 목록은 바꾸지 않는다). 박이 같으면 포함한다.
+    /// 롱노트는 시작 박으로 본다: 시작 위치가 롱노트 도중이면(시작이 시작 박 앞) 그 롱노트는 뺀다.
     /// 부동소수 오차를 피하려고 tick으로 반올림해서 비교한다.
     /// </summary>
     public static List<NoteData> FilterNotesFrom(IReadOnlyList<NoteData> notes, float startBeat)
@@ -36,9 +37,30 @@ public static class TestPlayRules
         int startTick = BeatGridMath.BeatToTick(startBeat);
         foreach (NoteData note in notes)
         {
-            if (note != null && BeatGridMath.BeatToTick(note.beat) >= startTick) result.Add(note);
+            if (IsPlayableFrom(note, startTick)) result.Add(note);
         }
         return result;
+    }
+
+    /// <summary>
+    /// FilterNotesFrom이 남길 노트 수 (목록을 만들지 않는다). 테스트 플레이를 시작할 수 있는지 볼 때 쓴다.
+    /// </summary>
+    public static int CountNotesFrom(IReadOnlyList<NoteData> notes, float startBeat)
+    {
+        if (notes == null) return 0;
+
+        int startTick = BeatGridMath.BeatToTick(startBeat);
+        int count = 0;
+        foreach (NoteData note in notes)
+        {
+            if (IsPlayableFrom(note, startTick)) count++;
+        }
+        return count;
+    }
+
+    private static bool IsPlayableFrom(NoteData note, int startTick)
+    {
+        return note != null && BeatGridMath.BeatToTick(note.beat) >= startTick;
     }
 
     /// <summary>

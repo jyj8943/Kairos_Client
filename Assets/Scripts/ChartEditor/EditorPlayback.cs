@@ -10,7 +10,7 @@ using UnityEngine;
 /// - 메트로놈: 켜져 있으면 다음 박의 클릭을 DSP 시각으로 미리 예약한다 (프레임마다 재생하지 않는다).
 ///   마디 첫 박은 더 높은 소리다. 현재 위치 선도 박마다 잠깐 밝아진다.
 /// - 키음: 켜져 있으면 노트가 현재 위치 선에 닿는 순간의 키음(인게임과 같은 NoteSFX)을 DSP 시각으로 미리 예약한다.
-///   같은 박 여러 라인 노트는 노트마다 한 번씩, 롱노트는 시작에서 한 번. 재생 중 노트가 바뀌면 예약을 지우고 다시 잡는다.
+///   같은 박 여러 라인 노트는 노트마다 한 번씩, 롱노트는 시작과 끝에서 각각 한 번. 재생 중 노트가 바뀌면 예약을 지우고 다시 잡는다.
 ///   계산(첫 노트, 예약 범위 안 노트)은 EditorKeySoundMath가 맡는다.
 /// - 메트로놈과 키음은 따로 켜고 끈다. 예약은 둘 다 SoundManager.ScheduleSfx를 쓰고, 취소(CancelScheduledSfx)도 같이 된다.
 /// - 박 ↔ 시간은 인게임과 같은 TimingMap(session.Timing, offset 포함)을 쓴다.
@@ -33,9 +33,13 @@ public class EditorPlayback : MonoBehaviour
 
     private bool isKeySoundOn;
     private ChartEditData noteData;
-    private int nextNoteIndex;
+    private int nextKeyIndex;
     private int keyPlayStartTick;
     private readonly List<int> collectedNotes = new List<int>();
+
+    // 키음을 낼 순간 목록 (노트 시작 + 롱노트 끝, tick 순). 재생을 시작할 때와 재생 중 노트가 바뀔 때 다시 만든다
+    private readonly List<EditorKeySoundMath.KeySoundEvent> keyEvents = new List<EditorKeySoundMath.KeySoundEvent>();
+    private int scheduledLongEndCount;
 
     // 이번 재생에서 예약한 키음 (확인용: 노트 tick·라인과 예약 DSP 시각). 다시 계산할 때 아직 안 울린 것은 지운다
     private readonly List<int> keyTicks = new List<int>();
@@ -118,7 +122,9 @@ public class EditorPlayback : MonoBehaviour
         IsPlaying = true;
         nextClickBeat = EditorPlaybackMath.GetFirstClickBeat(playStartBeat);
         keyPlayStartTick = EditorKeySoundMath.BeatToFirstTick(playStartBeat);
-        nextNoteIndex = EditorKeySoundMath.FindFirstNoteAtOrAfter(noteData.Notes, keyPlayStartTick);
+        EditorKeySoundMath.BuildEvents(noteData.Notes, keyEvents);
+        nextKeyIndex = EditorKeySoundMath.FindFirstAtOrAfter(keyEvents, keyPlayStartTick);
+        scheduledLongEndCount = 0;
         keyTicks.Clear();
         keyLanes.Clear();
         keyDsps.Clear();
@@ -159,7 +165,7 @@ public class EditorPlayback : MonoBehaviour
         {
             if (dsp <= dspNow) playedKeys++;
         }
-        int rangeNotes = EditorKeySoundMath.CountNotesInRange(noteData.Notes, keyPlayStartTick,
+        int rangeNotes = EditorKeySoundMath.CountInRange(keyEvents, keyPlayStartTick,
             Mathf.FloorToInt(stopBeat * GameConstants.Editor.TicksPerBeat));
 
         IsPlaying = false;
@@ -176,7 +182,7 @@ public class EditorPlayback : MonoBehaviour
                   $"{session.Timing.BeatToSeconds(grid.CurrentBeat):0.000}초), 재생 프레임 {frameCount}개, " +
                   $"곡 시간과 그리드 박 시간 차이 최대 {maxBeatTimeErrorMs:0.###}ms, " +
                   $"메트로놈 예약 {scheduledClickCount}개 (예약 시각 − 박 시각 최대 {maxClickErrorMs:0.###}ms, 늦어서 건너뜀 {skippedClickCount}개), " +
-                  $"키음 {(isKeySoundOn ? "켬" : "끔")}: 울림 {playedKeys}개 / 재생 구간 노트 {rangeNotes}개, 정지로 취소 {keyDsps.Count - playedKeys}개 " +
+                  $"키음 {(isKeySoundOn ? "켬" : "끔")}: 울림 {playedKeys}개 / 재생 구간 키음 {rangeNotes}개 (롱노트 끝 포함, 예약한 롱노트 끝 {scheduledLongEndCount}개), 정지로 취소 {keyDsps.Count - playedKeys}개 " +
                   $"(예약 시각 − 노트 시각 최대 {maxKeyErrorMs:0.###}ms, 늦어서 건너뜀 {skippedKeyCount}개, 노트 변경으로 다시 계산 {rescheduleCount}번)", this);
 
         onPlayingChanged?.Invoke();
@@ -220,6 +226,7 @@ public class EditorPlayback : MonoBehaviour
         if (!IsPlaying) return;
 
         rescheduleCount++;
+        EditorKeySoundMath.BuildEvents(noteData.Notes, keyEvents);
         RescheduleFromNow();
     }
 
@@ -245,10 +252,20 @@ public class EditorPlayback : MonoBehaviour
         // (realtime으로 보간한 곡 시간은 dspTime보다 몇 ms 앞서 있어, 그 사이 노트가 취소만 되고 다시 예약되지 않는다)
         double songTimeNow = GameManager.Sound.GetSongTimeAtRealtime(Time.realtimeSinceStartupAsDouble);
         double songTimeAtDsp = songTimeNow - (GameManager.Sound.GetDspTimeOfSongTime(songTimeNow) - dspNow);
-        float beatAtDsp = Mathf.Max((float)session.Timing.SecondsToBeat(songTimeAtDsp), playStartBeat);
-        nextClickBeat = EditorPlaybackMath.GetFirstClickBeat(beatAtDsp + 0.01f);
-        nextNoteIndex = EditorKeySoundMath.FindFirstNoteAtOrAfter(noteData.Notes,
-            Mathf.FloorToInt(beatAtDsp * GameConstants.Editor.TicksPerBeat) + 1);
+        if (songTimeAtDsp < session.Timing.BeatToSeconds(playStartBeat))
+        {
+            // 아직 시작 지연 중이면 시작 위치의 박·노트는 울리기 전이므로 시작 위치부터 다시 잡는다
+            nextClickBeat = EditorPlaybackMath.GetFirstClickBeat(playStartBeat);
+            nextKeyIndex = EditorKeySoundMath.FindFirstAtOrAfter(keyEvents, keyPlayStartTick);
+        }
+        else
+        {
+            // 이미 지난 박·노트는 울렸으므로 지금 위치 바로 뒤부터 다시 잡는다
+            float beatAtDsp = (float)session.Timing.SecondsToBeat(songTimeAtDsp);
+            nextClickBeat = EditorPlaybackMath.GetFirstClickBeat(beatAtDsp + 0.01f);
+            nextKeyIndex = EditorKeySoundMath.FindFirstAtOrAfter(keyEvents,
+                Mathf.FloorToInt(beatAtDsp * GameConstants.Editor.TicksPerBeat) + 1);
+        }
 
         if (isMetronomeOn) ScheduleClicks(songTimeNow);
         if (isKeySoundOn) ScheduleKeySounds(songTimeNow);
@@ -339,15 +356,14 @@ public class EditorPlayback : MonoBehaviour
 
         double lookaheadEnd = songTime + GameConstants.Editor.KeySoundLookaheadSeconds;
         int endTick = Mathf.FloorToInt((float)session.Timing.SecondsToBeat(lookaheadEnd) * GameConstants.Editor.TicksPerBeat);
-        IReadOnlyList<EditorNote> notes = noteData.Notes;
-        nextNoteIndex = EditorKeySoundMath.CollectNotesUntil(notes, nextNoteIndex, endTick, collectedNotes);
+        nextKeyIndex = EditorKeySoundMath.CollectUntil(keyEvents, nextKeyIndex, endTick, collectedNotes);
         if (collectedNotes.Count == 0) return;
 
         double dspNow = AudioSettings.dspTime;
         double sourceTime = GameManager.Sound.MusicSourceTime;
         foreach (int index in collectedNotes)
         {
-            EditorNote note = notes[index];
+            EditorKeySoundMath.KeySoundEvent note = keyEvents[index];
             double noteTime = session.Timing.BeatToSeconds(BeatGridMath.TickToBeat(note.Tick));
             double dsp = GameManager.Sound.GetDspTimeOfSongTime(noteTime);
             if (dsp <= dspNow)
@@ -358,6 +374,7 @@ public class EditorPlayback : MonoBehaviour
 
             if (!GameManager.Sound.ScheduleSfx(keySound, dsp)) continue;
 
+            if (note.IsEnd) scheduledLongEndCount++;
             keyTicks.Add(note.Tick);
             keyLanes.Add(note.Lane);
             keyDsps.Add(dsp);

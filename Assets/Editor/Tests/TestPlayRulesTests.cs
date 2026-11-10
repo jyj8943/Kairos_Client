@@ -112,4 +112,60 @@ public class TestPlayRulesTests
             Object.DestroyImmediate(owner);
         }
     }
+    /// <summary>
+    /// 롱노트: 시작 위치가 롱노트 도중이면(시작이 시작 박 앞) 그 롱노트는 뺀다. 시작 박에서 시작하는 롱노트는 넣는다.
+    /// CountNotesFrom은 FilterNotesFrom이 남기는 수와 같다.
+    /// </summary>
+    [Test]
+    public void FilterNotesFrom_ExcludesLongInProgress()
+    {
+        List<NoteData> notes = new List<NoteData>
+        {
+            new NoteData { beat = 6f, endBeat = 10f, lane = 0, type = NoteData.TypeLong },
+            new NoteData { beat = 8f, endBeat = 9f, lane = 1, type = NoteData.TypeLong },
+            Short(8f, 2),
+            new NoteData { beat = 7f + 2f / 3f, endBeat = 8f + 1f / 3f, lane = 3, type = NoteData.TypeLong }
+        };
+
+        List<NoteData> filtered = TestPlayRules.FilterNotesFrom(notes, 8f);
+        Assert.AreEqual(2, filtered.Count, "도중인 롱노트 두 개(6~10박, 7.67~8.33박)는 빠진다");
+        Assert.AreSame(notes[1], filtered[0], "8박에서 시작하는 롱노트는 넣는다");
+        Assert.AreSame(notes[2], filtered[1]);
+        Assert.AreEqual(filtered.Count, TestPlayRules.CountNotesFrom(notes, 8f));
+        Assert.AreEqual(4, TestPlayRules.CountNotesFrom(notes, 0f));
+        Assert.AreEqual(0, TestPlayRules.CountNotesFrom(notes, 8.25f));
+        Assert.AreEqual(0, TestPlayRules.CountNotesFrom(null, 0f));
+    }
+
+    /// <summary>세션: 시작 위치 뒤에 도중인 롱노트만 있으면 테스트 플레이를 만들지 않는다 (칠 노트가 없다)</summary>
+    [Test]
+    public void Session_CreateTestPlayData_LongInProgressOnly()
+    {
+        GameObject owner = new GameObject("ChartEditSession_TestPlayLong");
+        try
+        {
+            ChartEditSession session = owner.AddComponent<ChartEditSession>();
+            session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", 150f, 0, 60f);
+            Assert.IsTrue(session.AddLongNote(0, 48 * 4, 48 * 12, out _));
+
+            Assert.IsNull(session.CreateTestPlayData(8f, 4, 1f, EditorTool.LongNote, false, out string error), "롱노트 도중에서 시작");
+            Assert.AreEqual(GameConstants.Editor.TestPlayNoNotesAfterMessage, error);
+
+            TestPlayData atStart = session.CreateTestPlayData(4f, 4, 1f, EditorTool.LongNote, false, out error);
+            Assert.IsNotNull(atStart, error);
+            Assert.AreEqual(1, TestPlayRules.CountNotesFrom(atStart.chart.notes, atStart.startBeat), "롱노트 시작 박에서 시작하면 넣는다");
+
+            Assert.IsTrue(session.AddNote(1, 48 * 10, out _));
+            TestPlayData middle = session.CreateTestPlayData(8f, 4, 1f, EditorTool.LongNote, false, out error);
+            Assert.IsNotNull(middle, error);
+            Assert.AreEqual(2, middle.chart.notes.Count, "채보에는 모든 노트가 들어 있다 (돌아올 때 되돌리기용)");
+            List<NoteData> playable = TestPlayRules.FilterNotesFrom(middle.chart.notes, middle.startBeat);
+            Assert.AreEqual(1, playable.Count, "인게임에서는 도중인 롱노트를 빼고 숏노트 하나만 친다");
+            Assert.AreEqual(NoteData.TypeShort, playable[0].type);
+        }
+        finally
+        {
+            Object.DestroyImmediate(owner);
+        }
+    }
 }

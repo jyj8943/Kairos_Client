@@ -315,6 +315,22 @@ public static class GameConstants
         /// <summary>재생 중 현재 위치 선이 박마다 밝아지는 시간 (박의 비율, 0~1)</summary>
         public const float BeatFlashFraction = 0.15f;
 
+        /// <summary>롱노트 최소 길이 (틱) = 1/4박. 이보다 짧은 롱노트는 만들 수 없다 (기획서 2-3)</summary>
+        public const int MinLongNoteTicks = TicksPerBeat / 4;
+
+        /// <summary>노트 배치 실패 안내 (StatusMessageSeconds 동안 상태 표시줄에 보여준다)</summary>
+        public const string LongNoteTooShortMessage = "롱노트가 너무 짧습니다";
+        public const string NoteOverlapMessage = "다른 노트와 겹칩니다";
+
+        /// <summary>오른쪽 패널 노트 수: {0} 전체 노트 수(숏 + 롱), {1} 롱노트 수</summary>
+        public const string NoteCountFormat = "노트 {0} · 롱노트 {1}";
+
+        /// <summary>롱노트 드래그 미리보기의 불투명도 (0~1)</summary>
+        public const float LongNotePreviewAlpha = 0.45f;
+
+        /// <summary>롱노트 몸통 색 = 라인 색 × 이 값 (머리·꼬리보다 조금 어둡게)</summary>
+        public const float LongNoteBodyBrightness = 0.6f;
+
         /// <summary>곡 고르기의 내 채보 항목 정보: {0} 레벨, {1} 노트 수</summary>
         public const string MyChartInfoFormat = "Lv.{0} · 노트 {1}";
 

@@ -104,7 +104,7 @@ public class EditorScene : SceneBase
         }
 
         noteLayer.Init(grid, session);
-        notePlacer.Init(grid, session, () => canvas.CurrentTool);
+        notePlacer.Init(grid, session, noteLayer, () => canvas.CurrentTool, ShowTimedStatus);
         canvas.Init(grid, session, song, OnSaveRequested, OnExitRequested, OnTestPlayRequested, OnAutoTestPlayRequested);
 
         // 재생은 정지 상태로 시작한다 (테스트 플레이에서 돌아온 경우도)
@@ -132,6 +132,15 @@ public class EditorScene : SceneBase
         statusResetAt = -1f;
         isLeaving = false;
         isReady = true;
+    }
+
+    /// <summary>
+    /// 상태 표시줄에 안내를 StatusMessageSeconds 동안 보여주고, 그 뒤 저장 상태 표시로 되돌린다 (Update).
+    /// </summary>
+    private void ShowTimedStatus(string message)
+    {
+        statusResetAt = Time.unscaledTime + GameConstants.Editor.StatusMessageSeconds;
+        canvas.ShowStatusMessage(message);
     }
 
     /// <summary>
@@ -347,8 +356,7 @@ public class EditorScene : SceneBase
         TestPlayData testPlay = session.CreateTestPlayData(grid.CurrentBeat, grid.SnapDivision, grid.GridHeightScale, canvas.CurrentTool, autoPlay, out string error);
         if (testPlay == null)
         {
-            statusResetAt = Time.unscaledTime + GameConstants.Editor.StatusMessageSeconds;
-            canvas.ShowStatusMessage(error);
+            ShowTimedStatus(error);
             return;
         }
 

@@ -318,6 +318,117 @@ public class ChartRepositoryTests
         Assert.IsFalse(Directory.Exists(ChartRepository.GetSongFolder(TestSongId, ChartType.Official)), "공식 채보 폴더를 만들지 않는다");
     }
 
+    /// <summary>
+    /// 롱노트 저장 → 다시 열기 왕복: 시작·끝 tick과 라인이 같다. 셋잇단 끝(4/3박 등)도 반올림 경고 없이 왕복된다.
+    /// </summary>
+    [Test]
+    public void Session_LongNotes_SaveAndReopen()
+    {
+        const int T = GameConstants.Editor.TicksPerBeat;
+        // (lane, 시작 tick, 끝 tick): 1박 롱, 셋잇단 끝(0 → 4/3박), 셋잇단 시작·끝(10 + 1/3 → 11 + 2/3박), 최소 길이(1/4박), 셋잇단 32분 끝
+        int[,] longs =
+        {
+            { 0, T * 2, T * 3 },
+            { 1, 0, T * 4 / 3 },
+            { 2, T * 10 + 16, T * 11 + 32 },
+            { 3, T * 20, T * 20 + GameConstants.Editor.MinLongNoteTicks },
+            { 0, T * 30, T * 31 + 4 }
+        };
+
+        GameObject sourceObject = new GameObject("ChartEditSession_LongSource");
+        GameObject targetObject = new GameObject("ChartEditSession_LongTarget");
+        int roundingWarnings = 0;
+        Application.LogCallback counter = (message, stackTrace, type) =>
+        {
+            if (type == LogType.Warning && (message.Contains("반올림 오차") || message.Contains("넣지 못한 노트"))) roundingWarnings++;
+        };
+        Application.logMessageReceived += counter;
+        try
+        {
+            ChartEditSession source = CreateSession(sourceObject, null);
+            for (int i = 0; i < longs.GetLength(0); i++)
+                Assert.IsTrue(source.AddLongNote(longs[i, 0], longs[i, 1], longs[i, 2], out NoteEditError error), $"롱노트 {i}: {error}");
+            Assert.IsTrue(source.AddNote(1, T * 3, out _), "다른 라인 숏노트");
+            Assert.AreEqual(5, source.Data.LongCount);
+            Assert.AreEqual(1, source.Data.ShortCount);
+
+            Assert.IsTrue(source.TrySave(out string saveError), saveError);
+            Assert.IsTrue(ChartRepository.TryLoad(TestSongId, source.ChartId, ChartType.Custom, out ChartData loaded, out string loadError), loadError);
+
+            int longInFile = loaded.notes.FindAll(n => n.type == NoteData.TypeLong).Count;
+            Assert.AreEqual(5, longInFile, "파일에 type long으로 저장된다");
+
+            ChartEditSession target = CreateSession(targetObject, source.ChartId);
+            target.ApplyChartData(loaded);
+
+            Assert.AreEqual(source.Data.Notes.Count, target.Data.Notes.Count);
+            for (int i = 0; i < source.Data.Notes.Count; i++)
+            {
+                EditorNote expected = source.Data.Notes[i];
+                EditorNote actual = target.Data.Notes[i];
+                Assert.AreEqual(expected.Lane, actual.Lane, $"노트 {i} 라인");
+                Assert.AreEqual(expected.Tick, actual.Tick, $"노트 {i} 시작");
+                Assert.AreEqual(expected.EndTick, actual.EndTick, $"노트 {i} 끝");
+            }
+            Assert.AreEqual(5, target.Data.LongCount);
+            Assert.AreEqual(1, target.Data.ShortCount);
+            Assert.AreEqual(0, roundingWarnings, "셋잇단 끝도 반올림 경고·누락 없이 왕복");
+        }
+        finally
+        {
+            Application.logMessageReceived -= counter;
+            Object.DestroyImmediate(sourceObject);
+            Object.DestroyImmediate(targetObject);
+        }
+    }
+
+    /// <summary>검증: 1/4박보다 짧은 롱노트, 같은 라인 겹침(끝과 같은 박 포함)은 저장이 실패한다. 다른 라인은 겹쳐도 된다</summary>
+    [Test]
+    public void InvalidLongNotes_Rejected()
+    {
+        ChartData tooShort = CreateChart("my_test_longshort");
+        tooShort.notes.Add(Long(1f, 1.2f, 0));
+        Assert.IsFalse(ChartRepository.TrySave(tooShort, out string error));
+        StringAssert.Contains("1/4박", error);
+
+        ChartData minimum = CreateChart("my_test_longmin");
+        minimum.notes.Add(Long(1f, 1.25f, 0));
+        Assert.IsTrue(ChartRepository.TrySave(minimum, out error), error);
+
+        ChartData shortInside = CreateChart("my_test_longoverlap1");
+        shortInside.notes.Add(Long(1f, 3f, 0));
+        shortInside.notes.Add(Short(2f, 0));
+        Assert.IsFalse(ChartRepository.TrySave(shortInside, out error));
+        StringAssert.Contains("겹칩니다", error);
+
+        ChartData touchingEnd = CreateChart("my_test_longoverlap2");
+        touchingEnd.notes.Add(Short(3f, 0));
+        touchingEnd.notes.Add(Long(1f, 3f, 0));
+        Assert.IsFalse(ChartRepository.TrySave(touchingEnd, out error), "끝과 같은 박의 노트도 겹침");
+
+        ChartData longs = CreateChart("my_test_longoverlap3");
+        longs.notes.Add(Long(1f, 3f, 2));
+        longs.notes.Add(Long(2f, 4f, 2));
+        Assert.IsFalse(ChartRepository.TrySave(longs, out error));
+
+        ChartData duplicate = CreateChart("my_test_dupshort");
+        duplicate.notes.Add(Short(1f, 1));
+        duplicate.notes.Add(Short(1f, 1));
+        Assert.IsFalse(ChartRepository.TrySave(duplicate, out error), "같은 자리 숏노트 두 개도 겹침");
+
+        ChartData otherLanes = CreateChart("my_test_longlanes");
+        otherLanes.notes.Add(Long(1f, 3f, 0));
+        otherLanes.notes.Add(Short(2f, 1));
+        otherLanes.notes.Add(Long(1f, 4f / 3f + 1f, 2));
+        otherLanes.notes.Add(Short(3f + 1f / 48f, 0));
+        Assert.IsTrue(ChartRepository.TrySave(otherLanes, out error), error);
+    }
+
+    private static NoteData Long(float beat, float endBeat, int lane)
+    {
+        return new NoteData { beat = beat, endBeat = endBeat, lane = lane, type = NoteData.TypeLong };
+    }
+
     private static ChartData CreateChart(string chartId)
     {
         return new ChartData

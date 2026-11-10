@@ -492,11 +492,11 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// "N (롱 M)" 형식으로 노트 수를 표시한다. N은 숏노트와 롱노트를 합한 수다.
+    /// "노트 N · 롱노트 M" 형식(NoteCountFormat)으로 노트 수를 표시한다. N은 숏노트와 롱노트를 합한 수다.
     /// </summary>
     private void RefreshNoteCountText()
     {
-        noteCountText.text = $"{data.ShortCount + data.LongCount} (롱 {data.LongCount})";
+        noteCountText.text = string.Format(GameConstants.Editor.NoteCountFormat, data.ShortCount + data.LongCount, data.LongCount);
     }
 
     /// <summary>

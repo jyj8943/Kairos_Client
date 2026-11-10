@@ -6219,9 +6219,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EditorNoteLayer
   shortNotePrefab: {fileID: 3400263297325189693, guid: a8f95ad61fa80384b9eb2fe3bec58db9, type: 3}
+  longNotePrefab: {fileID: 108421715703987316, guid: 7583b75b7a59e184fa33eb98de0d3815, type: 3}
   noteHeight: 16
   laneHorizontalPadding: 2
   prewarmCount: 128
+  longPrewarmCount: 32
 --- !u!1 &995733025
 GameObject:
   m_ObjectHideFlags: 0

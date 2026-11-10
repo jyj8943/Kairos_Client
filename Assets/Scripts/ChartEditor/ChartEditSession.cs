@@ -135,7 +135,45 @@ public class ChartEditSession : MonoBehaviour
     }
 
     /// <summary>
-    /// 같은 자리의 노트를 지운다. 성공하면 수정 상태가 된다.
+    /// 숏노트를 추가한다. 실패하면 error에 이유가 들어간다 (상태 표시줄 안내용).
+    /// </summary>
+    public bool AddNote(int lane, int tick, out NoteEditError error)
+    {
+        // TODO: 실행 취소 기록
+        if (!Data.TryAdd(lane, tick, out error)) return false;
+
+        SetDirty(true);
+        return true;
+    }
+
+    /// <summary>
+    /// 롱노트를 추가한다 (시작·끝은 어느 쪽이 커도 된다). 성공하면 수정 상태가 된다.
+    /// </summary>
+    /// <param name="error">실패 이유 (너무 짧음, 겹침, 범위 밖)</param>
+    public bool AddLongNote(int lane, int startTick, int endTick, out NoteEditError error)
+    {
+        // TODO: 실행 취소 기록
+        if (!Data.TryAddLong(lane, startTick, endTick, out error)) return false;
+
+        SetDirty(true);
+        return true;
+    }
+
+    /// <summary>
+    /// 노트 추가 실패 이유를 상태 표시줄 문구로 바꾼다. 안내할 필요가 없으면(범위 밖 등) null.
+    /// </summary>
+    public static string GetErrorMessage(NoteEditError error)
+    {
+        switch (error)
+        {
+            case NoteEditError.TooShort: return GameConstants.Editor.LongNoteTooShortMessage;
+            case NoteEditError.Overlap: return GameConstants.Editor.NoteOverlapMessage;
+            default: return null;
+        }
+    }
+
+    /// <summary>
+    /// 그 자리를 덮는 노트를 지운다 (롱노트는 시작·몸통·끝 어느 tick이든). 성공하면 수정 상태가 된다.
     /// </summary>
     /// <returns>지웠으면 true. 그 자리에 노트가 없으면 false</returns>
     public bool RemoveNote(int lane, int tick)
@@ -237,7 +275,7 @@ public class ChartEditSession : MonoBehaviour
 
         int skipped = Data.ReplaceAll(notes);
         if (skipped > 0)
-            Debug.LogWarning($"[ChartEditSession] 곡 범위 밖이거나 겹쳐서 넣지 못한 노트가 {skipped}개 있습니다: chartId={ChartId}", this);
+            Debug.LogWarning($"[ChartEditSession] 곡 범위 밖이거나, 겹치거나, 너무 짧은 롱노트라 넣지 못한 노트가 {skipped}개 있습니다: chartId={ChartId}", this);
 
         IsDirty = false;
         RefreshDebugView();
@@ -281,14 +319,15 @@ public class ChartEditSession : MonoBehaviour
             return null;
         }
 
-        int startTick = BeatGridMath.BeatToTick(startBeat);
-        if (Data.Notes[Data.Notes.Count - 1].Tick < startTick)
+        // 인게임과 같은 규칙(TestPlayRules.FilterNotesFrom)으로 칠 노트가 남는지 본다.
+        // 시작 박 앞의 노트와, 시작 위치가 도중인 롱노트(시작이 시작 박 앞)는 빠진다
+        ChartData chart = BuildChartData();
+        if (TestPlayRules.CountNotesFrom(chart.notes, startBeat) == 0)
         {
             error = GameConstants.Editor.TestPlayNoNotesAfterMessage;
             return null;
         }
 
-        ChartData chart = BuildChartData();
         error = string.Empty;
         return new TestPlayData
         {

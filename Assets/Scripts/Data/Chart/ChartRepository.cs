@@ -470,11 +470,56 @@ public static class ChartRepository
                 return false;
             }
 
-            if (note.type == NoteData.TypeLong && note.endBeat <= note.beat)
+            // 롱노트 길이는 1/4박 이상 (tick으로 반올림해 비교해 셋잇단 끝 같은 부동소수 오차를 피한다)
+            if (note.type == NoteData.TypeLong
+                && BeatGridMath.BeatToTick(note.endBeat) - BeatGridMath.BeatToTick(note.beat) < GameConstants.Editor.MinLongNoteTicks)
             {
-                error = $"롱노트 {i}의 endBeat({note.endBeat})가 beat({note.beat})보다 크지 않습니다.";
+                error = $"롱노트 {i}의 길이(endBeat {note.endBeat} − beat {note.beat})가 1/4박보다 짧습니다.";
                 return false;
             }
+        }
+
+        if (!TryFindOverlap(chart.notes, out error)) return false;
+
+        error = string.Empty;
+        return true;
+    }
+
+    /// <summary>
+    /// 같은 라인 노트끼리 겹치는지 검사한다. 노트 구간은 [beat, endBeat] (숏노트는 한 점)를 tick으로 반올림한 값이고,
+    /// 앞 노트의 끝과 같은 tick에서 시작해도 겹침으로 본다 (에디터 ChartEditData와 같은 규칙).
+    /// lane·type은 미리 검사했다고 본다.
+    /// </summary>
+    /// <returns>겹치지 않으면 true. 겹치면 false와 error</returns>
+    private static bool TryFindOverlap(List<NoteData> notes, out string error)
+    {
+        List<int> order = new List<int>(notes.Count);
+        for (int i = 0; i < notes.Count; i++) order.Add(i);
+        order.Sort((a, b) =>
+        {
+            int byLane = notes[a].lane.CompareTo(notes[b].lane);
+            if (byLane != 0) return byLane;
+            return BeatGridMath.BeatToTick(notes[a].beat).CompareTo(BeatGridMath.BeatToTick(notes[b].beat));
+        });
+
+        int previousLane = -1;
+        int previousEnd = -1;
+        int previousIndex = -1;
+        foreach (int index in order)
+        {
+            NoteData note = notes[index];
+            int start = BeatGridMath.BeatToTick(note.beat);
+            int end = note.type == NoteData.TypeLong ? BeatGridMath.BeatToTick(note.endBeat) : start;
+
+            if (note.lane == previousLane && start <= previousEnd)
+            {
+                error = $"노트 {previousIndex}와 노트 {index}가 같은 라인({note.lane})에서 겹칩니다 (beat {notes[previousIndex].beat}, {note.beat}).";
+                return false;
+            }
+
+            previousLane = note.lane;
+            previousEnd = end;
+            previousIndex = index;
         }
 
         error = string.Empty;
