@@ -12,8 +12,8 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: DefaultCompany
-  productName: Kairos_Client
+  companyName: JYJStudio
+  productName: Kairos
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -171,7 +171,7 @@ PlayerSettings:
   androidMinAspectRatio: 1
   applicationIdentifier:
     Android: com.DefaultCompany.urp_2d
-    Standalone: com.DefaultCompany.2D-URP
+    Standalone: com.JYJStudio.Kairos
   buildNumber:
     Standalone: 0
     VisionOS: 0
