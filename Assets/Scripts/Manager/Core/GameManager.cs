@@ -17,6 +17,9 @@ public static class GameManager
 
     /// <summary>UI 화면 등록·팝업 스택·ESC 처리, 확인 팝업 (GameManager.UI.Confirm)</summary>
     public static UIManager UI => UIManager.Instance;
+
+    /// <summary>지금 설정 값 (판정 오프셋). 파일 저장은 아직 없다</summary>
+    public static SettingsManager Settings => SettingsManager.Instance;
 }
 
 /// <summary>

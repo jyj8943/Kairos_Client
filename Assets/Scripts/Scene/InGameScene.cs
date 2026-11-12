@@ -24,6 +24,9 @@ using UnityEngine.InputSystem;
 /// - 배속: 1 / 2 키(Gameplay/SpeedDown·SpeedUp)로 플레이 중에도 0.1배씩 바꾼다 (누르고 있으면 0.4초 뒤부터 0.08초마다 반복).
 ///   팝업(일시정지·확인)이 열려 있으면 받지 않고, 재개 카운트다운 중에는 받는다. 바꾼 배속은 진입 데이터(entry.scrollMultiplier)에 남겨
 ///   재시작·다시 하기·곡 선택·에디터 복귀로 이어 넘긴다 (싱글톤에 남기지 않는다).
+/// - 판정 오프셋(설정): 판이 시작될 때 GameManager.Settings.OffsetMs를 한 번 읽어(appliedOffsetMs) 곡 offset에 더해 TimingMap을 만든다.
+///   노트 시간 전체(화면·판정·롱노트 틱·MISS·테스트 플레이 시작 위치)가 함께 움직이고 입력 시각은 그대로다. + = 노트를 늦게, - = 빠르게.
+///   일시정지 중 설정 창에서 바꾸고 닫으면 재시작을 묻는다 (OnSettingsClosed). 에디터 재생·메트로놈에는 적용하지 않는다.
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -75,8 +78,20 @@ public class InGameScene : SceneBase
     private SongData song;
     private ChartData chart;
 
-    /// <summary>채보 timingPoints와 곡 offset으로 만든 박 ↔ 시간 변환. TryLoad에서 만든다</summary>
+    /// <summary>
+    /// 채보 timingPoints와 (곡 offset + 사용자 판정 오프셋)으로 만든 박 ↔ 시간 변환. TryLoad에서 만든다.
+    /// 인게임의 박 → 시간 변환(노트·롱노트 끝·유지 틱·테스트 플레이 시작 위치)은 모두 이것 하나를 쓴다.
+    /// </summary>
     private TimingMap timing;
+
+    /// <summary>
+    /// 이번 판에 적용한 사용자 판정 오프셋 (ms). 판이 시작될 때(TryLoad) GameManager.Settings.OffsetMs를 한 번 읽어 둔다.
+    /// 플레이 중에는 노트 시간을 다시 계산하지 않는다 (일시정지 중 바꾸면 설정 창을 닫을 때 재시작을 묻는다).
+    /// </summary>
+    private int appliedOffsetMs;
+
+    /// <summary>설정 창 Closed를 구독 중이면 true</summary>
+    private bool isSettingsClosedSubscribed;
 
     /// <summary>곡 시간 → 스크롤 거리 (노트 높이 계산용). 지금은 배속 구간이 없다</summary>
     private ScrollMap scrollMap;
@@ -194,7 +209,7 @@ public class InGameScene : SceneBase
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
                   $"노트 {judge.TotalCount}개 (롱노트 {longCount}개, 유지 틱 {judge.TotalTicks}개 → 가능한 최대 콤보 {score.MaxPossibleCombo})" +
                   $"{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
-                  $"bpm={timing.BpmAt(0)} (BPM 구간 {timing.PointCount}개), offsetMs={timing.OffsetMs}, 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
+                  $"bpm={timing.BpmAt(0)} (BPM 구간 {timing.PointCount}개), offsetMs={timing.OffsetMs} (곡 {song.OffsetMs} + 사용자 판정 오프셋 {appliedOffsetMs:+0;-0;0}), 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
                   $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개 (롱노트 {noteLayer.PooledLongCount}개), " +
                   $"배속 x{noteLayer.ScrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###}유닛/초 (1.0배 {noteLayer.BaseScrollSpeed:0.###}유닛/초 = 화면 위 끝~판정선 {gear.ScreenTopY - gear.JudgeLineY:0.###}유닛 ÷ {GameConstants.Play.BaseVisibleSeconds}초)", this);
 
@@ -213,6 +228,7 @@ public class InGameScene : SceneBase
         GameManager.Sound.PlayMusicScheduled(song.Clip, startDelaySeconds, musicStartPosition);
         input.EnableInput();
         EnableSpeedInput();
+        SubscribeSettingsClosed();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.EnableInput();
 #endif
@@ -228,6 +244,7 @@ public class InGameScene : SceneBase
         StopCountdown();
         if (input != null) input.DisableInput();
         DisableSpeedInput();
+        UnsubscribeSettingsClosed();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.DisableInput();
 #endif
@@ -242,6 +259,57 @@ public class InGameScene : SceneBase
     private void OnDestroy()
     {
         DisableSpeedInput();
+        UnsubscribeSettingsClosed();
+    }
+
+    // ───── 일시정지 중 판정 오프셋 변경 ─────
+
+    /// <summary>설정 창 Closed를 구독한다 (OnEnter). 설정 창은 오버레이 Canvas에 있어 씬을 넘어 남으므로 OnExit·OnDestroy에서 끊는다.</summary>
+    private void SubscribeSettingsClosed()
+    {
+        if (isSettingsClosedSubscribed || !UIManager.HasInstance) return;
+        Popup_Settings settings = GameManager.UI.Get<Popup_Settings>();
+        if (settings == null) return;
+
+        settings.Closed += OnSettingsClosed;
+        isSettingsClosedSubscribed = true;
+    }
+
+    /// <summary>설정 창 Closed 구독을 끊는다 (이미 끊었으면 아무것도 하지 않는다).</summary>
+    private void UnsubscribeSettingsClosed()
+    {
+        if (!isSettingsClosedSubscribed) return;
+        isSettingsClosedSubscribed = false;
+        if (!UIManager.HasInstance) return;
+
+        Popup_Settings settings = GameManager.UI.Get<Popup_Settings>();
+        if (settings != null) settings.Closed -= OnSettingsClosed;
+    }
+
+    /// <summary>
+    /// 설정 창이 닫혔을 때: 일시정지 중이고 판정 오프셋이 이번 판 값(appliedOffsetMs)과 다르면 재시작을 묻는다.
+    /// 확인하면 일시정지 메뉴 "재시작"과 같은 경로로 바로 재시작한다 (재시작 확인은 다시 묻지 않는다).
+    /// 취소(ESC 포함)하면 일시정지 메뉴로 돌아가고, 바꾼 값은 그대로 두어 다음 판부터 적용된다.
+    /// 바꿨다가 되돌려 값이 같으면 묻지 않는다.
+    /// </summary>
+    private void OnSettingsClosed()
+    {
+        if (isFinished || !isPaused || !pausePopup.IsOpen) return;
+        if (!SettingsManager.HasInstance) return;
+
+        int current = GameManager.Settings.OffsetMs;
+        if (current == appliedOffsetMs) return;
+
+        Debug.Log($"[InGameScene] 일시정지 중 판정 오프셋 변경: 이번 판 {appliedOffsetMs:+0;-0;0}ms → 설정 {current:+0;-0;0}ms, 재시작 확인", this);
+        GameManager.UI.Confirm(GameConstants.Confirm.OffsetRestart, GameConstants.Confirm.OffsetRestartLabel,
+            Restart, OnOffsetRestartCanceled);
+    }
+
+    /// <summary>오프셋 재시작 확인 취소: 일시정지 메뉴로 돌아간다 (확인 팝업이 이전 선택을 되돌린다).</summary>
+    private void OnOffsetRestartCanceled()
+    {
+        Debug.Log($"[InGameScene] 오프셋 재시작 취소: 이번 판은 {appliedOffsetMs:+0;-0;0}ms 그대로, 다음 판부터 " +
+                  $"{(SettingsManager.HasInstance ? GameManager.Settings.OffsetMs : 0):+0;-0;0}ms", this);
     }
 
     private void Update()
@@ -851,10 +919,13 @@ public class InGameScene : SceneBase
             if (!ChartRepository.TryLoad(entry.songId, entry.chartId, entry.chartType, out chart, out error)) return false;
         }
 
+        // 사용자 판정 오프셋: + = 노트를 늦게, - = 노트를 빠르게. 노트 시간 전체(화면·판정·롱노트 틱·MISS)가 함께 움직이고 입력 시각은 그대로다
+        appliedOffsetMs = SettingsManager.HasInstance ? GameManager.Settings.OffsetMs : 0;
+
         // BPM 구간이 없거나 0 이하인 구간이 있으면 TimingMap이 ArgumentException을 던진다
         try
         {
-            timing = TimingMap.FromChart(chart, song.OffsetMs);
+            timing = TimingMap.FromChart(chart, song.OffsetMs + appliedOffsetMs);
         }
         catch (System.ArgumentException e)
         {
@@ -867,7 +938,7 @@ public class InGameScene : SceneBase
     }
 
     /// <summary>
-    /// 채보 노트를 시간(초)으로 바꾼다. 에디터와 같은 TimingMap 변환 (offsetMs 포함, timingPoints 전체 구간).
+    /// 채보 노트를 시간(초)으로 바꾼다. 에디터와 같은 TimingMap 변환 (곡 offsetMs + 사용자 판정 오프셋, timingPoints 전체 구간).
     /// 롱노트는 끝 시간과 유지 틱 시간(LongNoteTicks, 시작 + 1/4박 ~ 끝 − 1/4박 이하)도 같이 계산한다.
     /// 테스트 플레이면 시작 박 앞의 노트(시작이 앞인 롱노트 포함)는 건너뛴다 (전체 노트 수에도 넣지 않는다).
     /// </summary>

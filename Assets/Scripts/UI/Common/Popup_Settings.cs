@@ -11,13 +11,15 @@ using UnityEngine.UI;
 /// - 사운드 탭: 슬라이더(0~100)를 바꾸는 즉시 SoundManager의 MasterVolume·MusicVolume·SfxVolume(0~1)에 넣는다. 열 때 SoundManager의 지금 값으로 맞춘다.
 /// - 화면 탭: 창 모드·해상도 드롭다운을 바꾸는 즉시 ApplyScreen()으로 Screen.SetResolution을 부른다. 열 때 지금 화면(Screen.width·height·fullScreenMode)으로 맞춘다.
 ///   창 모드에서는 모니터보다 큰 해상도를 목록에서 뺀다. 에디터 Game 뷰에서는 SetResolution이 적용되지 않아 로그만 남는다 (실제 확인은 빌드).
-/// - 값은 SettingsViewState(임시)에 모아 둔다.
-///   TODO(설정 기능): 판정 오프셋 반영, 기본 배속 적용, 오프셋 측정.
-///   TODO(설정 저장): settings.json 저장·불러오기.
+/// - 게임 탭: 판정 오프셋 줄은 GameManager.Settings.OffsetMs를 읽고 쓴다 (열 때 그 값으로 다시 맞춘다). 인게임은 판이 시작될 때 한 번 읽는다.
+///   TODO(설정 기능): 오프셋 측정 (4주차).
+/// - 보여주는 값은 SettingsViewState(임시)에 모아 둔다.
+///   TODO(플레이 데이터 저장): 설정 저장·불러오기.
+/// - 닫힐 때 Closed를 알린다 (인게임은 이것을 구독해 오프셋이 바뀌었으면 재시작을 묻는다). 이 창은 누가 열었는지 알지 않는다.
 /// - 탭 3개(사운드·게임·화면): 고른 탭은 검정 채움·흰 글자, 나머지는 흰 채움·테두리·검정 글자. 고른 탭의 내용만 보인다. 마지막 탭은 이 실행 동안 기억한다.
 /// - 키보드는 EventSystem(UI 맵)의 Navigate·Submit을 그대로 쓴다.
 ///   ↑↓: 탭 줄 → 탭 안 항목 → (마지막에서 ↓) 탭 줄. 탭 줄에서 ↑는 닫기 버튼. Selectable Navigation을 Explicit으로 연결한다.
-///   ←→: 탭 줄은 탭 사이 이동, 슬라이더는 기본 동작(값), 오프셋·기본 배속 줄은 UINavigateStepper로 ◀▶와 같게 값을 바꾼다.
+///   ←→: 탭 줄은 탭 사이 이동, 슬라이더는 기본 동작(값), 오프셋 줄은 UINavigateStepper로 ◀▶와 같게 값을 바꾼다.
 ///   Tab 키: 다음 탭 (입력 에셋 Settings/NextTab. 열 때 구독하고 닫을 때·OnDestroy에서 끊는다).
 ///   ESC: UIManager → OnCancelRequested() → 닫기 (자동 저장은 기능 작업 때).
 /// - 열 때와 탭을 바꿀 때 선택은 지금 탭 버튼에 둔다. 바깥(어두운 배경) 클릭으로는 닫히지 않는다.
@@ -59,7 +61,7 @@ public class Popup_Settings : UIPopup
 
     [Header("게임 탭")]
     [SerializeField] private TMP_Text offsetLabel;
-    [Tooltip("판정 오프셋 줄 (Btn_Offset). ←→로 값을 바꾸는 선택 대상")]
+    [Tooltip("판정 오프셋 줄 (Btn_Offset). ←→로 값을 바꾸는 선택 대상. + = 노트를 늦게 (소리가 늦게 들리거나 늦게 칠 때), - = 노트를 빠르게")]
     [SerializeField] private Button offsetRow;
     [SerializeField] private Button offsetDownButton;
     [SerializeField] private TMP_Text offsetText;
@@ -67,12 +69,6 @@ public class Popup_Settings : UIPopup
     [SerializeField] private TMP_Text offsetRangeText;
     [SerializeField] private Button measureOffsetButton;
     [SerializeField] private TMP_Text measureOffsetText;
-    [SerializeField] private TMP_Text defaultSpeedLabel;
-    [Tooltip("기본 배속 줄 (Btn_DefaultSpeed). ←→로 값을 바꾸는 선택 대상")]
-    [SerializeField] private Button defaultSpeedRow;
-    [SerializeField] private Button defaultSpeedDownButton;
-    [SerializeField] private TMP_Text defaultSpeedText;
-    [SerializeField] private Button defaultSpeedUpButton;
 
     [Header("화면 탭")]
     [SerializeField] private TMP_Text resolutionLabel;
@@ -87,7 +83,7 @@ public class Popup_Settings : UIPopup
     [Tooltip("입력 에셋의 Settings/NextTab (Tab 키)")]
     [SerializeField] private InputActionReference nextTabAction;
 
-    /// <summary>보여주는 값 (임시). TODO(설정 저장): settings.json과 같은 설정 데이터 클래스로 바꾼다</summary>
+    /// <summary>보여주는 값 (임시). TODO(플레이 데이터 저장): settings.json과 같은 설정 데이터 클래스로 바꾼다</summary>
     private readonly SettingsViewState state = new SettingsViewState();
 
     /// <summary>창 모드 드롭다운에 넣은 항목 (드롭다운 번호 = 이 목록의 번호)</summary>
@@ -97,7 +93,6 @@ public class Popup_Settings : UIPopup
     private readonly List<Vector2Int> resolutionOptions = new List<Vector2Int>();
 
     private UINavigateStepper offsetStepper;
-    private UINavigateStepper defaultSpeedStepper;
     private bool isTabInputEnabled;
 
     /// <summary>지금 탭 (확인용)</summary>
@@ -143,7 +138,6 @@ public class Popup_Settings : UIPopup
         offsetLabel.text = GameConstants.Settings.OffsetLabel;
         offsetRangeText.text = GameConstants.Settings.OffsetRangeHint;
         measureOffsetText.text = GameConstants.Settings.MeasureOffsetLabel;
-        defaultSpeedLabel.text = GameConstants.Settings.DefaultSpeedLabel;
         resolutionLabel.text = GameConstants.Settings.ResolutionLabel;
         windowModeLabel.text = GameConstants.Settings.WindowModeLabel;
         hintText.text = GameConstants.Settings.HintText;
@@ -166,26 +160,22 @@ public class Popup_Settings : UIPopup
 
         offsetDownButton.onClick.AddListener(OnClickOffsetDown);
         offsetUpButton.onClick.AddListener(OnClickOffsetUp);
-        defaultSpeedDownButton.onClick.AddListener(OnClickDefaultSpeedDown);
-        defaultSpeedUpButton.onClick.AddListener(OnClickDefaultSpeedUp);
         measureOffsetButton.onClick.AddListener(OnClickMeasureOffset);
 
         if (offsetStepper == null) offsetStepper = offsetRow.GetComponent<UINavigateStepper>();
-        if (defaultSpeedStepper == null) defaultSpeedStepper = defaultSpeedRow.GetComponent<UINavigateStepper>();
         if (offsetStepper != null) offsetStepper.Stepped += StepOffset;
-        if (defaultSpeedStepper != null) defaultSpeedStepper.Stepped += StepDefaultSpeed;
 
         FillWindowModeDropdown();
         resolutionDropdown.onValueChanged.AddListener(OnResolutionChanged);
         windowModeDropdown.onValueChanged.AddListener(OnWindowModeChanged);
 
         // 처음 값: 음량은 SoundManager, 해상도·창 모드는 지금 화면, 오프셋 0 · 배속 1.0
-        // TODO(설정 저장): settings.json에서 읽은 값으로 채운다
+        // TODO(플레이 데이터 저장): settings.json에서 읽은 값으로 채운다
         SyncFromCurrent();
         RefreshAll();
 
-        // 오프셋·배속 줄 안의 ◀▶는 마우스 전용 (키보드는 줄에서 ←→)
-        foreach (Button button in new[] { offsetDownButton, offsetUpButton, defaultSpeedDownButton, defaultSpeedUpButton })
+        // 오프셋 줄 안의 ◀▶는 마우스 전용 (키보드는 줄에서 ←→)
+        foreach (Button button in new[] { offsetDownButton, offsetUpButton })
             button.navigation = new Navigation { mode = Navigation.Mode.None };
 
         HideImmediate();
@@ -198,7 +188,7 @@ public class Popup_Settings : UIPopup
     {
         if (IsOpen) return;
 
-        // 열 때마다 지금 음량·화면으로 다시 맞춘다 (다른 곳에서 바뀌었을 수 있다)
+        // 열 때마다 지금 음량·화면·오프셋으로 다시 맞춘다 (다른 곳에서 바뀌었을 수 있다)
         SyncFromCurrent();
         RefreshAll();
         ShowTab(state.tab, false);
@@ -207,10 +197,28 @@ public class Popup_Settings : UIPopup
         Debug.Log($"[Popup_Settings] 열림: 탭 {state.tab}", this);
     }
 
-    /// <summary>ESC = 닫기. TODO(설정 저장): 닫을 때 settings.json에 자동 저장</summary>
+    /// <summary>ESC = 닫기. TODO(플레이 데이터 저장): 닫을 때 설정을 저장한다</summary>
     public override void OnCancelRequested()
     {
         Close();
+    }
+
+    /// <summary>
+    /// 닫히면 알린다 (닫기 버튼·ESC 모두). 팝업 스택에서 빠지고 이전 선택을 되돌린 뒤에 부르므로,
+    /// 받는 쪽이 여기서 다른 팝업(확인 팝업)을 열어도 그 팝업의 처음 선택과 닫을 때 돌아갈 선택이 맞다.
+    /// </summary>
+    public event System.Action Closed;
+
+    /// <summary>
+    /// 닫는다. UIBase.OnClosed()는 스택에서 빼기 전에 불려 그 안에서 다른 팝업을 열면 선택이 꼬이므로,
+    /// Closed는 base.Close()가 모두 끝난 뒤에 알린다.
+    /// </summary>
+    public override void Close()
+    {
+        if (!IsOpen) return;
+
+        base.Close();
+        Closed?.Invoke();
     }
 
     protected override void OnOpened()
@@ -283,7 +291,7 @@ public class Popup_Settings : UIPopup
         switch (tab)
         {
             case SettingsTab.Sound: return new List<Selectable> { masterVolumeSlider, musicVolumeSlider, sfxVolumeSlider };
-            case SettingsTab.Game: return new List<Selectable> { offsetRow, measureOffsetButton, defaultSpeedRow };
+            case SettingsTab.Game: return new List<Selectable> { offsetRow, measureOffsetButton };
             default: return new List<Selectable> { resolutionDropdown, windowModeDropdown };
         }
     }
@@ -366,23 +374,21 @@ public class Popup_Settings : UIPopup
 
     private void OnClickOffsetDown() => StepOffset(-1);
     private void OnClickOffsetUp() => StepOffset(1);
-    private void OnClickDefaultSpeedDown() => StepDefaultSpeed(-1);
-    private void OnClickDefaultSpeedUp() => StepDefaultSpeed(1);
 
-    /// <summary>판정 오프셋을 5ms씩 바꾼다 (-200 ~ +200). TODO(설정 기능): 판정 시간에 반영</summary>
+    /// <summary>
+    /// 판정 오프셋을 5ms씩 바꾼다 (-200 ~ +200). 값은 GameManager.Settings.OffsetMs에 바로 넣는다.
+    /// + = 노트를 늦게 (소리가 늦게 들리거나 늦게 칠 때), - = 노트를 빠르게. 인게임에는 다음 판부터 (일시정지 중이면 닫을 때 재시작을 묻는다).
+    /// </summary>
     private void StepOffset(int direction)
     {
-        state.offsetMs = Mathf.Clamp(state.offsetMs + direction * GameConstants.Settings.OffsetStepMs,
-            GameConstants.Settings.MinOffsetMs, GameConstants.Settings.MaxOffsetMs);
+        if (!SettingsManager.HasInstance) return;
+
+        GameManager.Settings.OffsetMs += direction * GameConstants.Settings.OffsetStepMs;
         RefreshOffset();
     }
 
-    /// <summary>기본 배속을 0.1씩 바꾼다 (1.0 ~ 8.0, 공용 배속 단계). TODO(설정 기능): 곡 선택·에디터의 처음 배속으로 쓴다</summary>
-    private void StepDefaultSpeed(int direction)
-    {
-        state.defaultSpeedSteps = ScrollSpeedRules.Step(state.defaultSpeedSteps, direction);
-        RefreshDefaultSpeed();
-    }
+    /// <summary>지금 판정 오프셋 (SettingsManager가 없으면 0)</summary>
+    private static int CurrentOffsetMs => SettingsManager.HasInstance ? GameManager.Settings.OffsetMs : 0;
 
     /// <summary>TODO(설정 기능): 오프셋 측정 창을 연다. 지금은 눌린 표시만 된다</summary>
     private void OnClickMeasureOffset()
@@ -414,7 +420,7 @@ public class Popup_Settings : UIPopup
 
     /// <summary>
     /// 고른 해상도·창 모드를 화면에 적용한다 (두 드롭다운이 함께 쓰는 한 곳). 요청 값과 다음 프레임의 실제 값을 로그로 남긴다.
-    /// TODO(설정 저장): 적용한 해상도·창 모드를 settings.json에 저장한다.
+    /// TODO(플레이 데이터 저장): 적용한 해상도·창 모드를 settings.json에 저장한다.
     /// </summary>
     public void ApplyScreen()
     {
@@ -450,7 +456,6 @@ public class Popup_Settings : UIPopup
         resolutionDropdown.SetValueWithoutNotify(resolutionOptions.IndexOf(state.resolution));
         RefreshVolumes();
         RefreshOffset();
-        RefreshDefaultSpeed();
     }
 
     private void RefreshVolumes()
@@ -462,12 +467,7 @@ public class Popup_Settings : UIPopup
 
     private void RefreshOffset()
     {
-        offsetText.text = FormatOffset(state.offsetMs);
-    }
-
-    private void RefreshDefaultSpeed()
-    {
-        defaultSpeedText.text = string.Format(GameConstants.Settings.DefaultSpeedFormat, ScrollSpeedRules.FromSteps(state.defaultSpeedSteps));
+        offsetText.text = FormatOffset(CurrentOffsetMs);
     }
 
     /// <summary>
@@ -594,12 +594,9 @@ public class Popup_Settings : UIPopup
         if (sfxVolumeSlider != null) sfxVolumeSlider.onValueChanged.RemoveListener(OnSfxVolumeChanged);
         if (offsetDownButton != null) offsetDownButton.onClick.RemoveListener(OnClickOffsetDown);
         if (offsetUpButton != null) offsetUpButton.onClick.RemoveListener(OnClickOffsetUp);
-        if (defaultSpeedDownButton != null) defaultSpeedDownButton.onClick.RemoveListener(OnClickDefaultSpeedDown);
-        if (defaultSpeedUpButton != null) defaultSpeedUpButton.onClick.RemoveListener(OnClickDefaultSpeedUp);
         if (measureOffsetButton != null) measureOffsetButton.onClick.RemoveListener(OnClickMeasureOffset);
         if (resolutionDropdown != null) resolutionDropdown.onValueChanged.RemoveListener(OnResolutionChanged);
         if (windowModeDropdown != null) windowModeDropdown.onValueChanged.RemoveListener(OnWindowModeChanged);
         if (offsetStepper != null) offsetStepper.Stepped -= StepOffset;
-        if (defaultSpeedStepper != null) defaultSpeedStepper.Stepped -= StepDefaultSpeed;
     }
 }

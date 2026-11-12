@@ -188,6 +188,10 @@ public static class GameConstants
         /// <summary>인게임 나가기 (일시정지 메뉴, 보통 플레이만. 테스트 플레이는 확인 없이 에디터로)</summary>
         public const string InGameExitMessage = "플레이를 그만두고 나가시겠습니까?\n이번 기록은 저장되지 않습니다.";
         public const string InGameExitLabel = "나가기";
+
+        /// <summary>일시정지 중 설정 창에서 판정 오프셋을 바꾸고 닫았을 때 (확인하면 바로 재시작, 취소하면 다음 판부터 적용)</summary>
+        public const string OffsetRestart = "판정 오프셋이 바뀌었습니다.\n지금 재시작해야 이번 판에 적용됩니다.\n재시작하시겠습니까?";
+        public const string OffsetRestartLabel = "재시작";
     }
 
     /// <summary>인게임 일시정지 메뉴 (기획서 3-4, 2-1 재개 3초 카운트다운)</summary>
@@ -225,7 +229,6 @@ public static class GameConstants
         public const string OffsetLabel = "판정 오프셋";
         public const string OffsetRangeHint = "-200 ~ +200ms, 5ms 단위";
         public const string MeasureOffsetLabel = "오프셋 측정하기";
-        public const string DefaultSpeedLabel = "기본 배속";
 
         public const string ResolutionLabel = "해상도";
         public const string WindowModeLabel = "창 모드";
@@ -241,16 +244,16 @@ public static class GameConstants
         public const int MaxVolume = 100;
         public const int DefaultVolume = 100;
 
-        /// <summary>판정 오프셋 범위·단위 (ms)와 표시 형식: 양수 "+15 ms", 0 "0 ms", 음수 "-15 ms"</summary>
+        /// <summary>
+        /// 판정 오프셋 범위·단위 (ms)와 표시 형식: 양수 "+15 ms", 0 "0 ms", 음수 "-15 ms".
+        /// 부호: + = 노트를 늦게 (소리가 늦게 들리거나 늦게 칠 때), - = 노트를 빠르게. 인게임 노트 시간 전체(화면·판정·롱노트 틱·MISS)를 옮긴다.
+        /// </summary>
         public const int MinOffsetMs = -200;
         public const int MaxOffsetMs = 200;
         public const int OffsetStepMs = 5;
         public const string OffsetPositiveFormat = "+{0} ms";
         public const string OffsetZeroText = "0 ms";
         public const string OffsetNegativeFormat = "-{0} ms";
-
-        /// <summary>기본 배속 표시: {0} 배속</summary>
-        public const string DefaultSpeedFormat = "x{0:0.0}";
 
         /// <summary>해상도 선택지와 기본값. 설정 창은 창 모드일 때 모니터보다 큰 항목을 빼고 보여준다</summary>
         public static readonly Vector2Int[] Resolutions =
