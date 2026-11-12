@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -59,7 +60,7 @@ public class Canvas_SongSelect : UIBase
     [SerializeField] private RectTransform myChartContent;
     [SerializeField] private TMP_Text myChartEmptyText;
 
-    [Header("최고 기록 (지금은 \"-\")")]
+    [Header("최고 기록 (고른 채보의 기록, 없으면 \"-\")")]
     [SerializeField] private TMP_Text bestScoreText;
     [SerializeField] private TMP_Text bestRankText;
     [SerializeField] private TMP_Text bestComboText;
@@ -129,7 +130,7 @@ public class Canvas_SongSelect : UIBase
 
         officialEmptyText.text = GameConstants.SongSelect.OfficialEmpty;
         myChartEmptyText.text = GameConstants.SongSelect.MyChartEmpty;
-        ShowRecordEmpty();
+        ShowRecord(null);
 
         speedSteps = ScrollSpeedRules.ToSteps(entry != null ? entry.scrollMultiplier : GameConstants.Play.DefaultScrollMultiplier);
         SetSpeedText(ScrollMultiplier);
@@ -140,7 +141,7 @@ public class Canvas_SongSelect : UIBase
 
         if (songItems.Count == 0)
         {
-            RefreshStartButton();
+            RefreshChosenChart();
             return;
         }
 
@@ -297,7 +298,7 @@ public class Canvas_SongSelect : UIBase
         SetTabVisual(myChartTabButton, myChartTabText, !isOfficial);
 
         keyHintText.text = isOfficial ? GameConstants.SongSelect.KeyHintOfficial : GameConstants.SongSelect.KeyHintMyChart;
-        RefreshStartButton();
+        RefreshChosenChart();
     }
 
     private void SetTabVisual(Button tabButton, TMP_Text label, bool chosen)
@@ -379,7 +380,7 @@ public class Canvas_SongSelect : UIBase
         ShowSongInfo(song);
         RefreshDifficulties(currentTab == ChartType.Official ? pendingChartId : null);
         RefreshMyCharts(currentTab == ChartType.Custom ? pendingChartId : null);
-        RefreshStartButton();
+        RefreshChosenChart();
         ScrollSongListToShow(item);
 
         if (pendingChartId == null) LogState("곡 변경");
@@ -431,7 +432,7 @@ public class Canvas_SongSelect : UIBase
         if (chosenDifficulty != null) chosenDifficulty.SetChosen(false);
         chosenDifficulty = target;
         if (chosenDifficulty != null) chosenDifficulty.SetChosen(true);
-        RefreshStartButton();
+        RefreshChosenChart();
     }
 
     /// <summary>
@@ -521,7 +522,7 @@ public class Canvas_SongSelect : UIBase
         if (chosenMyChart != null) chosenMyChart.SetChosen(false);
         chosenMyChart = target;
         if (chosenMyChart != null) chosenMyChart.SetChosen(true);
-        RefreshStartButton();
+        RefreshChosenChart();
     }
 
     /// <summary>
@@ -625,6 +626,13 @@ public class Canvas_SongSelect : UIBase
 
     // ───── 시작 ─────
 
+    /// <summary>고른 채보가 바뀌었을 때: 시작 버튼과 최고 기록 칸을 다시 맞춘다</summary>
+    private void RefreshChosenChart()
+    {
+        RefreshStartButton();
+        ShowRecord(ChosenChart);
+    }
+
     private void RefreshStartButton()
     {
         startButton.interactable = !isLeaving && ChosenChart != null;
@@ -705,15 +713,28 @@ public class Canvas_SongSelect : UIBase
     // ───── 표시 ─────
 
     /// <summary>
-    /// 최고 기록 칸을 모두 "-"로 둔다 (기록 저장은 아직 없다).
+    /// 최고 기록 칸: 고른 채보(공식 난이도 / 나만의 채보)의 기록을 GameManager.PlayerData에서 찾아 최고 점수(천 단위 쉼표)·랭크·최대 콤보·FC/AP를 보여준다.
+    /// 채보가 없거나 기록이 없으면 모두 "-".
     /// </summary>
-    private void ShowRecordEmpty()
+    private void ShowRecord(ChartData chart)
     {
+        ChartRecordData record = chart != null && PlayerDataManager.HasInstance ? GameManager.PlayerData.FindRecord(chart.chartId) : null;
         string empty = GameConstants.SongSelect.EmptyValue;
-        bestScoreText.text = empty;
-        bestRankText.text = string.Format(GameConstants.SongSelect.RecordRankFormat, empty);
-        bestComboText.text = string.Format(GameConstants.SongSelect.RecordComboFormat, empty);
-        badgeText.text = empty;
+        if (record == null)
+        {
+            bestScoreText.text = empty;
+            bestRankText.text = string.Format(GameConstants.SongSelect.RecordRankFormat, empty);
+            bestComboText.text = string.Format(GameConstants.SongSelect.RecordComboFormat, empty);
+            badgeText.text = empty;
+            return;
+        }
+
+        bestScoreText.text = string.Format(CultureInfo.InvariantCulture, GameConstants.SongSelect.RecordScoreFormat, record.bestScore);
+        bestRankText.text = string.Format(GameConstants.SongSelect.RecordRankFormat, PlayerDataRules.ParseRank(record.bestRank));
+        bestComboText.text = string.Format(GameConstants.SongSelect.RecordComboFormat, record.maxCombo);
+        badgeText.text = record.isAllPerfect ? GameConstants.Play.AllPerfectText
+            : record.isFullCombo ? GameConstants.Play.FullComboText
+            : empty;
     }
 
     /// <summary>

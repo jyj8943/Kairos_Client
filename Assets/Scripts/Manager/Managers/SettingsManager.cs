@@ -6,8 +6,8 @@ using UnityEngine;
 /// - 들고 있는 값: 판정 오프셋(OffsetMs). 음량은 SoundManager, 해상도·창 모드는 Screen이 들고 있으므로 여기로 옮기지 않는다.
 /// - 값은 인스턴스 필드에만 둔다 (static 값 없음). 도메인 리로드를 끈 설정에서도 Play를 다시 시작하면 프리팹을 새로 만들어 기본값(0)으로 시작한다.
 /// - 값이 바뀌면 OnChanged를 알린다.
-/// - 파일 저장은 하지 않는다.
-///   TODO(플레이 데이터 저장): 불러온 값을 Init에서 채우고, 바뀌면 저장한다.
+/// - 파일 읽기·쓰기는 PlayerDataManager가 한다: Init은 기본값(0)으로 두고, 뒤이어 PlayerDataManager.Init이 PlayerData.json의 값을 넣는다.
+///   저장은 설정 창을 닫을 때 PlayerDataManager.Save()가 지금 값을 모아 쓴다 (값이 바뀔 때마다 쓰지 않는다).
 /// </summary>
 public class SettingsManager : MonoSingleton<SettingsManager>, IGameModule
 {
@@ -33,7 +33,7 @@ public class SettingsManager : MonoSingleton<SettingsManager>, IGameModule
     }
 
     /// <summary>
-    /// 기본값으로 시작한다. TODO(플레이 데이터 저장): 저장된 설정을 불러와 채운다.
+    /// 기본값(0)으로 시작한다. 저장된 값은 뒤이어 PlayerDataManager.Init이 넣는다.
     /// </summary>
     public void Init()
     {

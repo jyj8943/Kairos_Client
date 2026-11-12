@@ -135,6 +135,10 @@ public static class GameConstants
         public const string FullComboText = "FULL COMBO";
         public const string AllPerfectText = "ALL PERFECT";
 
+        /// <summary>결과 화면 신기록 표시 (기획서 3-5 ③). 처음 플레이: NewRecordText, 기록을 넘었을 때: {0} 이전 최고 점수 (천 단위 쉼표)</summary>
+        public const string NewRecordText = "NEW RECORD";
+        public const string NewRecordPreviousFormat = "NEW RECORD  (이전 {0:N0})";
+
         /// <summary>시작 MISS 롱노트의 비활성 색 (끝까지 이 색으로 내려간다)</summary>
         public static readonly Color32 LongNoteMissedColor = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
 
@@ -213,7 +217,7 @@ public static class GameConstants
         public const int CountdownSeconds = 3;
     }
 
-    /// <summary>설정 창(Popup_Settings) 문구·값 범위 (기획서 3-7, 2-4). 기능(적용·저장)은 다음 작업</summary>
+    /// <summary>설정 창(Popup_Settings) 문구·값 범위 (기획서 3-7, 2-4). 저장은 PlayerData.json (GameConstants.PlayerData)</summary>
     public static class Settings
     {
         public const string Title = "설정";
@@ -274,6 +278,30 @@ public static class GameConstants
             FullScreenMode.FullScreenWindow
         };
         public static readonly string[] WindowModeLabels = { "전체 화면", "창 모드", "테두리 없는 창" };
+
+        /// <summary>저장 파일의 창 모드가 목록에 없을 때 쓰는 값 (Player Settings 기본값과 같은 테두리 없는 창)</summary>
+        public const FullScreenMode DefaultWindowMode = FullScreenMode.FullScreenWindow;
+    }
+
+    /// <summary>유저 플레이 데이터 파일 (기획서 2-4): 설정 + 공식·나만의 채보 기록</summary>
+    public static class PlayerData
+    {
+        /// <summary>저장 파일 이름 (persistentDataPath 아래)</summary>
+        public const string FileName = "PlayerData.json";
+
+        /// <summary>지금 쓰는 파일 형식 버전. 형식이 바뀌면 올리고 불러올 때 변환한다</summary>
+        public const int CurrentVersion = 1;
+
+        /// <summary>직전 파일 백업 (PlayerData.json.bak)과 쓰는 중인 임시 파일 (PlayerData.json.tmp)</summary>
+        public const string BackupSuffix = ".bak";
+        public const string TempSuffix = ".tmp";
+
+        /// <summary>읽지 못한 파일을 옮겨 둘 이름: {0} 시각 (yyyyMMdd_HHmmss)</summary>
+        public const string BrokenFileFormat = "PlayerData_broken_{0}.json";
+        public const string BrokenTimeFormat = "yyyyMMdd_HHmmss";
+
+        /// <summary>기록 시각 형식 (UTC, ISO 8601)</summary>
+        public const string TimeFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'";
     }
 
     /// <summary>곡 선택 화면 표시 문구 (기획서 3-3)</summary>
@@ -291,7 +319,8 @@ public static class GameConstants
         /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지)</summary>
         public const string SpeedFormat = "배속 x{0:0.0} ( 1 / 2 · - / + )";
 
-        /// <summary>최고 기록 칸: {0} 값</summary>
+        /// <summary>최고 기록 칸: {0} 값. 점수는 천 단위 쉼표 (InvariantCulture)</summary>
+        public const string RecordScoreFormat = "{0:N0}";
         public const string RecordRankFormat = "랭크 {0}";
         public const string RecordComboFormat = "최대 콤보 {0}";
 

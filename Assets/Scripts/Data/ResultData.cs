@@ -52,6 +52,16 @@ public class ResultData
     public ResultReturnTarget returnTarget;
 
     /// <summary>
+    /// 기록 갱신 결과 (결과 씬이 들어올 때 PlayerDataManager.SubmitResult로 채운다).
+    /// 신기록 = 처음 플레이했거나 최고 점수가 올랐을 때. 기록하지 않는 판(테스트·자동 플레이)이면 false.
+    /// </summary>
+    public bool isNewRecord;
+
+    /// <summary>이 판 전에 기록이 있었으면 true, 그때의 최고 점수 (없었으면 0)</summary>
+    public bool hadPreviousRecord;
+    public int previousBestScore;
+
+    /// <summary>
     /// 점수 계산 결과를 옮겨 담는다.
     /// </summary>
     public static ResultData FromScore(ScoreCalculator score)

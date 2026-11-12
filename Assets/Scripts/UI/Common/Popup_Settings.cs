@@ -14,14 +14,15 @@ using UnityEngine.UI;
 /// - 게임 탭: 판정 오프셋 줄은 GameManager.Settings.OffsetMs를 읽고 쓴다 (열 때 그 값으로 다시 맞춘다). 인게임은 판이 시작될 때 한 번 읽는다.
 ///   TODO(설정 기능): 오프셋 측정 (4주차).
 /// - 보여주는 값은 SettingsViewState(임시)에 모아 둔다.
-///   TODO(플레이 데이터 저장): 설정 저장·불러오기.
+/// - 저장: 닫을 때(닫기 버튼·ESC) GameManager.PlayerData.Save()가 지금 음량·오프셋·화면을 PlayerData.json에 쓴다 (안내 문구의 "자동 저장").
+///   불러오기는 PlayerDataManager.Init이 게임 시작 때 SoundManager·SettingsManager·Screen에 적용하고, 이 창은 열 때 그 값을 읽는다.
 /// - 닫힐 때 Closed를 알린다 (인게임은 이것을 구독해 오프셋이 바뀌었으면 재시작을 묻는다). 이 창은 누가 열었는지 알지 않는다.
 /// - 탭 3개(사운드·게임·화면): 고른 탭은 검정 채움·흰 글자, 나머지는 흰 채움·테두리·검정 글자. 고른 탭의 내용만 보인다. 마지막 탭은 이 실행 동안 기억한다.
 /// - 키보드는 EventSystem(UI 맵)의 Navigate·Submit을 그대로 쓴다.
 ///   ↑↓: 탭 줄 → 탭 안 항목 → (마지막에서 ↓) 탭 줄. 탭 줄에서 ↑는 닫기 버튼. Selectable Navigation을 Explicit으로 연결한다.
 ///   ←→: 탭 줄은 탭 사이 이동, 슬라이더는 기본 동작(값), 오프셋 줄은 UINavigateStepper로 ◀▶와 같게 값을 바꾼다.
 ///   Tab 키: 다음 탭 (입력 에셋 Settings/NextTab. 열 때 구독하고 닫을 때·OnDestroy에서 끊는다).
-///   ESC: UIManager → OnCancelRequested() → 닫기 (자동 저장은 기능 작업 때).
+///   ESC: UIManager → OnCancelRequested() → 닫기 (닫을 때 자동 저장).
 /// - 열 때와 탭을 바꿀 때 선택은 지금 탭 버튼에 둔다. 바깥(어두운 배경) 클릭으로는 닫히지 않는다.
 /// - 일시정지 메뉴 위에서 열면 닫을 때 일시정지 메뉴의 선택으로 돌아간다 (UIPopup이 이전 선택을 되돌린다).
 /// </summary>
@@ -83,7 +84,7 @@ public class Popup_Settings : UIPopup
     [Tooltip("입력 에셋의 Settings/NextTab (Tab 키)")]
     [SerializeField] private InputActionReference nextTabAction;
 
-    /// <summary>보여주는 값 (임시). TODO(플레이 데이터 저장): settings.json과 같은 설정 데이터 클래스로 바꾼다</summary>
+    /// <summary>보여주는 값 (탭·음량 슬라이더·해상도·창 모드 드롭다운). 저장되는 값은 SoundManager·SettingsManager·Screen에 있다</summary>
     private readonly SettingsViewState state = new SettingsViewState();
 
     /// <summary>창 모드 드롭다운에 넣은 항목 (드롭다운 번호 = 이 목록의 번호)</summary>
@@ -170,7 +171,7 @@ public class Popup_Settings : UIPopup
         windowModeDropdown.onValueChanged.AddListener(OnWindowModeChanged);
 
         // 처음 값: 음량은 SoundManager, 해상도·창 모드는 지금 화면, 오프셋 0 · 배속 1.0
-        // TODO(플레이 데이터 저장): settings.json에서 읽은 값으로 채운다
+        // 저장된 값은 PlayerDataManager.Init이 이미 적용해 두었다
         SyncFromCurrent();
         RefreshAll();
 
@@ -197,7 +198,7 @@ public class Popup_Settings : UIPopup
         Debug.Log($"[Popup_Settings] 열림: 탭 {state.tab}", this);
     }
 
-    /// <summary>ESC = 닫기. TODO(플레이 데이터 저장): 닫을 때 설정을 저장한다</summary>
+    /// <summary>ESC = 닫기 (닫을 때 자동 저장)</summary>
     public override void OnCancelRequested()
     {
         Close();
@@ -210,14 +211,15 @@ public class Popup_Settings : UIPopup
     public event System.Action Closed;
 
     /// <summary>
-    /// 닫는다. UIBase.OnClosed()는 스택에서 빼기 전에 불려 그 안에서 다른 팝업을 열면 선택이 꼬이므로,
-    /// Closed는 base.Close()가 모두 끝난 뒤에 알린다.
+    /// 닫는다. 닫을 때 지금 설정을 PlayerData.json에 저장한다 (GameManager.PlayerData.Save).
+    /// UIBase.OnClosed()는 스택에서 빼기 전에 불려 그 안에서 다른 팝업을 열면 선택이 꼬이므로, Closed는 base.Close()가 모두 끝난 뒤에 알린다.
     /// </summary>
     public override void Close()
     {
         if (!IsOpen) return;
 
         base.Close();
+        if (PlayerDataManager.HasInstance) GameManager.PlayerData.Save();
         Closed?.Invoke();
     }
 
@@ -420,7 +422,7 @@ public class Popup_Settings : UIPopup
 
     /// <summary>
     /// 고른 해상도·창 모드를 화면에 적용한다 (두 드롭다운이 함께 쓰는 한 곳). 요청 값과 다음 프레임의 실제 값을 로그로 남긴다.
-    /// TODO(플레이 데이터 저장): 적용한 해상도·창 모드를 settings.json에 저장한다.
+    /// 파일 저장은 이 창을 닫을 때 한다 (그때의 Screen 값을 PlayerData.json에 쓴다).
     /// </summary>
     public void ApplyScreen()
     {

@@ -33,6 +33,7 @@ public static class Bootstrapper
         Init(GameManager.Settings); // 설정 값 (다른 매니저·씬이 읽기 전에)
         Init(GameManager.Songs);  // 곡 목록 검사 (씬이 곡을 찾기 전에)
         Init(GameManager.Sound);  // 노래·효과음 준비
+        Init(GameManager.PlayerData); // PlayerData.json 불러와 설정 적용 (SoundManager·SettingsManager 다음)
         Init(GameManager.UI);     // 오버레이 Canvas·공용 팝업·ESC (씬이 Canvas를 등록하기 전에)
         Init(GameManager.Scene);  // 씬 전환 준비 (마지막)
 

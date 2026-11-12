@@ -406,7 +406,13 @@ public class EditorScene : SceneBase
             }
 
             if (saved)
+            {
                 Debug.Log($"[EditorScene] 저장했습니다: songId={session.SongId}, chartId={session.ChartId}, 노트 {session.Data.Notes.Count}개", this);
+
+                // 나만의 채보를 수정해 저장하면 그 채보의 기록은 초기화한다 (기획서 2-1(8)). ChartRepository는 기록을 알지 않게 여기서 지운다
+                if (PlayerDataManager.HasInstance && GameManager.PlayerData.ResetRecord(session.ChartId))
+                    Debug.Log($"[EditorScene] 채보를 수정해 저장해서 기록을 초기화했습니다: chartId={session.ChartId}", this);
+            }
             else
                 Debug.LogError($"[EditorScene] 저장하지 못했습니다: {error}", this);
 

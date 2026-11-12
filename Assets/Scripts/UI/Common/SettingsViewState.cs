@@ -4,7 +4,7 @@ using UnityEngine;
 /// 설정 창(Popup_Settings)이 보여주는 값 묶음 (임시).
 /// - 음량은 SoundManager, 해상도·창 모드는 Screen에 바로 적용하고, 열 때 그 값으로 다시 맞춘다.
 /// - 판정 오프셋은 여기 두지 않고 GameManager.Settings.OffsetMs를 바로 읽고 쓴다.
-/// TODO(플레이 데이터 저장): 설정 저장·불러오기와 함께 정리한다 (기획서 2-4).
+/// - 파일 저장·불러오기는 PlayerDataManager(PlayerData.json)가 SoundManager·SettingsManager·Screen 값으로 한다. 이 묶음은 저장하지 않는다.
 /// </summary>
 public class SettingsViewState
 {
