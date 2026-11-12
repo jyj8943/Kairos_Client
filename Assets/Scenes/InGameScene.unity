@@ -968,7 +968,7 @@ MonoBehaviour:
     m_HighlightedColor: {r: 0.8156863, g: 0.8156863, b: 0.83137256, a: 1}
     m_PressedColor: {r: 0.627451, g: 0.627451, b: 0.6509804, a: 1}
     m_SelectedColor: {r: 0.8156863, g: 0.8156863, b: 0.83137256, a: 1}
-    m_DisabledColor: {r: 0.9254902, g: 0.9254902, b: 0.9372549, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -982,7 +982,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 0
+  m_Interactable: 1
   m_TargetGraphic: {fileID: 72003208}
   m_OnClick:
     m_PersistentCalls:
@@ -1301,7 +1301,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC124\uC815 (\uC900\uBE44 \uC911)"
+  m_text: "\uC124\uC815"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
   m_sharedMaterial: {fileID: -6662165456191364081, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
@@ -1310,8 +1310,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4286082670
-  m_fontColor: {r: 0.43137255, g: 0.43137255, b: 0.47058824, a: 1}
+    rgba: 4279900698
+  m_fontColor: {r: 0.101960786, g: 0.101960786, b: 0.101960786, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

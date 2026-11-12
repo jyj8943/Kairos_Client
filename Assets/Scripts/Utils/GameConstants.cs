@@ -252,7 +252,7 @@ public static class GameConstants
         /// <summary>기본 배속 표시: {0} 배속</summary>
         public const string DefaultSpeedFormat = "x{0:0.0}";
 
-        /// <summary>해상도 선택지 (고정 목록. 실제 모니터 해상도 목록은 기능 작업 때)과 기본값</summary>
+        /// <summary>해상도 선택지와 기본값. 설정 창은 창 모드일 때 모니터보다 큰 항목을 빼고 보여준다</summary>
         public static readonly Vector2Int[] Resolutions =
         {
             new Vector2Int(1280, 720),

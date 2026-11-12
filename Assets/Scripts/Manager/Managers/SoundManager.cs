@@ -5,6 +5,8 @@ using UnityEngine;
 /// - 노래는 PlayScheduled로 DSP 시각에 맞춰 시작하고, 곡 시간(SongTime)은 MusicClock이 dspTime 기준으로 계산한다.
 /// - 판정·노트 위치는 SongTime을 쓴다. AudioSource.time은 기준으로 쓰지 않는다 (기획서: 판정 기준은 DSP 시간).
 /// - 다른 스크립트보다 먼저 Update해 그 프레임의 SongTime을 맞춰 둔다.
+/// - 음량: 노래·BGM = 메인 × 음악, 키음·효과음(예약 효과음 포함) = 메인 × 효과음 (ApplyVolumes). 설정 창이 MasterVolume·MusicVolume·SfxVolume을 바꾼다.
+///   앞으로 추가하는 BGM·효과음도 따로 AudioSource를 두지 말고 이 매니저를 거쳐 재생해야 음량이 적용된다.
 /// </summary>
 [DefaultExecutionOrder(-100)]
 public class SoundManager : MonoSingleton<SoundManager>, IGameModule

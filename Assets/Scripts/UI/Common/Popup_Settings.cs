@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -7,8 +8,12 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 어디서든 여는 공용 설정 창 (기획서 3-7). UIManager 오버레이 Canvas 아래에 두고, UIManager가 Init()을 호출한다. 여는 쪽은 GameManager.UI.OpenSettings().
-/// - 이번 범위: UI·열기·닫기·탭 전환·키보드·마우스 조작·표시 값까지. 값은 SettingsViewState(임시) 하나에 모아 들고만 있다.
-///   TODO(설정 기능): 음량 적용(SoundManager), 판정 오프셋 반영, 해상도·창 모드 적용, settings.json 저장·불러오기, 오프셋 측정.
+/// - 사운드 탭: 슬라이더(0~100)를 바꾸는 즉시 SoundManager의 MasterVolume·MusicVolume·SfxVolume(0~1)에 넣는다. 열 때 SoundManager의 지금 값으로 맞춘다.
+/// - 화면 탭: 창 모드·해상도 드롭다운을 바꾸는 즉시 ApplyScreen()으로 Screen.SetResolution을 부른다. 열 때 지금 화면(Screen.width·height·fullScreenMode)으로 맞춘다.
+///   창 모드에서는 모니터보다 큰 해상도를 목록에서 뺀다. 에디터 Game 뷰에서는 SetResolution이 적용되지 않아 로그만 남는다 (실제 확인은 빌드).
+/// - 값은 SettingsViewState(임시)에 모아 둔다.
+///   TODO(설정 기능): 판정 오프셋 반영, 기본 배속 적용, 오프셋 측정.
+///   TODO(설정 저장): settings.json 저장·불러오기.
 /// - 탭 3개(사운드·게임·화면): 고른 탭은 검정 채움·흰 글자, 나머지는 흰 채움·테두리·검정 글자. 고른 탭의 내용만 보인다. 마지막 탭은 이 실행 동안 기억한다.
 /// - 키보드는 EventSystem(UI 맵)의 Navigate·Submit을 그대로 쓴다.
 ///   ↑↓: 탭 줄 → 탭 안 항목 → (마지막에서 ↓) 탭 줄. 탭 줄에서 ↑는 닫기 버튼. Selectable Navigation을 Explicit으로 연결한다.
@@ -82,8 +87,14 @@ public class Popup_Settings : UIPopup
     [Tooltip("입력 에셋의 Settings/NextTab (Tab 키)")]
     [SerializeField] private InputActionReference nextTabAction;
 
-    /// <summary>보여주는 값 (임시). TODO(설정 기능): 설정 데이터 클래스로 바꾼다</summary>
+    /// <summary>보여주는 값 (임시). TODO(설정 저장): settings.json과 같은 설정 데이터 클래스로 바꾼다</summary>
     private readonly SettingsViewState state = new SettingsViewState();
+
+    /// <summary>창 모드 드롭다운에 넣은 항목 (드롭다운 번호 = 이 목록의 번호)</summary>
+    private readonly List<FullScreenMode> windowModeOptions = new List<FullScreenMode>();
+
+    /// <summary>해상도 드롭다운에 넣은 항목 (드롭다운 번호 = 이 목록의 번호). 창 모드에 따라 다시 만든다</summary>
+    private readonly List<Vector2Int> resolutionOptions = new List<Vector2Int>();
 
     private UINavigateStepper offsetStepper;
     private UINavigateStepper defaultSpeedStepper;
@@ -94,6 +105,27 @@ public class Popup_Settings : UIPopup
 
     /// <summary>보여주는 값 (확인용)</summary>
     public SettingsViewState State => state;
+
+    /// <summary>지금 창 모드 드롭다운 항목 (확인용)</summary>
+    public IReadOnlyList<FullScreenMode> WindowModeOptions => windowModeOptions;
+
+    /// <summary>지금 해상도 드롭다운 항목 (확인용)</summary>
+    public IReadOnlyList<Vector2Int> ResolutionOptions => resolutionOptions;
+
+    /// <summary>메인 음량 슬라이더 (확인용)</summary>
+    public Slider MasterVolumeSlider => masterVolumeSlider;
+
+    /// <summary>음악 음량 슬라이더 (확인용)</summary>
+    public Slider MusicVolumeSlider => musicVolumeSlider;
+
+    /// <summary>효과음 음량 슬라이더 (확인용)</summary>
+    public Slider SfxVolumeSlider => sfxVolumeSlider;
+
+    /// <summary>해상도 드롭다운 (확인용)</summary>
+    public TMP_Dropdown ResolutionDropdown => resolutionDropdown;
+
+    /// <summary>창 모드 드롭다운 (확인용)</summary>
+    public TMP_Dropdown WindowModeDropdown => windowModeDropdown;
 
     /// <summary>
     /// 문구, 버튼·슬라이더·드롭다운 리스너, 처음 값을 채우고 닫힌 상태로 둔다.
@@ -143,14 +175,13 @@ public class Popup_Settings : UIPopup
         if (offsetStepper != null) offsetStepper.Stepped += StepOffset;
         if (defaultSpeedStepper != null) defaultSpeedStepper.Stepped += StepDefaultSpeed;
 
-        FillDropdowns();
+        FillWindowModeDropdown();
         resolutionDropdown.onValueChanged.AddListener(OnResolutionChanged);
         windowModeDropdown.onValueChanged.AddListener(OnWindowModeChanged);
 
-        // 처음 값: 음량 100 · 오프셋 0 · 배속 1.0, 해상도·창 모드는 지금 화면에 맞는 항목 (없으면 1920×1080, 전체 화면)
-        // TODO(설정 기능): settings.json에서 읽은 값으로 채운다
-        state.resolutionIndex = FindResolutionIndex(Screen.width, Screen.height);
-        state.windowModeIndex = FindWindowModeIndex(Screen.fullScreenMode);
+        // 처음 값: 음량은 SoundManager, 해상도·창 모드는 지금 화면, 오프셋 0 · 배속 1.0
+        // TODO(설정 저장): settings.json에서 읽은 값으로 채운다
+        SyncFromCurrent();
         RefreshAll();
 
         // 오프셋·배속 줄 안의 ◀▶는 마우스 전용 (키보드는 줄에서 ←→)
@@ -167,13 +198,16 @@ public class Popup_Settings : UIPopup
     {
         if (IsOpen) return;
 
+        // 열 때마다 지금 음량·화면으로 다시 맞춘다 (다른 곳에서 바뀌었을 수 있다)
+        SyncFromCurrent();
+        RefreshAll();
         ShowTab(state.tab, false);
         Open();
         SelectTabButton();
         Debug.Log($"[Popup_Settings] 열림: 탭 {state.tab}", this);
     }
 
-    /// <summary>ESC = 닫기. TODO(설정 기능): 닫을 때 자동 저장</summary>
+    /// <summary>ESC = 닫기. TODO(설정 저장): 닫을 때 settings.json에 자동 저장</summary>
     public override void OnCancelRequested()
     {
         Close();
@@ -293,9 +327,42 @@ public class Popup_Settings : UIPopup
 
     // ───── 값 ─────
 
-    private void OnMasterVolumeChanged(float value) { state.masterVolume = Mathf.RoundToInt(value); RefreshVolumes(); /* TODO(설정 기능): SoundManager 메인 음량 */ }
-    private void OnMusicVolumeChanged(float value) { state.musicVolume = Mathf.RoundToInt(value); RefreshVolumes(); /* TODO(설정 기능): SoundManager 음악 음량 */ }
-    private void OnSfxVolumeChanged(float value) { state.sfxVolume = Mathf.RoundToInt(value); RefreshVolumes(); /* TODO(설정 기능): SoundManager 효과음 음량 */ }
+    /// <summary>메인 음량 슬라이더 → SoundManager.MasterVolume (모든 소리에 곱해진다)</summary>
+    private void OnMasterVolumeChanged(float value)
+    {
+        state.masterVolume = Mathf.RoundToInt(value);
+        if (SoundManager.HasInstance) GameManager.Sound.MasterVolume = ToVolume01(state.masterVolume);
+        RefreshVolumes();
+    }
+
+    /// <summary>음악 음량 슬라이더 → SoundManager.MusicVolume (노래·BGM)</summary>
+    private void OnMusicVolumeChanged(float value)
+    {
+        state.musicVolume = Mathf.RoundToInt(value);
+        if (SoundManager.HasInstance) GameManager.Sound.MusicVolume = ToVolume01(state.musicVolume);
+        RefreshVolumes();
+    }
+
+    /// <summary>효과음 음량 슬라이더 → SoundManager.SfxVolume (키음·효과음)</summary>
+    private void OnSfxVolumeChanged(float value)
+    {
+        state.sfxVolume = Mathf.RoundToInt(value);
+        if (SoundManager.HasInstance) GameManager.Sound.SfxVolume = ToVolume01(state.sfxVolume);
+        RefreshVolumes();
+    }
+
+    /// <summary>슬라이더 값(0~100) → SoundManager 음량(0~1)</summary>
+    public static float ToVolume01(int sliderValue)
+    {
+        return Mathf.Clamp01(sliderValue / (float)GameConstants.Settings.MaxVolume);
+    }
+
+    /// <summary>SoundManager 음량(0~1) → 슬라이더 값(0~100, 반올림)</summary>
+    public static int ToSliderValue(float volume01)
+    {
+        return Mathf.Clamp(Mathf.RoundToInt(volume01 * GameConstants.Settings.MaxVolume),
+            GameConstants.Settings.MinVolume, GameConstants.Settings.MaxVolume);
+    }
 
     private void OnClickOffsetDown() => StepOffset(-1);
     private void OnClickOffsetUp() => StepOffset(1);
@@ -323,16 +390,47 @@ public class Popup_Settings : UIPopup
         Debug.Log("[Popup_Settings] 오프셋 측정하기 (아직 기능 없음)", this);
     }
 
-    /// <summary>TODO(설정 기능): 해상도를 바꾼다 (Screen.SetResolution)</summary>
+    /// <summary>해상도 드롭다운 → 고른 해상도를 지금 창 모드로 바로 적용한다</summary>
     private void OnResolutionChanged(int index)
     {
-        state.resolutionIndex = index;
+        if (index < 0 || index >= resolutionOptions.Count) return;
+        state.resolution = resolutionOptions[index];
+        ApplyScreen();
     }
 
-    /// <summary>TODO(설정 기능): 창 모드를 바꾼다 (Screen.fullScreenMode)</summary>
+    /// <summary>
+    /// 창 모드 드롭다운 → 그 모드에 맞게 해상도 목록을 다시 만들고(창 모드면 모니터보다 큰 항목 뺌) 바로 적용한다.
+    /// 고른 해상도가 새 목록에 없으면 기본값, 그것도 없으면 목록의 가장 큰 항목으로 바꾼다.
+    /// </summary>
     private void OnWindowModeChanged(int index)
     {
-        state.windowModeIndex = index;
+        if (index < 0 || index >= windowModeOptions.Count) return;
+        state.windowMode = windowModeOptions[index];
+        RebuildResolutionOptions(state.windowMode);
+        state.resolution = PickResolution(resolutionOptions, state.resolution);
+        resolutionDropdown.SetValueWithoutNotify(resolutionOptions.IndexOf(state.resolution));
+        ApplyScreen();
+    }
+
+    /// <summary>
+    /// 고른 해상도·창 모드를 화면에 적용한다 (두 드롭다운이 함께 쓰는 한 곳). 요청 값과 다음 프레임의 실제 값을 로그로 남긴다.
+    /// TODO(설정 저장): 적용한 해상도·창 모드를 settings.json에 저장한다.
+    /// </summary>
+    public void ApplyScreen()
+    {
+        Vector2Int size = state.resolution;
+        FullScreenMode mode = state.windowMode;
+        Screen.SetResolution(size.x, size.y, mode);
+        Debug.Log($"[Popup_Settings] 화면 적용 요청: {size.x}×{size.y} {mode}", this);
+
+        if (isActiveAndEnabled) StartCoroutine(LogScreenNextFrame(size, mode));
+    }
+
+    /// <summary>적용 뒤 다음 프레임의 실제 화면 값을 로그로 남긴다</summary>
+    private IEnumerator LogScreenNextFrame(Vector2Int size, FullScreenMode mode)
+    {
+        yield return null;
+        Debug.Log($"[Popup_Settings] 화면 적용 결과 (다음 프레임): 요청 {size.x}×{size.y} {mode} → 지금 {Screen.width}×{Screen.height} {Screen.fullScreenMode}", this);
     }
 
     /// <summary>오프셋 표시: 양수 "+15 ms", 0 "0 ms", 음수 "-15 ms"</summary>
@@ -348,8 +446,8 @@ public class Popup_Settings : UIPopup
         masterVolumeSlider.SetValueWithoutNotify(state.masterVolume);
         musicVolumeSlider.SetValueWithoutNotify(state.musicVolume);
         sfxVolumeSlider.SetValueWithoutNotify(state.sfxVolume);
-        resolutionDropdown.SetValueWithoutNotify(state.resolutionIndex);
-        windowModeDropdown.SetValueWithoutNotify(state.windowModeIndex);
+        windowModeDropdown.SetValueWithoutNotify(windowModeOptions.IndexOf(state.windowMode));
+        resolutionDropdown.SetValueWithoutNotify(resolutionOptions.IndexOf(state.resolution));
         RefreshVolumes();
         RefreshOffset();
         RefreshDefaultSpeed();
@@ -372,34 +470,91 @@ public class Popup_Settings : UIPopup
         defaultSpeedText.text = string.Format(GameConstants.Settings.DefaultSpeedFormat, ScrollSpeedRules.FromSteps(state.defaultSpeedSteps));
     }
 
-    private void FillDropdowns()
+    /// <summary>
+    /// 지금 값으로 맞춘다: 음량은 SoundManager(0~1 → 0~100 반올림), 창 모드·해상도는 지금 화면.
+    /// 창 모드가 목록에 없으면(MaximizedWindow 등) 목록의 첫 항목, 해상도가 목록에 없으면 기본값 → 가장 큰 항목.
+    /// </summary>
+    private void SyncFromCurrent()
     {
-        resolutionDropdown.ClearOptions();
-        List<string> resolutions = new List<string>();
-        foreach (Vector2Int size in GameConstants.Settings.Resolutions)
-            resolutions.Add(string.Format(GameConstants.Settings.ResolutionFormat, size.x, size.y));
-        resolutionDropdown.AddOptions(resolutions);
+        if (SoundManager.HasInstance)
+        {
+            state.masterVolume = ToSliderValue(GameManager.Sound.MasterVolume);
+            state.musicVolume = ToSliderValue(GameManager.Sound.MusicVolume);
+            state.sfxVolume = ToSliderValue(GameManager.Sound.SfxVolume);
+        }
 
+        FullScreenMode current = Screen.fullScreenMode;
+        state.windowMode = windowModeOptions.Contains(current) ? current : windowModeOptions[0];
+        RebuildResolutionOptions(state.windowMode);
+        state.resolution = PickResolution(resolutionOptions, new Vector2Int(Screen.width, Screen.height));
+    }
+
+    /// <summary>창 모드 드롭다운을 GameConstants.Settings.WindowModes로 채운다 (한 번만)</summary>
+    private void FillWindowModeDropdown()
+    {
+        windowModeOptions.Clear();
+        windowModeOptions.AddRange(GameConstants.Settings.WindowModes);
         windowModeDropdown.ClearOptions();
         windowModeDropdown.AddOptions(new List<string>(GameConstants.Settings.WindowModeLabels));
     }
 
-    /// <summary>지금 화면 크기와 같은 해상도 항목. 없으면 1920×1080</summary>
-    private static int FindResolutionIndex(int width, int height)
+    /// <summary>해상도 목록을 창 모드에 맞게 다시 만들고 드롭다운을 채운다</summary>
+    private void RebuildResolutionOptions(FullScreenMode mode)
     {
-        Vector2Int[] list = GameConstants.Settings.Resolutions;
-        for (int i = 0; i < list.Length; i++)
-        {
-            if (list[i].x == width && list[i].y == height) return i;
-        }
-        return System.Array.IndexOf(list, GameConstants.Settings.DefaultResolution);
+        resolutionOptions.Clear();
+        resolutionOptions.AddRange(BuildResolutionOptions(mode, GetMonitorSize()));
+
+        resolutionDropdown.ClearOptions();
+        List<string> labels = new List<string>();
+        foreach (Vector2Int size in resolutionOptions)
+            labels.Add(string.Format(GameConstants.Settings.ResolutionFormat, size.x, size.y));
+        resolutionDropdown.AddOptions(labels);
     }
 
-    /// <summary>지금 창 모드와 같은 항목. 없으면(MaximizedWindow 등) 전체 화면</summary>
-    private static int FindWindowModeIndex(FullScreenMode mode)
+    /// <summary>
+    /// 창 모드에 맞는 해상도 목록. 창 모드(Windowed)면 모니터보다 큰 항목을 뺀다 (모두 빠지면 가장 작은 항목 하나는 남긴다).
+    /// </summary>
+    public static List<Vector2Int> BuildResolutionOptions(FullScreenMode mode, Vector2Int monitor)
     {
-        int index = System.Array.IndexOf(GameConstants.Settings.WindowModes, mode);
-        return index >= 0 ? index : 0;
+        List<Vector2Int> list = new List<Vector2Int>();
+        foreach (Vector2Int size in GameConstants.Settings.Resolutions)
+        {
+            bool fits = size.x <= monitor.x && size.y <= monitor.y;
+            if (mode != FullScreenMode.Windowed || fits) list.Add(size);
+        }
+
+        if (list.Count == 0)
+        {
+            Vector2Int smallest = GameConstants.Settings.Resolutions[0];
+            foreach (Vector2Int size in GameConstants.Settings.Resolutions)
+            {
+                if (size.x * size.y < smallest.x * smallest.y) smallest = size;
+            }
+            list.Add(smallest);
+        }
+        return list;
+    }
+
+    /// <summary>목록에서 고른다: 원하는 크기가 있으면 그것, 없으면 기본값(DefaultResolution), 그것도 없으면 가장 큰 항목</summary>
+    public static Vector2Int PickResolution(List<Vector2Int> options, Vector2Int wanted)
+    {
+        if (options.Contains(wanted)) return wanted;
+        if (options.Contains(GameConstants.Settings.DefaultResolution)) return GameConstants.Settings.DefaultResolution;
+
+        Vector2Int largest = options[0];
+        foreach (Vector2Int size in options)
+        {
+            if (size.x * size.y > largest.x * largest.y) largest = size;
+        }
+        return largest;
+    }
+
+    /// <summary>게임 창이 있는 모니터의 해상도. 못 읽으면 Display.main의 systemWidth·systemHeight</summary>
+    public static Vector2Int GetMonitorSize()
+    {
+        DisplayInfo info = Screen.mainWindowDisplayInfo;
+        if (info.width > 0 && info.height > 0) return new Vector2Int(info.width, info.height);
+        return new Vector2Int(Display.main.systemWidth, Display.main.systemHeight);
     }
 
     // ───── Tab 키 ─────
