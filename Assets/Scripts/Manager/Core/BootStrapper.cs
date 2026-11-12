@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>
 /// 어느 씬에서 플레이를 시작해도 첫 씬이 로드되기 전에
 /// 전역 매니저 프리팹(Managers_DontDestroy)을 만들고 매니저를 정해진 순서로 초기화한다.
+/// 매니저 Init 전에 프레임 설정(FrameRateRules.Apply: VSync 기본, 주사율 60Hz 미만이면 60프레임 목표)을 한 번 한다.
 /// </summary>
 public static class Bootstrapper
 {
@@ -10,6 +11,7 @@ public static class Bootstrapper
     private static void Initialize()
     {
         GameManager.IsInitialized = false;
+        FrameRateRules.Apply("게임 시작");
 
         GameObject prefab = Resources.Load<GameObject>(GameConstants.ResourcePaths.ManagersPrefab);
 

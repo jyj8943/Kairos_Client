@@ -125,6 +125,12 @@ public class InGameScene : SceneBase
     /// <summary>자동 플레이가 켠 라인 빛남을 끌 시각 (realtime, 0이면 꺼져 있음)</summary>
     private readonly double[] autoGlowOffAt = new double[GameConstants.Editor.LaneCount];
 
+    /// <summary>
+    /// 한 판의 프레임 시간 (플레이 중·일시정지 아님인 프레임만, 시작 직후 첫 프레임 제외). 결과로 가기 전에 평균·최저 fps를 로그로 남긴다 (빌드 Player.log 포함)
+    /// </summary>
+    private readonly FrameTimeStats frameStats = new FrameTimeStats();
+    private bool skipNextFrameSample;
+
     /// <summary>롱노트 끝 판정 키음을 낸 수 (확인용)</summary>
     private int longEndKeySoundCount;
 
@@ -184,6 +190,8 @@ public class InGameScene : SceneBase
             startDelaySeconds = System.Math.Max(GameConstants.Play.MinStartDelaySeconds, GameConstants.Play.LeadInSeconds - firstNoteTime);
         }
         allJudgedSongTime = -1;
+        frameStats.Reset();
+        skipNextFrameSample = true;
         isWaitingResult = false;
 #if UNITY_EDITOR
         maxSyncErrorSeconds = 0;
@@ -317,7 +325,16 @@ public class InGameScene : SceneBase
         // 배속 키 반복은 재개 카운트다운 중에도 받는다 (팝업이 열려 있으면 ChangeSpeed가 무시한다)
         if (isPlaying) UpdateSpeedRepeat();
 
-        if (!isPlaying || isPaused) return;
+        if (!isPlaying || isPaused)
+        {
+            // 일시정지가 풀린 첫 프레임은 재지 않는다 (카운트다운이 끝난 프레임)
+            skipNextFrameSample = true;
+            return;
+        }
+
+        // 씬 시작 직후 첫 프레임은 로딩 시간이 섞여 있어 빼고 잰다
+        if (skipNextFrameSample) skipNextFrameSample = false;
+        else frameStats.Add(Time.unscaledDeltaTime);
 
         double songTime = GameManager.Sound.SongTime;
 
@@ -596,6 +613,8 @@ public class InGameScene : SceneBase
                   $"최대 콤보 {score.MaxCombo}/{score.MaxPossibleCombo} (노트 {score.TotalNotes} + 유지 틱 {score.TotalTicks}), 롱노트 끝 키음 {longEndKeySoundCount}번, 정확도 {score.Accuracy:0.00}%, FC={score.IsFullCombo}, AP={score.IsAllPerfect}, " +
                   $"판정 오차(친 노트 {hitCount}개) 평균 {(hitCount > 0 ? hitErrorSumMs / hitCount : 0):0.###}ms · 최대 {hitErrorMaxMs:0.###}ms, " +
                   $"노트 풀 {noteLayer.PooledCount}개(추가 생성 {noteLayer.GrowCount})", this);
+        Debug.Log($"[InGameScene] 프레임: 평균 {frameStats.AverageFps:0.0}fps, 최저 {frameStats.MinFps:0.0}fps (가장 긴 프레임 {frameStats.MaxSeconds * 1000:0.0}ms), " +
+                  $"프레임 {frameStats.Count}개 / {frameStats.TotalSeconds:0.0}초, vSyncCount {QualitySettings.vSyncCount}, targetFrameRate {Application.targetFrameRate}", this);
 #if UNITY_EDITOR
         Debug.Log($"[InGameScene] 싱크 진단: 곡 시간과 음원 재생 위치 차이 최대 {maxSyncErrorSeconds * 1000:0.#}ms (경고 기준 {GameConstants.Play.SyncWarningSeconds * 1000:0}ms)", this);
 #endif

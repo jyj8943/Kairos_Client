@@ -283,6 +283,16 @@ public static class GameConstants
         public const FullScreenMode DefaultWindowMode = FullScreenMode.FullScreenWindow;
     }
 
+    /// <summary>화면 프레임 설정 (FrameRateRules)</summary>
+    public static class Display
+    {
+        /// <summary>
+        /// 모니터 주사율이 이 값 미만이면 VSync를 끄고 이 프레임을 목표로 한다 (이상이면 VSync).
+        /// 최소 프레임은 보장할 수 없고 상한만 정할 수 있다. VSync가 켜져 있으면 targetFrameRate는 무시된다.
+        /// </summary>
+        public const int MinTargetFrameRate = 60;
+    }
+
     /// <summary>유저 플레이 데이터 파일 (기획서 2-4): 설정 + 공식·나만의 채보 기록</summary>
     public static class PlayerData
     {

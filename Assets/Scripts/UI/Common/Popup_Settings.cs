@@ -431,6 +431,9 @@ public class Popup_Settings : UIPopup
         Screen.SetResolution(size.x, size.y, mode);
         Debug.Log($"[Popup_Settings] 화면 적용 요청: {size.x}×{size.y} {mode}", this);
 
+        // 모니터·모드가 바뀌면 주사율이 달라질 수 있어 프레임 설정을 다시 맞춘다
+        FrameRateRules.Apply("화면 적용");
+
         if (isActiveAndEnabled) StartCoroutine(LogScreenNextFrame(size, mode));
     }
 
