@@ -141,6 +141,9 @@ public static class GameConstants
         public const string FullComboText = "FULL COMBO";
         public const string AllPerfectText = "ALL PERFECT";
 
+        /// <summary>인게임 콤보 숫자 위 제목 (Txt_ComboTitle)</summary>
+        public const string ComboTitleText = "COMBO";
+
         /// <summary>결과 화면 신기록 표시 (기획서 3-5 ③). 처음 플레이: NewRecordText, 기록을 넘었을 때: {0} 이전 최고 점수 (천 단위 쉼표)</summary>
         public const string NewRecordText = "NEW RECORD";
         public const string NewRecordPreviousFormat = "NEW RECORD  (이전 {0:N0})";

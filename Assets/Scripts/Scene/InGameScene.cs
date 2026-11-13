@@ -342,6 +342,9 @@ public class InGameScene : SceneBase
         if (skipNextFrameSample) skipNextFrameSample = false;
         else frameStats.Add(Time.unscaledDeltaTime);
 
+        // 콤보 애니메이션·쉬는 시간 (일시정지·카운트다운 중에는 위에서 돌아가 멈춘다. 모든 노트 판정 뒤 결과 전까지는 계속)
+        canvas.TickCombo(Time.unscaledDeltaTime);
+
         double songTime = GameManager.Sound.SongTime;
 
         if (isAutoPlay)

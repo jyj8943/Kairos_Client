@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 인게임 화면 UI (기획서 3-4 최소 형태). InGameScene이 Init()을 호출한다.
-/// - 곡 정보(제목·채보 이름·Lv·배속), 판정 글자, 콤보, 점수, 안내 문구, 테스트 플레이 표시, 재개 카운트다운.
+/// - 곡 정보(제목·채보 이름·Lv·배속), 판정 글자, 콤보(Txt_Combo: 오름·쉬면 숨기기 애니메이션), 점수, 안내 문구, 테스트 플레이 표시, 재개 카운트다운.
 /// - 플레이 중 배속을 바꾸면 곡 정보의 배속을 고치고, 기어 옆(Txt_SpeedChange)에 "x5.6"을 잠깐(SpeedChangeShowSeconds) 보여준다.
 /// - 결과는 결과 씬(ResultScene)이 보여준다.
 /// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다.
@@ -12,7 +12,10 @@ public class Canvas_InGame : UIBase
 {
     [SerializeField] private TMP_Text songInfoText;
     [SerializeField] private TMP_Text judgeText;
-    [SerializeField] private TMP_Text comboText;
+    [Tooltip("콤보 숫자 (Combo/Txt_Combo). 오름·쉬면 숨기기 애니메이션을 맡는다")]
+    [SerializeField] private Txt_Combo comboText;
+    [Tooltip("콤보 숫자 위 제목 (Combo/Txt_ComboTitle). 움직이지 않는다")]
+    [SerializeField] private TMP_Text comboTitleText;
     [SerializeField] private TMP_Text scoreText;
     [Tooltip("불러오기 실패 등 안내 문구 (Txt_Message)")]
     [SerializeField] private TMP_Text messageText;
@@ -50,7 +53,8 @@ public class Canvas_InGame : UIBase
         if (speedChangeText != null) speedChangeText.gameObject.SetActive(false);
         speedChangeHideAt = -1f;
         judgeText.text = string.Empty;
-        comboText.text = string.Empty;
+        if (comboTitleText != null) comboTitleText.text = GameConstants.Play.ComboTitleText;
+        comboText.ResetView();
         scoreText.SetText("{0}", 0);
         messageText.text = string.Empty;
 
@@ -130,9 +134,18 @@ public class Canvas_InGame : UIBase
     /// </summary>
     public void ShowCombo(int combo, int score)
     {
-        if (combo > 0) comboText.SetText("{0}", combo);
-        else comboText.text = string.Empty;
-
+        comboText.SetCombo(combo);
         scoreText.SetText("{0}", score);
     }
+
+    /// <summary>
+    /// 콤보 애니메이션·쉬는 시간을 진행한다. InGameScene이 플레이 중 매 프레임 부른다 (일시정지·재개 카운트다운 중에는 부르지 않는다).
+    /// </summary>
+    public void TickCombo(float deltaTime)
+    {
+        comboText.Tick(deltaTime);
+    }
+
+    /// <summary>콤보 표시 (확인용)</summary>
+    public Txt_Combo Combo => comboText;
 }
