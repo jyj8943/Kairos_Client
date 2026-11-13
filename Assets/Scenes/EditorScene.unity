@@ -15005,6 +15005,7 @@ MonoBehaviour:
   testPlayButton: {fileID: 2078604252}
   autoTestPlayButton: {fileID: 2134534104}
   gridRect: {fileID: 866246639}
+  controlHintText: {fileID: 1714660371}
   shortNoteToggle: {fileID: 371102817}
   longNoteToggle: {fileID: 11959866}
   selectToggle: {fileID: 1570473062}
@@ -15030,6 +15031,8 @@ MonoBehaviour:
   pointAction: {fileID: 3778820221566287632, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   saveAction: {fileID: -6047314594456182298, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   playPauseAction: {fileID: 2322362625899557903, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  undoAction: {fileID: 8084546757780086273, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  redoAction: {fileID: -1957480570320670040, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!1 &1999466424
 GameObject:
   m_ObjectHideFlags: 0

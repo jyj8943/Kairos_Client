@@ -9,7 +9,9 @@ using UnityEngine;
 /// - 나가기 요청(Btn_Exit)을 받아 곡 고르기로 돌아간다 (저장 안 한 변경이 있으면 확인 팝업을 띄운다).
 /// - ESC(OnBack)는 지금 아무것도 하지 않는다 (기존 동작 그대로).
 /// - 테스트 플레이 요청(Btn_TestPlay)을 받아 지금 상태를 저장하지 않고 인게임으로 넘긴다.
-///   돌아올 때는 진입 데이터의 restore로 노트·위치·스냅·그리드 높이·도구·수정 여부를 되돌린다.
+///   돌아올 때는 진입 데이터의 restore로 노트·위치·스냅·그리드 높이·도구·수정 여부·실행 취소 기록을 되돌린다.
+/// - 실행 취소(Ctrl+Z)·다시 실행(Ctrl+Y · Ctrl+Shift+Z) 요청을 받아 세션에 맡기고 결과를 상태 표시줄에 잠깐 보여 준다.
+///   롱노트를 드래그하는 중이면 무시한다. 재생 중에도 노트 편집이 되므로 실행 취소도 된다.
 /// </summary>
 public class EditorScene : SceneBase
 {
@@ -88,10 +90,11 @@ public class EditorScene : SceneBase
         {
             // 채보 이름·레벨·노트·chartId는 채보 값을 쓴다
             session.ApplyChartData(chart);
-            if (restore != null) session.RestoreDirty(restore.isDirty);
+            // 테스트 플레이에서 돌아왔으면 수정 여부와 실행 취소 기록(저장 시점 포함)을 이어 쓴다
+            if (restore != null) session.RestoreEditState(restore.isDirty, restore.history);
             Debug.Log($"[EditorScene] 채보를 {(restore != null ? "테스트 플레이 전 상태로 되돌렸습니다" : "불러왔습니다")}: " +
                       $"chartId={session.ChartId ?? "(새 채보)"}, chartName={session.ChartName}, level={session.Level}, " +
-                      $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}", this);
+                      $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}, 실행 취소 {session.UndoCount}개 · 다시 실행 {session.RedoCount}개", this);
         }
 
         // 그리드 높이는 편집에 쓰는 박 ↔ 시간 변환(채보를 열었으면 채보 BPM)으로 정한다
@@ -204,6 +207,8 @@ public class EditorScene : SceneBase
     private void SubscribeCanvasEvents()
     {
         UnsubscribeCanvasEvents();
+        canvas.UndoRequested += OnUndoRequested;
+        canvas.RedoRequested += OnRedoRequested;
         canvas.PlayToggleRequested += playback.Toggle;
         canvas.ManualMoveStarting += StopPlaybackWithSnap;
         canvas.SeekStarted += StopPlaybackWithoutSnap;
@@ -217,6 +222,8 @@ public class EditorScene : SceneBase
     {
         if (canvas == null || playback == null) return;
 
+        canvas.UndoRequested -= OnUndoRequested;
+        canvas.RedoRequested -= OnRedoRequested;
         canvas.PlayToggleRequested -= playback.Toggle;
         canvas.ManualMoveStarting -= StopPlaybackWithSnap;
         canvas.SeekStarted -= StopPlaybackWithoutSnap;
@@ -224,6 +231,34 @@ public class EditorScene : SceneBase
         canvas.SeekReleased -= OnSeekReleased;
         canvas.MetronomeChanged -= playback.SetMetronome;
         canvas.KeySoundChanged -= playback.SetKeySound;
+    }
+
+    /// <summary>
+    /// 실행 취소 (Ctrl+Z). 롱노트를 드래그하는 중이거나 저장·씬 이동 중이면 무시한다.
+    /// 되돌린 노트가 화면 밖이어도 그리드는 옮기지 않는다.
+    /// </summary>
+    private void OnUndoRequested()
+    {
+        if (!CanUseHistory()) return;
+
+        string description = session.Undo();
+        if (description != null) ShowTimedStatus(string.Format(GameConstants.Editor.UndoStatusFormat, description));
+    }
+
+    /// <summary>
+    /// 다시 실행 (Ctrl+Y · Ctrl+Shift+Z). 조건은 실행 취소와 같다.
+    /// </summary>
+    private void OnRedoRequested()
+    {
+        if (!CanUseHistory()) return;
+
+        string description = session.Redo();
+        if (description != null) ShowTimedStatus(string.Format(GameConstants.Editor.RedoStatusFormat, description));
+    }
+
+    private bool CanUseHistory()
+    {
+        return isReady && !isLeaving && !isSaving && !notePlacer.IsPressing;
     }
 
     private void StopPlaybackWithSnap()

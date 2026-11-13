@@ -482,6 +482,22 @@ public static class GameConstants
         public const string LongNoteTooShortMessage = "롱노트가 너무 짧습니다";
         public const string NoteOverlapMessage = "다른 노트와 겹칩니다";
 
+        /// <summary>실행 취소 기록 최대 개수. 넘으면 가장 오래된 기록부터 버린다</summary>
+        public const int MaxUndoCount = 200;
+
+        /// <summary>실행 취소 · 다시 실행 기록 설명 (상태 표시줄에 "실행 취소: 숏노트 추가"처럼 보여 준다)</summary>
+        public const string HistoryAddShortNote = "숏노트 추가";
+        public const string HistoryRemoveShortNote = "숏노트 삭제";
+        public const string HistoryAddLongNote = "롱노트 추가";
+        public const string HistoryRemoveLongNote = "롱노트 삭제";
+
+        /// <summary>실행 취소 · 다시 실행 결과 안내: {0} 기록 설명 (StatusMessageSeconds 동안 보여 준다)</summary>
+        public const string UndoStatusFormat = "실행 취소: {0}";
+        public const string RedoStatusFormat = "다시 실행: {0}";
+
+        /// <summary>그리드 아래 조작 안내 (Txt_ControlHint)</summary>
+        public const string ControlHint = "Space 재생 · 휠 이동 · 클릭 배치 · 우클릭 삭제 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행";
+
         /// <summary>오른쪽 패널 노트 수: {0} 전체 노트 수(숏 + 롱), {1} 롱노트 수</summary>
         public const string NoteCountFormat = "노트 {0} · 롱노트 {1}";
 

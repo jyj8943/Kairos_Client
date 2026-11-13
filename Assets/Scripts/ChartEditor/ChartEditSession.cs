@@ -5,7 +5,9 @@ using UnityEngine;
 /// <summary>
 /// 편집 중인 채보의 주인. EditorScene.unity 루트의 "ChartEditSession" 오브젝트에 붙이고, EditorScene이 Init()을 호출한다.
 /// - 채보 정보(songId·chartId·이름·레벨·BPM), 노트(ChartEditData), 수정 여부(IsDirty)를 들고 있다.
-/// - 노트 편집은 반드시 AddNote / RemoveNote를 거친다. 나중에 실행 취소 기록을 이 두 함수에 넣는다.
+/// - 노트 편집은 반드시 AddNote / AddLongNote / RemoveNote를 거친다. 성공한 편집만 실행 취소 기록(EditHistory)에 남는다.
+/// - Undo / Redo도 같은 검사를 거치는 내부 경로(ApplyAddNote / ApplyRemoveNote)로 노트를 바꾸고 기록은 남기지 않는다.
+/// - 수정 여부(IsDirty)는 기록의 저장 시점과 비교한다: 실행 취소·다시 실행으로 저장 시점에 돌아오면 false.
 /// - 표시 쪽(EditorNoteLayer, Canvas_Editor)은 Data를 읽기만 한다.
 /// - 싱글톤이 아니다. EditorScene이 참조를 들고 필요한 곳에 넘겨준다.
 /// </summary>
@@ -63,6 +65,21 @@ public class ChartEditSession : MonoBehaviour
     /// <summary>마지막 저장(또는 시작) 뒤로 노트가 바뀌었으면 true</summary>
     public bool IsDirty { get; private set; }
 
+    /// <summary>실행 취소 · 다시 실행 기록. 채보를 새로 시작하거나 불러오면 비운다</summary>
+    private EditHistory history = new EditHistory();
+
+    /// <summary>실행 취소할 편집이 있으면 true</summary>
+    public bool CanUndo => history.CanUndo;
+
+    /// <summary>다시 실행할 편집이 있으면 true</summary>
+    public bool CanRedo => history.CanRedo;
+
+    /// <summary>실행 취소 기록 수 (확인용)</summary>
+    public int UndoCount => history.UndoCount;
+
+    /// <summary>다시 실행 기록 수 (확인용)</summary>
+    public int RedoCount => history.RedoCount;
+
     /// <summary>
     /// 곡 정보(BPM·offset·음원 길이)로 세션을 시작한다. EditorScene이 호출한다.
     /// </summary>
@@ -104,6 +121,7 @@ public class ChartEditSession : MonoBehaviour
         Data.OnChanged += RefreshDebugNotes;
 
         IsDirty = false;
+        history = new EditHistory();
         RefreshDebugView();
         RefreshDebugNotes();
 
@@ -127,11 +145,7 @@ public class ChartEditSession : MonoBehaviour
     /// <returns>추가했으면 true. 범위 밖이거나 같은 자리에 이미 있으면 false</returns>
     public bool AddNote(int lane, int tick)
     {
-        // TODO: 실행 취소 기록
-        if (!Data.TryAdd(lane, tick)) return false;
-
-        SetDirty(true);
-        return true;
+        return AddNote(lane, tick, out _);
     }
 
     /// <summary>
@@ -139,10 +153,9 @@ public class ChartEditSession : MonoBehaviour
     /// </summary>
     public bool AddNote(int lane, int tick, out NoteEditError error)
     {
-        // TODO: 실행 취소 기록
         if (!Data.TryAdd(lane, tick, out error)) return false;
 
-        SetDirty(true);
+        RecordEdit(new NoteEditAction(EditorNote.Short(lane, tick), true));
         return true;
     }
 
@@ -152,10 +165,10 @@ public class ChartEditSession : MonoBehaviour
     /// <param name="error">실패 이유 (너무 짧음, 겹침, 범위 밖)</param>
     public bool AddLongNote(int lane, int startTick, int endTick, out NoteEditError error)
     {
-        // TODO: 실행 취소 기록
         if (!Data.TryAddLong(lane, startTick, endTick, out error)) return false;
 
-        SetDirty(true);
+        // 드래그로 만든 롱노트 하나 = 기록 하나 (작은 쪽이 시작)
+        RecordEdit(new NoteEditAction(new EditorNote(lane, Mathf.Min(startTick, endTick), Mathf.Max(startTick, endTick)), true));
         return true;
     }
 
@@ -178,11 +191,76 @@ public class ChartEditSession : MonoBehaviour
     /// <returns>지웠으면 true. 그 자리에 노트가 없으면 false</returns>
     public bool RemoveNote(int lane, int tick)
     {
-        // TODO: 실행 취소 기록
+        // 지우기 전에 어떤 노트인지 값으로 기억해 둔다 (롱노트는 시작·끝 tick)
+        if (!Data.TryFindAt(lane, tick, out EditorNote removed)) return false;
         if (!Data.TryRemove(lane, tick)) return false;
 
-        SetDirty(true);
+        RecordEdit(new NoteEditAction(removed, false));
         return true;
+    }
+
+    /// <summary>
+    /// 마지막 편집을 되돌린다 (Ctrl+Z). 저장 시점으로 돌아오면 수정 여부가 false가 된다.
+    /// </summary>
+    /// <returns>되돌린 편집의 설명 (예: "숏노트 추가"). 되돌릴 것이 없거나 실패하면 null</returns>
+    public string Undo()
+    {
+        IEditAction action = history.Undo(this);
+        SetDirty(!history.IsAtSavedState);
+        return action != null ? action.Description : null;
+    }
+
+    /// <summary>
+    /// 마지막으로 되돌린 편집을 다시 적용한다 (Ctrl+Y · Ctrl+Shift+Z).
+    /// </summary>
+    /// <returns>다시 적용한 편집의 설명. 없거나 실패하면 null</returns>
+    public string Redo()
+    {
+        IEditAction action = history.Redo(this);
+        SetDirty(!history.IsAtSavedState);
+        return action != null ? action.Description : null;
+    }
+
+    /// <summary>
+    /// 여러 편집을 실행 취소 한 번으로 묶기 시작한다 (다음 작업의 BPM 구간 삭제 등). EndEditGroup으로 끝낸다.
+    /// </summary>
+    public void BeginEditGroup(string description)
+    {
+        history.BeginGroup(description);
+    }
+
+    /// <summary>편집 묶음을 끝낸다. 묶은 편집이 없으면 기록하지 않는다</summary>
+    public void EndEditGroup()
+    {
+        history.EndGroup();
+    }
+
+    /// <summary>
+    /// 기록을 남기지 않고 노트를 넣는다 (실행 취소·다시 실행 전용). 검사는 AddNote / AddLongNote와 같다.
+    /// </summary>
+    internal bool ApplyAddNote(EditorNote note)
+    {
+        return note.IsLong
+            ? Data.TryAddLong(note.Lane, note.Tick, note.EndTick, out _)
+            : Data.TryAdd(note.Lane, note.Tick);
+    }
+
+    /// <summary>
+    /// 기록을 남기지 않고 노트를 지운다 (실행 취소·다시 실행 전용). 그 자리 노트가 기록과 같은 노트(시작·끝 tick)일 때만 지운다.
+    /// </summary>
+    internal bool ApplyRemoveNote(EditorNote note)
+    {
+        if (!Data.TryFindAt(note.Lane, note.Tick, out EditorNote found)) return false;
+        if (found.Tick != note.Tick || found.EndTick != note.EndTick) return false;
+
+        return Data.TryRemove(note.Lane, note.Tick);
+    }
+
+    /// <summary>성공한 편집을 기록하고 수정 상태로 만든다 (새 편집은 항상 저장 시점에서 벗어난다)</summary>
+    private void RecordEdit(IEditAction action)
+    {
+        history.Record(action);
+        SetDirty(true);
     }
 
     /// <summary>
@@ -277,6 +355,8 @@ public class ChartEditSession : MonoBehaviour
         if (skipped > 0)
             Debug.LogWarning($"[ChartEditSession] 곡 범위 밖이거나, 겹치거나, 너무 짧은 롱노트라 넣지 못한 노트가 {skipped}개 있습니다: chartId={ChartId}", this);
 
+        // 불러온 채보가 새 시작점이다 (기록을 비우고 저장 시점으로 본다)
+        history.Clear();
         IsDirty = false;
         RefreshDebugView();
         OnDirtyChanged?.Invoke(false);
@@ -298,6 +378,7 @@ public class ChartEditSession : MonoBehaviour
 
         if (!ChartRepository.TrySave(chart, out error)) return false;
 
+        history.MarkSaved();
         SetDirty(false);
         return true;
     }
@@ -339,6 +420,7 @@ public class ChartEditSession : MonoBehaviour
             {
                 chart = chart,
                 isDirty = IsDirty,
+                history = history,
                 currentBeat = startBeat,
                 snapDivision = snapDivision,
                 gridHeightScale = gridHeightScale,
@@ -365,8 +447,12 @@ public class ChartEditSession : MonoBehaviour
         Timing = TimingMap.Single(Bpm, OffsetMs);
         UpdateLength();
 
-        // BPM이 바뀌면 저장할 채보 내용(timingPoints)이 바뀐다
-        if (bpmChanged) SetDirty(true);
+        // BPM이 바뀌면 저장할 채보 내용(timingPoints)이 바뀐다. 실행 취소 기록에는 없으므로 실행 취소로 저장 상태에 돌아오지 않게 한다
+        if (bpmChanged)
+        {
+            history.MarkSavedUnreachable();
+            SetDirty(true);
+        }
     }
 
     /// <summary>
@@ -387,6 +473,21 @@ public class ChartEditSession : MonoBehaviour
     /// </summary>
     public void RestoreDirty(bool dirty)
     {
+        SetDirty(dirty);
+    }
+
+    /// <summary>
+    /// 테스트 플레이에서 돌아와 실행 취소 기록과 수정 여부를 되돌린다 (ApplyChartData 뒤에 부른다. ApplyChartData가 기록을 비우기 때문).
+    /// 기록이 없으면(예전 데이터) 수정 여부만 되돌린다. 기록의 저장 시점과 수정 여부가 다르면 수정 여부를 따른다.
+    /// </summary>
+    public void RestoreEditState(bool dirty, EditHistory restoredHistory)
+    {
+        if (restoredHistory != null)
+        {
+            history = restoredHistory;
+            if (dirty && history.IsAtSavedState) history.MarkSavedUnreachable();
+            else if (!dirty && !history.IsAtSavedState) history.MarkSaved();
+        }
         SetDirty(dirty);
     }
 

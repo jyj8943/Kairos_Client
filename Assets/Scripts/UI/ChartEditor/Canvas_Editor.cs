@@ -17,7 +17,9 @@ using UnityEngine.UI;
 ///   입력창에 글자를 쓰는 중이면 Ctrl+S를 무시한다.
 /// - 재생은 Btn_Play 클릭과 ChartEditor/PlayPause(Space), 타임라인 슬라이더, 메트로놈 토글을 이벤트로 알린다
 ///   (재생 처리는 EditorPlayback이 맡는다). 입력창에 글자를 쓰는 중이면 Space를 무시한다.
-/// - 확인 팝업 등 팝업이 열려 있으면 Space·Ctrl+S·휠은 동작하지 않는다 (GameManager.UI.HasOpenPopup).
+/// - 실행 취소(ChartEditor/Undo, Ctrl+Z)·다시 실행(ChartEditor/Redo, Ctrl+Y · Ctrl+Shift+Z)은 이벤트로 알린다 (처리는 EditorScene).
+///   입력창에 글자를 쓰는 중이면 무시한다. Ctrl+Shift+Z는 다시 실행만 받는다 (Undo 콜백에서 Shift가 눌려 있으면 무시).
+/// - 확인 팝업 등 팝업이 열려 있으면 Space·Ctrl+S·Ctrl+Z·Ctrl+Y·휠은 동작하지 않는다 (GameManager.UI.HasOpenPopup).
 /// - 폴더 이름을 Editor로 두면 Unity 특수 폴더가 되므로 UI/ChartEditor/에 둔다.
 /// </summary>
 public class Canvas_Editor : UIBase
@@ -35,6 +37,8 @@ public class Canvas_Editor : UIBase
     [Header("그리드")]
     [Tooltip("휠 입력을 받을 영역 (Img_Grid)")]
     [SerializeField] private RectTransform gridRect;
+    [Tooltip("그리드 아래 조작 안내 (Txt_ControlHint). 문구는 GameConstants.Editor.ControlHint")]
+    [SerializeField] private TMP_Text controlHintText;
 
     [Header("왼쪽 도구")]
     [SerializeField] private Toggle shortNoteToggle;
@@ -85,6 +89,16 @@ public class Canvas_Editor : UIBase
     [SerializeField] private InputActionReference saveAction;
     [Tooltip("입력 에셋의 ChartEditor/PlayPause (Space)")]
     [SerializeField] private InputActionReference playPauseAction;
+    [Tooltip("입력 에셋의 ChartEditor/Undo (Ctrl+Z)")]
+    [SerializeField] private InputActionReference undoAction;
+    [Tooltip("입력 에셋의 ChartEditor/Redo (Ctrl+Y · Ctrl+Shift+Z)")]
+    [SerializeField] private InputActionReference redoAction;
+
+    /// <summary>실행 취소 요청 (Ctrl+Z)</summary>
+    public event Action UndoRequested;
+
+    /// <summary>다시 실행 요청 (Ctrl+Y · Ctrl+Shift+Z)</summary>
+    public event Action RedoRequested;
 
     /// <summary>재생·정지 요청 (Btn_Play·Space)</summary>
     public event Action PlayToggleRequested;
@@ -202,6 +216,8 @@ public class Canvas_Editor : UIBase
         songLengthText.text = TimeFormat.ToMinSec(session.SongLengthSeconds);
         lastSaveStatus = string.Empty;
         saveStatusText.text = lastSaveStatus;
+        if (controlHintText != null) controlHintText.text = GameConstants.Editor.ControlHint;
+        else Debug.LogWarning("[Canvas_Editor] 조작 안내(Txt_ControlHint)가 연결되지 않았습니다.", this);
 
         // BPM은 표시만 한다 (선택·입력 불가)
         RefreshTiming();
@@ -278,6 +294,17 @@ public class Canvas_Editor : UIBase
         scrollAction.action.performed += OnScroll;
         saveAction.action.performed += OnSaveShortcut;
         playPauseAction.action.performed += OnPlayPauseShortcut;
+        if (undoAction != null && redoAction != null)
+        {
+            undoAction.action.performed += OnUndoShortcut;
+            redoAction.action.performed += OnRedoShortcut;
+            undoAction.action.Enable();
+            redoAction.action.Enable();
+        }
+        else
+        {
+            Debug.LogWarning("[Canvas_Editor] 실행 취소·다시 실행 입력 액션이 연결되지 않아 Ctrl+Z·Ctrl+Y를 받을 수 없습니다.", this);
+        }
         scrollAction.action.Enable();
         zoomModifierAction.action.Enable();
         pointAction.action.Enable();
@@ -297,6 +324,8 @@ public class Canvas_Editor : UIBase
         scrollAction.action.performed -= OnScroll;
         saveAction.action.performed -= OnSaveShortcut;
         playPauseAction.action.performed -= OnPlayPauseShortcut;
+        if (undoAction != null) undoAction.action.performed -= OnUndoShortcut;
+        if (redoAction != null) redoAction.action.performed -= OnRedoShortcut;
         isInputEnabled = false;
     }
 
@@ -394,11 +423,12 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 저장 뒤 다시 편집하면 "저장 안 됨"을 표시한다. 저장 성공 표시는 ShowSaveResult가 맡는다.
+    /// 저장 뒤 다시 편집하면 "저장 안 됨"을, 실행 취소로 저장 시점에 돌아오면 마지막 저장 결과("저장됨 14:32")를 표시한다.
+    /// 저장 성공 표시는 ShowSaveResult가 맡는다. 마지막 저장 결과 문구(lastSaveStatus)는 여기서 덮어쓰지 않는다.
     /// </summary>
     private void OnDirtyChanged(bool isDirty)
     {
-        if (isDirty) SetSaveStatus(GameConstants.Editor.SaveStatusUnsaved);
+        RefreshSaveStatus();
     }
 
     private void RequestSave()
@@ -433,6 +463,26 @@ public class Canvas_Editor : UIBase
     {
         if (IsShortcutBlocked()) return;
         RequestPlayToggle();
+    }
+
+    /// <summary>
+    /// Ctrl+Z. 입력창에 글자를 쓰는 중이거나 팝업이 열려 있으면 무시한다.
+    /// Ctrl+Shift+Z는 다시 실행이므로 Shift가 같이 눌려 있으면 무시한다 (OneModifier 조합은 Shift가 더 눌려도 발동한다).
+    /// </summary>
+    private void OnUndoShortcut(InputAction.CallbackContext context)
+    {
+        if (IsShortcutBlocked()) return;
+        if (context.control != null && context.control.device is Keyboard keyboard && keyboard.shiftKey.isPressed) return;
+        UndoRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Ctrl+Y · Ctrl+Shift+Z. 입력창에 글자를 쓰는 중이거나 팝업이 열려 있으면 무시한다.
+    /// </summary>
+    private void OnRedoShortcut(InputAction.CallbackContext context)
+    {
+        if (IsShortcutBlocked()) return;
+        RedoRequested?.Invoke();
     }
 
     private void OnMetronomeToggled(bool on)

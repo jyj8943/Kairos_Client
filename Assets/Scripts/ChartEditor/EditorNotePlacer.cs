@@ -44,6 +44,9 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
 
     private bool IsReady => grid != null && session != null && getCurrentTool != null;
 
+    /// <summary>왼쪽 버튼으로 누르고(드래그하고) 있는 중이면 true. 그동안은 실행 취소·다시 실행을 하지 않는다</summary>
+    public bool IsPressing => isPressing;
+
     public void OnPointerDown(PointerEventData eventData)
     {
         if (!IsReady || eventData.button != PointerEventData.InputButton.Left) return;

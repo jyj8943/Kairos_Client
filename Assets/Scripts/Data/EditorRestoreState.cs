@@ -10,6 +10,9 @@ public class EditorRestoreState
     /// <summary>테스트 플레이 전 수정 여부</summary>
     public bool isDirty;
 
+    /// <summary>테스트 플레이 전 실행 취소 · 다시 실행 기록 (저장 시점 포함). 돌아오면 그대로 이어 쓴다</summary>
+    public EditHistory history;
+
     /// <summary>현재 위치 선의 박</summary>
     public float currentBeat;
 
