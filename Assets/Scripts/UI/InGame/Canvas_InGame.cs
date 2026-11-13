@@ -49,6 +49,9 @@ public class Canvas_InGame : UIBase
     [Tooltip("나만의 채보(CUSTOM) 뱃지 색. 모르는 난이도 이름도 이 색을 쓴다")]
     [SerializeField] private Color customBadgeColor = GameConstants.Play.ChartBadgeCustomColor;
 
+    [Header("FULL COMBO / ALL PERFECT 연출 (ClearEffect)")]
+    [SerializeField] private ClearEffect clearEffect;
+
     [Header("판정 패널 (Img_JudgePanel)")]
     [Tooltip("판정 개수·FAST/SLOW·정확도. 점수는 scoreText")]
     [SerializeField] private Img_JudgePanel judgePanel;
@@ -113,6 +116,7 @@ public class Canvas_InGame : UIBase
         shownProgress = -1f;
         SetProgress(0f);
         judgeText.ResetView();
+        if (clearEffect != null) clearEffect.ResetView();
         if (fastSlowText != null) fastSlowText.ResetView();
         if (judgePanel != null) judgePanel.Init(perfectColor, greatColor, goodColor, missColor, fastColor, slowColor);
         if (comboTitleText != null) comboTitleText.text = GameConstants.Play.ComboTitleText;
@@ -268,6 +272,23 @@ public class Canvas_InGame : UIBase
         judgeText.Tick(deltaTime);
         if (fastSlowText != null) fastSlowText.Tick(deltaTime);
     }
+
+    /// <summary>
+    /// FULL COMBO / ALL PERFECT 연출을 고른다 (모든 노트 판정 순간, InGameScene이 ClearEffectRules로 정해 넘긴다). None이면 띄우지 않는다.
+    /// </summary>
+    public void PlayClear(ClearKind kind)
+    {
+        if (clearEffect != null) clearEffect.Play(kind);
+    }
+
+    /// <summary>FULL COMBO / ALL PERFECT 연출 시간을 맞춘다 (모든 노트 판정 뒤 지난 곡 시간, 초)</summary>
+    public void SetClearTime(float elapsed)
+    {
+        if (clearEffect != null) clearEffect.SetTime(elapsed);
+    }
+
+    /// <summary>FULL COMBO / ALL PERFECT 연출 (확인용)</summary>
+    public ClearEffect Clear => clearEffect;
 
     /// <summary>콤보 표시 (확인용)</summary>
     public Txt_Combo Combo => comboText;

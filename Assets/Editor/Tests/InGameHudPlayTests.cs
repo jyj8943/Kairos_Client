@@ -178,4 +178,56 @@ public class InGameHudPlayTests
         Assert.AreEqual("85.00%", Get<TMP_Text>(panel, "accuracy").text, "(100 + 70) ÷ 2");
         Debug.Log($"[InGameHudPlayTest] H2: GREAT FAST → 패널 {Get<TMP_Text>(panel, "greatCount").text} / {Get<TMP_Text>(panel, "fastCount").text}, PERFECT 뒤 FAST/SLOW '{canvas.FastSlowShown}' (경과 {canvas.FastSlowText.Animation.Elapsed:0.000}초), 정확도 {Get<TMP_Text>(panel, "accuracy").text}");
     }
+
+    /// <summary>
+    /// H3: 테스트 플레이(자동 아님)에서 전부 PERFECT로 치면 ALL PERFECT 연출: 판정 직후 숨김 → 곡 시간 1.5초쯤 글자·띠 보임 →
+    /// 2.8초 뒤 숨김 → 3초에 결과로
+    /// </summary>
+    [UnityTest]
+    public IEnumerator H3_AllPerfectClearEffect()
+    {
+        yield return Load(false);
+        NoteJudge judge = Get<NoteJudge>(scene, "judge");
+        ClearEffect clear = canvas.Clear;
+        Assert.AreEqual(ClearKind.None, clear.Kind, "시작: 연출 없음");
+        Assert.IsFalse(clear.Frame.Visible);
+
+        float deadline = Time.realtimeSinceStartup + 20f;
+        for (int i = 0; i < judge.Notes.Count; i++)
+        {
+            PlayNote note = judge.Notes[i];
+            while (GameManager.Sound.SongTime < note.Time)
+            {
+                Assert.Less(Time.realtimeSinceStartup, deadline, "노트 대기 시간 초과");
+                yield return null;
+            }
+            Assert.IsFalse(Get<bool>(scene, "isPaused"), "에디터 포커스를 잃어 일시정지되면 안 된다");
+            scene.TestPress(note.Lane, note.Time);
+        }
+        yield return null;
+        Assert.IsTrue(judge.AllJudged);
+        Assert.AreEqual(ClearKind.AllPerfect, clear.Kind, "테스트 플레이 + 전부 PERFECT → ALL PERFECT");
+
+        double judgedAt = Get<double>(scene, "allJudgedSongTime");
+        while (GameManager.Sound.SongTime < judgedAt + 1.5)
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "연출 대기 시간 초과");
+            yield return null;
+        }
+        ClearEffectFrame mid = clear.Frame;
+        Assert.IsTrue(mid.Visible, "1.5초: 보임");
+        Assert.AreEqual(1f, mid.TitleAlpha, 1e-4f);
+        Assert.AreEqual(0.55f, mid.BandAlpha, 1e-4f);
+        UnityEngine.UI.Image title = Get<UnityEngine.UI.Image>(clear, "title");
+        Assert.AreSame(Get<Sprite>(clear, "allPerfectSprite"), title.sprite, "ALL PERFECT 이미지");
+
+        while (GameManager.Sound.SongTime < judgedAt + 2.85 && !Get<bool>(scene, "isFinished"))
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "연출 끝 대기 시간 초과");
+            yield return null;
+        }
+        Assert.IsFalse(Get<bool>(scene, "isFinished"), "2.85초에는 아직 결과 전 (3초에 결과로)");
+        Assert.IsFalse(clear.Frame.Visible, "2.8초 뒤 숨김");
+        Debug.Log($"[InGameHudPlayTest] H3: {clear.Kind}, 1.5초 글자 크기 {mid.TitleScale:0.000}·띠 알파 {mid.BandAlpha:0.00}, 2.85초 숨김");
+    }
 }

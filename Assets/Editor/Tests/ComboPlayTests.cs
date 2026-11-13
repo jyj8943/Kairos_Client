@@ -172,6 +172,8 @@ public class ComboPlayTests
             yield return null;
         }
         Assert.AreEqual(judge.TotalCount, combo.Motion.Combo, "마지막 콤보 표시");
+        Assert.IsTrue(score.IsAllPerfect, "자동 플레이는 전부 PERFECT");
+        Assert.AreEqual(ClearKind.None, canvas.Clear.Kind, "자동 플레이는 ALL PERFECT여도 연출 없음");
         Assert.AreEqual(1f, combo.Group.alpha, 1e-4f, "마지막 판정 직후에는 보임");
 
         // 결과로 가기 전 3초 동안 Tick이 계속 흐른다 → 0.74초 뒤 숨김

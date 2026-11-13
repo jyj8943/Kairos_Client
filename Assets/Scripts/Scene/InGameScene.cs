@@ -9,6 +9,7 @@ using UnityEngine.InputSystem;
 /// - 곡 시간은 GameManager.Sound.SongTime(DSP 기준). 판정은 NoteJudge, 점수는 ScoreCalculator가 맡는다.
 /// - 모든 노트가 판정(친 판정 또는 놓침 MISS)되면 OnAllNotesJudged를 한 번 알리고, 그 곡 시간부터 3초(ResultDelaySeconds) 뒤
 ///   결과 씬으로 ResultData를 넘긴다. 그 3초 동안 노래는 계속 흐르고, 결과로 넘어가는 중이라 일시정지는 받지 않는다.
+///   그 사이 ALL PERFECT / FULL COMBO면 연출(ClearEffect, 2.8초)을 곡 시간 기준으로 띄운다 (자동 플레이 제외).
 /// - 테스트 플레이(진입 데이터에 TestPlayData)면 파일 대신 넘겨받은 채보를 쓰고, 시작 박 앞의 노트는 건너뛴다.
 ///   노래는 시작 위치 2초 전부터 들려준다.
 /// - ESC(팝업이 없을 때 UIManager가 OnBack을 부름)나 창 포커스를 잃으면 일시정지 메뉴(Popup_Pause)를 연다.
@@ -375,10 +376,15 @@ public class InGameScene : SceneBase
         {
             isWaitingResult = true;
             allJudgedSongTime = songTime;
-            Debug.Log($"[InGameScene] 모든 노트 판정: 곡 시간 {songTime:0.###}초, {GameConstants.Play.ResultDelaySeconds}초 뒤 결과로", this);
-            // TODO: FULL COMBO / ALL PERFECT 연출 (OnAllNotesJudged를 받아 띄운다)
+            // FULL COMBO / ALL PERFECT 연출 (자동 플레이 제외, 테스트 플레이는 띄움). 결과로 가는 시간(3초)은 그대로
+            ClearKind clearKind = ClearEffectRules.Select(isAutoPlay, score.IsAllPerfect, score.IsFullCombo);
+            canvas.PlayClear(clearKind);
+            Debug.Log($"[InGameScene] 모든 노트 판정: 곡 시간 {songTime:0.###}초, {GameConstants.Play.ResultDelaySeconds}초 뒤 결과로, 연출 {clearKind}", this);
             OnAllNotesJudged?.Invoke();
         }
+
+        // 연출 시간은 결과 대기와 같은 곡 시간으로 센다 (일시정지·카운트다운 중에는 위에서 돌아가 멈춘다)
+        if (isWaitingResult) canvas.SetClearTime((float)(songTime - allJudgedSongTime));
 
         if (isWaitingResult && songTime >= allJudgedSongTime + GameConstants.Play.ResultDelaySeconds) Finish();
     }
