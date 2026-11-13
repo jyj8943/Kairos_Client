@@ -296,14 +296,22 @@ public class EditHistoryTests
         Assert.IsFalse(session.IsDirty, "저장 시점(노트 1개)으로 돌아옴");
     }
 
-    /// <summary>개발용 BPM 변경처럼 기록하지 않는 변경 뒤에는 실행 취소로 저장 상태에 돌아오지 않는다</summary>
+    /// <summary>F1 곡 조정의 곡 시작 BPM 변경도 기록된다: Undo로 BPM이 돌아오고, 끝까지 되돌리면 저장할 것이 없다</summary>
     [Test]
-    public void UnrecordedChange_StaysDirty()
+    public void TuneStartBpm_IsUndoable()
     {
         session.AddNote(0, 0);
         session.SetTiming(160f, 0);
+        Assert.AreEqual(160f, session.Bpm);
+        Assert.AreEqual(GameConstants.Editor.HistoryTuneStartBpm, session.Undo());
+        Assert.AreEqual(150f, session.Bpm, "곡 시작 BPM이 돌아옴");
         session.Undo();
-        Assert.IsTrue(session.IsDirty, "BPM은 바뀐 채로라 저장 안 됨");
+        Assert.IsFalse(session.IsDirty, "처음(빈 새 채보) 상태");
+
+        session.SetTiming(150f, 30);
+        Assert.AreEqual(30, session.OffsetMs);
+        Assert.IsFalse(session.CanUndo, "offset만 바꾸면 기록하지 않는다 (곡 정보 값)");
+        Assert.IsFalse(session.IsDirty);
     }
 
     /// <summary>순서를 기록만 하는 가짜 편집 (EditHistory 순수 클래스 확인용)</summary>

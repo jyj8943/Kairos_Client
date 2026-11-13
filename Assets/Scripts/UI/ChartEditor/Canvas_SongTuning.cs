@@ -12,6 +12,8 @@ using UnityEngine.UI;
 /// - 파일 전체가 #if UNITY_EDITOR 안에 있고, 오브젝트는 EditorOnly 태그라 빌드에서 오브젝트째 빠진다.
 /// - F1(ChartEditor/ToggleTuning)로 여닫는다. offsetMs −10/−1/+1/+10 버튼과 BPM 입력칸으로 값을 바꾸면
 ///   EditorScene이 그리드·메트로놈·시간 표시에 바로 반영한다 (재생 중이면 그 자리에서 다시 재생).
+/// - BPM 입력칸은 곡 시작 구간(0박) BPM만 바꾼다. 다른 BPM 구간은 그대로 두고, 바꾼 것은 구간 편집처럼 Ctrl+Z로 되돌릴 수 있다.
+///   offset은 곡 정보 값이라 채보 수정(저장 안 됨 표시)에 넣지 않는다.
 /// - 바꾼 값은 "SongData에 저장"을 눌러야 곡 에셋에 들어간다. 저장 전에는 세션 값만 바뀌므로 플레이를 끝내면 원래 값 그대로다.
 /// - 공식 채보로 추가: 편집 중인 노트를 난이도·레벨을 정해 공식 채보(Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json)로 저장한다.
 ///   그 난이도 파일이 있으면 확인 팝업으로 덮어쓸지 묻고, 저장 뒤 바로 임포트해 같은 플레이 중에도 곡 선택 씬에서 보인다.
@@ -138,6 +140,8 @@ public class Canvas_SongTuning : MonoBehaviour
         serialized.FindProperty("offsetMs").intValue = session.OffsetMs;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(song);
+        // 곡 기본 BPM이 바뀌었으므로 "곡 기본 BPM으로 되돌리기"도 새 값을 쓴다
+        session.SetSongDefaultBpm(session.Bpm);
         AssetDatabase.SaveAssets();
 
         statusText.text = $"SongData에 저장했습니다 ({AssetDatabase.GetAssetPath(song)})";

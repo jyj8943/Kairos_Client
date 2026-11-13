@@ -9,8 +9,13 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 채보 편집 화면 UI. EditorScene이 그리드 Init 뒤에 Init()을 호출한다.
-/// - 상단 바(채보 정보·저장 상태), 오른쪽 패널(박자 스냅·그리드 높이·BPM·노트 수·곡 길이), 타임라인 정보를 갱신한다.
+/// - 상단 바(채보 정보·저장 상태), 왼쪽 패널(노트 수·도구·테스트 플레이 배속),
+///   오른쪽 패널(박자 스냅·그리드 높이·현재 위치 BPM·BPM 구간 목록·곡 기본 BPM으로 되돌리기·메트로놈/키음), 타임라인 정보를 갱신한다 (기획서 3-6).
 /// - 왼쪽 도구 토글 상태를 CurrentTool로 알려준다 (도구 동작은 각 처리 쪽에서 이 값을 읽는다).
+///   선택된 도구는 연한 주황 바탕 · 주황 테두리 · 진한 주황 글자, 나머지는 흰 바탕 · 회색 테두리 · 진한 회색 글자.
+///   도구 단축키 1 · 2 · 3(ChartEditor/ToolShortNote·ToolLongNote·ToolBpmSection)은 이벤트로 알린다 (롱노트 드래그 중 확인은 EditorScene).
+/// - BPM 구간: 목록 줄 클릭·Btn_ResetBpm은 이벤트로 알리고, 구간이 바뀌면(RefreshTiming) 목록·현재 BPM·타임라인 눈금을 다시 그린다.
+///   현재 위치가 속한 구간이 바뀔 때만 현재 BPM 글자·목록 강조를 바꾼다 (재생 중 매 프레임 글자를 새로 만들지 않게).
 /// - 마우스 휠은 입력 에셋의 ChartEditor 맵으로 받는다. 포인터가 그리드 위에 있을 때만 처리한다.
 ///   (휠: 현재 beat를 스냅 한 칸씩 이동, Ctrl+휠: 그리드 높이 배율 변경)
 /// - 저장은 Btn_Save 클릭과 ChartEditor/Save(Ctrl+S)로 받아 EditorScene이 넘긴 저장 요청 함수를 부른다.
@@ -19,7 +24,7 @@ using UnityEngine.UI;
 ///   (재생 처리는 EditorPlayback이 맡는다). 입력창에 글자를 쓰는 중이면 Space를 무시한다.
 /// - 실행 취소(ChartEditor/Undo, Ctrl+Z)·다시 실행(ChartEditor/Redo, Ctrl+Y · Ctrl+Shift+Z)은 이벤트로 알린다 (처리는 EditorScene).
 ///   입력창에 글자를 쓰는 중이면 무시한다. Ctrl+Shift+Z는 다시 실행만 받는다 (Undo 콜백에서 Shift가 눌려 있으면 무시).
-/// - 확인 팝업 등 팝업이 열려 있으면 Space·Ctrl+S·Ctrl+Z·Ctrl+Y·휠은 동작하지 않는다 (GameManager.UI.HasOpenPopup).
+/// - 확인 팝업 등 팝업이 열려 있으면 Space·Ctrl+S·Ctrl+Z·Ctrl+Y·1·2·3·휠은 동작하지 않는다 (GameManager.UI.HasOpenPopup).
 /// - 폴더 이름을 Editor로 두면 Unity 특수 폴더가 되므로 UI/ChartEditor/에 둔다.
 /// </summary>
 public class Canvas_Editor : UIBase
@@ -40,11 +45,24 @@ public class Canvas_Editor : UIBase
     [Tooltip("그리드 아래 조작 안내 (Txt_ControlHint). 문구는 GameConstants.Editor.ControlHint")]
     [SerializeField] private TMP_Text controlHintText;
 
-    [Header("왼쪽 도구")]
+    [Header("왼쪽 패널: 노트 수")]
+    [Tooltip("노트 수 (Txt_NoteCount). \"노트 413\" / \"롱노트 84\" 두 줄")]
+    [SerializeField] private TMP_Text noteCountText;
+
+    [Header("왼쪽 도구 (단축키 1 · 2 · 3)")]
     [SerializeField] private Toggle shortNoteToggle;
     [SerializeField] private Toggle longNoteToggle;
-    [SerializeField] private Toggle selectToggle;
-    [SerializeField] private Toggle eraserToggle;
+    [SerializeField] private Toggle bpmSectionToggle;
+
+    [Header("왼쪽 도구: 선택 표시 색 (기획서 3-6)")]
+    [SerializeField] private Color toolSelectedBackground = new Color32(0xFF, 0xF7, 0xED, 0xFF);
+    [SerializeField] private Color toolSelectedBorder = new Color32(0xF9, 0x73, 0x16, 0xFF);
+    [SerializeField] private Color toolSelectedText = new Color32(0xC2, 0x41, 0x0C, 0xFF);
+    [SerializeField] private Color toolNormalBackground = Color.white;
+    [SerializeField] private Color toolNormalBorder = new Color32(0xA1, 0xA1, 0xAA, 0xFF);
+    [SerializeField] private Color toolNormalText = new Color32(0x27, 0x27, 0x2A, 0xFF);
+    [Tooltip("선택된 도구 테두리 두께 (px). 선택 안 된 도구는 1px 더 얇다")]
+    [Min(1f)] [SerializeField] private float toolSelectedBorderWidth = 3f;
 
     [Header("왼쪽 도구: 테스트 플레이 배속 (버튼으로만 바꾼다, 단축키 없음)")]
     [Tooltip("배속 내림 (Btn_SpeedDown, −0.1)")]
@@ -59,10 +77,19 @@ public class Canvas_Editor : UIBase
     [SerializeField] private TMP_Text gridHeightText;
     [Tooltip("선 간격이 좁을 때 보여주는 안내 (Txt_GridHeightHint). 기준은 GameConstants.Editor.MinSnapLineSpacingPixels")]
     [SerializeField] private TMP_Text gridHeightHintText;
-    [Tooltip("곡 BPM 표시 (Input_Bpm). 이번에는 표시만 하고 수정할 수 없다")]
-    [SerializeField] private TMP_InputField bpmInput;
-    [SerializeField] private TMP_Text noteCountText;
-    [SerializeField] private TMP_Text songLengthText;
+
+    [Header("오른쪽 패널: BPM (현재 위치)")]
+    [Tooltip("현재 위치 선의 BPM (Txt_CurrentBpm)")]
+    [SerializeField] private TMP_Text currentBpmText;
+    [Tooltip("다음 구간 \"다음: 마디 17 → 200\" (Txt_NextBpm). 다음 구간이 없으면 비운다")]
+    [SerializeField] private TMP_Text nextBpmText;
+
+    [Header("오른쪽 패널: BPM 구간")]
+    [SerializeField] private ScrollView_BpmSections bpmSectionList;
+    [Tooltip("곡 기본 BPM으로 되돌리기 (Btn_ResetBpm). 곡 기본 BPM 1개 상태면 비활성")]
+    [SerializeField] private Button resetBpmButton;
+    [Tooltip("BPM 구간 추가 · 수정 창")]
+    [SerializeField] private Popup_BpmSection bpmSectionPopup;
 
     [Header("타임라인")]
     [SerializeField] private TMP_Text timeInfoText;
@@ -71,9 +98,7 @@ public class Canvas_Editor : UIBase
     [SerializeField] private TMP_Text playIconText;
     [SerializeField] private Slider_Timeline timelineSlider;
 
-    [Header("재생 설정")]
-    [Tooltip("재생 속도 (Dropdown_PlaybackSpeed). TODO: 재생 속도 기능을 만들면 연결한다 (지금은 막아 둔다)")]
-    [SerializeField] private TMP_Dropdown playbackSpeedDropdown;
+    [Header("재생 설정 (재생은 항상 1배)")]
     [SerializeField] private Toggle metronomeToggle;
     [Tooltip("에디터 키음 (Toggle_KeySound). 재생 중 노트가 현재 위치 선에 닿을 때 키음을 낸다")]
     [SerializeField] private Toggle keySoundToggle;
@@ -93,6 +118,27 @@ public class Canvas_Editor : UIBase
     [SerializeField] private InputActionReference undoAction;
     [Tooltip("입력 에셋의 ChartEditor/Redo (Ctrl+Y · Ctrl+Shift+Z)")]
     [SerializeField] private InputActionReference redoAction;
+    [Tooltip("입력 에셋의 ChartEditor/ToolShortNote (1)")]
+    [SerializeField] private InputActionReference toolShortNoteAction;
+    [Tooltip("입력 에셋의 ChartEditor/ToolLongNote (2)")]
+    [SerializeField] private InputActionReference toolLongNoteAction;
+    [Tooltip("입력 에셋의 ChartEditor/ToolBpmSection (3)")]
+    [SerializeField] private InputActionReference toolBpmSectionAction;
+
+    /// <summary>도구 단축키 1 · 2 · 3 요청 (EditorScene이 롱노트 드래그 중이 아니면 SetTool)</summary>
+    public event Action<EditorTool> ToolShortcutRequested;
+
+    /// <summary>BPM 구간 목록 줄 클릭 (구간 tick)</summary>
+    public event Action<int> BpmSectionChosen;
+
+    /// <summary>곡 기본 BPM으로 되돌리기 (Btn_ResetBpm)</summary>
+    public event Action ResetBpmRequested;
+
+    /// <summary>BPM 구간 추가 · 수정 창</summary>
+    public Popup_BpmSection BpmSectionPopup => bpmSectionPopup;
+
+    /// <summary>BPM 구간 목록 (확인용)</summary>
+    public ScrollView_BpmSections BpmSectionList => bpmSectionList;
 
     /// <summary>실행 취소 요청 (Ctrl+Z)</summary>
     public event Action UndoRequested;
@@ -139,6 +185,12 @@ public class Canvas_Editor : UIBase
     private string lastSaveStatus = string.Empty;
     private bool isInputEnabled;
 
+    /// <summary>현재 BPM 글자·목록 강조를 마지막으로 맞춘 구간 번호. 구간이 바뀌면 −1로 돌려 다시 맞춘다</summary>
+    private int shownSectionIndex = -1;
+
+    private readonly List<float> markerPositions = new List<float>();
+    private readonly List<string> markerLabels = new List<string>();
+
     /// <summary>
     /// 지금 켜진 도구. 토글이 모두 꺼져 있으면 숏노트로 본다 (ToggleGroup이 하나는 켜 두므로 보통 생기지 않음).
     /// </summary>
@@ -153,8 +205,7 @@ public class Canvas_Editor : UIBase
         get
         {
             if (longNoteToggle != null && longNoteToggle.isOn) return EditorTool.LongNote;
-            if (selectToggle != null && selectToggle.isOn) return EditorTool.Select;
-            if (eraserToggle != null && eraserToggle.isOn) return EditorTool.Eraser;
+            if (bpmSectionToggle != null && bpmSectionToggle.isOn) return EditorTool.BpmSection;
             return EditorTool.ShortNote;
         }
     }
@@ -213,21 +264,31 @@ public class Canvas_Editor : UIBase
         SetTestPlaySpeed(GameConstants.Play.DefaultScrollMultiplier);
 
         chartInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, song.Title, session.ChartName, session.Level);
-        songLengthText.text = TimeFormat.ToMinSec(session.SongLengthSeconds);
         lastSaveStatus = string.Empty;
         saveStatusText.text = lastSaveStatus;
         if (controlHintText != null) controlHintText.text = GameConstants.Editor.ControlHint;
         else Debug.LogWarning("[Canvas_Editor] 조작 안내(Txt_ControlHint)가 연결되지 않았습니다.", this);
 
-        // BPM은 표시만 한다 (선택·입력 불가)
-        RefreshTiming();
-        bpmInput.interactable = false;
+        // 도구: 선택 표시 색을 토글이 바뀔 때마다 맞춘다
+        foreach (Toggle toggle in ToolToggles())
+        {
+            if (toggle == null) continue;
+            toggle.onValueChanged.RemoveListener(OnToolToggled);
+            toggle.onValueChanged.AddListener(OnToolToggled);
+        }
+        RefreshToolStyles();
 
-        // 재생: 버튼·슬라이더·메트로놈. 재생 속도는 아직 기능이 없어 막아 둔다 (TODO)
+        // BPM 구간: 목록·되돌리기·입력 창
+        bpmSectionList.Init(tick => BpmSectionChosen?.Invoke(tick));
+        resetBpmButton.onClick.RemoveListener(RequestResetBpm);
+        resetBpmButton.onClick.AddListener(RequestResetBpm);
+        bpmSectionPopup.Init();
+
+        // 재생: 버튼·슬라이더·메트로놈 (재생은 항상 1배)
         playButton.onClick.RemoveListener(RequestPlayToggle);
         playButton.onClick.AddListener(RequestPlayToggle);
         timelineSlider.Init(() => SeekStarted?.Invoke(), value => SeekDragged?.Invoke(value), value => SeekReleased?.Invoke(value));
-        playbackSpeedDropdown.interactable = false;
+        RefreshTiming();
         metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
         metronomeToggle.SetIsOnWithoutNotify(false);
         metronomeToggle.onValueChanged.AddListener(OnMetronomeToggled);
@@ -256,13 +317,51 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// BPM 표시와 시간 표시를 세션 값으로 다시 맞춘다 (BPM·offset을 바꿨을 때).
+    /// BPM 구간 목록·현재 BPM·되돌리기 버튼·타임라인 눈금과 시간 표시를 세션 값으로 다시 맞춘다 (구간·offset이 바뀌었을 때).
     /// </summary>
     public void RefreshTiming()
     {
-        bpmInput.text = SongData.FormatBpm(session.Bpm);
+        bpmSectionList.SetSections(session.BpmSections);
+        resetBpmButton.interactable = !session.IsSongDefaultBpm;
+        RefreshTimelineMarkers();
+        shownSectionIndex = -1;
         RefreshTimeline();
         RefreshGridHeightText();
+    }
+
+    /// <summary>
+    /// 현재 위치가 속한 구간이 바뀌었으면 현재 BPM·다음 구간 글자와 목록 강조를 맞춘다.
+    /// </summary>
+    private void RefreshCurrentBpm()
+    {
+        IReadOnlyList<BpmSection> sections = session.BpmSections;
+        int index = BpmSectionRules.IndexAt(sections, BeatGridMath.BeatToTick(grid.CurrentBeat));
+        if (index == shownSectionIndex) return;
+
+        shownSectionIndex = index;
+        currentBpmText.text = SongData.FormatBpm(sections[index].Bpm);
+        nextBpmText.text = index + 1 < sections.Count
+            ? string.Format(GameConstants.Editor.NextBpmFormat, BpmSectionRules.FormatShortPosition(sections[index + 1].Tick), SongData.FormatBpm(sections[index + 1].Bpm))
+            : string.Empty;
+        bpmSectionList.SetCurrent(index);
+        // 스냅 선 간격 안내는 현재 위치 BPM 기준이다
+        RefreshGridHeightText();
+    }
+
+    /// <summary>타임라인 위 BPM 구간 눈금 (곡 시작 구간 제외)</summary>
+    private void RefreshTimelineMarkers()
+    {
+        markerPositions.Clear();
+        markerLabels.Clear();
+        float length = session.SongLengthSeconds;
+        IReadOnlyList<BpmSection> sections = session.BpmSections;
+        for (int i = 1; i < sections.Count; i++)
+        {
+            float seconds = (float)session.Timing.BeatToSeconds(sections[i].Beat);
+            markerPositions.Add(length > 0f ? seconds / length : 0f);
+            markerLabels.Add(SongData.FormatBpm(sections[i].Bpm));
+        }
+        timelineSlider.SetBpmMarkers(markerPositions, markerLabels);
     }
 
     /// <summary>
@@ -272,6 +371,7 @@ public class Canvas_Editor : UIBase
     public void RefreshTimeline()
     {
         RefreshTimeInfoText();
+        RefreshCurrentBpm();
 
         float length = session.SongLengthSeconds;
         float current = (float)session.Timing.BeatToSeconds(grid.CurrentBeat);
@@ -305,6 +405,19 @@ public class Canvas_Editor : UIBase
         {
             Debug.LogWarning("[Canvas_Editor] 실행 취소·다시 실행 입력 액션이 연결되지 않아 Ctrl+Z·Ctrl+Y를 받을 수 없습니다.", this);
         }
+        if (toolShortNoteAction != null && toolLongNoteAction != null && toolBpmSectionAction != null)
+        {
+            toolShortNoteAction.action.performed += OnToolShortNoteShortcut;
+            toolLongNoteAction.action.performed += OnToolLongNoteShortcut;
+            toolBpmSectionAction.action.performed += OnToolBpmSectionShortcut;
+            toolShortNoteAction.action.Enable();
+            toolLongNoteAction.action.Enable();
+            toolBpmSectionAction.action.Enable();
+        }
+        else
+        {
+            Debug.LogWarning("[Canvas_Editor] 도구 단축키 입력 액션이 연결되지 않아 1·2·3을 받을 수 없습니다.", this);
+        }
         scrollAction.action.Enable();
         zoomModifierAction.action.Enable();
         pointAction.action.Enable();
@@ -326,6 +439,9 @@ public class Canvas_Editor : UIBase
         playPauseAction.action.performed -= OnPlayPauseShortcut;
         if (undoAction != null) undoAction.action.performed -= OnUndoShortcut;
         if (redoAction != null) redoAction.action.performed -= OnRedoShortcut;
+        if (toolShortNoteAction != null) toolShortNoteAction.action.performed -= OnToolShortNoteShortcut;
+        if (toolLongNoteAction != null) toolLongNoteAction.action.performed -= OnToolLongNoteShortcut;
+        if (toolBpmSectionAction != null) toolBpmSectionAction.action.performed -= OnToolBpmSectionShortcut;
         isInputEnabled = false;
     }
 
@@ -384,10 +500,44 @@ public class Canvas_Editor : UIBase
     {
         Toggle target = shortNoteToggle;
         if (tool == EditorTool.LongNote) target = longNoteToggle;
-        else if (tool == EditorTool.Select) target = selectToggle;
-        else if (tool == EditorTool.Eraser) target = eraserToggle;
+        else if (tool == EditorTool.BpmSection) target = bpmSectionToggle;
 
         if (target != null) target.isOn = true;
+        RefreshToolStyles();
+    }
+
+    private IEnumerable<Toggle> ToolToggles()
+    {
+        yield return shortNoteToggle;
+        yield return longNoteToggle;
+        yield return bpmSectionToggle;
+    }
+
+    private void OnToolToggled(bool on)
+    {
+        RefreshToolStyles();
+    }
+
+    /// <summary>
+    /// 도구 버튼 색을 선택 상태에 맞춘다: 바탕은 Toggle의 targetGraphic, 테두리는 같은 오브젝트의 Outline, 글자는 자식 TMP.
+    /// </summary>
+    private void RefreshToolStyles()
+    {
+        foreach (Toggle toggle in ToolToggles())
+        {
+            if (toggle == null) continue;
+            bool on = toggle.isOn;
+            if (toggle.targetGraphic != null) toggle.targetGraphic.color = on ? toolSelectedBackground : toolNormalBackground;
+            Outline outline = toggle.GetComponent<Outline>();
+            if (outline != null)
+            {
+                outline.effectColor = on ? toolSelectedBorder : toolNormalBorder;
+                float width = on ? toolSelectedBorderWidth : Mathf.Max(1f, toolSelectedBorderWidth - 1f);
+                outline.effectDistance = new Vector2(width, -width);
+            }
+            TMP_Text label = toggle.GetComponentInChildren<TMP_Text>(true);
+            if (label != null) label.color = on ? toolSelectedText : toolNormalText;
+        }
     }
 
     /// <summary>
@@ -410,6 +560,9 @@ public class Canvas_Editor : UIBase
 
         if (beatSnapDropdown != null) beatSnapDropdown.onValueChanged.RemoveListener(OnBeatSnapChanged);
         if (saveButton != null) saveButton.onClick.RemoveListener(RequestSave);
+        if (resetBpmButton != null) resetBpmButton.onClick.RemoveListener(RequestResetBpm);
+        foreach (Toggle toggle in ToolToggles())
+            if (toggle != null) toggle.onValueChanged.RemoveListener(OnToolToggled);
         if (exitButton != null) exitButton.onClick.RemoveListener(RequestExit);
         if (testPlayButton != null) testPlayButton.onClick.RemoveListener(RequestTestPlay);
         if (autoTestPlayButton != null) autoTestPlayButton.onClick.RemoveListener(RequestAutoTestPlay);
@@ -434,6 +587,11 @@ public class Canvas_Editor : UIBase
     private void RequestSave()
     {
         onSaveRequested?.Invoke();
+    }
+
+    private void RequestResetBpm()
+    {
+        ResetBpmRequested?.Invoke();
     }
 
     private void RequestExit()
@@ -483,6 +641,17 @@ public class Canvas_Editor : UIBase
     {
         if (IsShortcutBlocked()) return;
         RedoRequested?.Invoke();
+    }
+
+    private void OnToolShortNoteShortcut(InputAction.CallbackContext context) => RequestToolShortcut(EditorTool.ShortNote);
+    private void OnToolLongNoteShortcut(InputAction.CallbackContext context) => RequestToolShortcut(EditorTool.LongNote);
+    private void OnToolBpmSectionShortcut(InputAction.CallbackContext context) => RequestToolShortcut(EditorTool.BpmSection);
+
+    /// <summary>도구 단축키 1 · 2 · 3. 팝업이 열려 있거나 입력창에 글자를 쓰는 중이면 무시한다</summary>
+    private void RequestToolShortcut(EditorTool tool)
+    {
+        if (IsShortcutBlocked()) return;
+        ToolShortcutRequested?.Invoke(tool);
     }
 
     private void OnMetronomeToggled(bool on)
@@ -602,7 +771,7 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// "노트 N · 롱노트 M" 형식(NoteCountFormat)으로 노트 수를 표시한다. N은 숏노트와 롱노트를 합한 수다.
+    /// "노트 N" / "롱노트 M" 두 줄(NoteCountFormat)로 노트 수를 표시한다. N은 숏노트와 롱노트를 합한 수다.
     /// </summary>
     private void RefreshNoteCountText()
     {

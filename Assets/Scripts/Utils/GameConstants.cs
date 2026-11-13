@@ -234,6 +234,17 @@ public static class GameConstants
         /// <summary>일시정지 중 설정 창에서 판정 오프셋을 바꾸고 닫았을 때 (확인하면 바로 재시작, 취소하면 다음 판부터 적용)</summary>
         public const string OffsetRestart = "판정 오프셋이 바뀌었습니다.\n지금 재시작해야 이번 판에 적용됩니다.\n재시작하시겠습니까?";
         public const string OffsetRestartLabel = "재시작";
+
+        /// <summary>에디터 BPM 구간 삭제 (그 구간 뒤에 노트가 있을 때만): {0} 시간이 바뀌는 노트 수</summary>
+        public const string BpmSectionRemoveMessageFormat = "이 BPM 구간을 삭제하시겠습니까?\n뒤에 있는 노트 {0}개의 시간이 바뀝니다.";
+
+        /// <summary>BPM 구간 삭제로 앞뒤 BPM이 같아질 때 덧붙이는 줄</summary>
+        public const string BpmSectionRemoveMergedLine = "\n같은 BPM이 된 다음 구간도 함께 삭제됩니다.";
+        public const string BpmSectionRemoveLabel = "삭제";
+
+        /// <summary>에디터 곡 기본 BPM으로 되돌리기: {0} 곡 기본 BPM</summary>
+        public const string BpmResetMessageFormat = "모든 BPM 구간을 삭제하고 곡의 기본 BPM({0})으로 되돌리시겠습니까?";
+        public const string BpmResetLabel = "되돌리기";
     }
 
     /// <summary>인게임 일시정지 메뉴 (기획서 3-4, 2-1 재개 3초 카운트다운)</summary>
@@ -498,8 +509,70 @@ public static class GameConstants
         /// <summary>그리드 아래 조작 안내 (Txt_ControlHint)</summary>
         public const string ControlHint = "Space 재생 · 휠 이동 · 클릭 배치 · 우클릭 삭제 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행";
 
+        /// <summary>BPM 구간 기록 설명</summary>
+        public const string HistoryAddBpmSection = "BPM 구간 추가";
+        public const string HistorySetBpmSection = "BPM 구간 수정";
+        public const string HistoryRemoveBpmSection = "BPM 구간 삭제";
+        public const string HistoryRemoveMergedBpmSection = "같은 BPM이 된 다음 구간 삭제";
+        public const string HistoryResetBpm = "곡 기본 BPM으로 되돌리기";
+        public const string HistoryTuneStartBpm = "곡 시작 BPM 변경 (F1)";
+
+        /// <summary>BPM 구간 BPM 범위 (기획서 3-6, 소수 둘째 자리까지)</summary>
+        public const float MinSectionBpm = 30f;
+        public const float MaxSectionBpm = 400f;
+
+        /// <summary>그리드 BPM 구간선 풀 크기 (한 화면에 보이는 구간 수보다 넉넉히)</summary>
+        public const int BpmSectionLinePoolSize = 8;
+
+        /// <summary>BPM 구간 입력 오류 문구 (Popup_BpmSection 안내 자리에 빨간 글씨)</summary>
+        public const string BpmSectionSameAsPreviousMessage = "이전 BPM 구간과 같은 BPM을 입력할 수 없습니다.";
+        public const string BpmSectionSameAsNextMessage = "다음 BPM 구간과 같은 BPM을 입력할 수 없습니다.";
+        public const string BpmSectionOutOfRangeMessage = "30 ~ 400 사이의 숫자를 입력해 주세요.";
+        public const string BpmSectionDuplicateMessage = "이 위치에는 이미 BPM 구간이 있습니다.";
+        public const string BpmSectionCannotRemoveStartMessage = "곡 시작 BPM 구간은 지울 수 없습니다.";
+        public const string BpmSectionOutOfSongMessage = "곡 범위 밖에는 BPM 구간을 둘 수 없습니다.";
+        public const string BpmSectionNotFoundMessage = "그 위치에 BPM 구간이 없습니다.";
+
+        /// <summary>BPM 입력 안내 (평소 회색)</summary>
+        public const string BpmSectionInputHint = "30 ~ 400, 소수 둘째 자리까지";
+
+        /// <summary>위치 문구: {0} 마디, {1} 박 (예: 마디 17 · 1박, 마디 25 · 3.5박)</summary>
+        public const string BpmSectionPositionFormat = "마디 {0} · {1}박";
+
+        /// <summary>짧은 위치 문구 (적용 범위·다음 구간): 마디 첫 박이면 "마디 17", 아니면 "마디 25 3박"</summary>
+        public const string BpmSectionMeasureFormat = "마디 {0}";
+        public const string BpmSectionMeasureBeatFormat = "마디 {0} {1}박";
+
+        /// <summary>적용 범위: {0} 시작, {1} 다음 구간 위치</summary>
+        public const string BpmSectionRangeFormat = "{0} ~ {1} (다음 구간 전까지)";
+        public const string BpmSectionRangeToEndFormat = "{0} ~ 곡 끝";
+
+        /// <summary>뒤 노트 경고: {0} 노트 수. 기획서의 ⚠는 NEXON Lv2 Gothic에 글자가 없어 ※로 쓴다</summary>
+        public const string BpmSectionNotesWarningFormat = "※ 이 뒤 노트 {0}개는 마디·박 위치 그대로, 시간이 바뀝니다 (Ctrl+Z로 되돌릴 수 있음)";
+
+        /// <summary>BPM 구간 입력 창 글자</summary>
+        public const string BpmSectionPopupTitle = "BPM 구간 (추가 · 수정)";
+        public const string BpmSectionPositionHint = "클릭한 스냅 위치";
+        public const string BpmSectionDeleteHint = "삭제는 그리드에서 구간선 우클릭";
+
+        /// <summary>오른쪽 패널 현재 위치 BPM 옆 다음 구간: {0} 위치, {1} BPM</summary>
+        public const string NextBpmFormat = "다음: {0} → {1}";
+
+        /// <summary>BPM 구간 목록에서 곡 시작 줄 표시, 그리드 라벨 아래 줄 (곡 시작 구간)</summary>
+        public const string BpmSectionStartLabel = "곡 시작";
+
+        /// <summary>그리드 구간선 라벨: {0} BPM / 아래 줄 {0} 이전 BPM → {1} 이 구간 BPM</summary>
+        public const string BpmSectionLabelFormat = "♩ {0} BPM";
+        public const string BpmSectionChangeFormat = "{0} → {1}";
+
+        /// <summary>BPM 구간 편집 결과 안내 (상태 표시줄)</summary>
+        public const string BpmSectionAddedFormat = "BPM 구간 추가: {0} · {1}";
+        public const string BpmSectionChangedFormat = "BPM 구간 수정: {0} · {1}";
+        public const string BpmSectionRemovedFormat = "BPM 구간 삭제: {0}";
+        public const string BpmResetDoneMessage = "곡 기본 BPM으로 되돌렸습니다";
+
         /// <summary>오른쪽 패널 노트 수: {0} 전체 노트 수(숏 + 롱), {1} 롱노트 수</summary>
-        public const string NoteCountFormat = "노트 {0} · 롱노트 {1}";
+        public const string NoteCountFormat = "노트 {0}\n<size=80%><color=#52525B>롱노트 {1}</color></size>";
 
         /// <summary>롱노트 드래그 미리보기의 불투명도 (0~1)</summary>
         public const float LongNotePreviewAlpha = 0.45f;

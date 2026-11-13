@@ -84,7 +84,7 @@ public class TestPlayRulesTests
             session.AddNote(1, 48 * 8);
             Assert.IsTrue(session.IsDirty);
 
-            TestPlayData data = session.CreateTestPlayData(8f, 6, 1.5f, EditorTool.Eraser, true, out string error);
+            TestPlayData data = session.CreateTestPlayData(8f, 6, 1.5f, EditorTool.BpmSection, true, out string error);
             Assert.IsNotNull(data, error);
             Assert.IsNull(session.ChartId, "새 채보에 ID를 만들지 않는다");
             Assert.IsNull(data.chart.chartId);
@@ -95,7 +95,7 @@ public class TestPlayRulesTests
             Assert.IsTrue(data.editorState.isDirty);
             Assert.AreEqual(6, data.editorState.snapDivision);
             Assert.AreEqual(1.5f, data.editorState.gridHeightScale);
-            Assert.AreEqual(EditorTool.Eraser, data.editorState.tool);
+            Assert.AreEqual(EditorTool.BpmSection, data.editorState.tool);
 
             Assert.IsNull(session.CreateTestPlayData(8.25f, 4, 1f, EditorTool.ShortNote, false, out string afterError), "뒤에 노트가 없으면 null");
             Assert.AreEqual(GameConstants.Editor.TestPlayNoNotesAfterMessage, afterError);

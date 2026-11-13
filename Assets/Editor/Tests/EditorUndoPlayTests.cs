@@ -158,9 +158,12 @@ public class EditorUndoPlayTests
         yield return null;
         Assert.IsFalse(GameManager.UI.HasOpenPopup);
 
-        // 입력창 (BPM 칸을 잠시 입력 가능하게 해 포커스를 준다)
-        TMP_InputField input = Get<TMP_InputField>(canvas, "bpmInput");
-        input.interactable = true;
+        // 입력창 (F1 곡 조정 패널의 BPM 칸을 잠시 열어 포커스를 준다. 에디터 화면에 남은 입력 칸은 이것뿐이다)
+        Canvas_SongTuning tuning = Object.FindFirstObjectByType<Canvas_SongTuning>(FindObjectsInactive.Include);
+        Assert.IsNotNull(tuning, "F1 곡 조정 패널");
+        GameObject tuningPanel = Get<GameObject>(tuning, "panel");
+        tuningPanel.SetActive(true);
+        TMP_InputField input = Get<TMP_InputField>(tuning, "bpmInput");
         EventSystem.current.SetSelectedGameObject(input.gameObject);
         input.ActivateInputField();
         yield return null;
@@ -170,7 +173,7 @@ public class EditorUndoPlayTests
         Assert.AreEqual(1, session.Data.Notes.Count, "입력창에 쓰는 중이면 무시");
         input.DeactivateInputField();
         EventSystem.current.SetSelectedGameObject(null);
-        input.interactable = false;
+        tuningPanel.SetActive(false);
         yield return null;
 
         // 롱노트 드래그 중

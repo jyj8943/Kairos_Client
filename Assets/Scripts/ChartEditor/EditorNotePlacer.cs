@@ -10,12 +10,20 @@ using UnityEngine.EventSystems;
 /// - 숏노트 도구: 왼쪽 클릭 = 숏노트. 같은 라인에서 1/4박 이상 드래그하면 롱노트, 그보다 짧은 드래그는 클릭으로 본다 (기획서 2-3).
 /// - 롱노트 도구: 왼쪽 버튼을 누른 칸 = 시작, 놓은 칸 = 끝. 위아래 어느 쪽으로 끌어도 작은 쪽이 시작이다.
 ///   드래그하는 동안 끝을 스냅 칸에 맞춘 반투명 미리보기를 보여준다 (EditorNoteLayer).
-/// - 오른쪽 클릭(숏노트·롱노트 도구), 지우개 도구의 왼쪽 클릭: 화면에 그려진 노트를 지운다 (숏노트는 가장자리까지, 롱노트는 어느 부분이든. 노트가 겹쳐 보이면 가까운 쪽).
+/// - 오른쪽 클릭(숏노트·롱노트 도구): 화면에 그려진 노트를 지운다 (숏노트는 가장자리까지, 롱노트는 어느 부분이든. 노트가 겹쳐 보이면 가까운 쪽).
+/// - BPM 구간 도구: 노트를 찍지 않는다. 왼쪽 클릭 = 구간선 근처(bpmSectionPickPixels 안)면 그 구간, 아니면 스냅 위치로 추가·수정 요청,
+///   오른쪽 클릭 = 구간선 근처면 삭제 요청. 실제 처리(창·확인 팝업)는 EditorScene이 맡는다.
 /// - 배치가 실패하면(너무 짧음, 겹침) 이유를 상태 표시줄에 잠깐 보여준다.
 /// </summary>
 public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IPointerClickHandler
 {
+    [Header("BPM 구간 도구")]
+    [Tooltip("구간선을 클릭한 것으로 보는 거리 (그리드 로컬 px, 위아래)")]
+    [Min(0f)] [SerializeField] private float bpmSectionPickPixels = 10f;
+
     private ChartGridView grid;
+    private Action<int> onBpmSectionClicked;
+    private Action<int> onBpmSectionRemoveRequested;
     private ChartEditSession session;
     private EditorNoteLayer noteLayer;
     private Func<EditorTool> getCurrentTool;
@@ -32,8 +40,13 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     /// 그리드·편집 세션·노트 표시(미리보기용)와 지금 고른 도구를 읽을 함수, 안내를 보여줄 함수를 받는다.
     /// </summary>
     /// <param name="showMessage">배치 실패 이유를 상태 표시줄에 잠깐 보여주는 함수</param>
-    public void Init(ChartGridView grid, ChartEditSession session, EditorNoteLayer noteLayer, Func<EditorTool> getCurrentTool, Action<string> showMessage)
+    /// <param name="onBpmSectionClicked">BPM 구간 도구 왼쪽 클릭: 구간 tick(구간선 위) 또는 스냅 tick(빈 곳)</param>
+    /// <param name="onBpmSectionRemoveRequested">BPM 구간 도구 오른쪽 클릭: 구간선 위면 그 구간 tick</param>
+    public void Init(ChartGridView grid, ChartEditSession session, EditorNoteLayer noteLayer, Func<EditorTool> getCurrentTool, Action<string> showMessage,
+                     Action<int> onBpmSectionClicked, Action<int> onBpmSectionRemoveRequested)
     {
+        this.onBpmSectionClicked = onBpmSectionClicked;
+        this.onBpmSectionRemoveRequested = onBpmSectionRemoveRequested;
         this.grid = grid;
         this.session = session;
         this.noteLayer = noteLayer;
@@ -100,7 +113,7 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     }
 
     /// <summary>
-    /// 오른쪽 클릭(숏노트·롱노트 도구), 지우개 왼쪽 클릭으로 그 자리를 덮는 노트를 지운다.
+    /// 오른쪽 클릭(숏노트·롱노트 도구)으로 그 자리를 덮는 노트를 지운다. BPM 구간 도구면 구간 추가·수정·삭제를 요청한다.
     /// 숏노트·롱노트 도구의 왼쪽 버튼은 OnPointerDown / OnPointerUp에서 처리한다.
     /// </summary>
     public void OnPointerClick(PointerEventData eventData)
@@ -108,10 +121,13 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
         if (!IsReady) return;
 
         EditorTool tool = getCurrentTool();
-        bool erase = eventData.button == PointerEventData.InputButton.Right
-            ? tool == EditorTool.ShortNote || tool == EditorTool.LongNote || tool == EditorTool.Eraser
-            : eventData.button == PointerEventData.InputButton.Left && tool == EditorTool.Eraser;
-        if (!erase) return;
+        if (tool == EditorTool.BpmSection)
+        {
+            HandleBpmSectionClick(eventData);
+            return;
+        }
+
+        if (eventData.button != PointerEventData.InputButton.Right) return;
 
         // 화면에 그려진 노트를 먼저 본다 (노트가 스냅 선 간격보다 커도 가장자리를 누르면 그 노트가 지워지게)
         if (noteLayer != null && TryGetLocalPoint(eventData, out float x, out float y) && x >= 0f && x < grid.GridRect.rect.width)
@@ -123,6 +139,46 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
         // 그 밖에는 스냅 선 위치(숏노트를 누른 자리)를 보고, 없으면 가리킨 tick 그대로(롱노트 몸통 중간) 본다
         if (TryGetGridPosition(eventData, out int lane, out int snappedTick) && session.RemoveNote(lane, snappedTick)) return;
         if (TryGetGridPosition(eventData, out lane, out int rawTick, false)) session.RemoveNote(lane, rawTick);
+    }
+
+    /// <summary>
+    /// BPM 구간 도구 클릭. 구간선 근처면 그 구간, 왼쪽 클릭이 빈 곳이면 지금 스냅 위치를 넘긴다.
+    /// </summary>
+    private void HandleBpmSectionClick(PointerEventData eventData)
+    {
+        if (!TryGetLocalPoint(eventData, out float x, out float y) || x < 0f || x >= grid.GridRect.rect.width) return;
+
+        int nearTick = FindSectionTickNear(y);
+        if (eventData.button == PointerEventData.InputButton.Right)
+        {
+            if (nearTick >= 0) onBpmSectionRemoveRequested?.Invoke(nearTick);
+            return;
+        }
+
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+        if (nearTick >= 0)
+        {
+            onBpmSectionClicked?.Invoke(nearTick);
+            return;
+        }
+
+        int tick = BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision);
+        if (tick >= 0 && tick <= session.Data.TotalTicks) onBpmSectionClicked?.Invoke(tick);
+    }
+
+    /// <summary>y(그리드 로컬)에서 bpmSectionPickPixels 안의 가장 가까운 구간 tick. 없으면 −1</summary>
+    private int FindSectionTickNear(float y)
+    {
+        int best = -1;
+        float bestDistance = bpmSectionPickPixels;
+        foreach (BpmSection section in session.BpmSections)
+        {
+            float distance = Mathf.Abs(grid.BeatToLocalY(section.Beat) - y);
+            if (distance > bestDistance) continue;
+            bestDistance = distance;
+            best = section.Tick;
+        }
+        return best;
     }
 
     private void OnDisable()

@@ -12,6 +12,10 @@ using UnityEngine;
 ///   돌아올 때는 진입 데이터의 restore로 노트·위치·스냅·그리드 높이·도구·수정 여부·실행 취소 기록을 되돌린다.
 /// - 실행 취소(Ctrl+Z)·다시 실행(Ctrl+Y · Ctrl+Shift+Z) 요청을 받아 세션에 맡기고 결과를 상태 표시줄에 잠깐 보여 준다.
 ///   롱노트를 드래그하는 중이면 무시한다. 재생 중에도 노트 편집이 되므로 실행 취소도 된다.
+/// - BPM 구간 (기획서 3-6): BPM 구간 도구 클릭 → Popup_BpmSection(추가·수정), 구간선 오른쪽 클릭 → 삭제(뒤에 노트가 있으면 확인 팝업),
+///   목록 줄 클릭 → 그 구간으로 이동, Btn_ResetBpm → 확인 팝업 → 곡 기본 BPM으로 되돌리기.
+///   구간이 바뀌면(세션 OnTimingChanged, 실행 취소 포함) 그리드·목록·타임라인을 다시 맞추고, 재생 중이면 그 자리에서 다시 재생한다.
+/// - 도구 단축키 1 · 2 · 3은 롱노트를 드래그하는 중이면 무시한다.
 /// </summary>
 public class EditorScene : SceneBase
 {
@@ -22,6 +26,8 @@ public class EditorScene : SceneBase
     [SerializeField] private ChartGridView grid;
     [SerializeField] private EditorNoteLayer noteLayer;
     [SerializeField] private EditorNotePlacer notePlacer;
+    [Tooltip("그리드 BPM 구간선·라벨 (BpmSectionLayer)")]
+    [SerializeField] private EditorBpmSectionLayer bpmSectionLayer;
     [SerializeField] private Canvas_Editor canvas;
 
     [Header("재생")]
@@ -56,9 +62,9 @@ public class EditorScene : SceneBase
         Debug.Log("[EditorScene] Init");
         isReady = false;
 
-        if (session == null || grid == null || noteLayer == null || notePlacer == null || canvas == null || playback == null)
+        if (session == null || grid == null || noteLayer == null || notePlacer == null || canvas == null || playback == null || bpmSectionLayer == null)
         {
-            Debug.LogError("[EditorScene] session, grid, noteLayer, notePlacer, canvas, playback 중 연결되지 않은 것이 있습니다.", this);
+            Debug.LogError("[EditorScene] session, grid, noteLayer, notePlacer, canvas, playback, bpmSectionLayer 중 연결되지 않은 것이 있습니다.", this);
             yield break;
         }
 
@@ -107,7 +113,8 @@ public class EditorScene : SceneBase
         }
 
         noteLayer.Init(grid, session);
-        notePlacer.Init(grid, session, noteLayer, () => canvas.CurrentTool, ShowTimedStatus);
+        bpmSectionLayer.Init(grid, session);
+        notePlacer.Init(grid, session, noteLayer, () => canvas.CurrentTool, ShowTimedStatus, OnBpmSectionClicked, OnBpmSectionRemoveRequested);
         canvas.Init(grid, session, song, OnSaveRequested, OnExitRequested, OnTestPlayRequested, OnAutoTestPlayRequested);
 
         // 재생은 정지 상태로 시작한다 (테스트 플레이에서 돌아온 경우도)
@@ -209,6 +216,10 @@ public class EditorScene : SceneBase
         UnsubscribeCanvasEvents();
         canvas.UndoRequested += OnUndoRequested;
         canvas.RedoRequested += OnRedoRequested;
+        canvas.ToolShortcutRequested += OnToolShortcutRequested;
+        canvas.BpmSectionChosen += OnBpmSectionChosen;
+        canvas.ResetBpmRequested += OnResetBpmRequested;
+        session.OnTimingChanged += OnSessionTimingChanged;
         canvas.PlayToggleRequested += playback.Toggle;
         canvas.ManualMoveStarting += StopPlaybackWithSnap;
         canvas.SeekStarted += StopPlaybackWithoutSnap;
@@ -224,6 +235,10 @@ public class EditorScene : SceneBase
 
         canvas.UndoRequested -= OnUndoRequested;
         canvas.RedoRequested -= OnRedoRequested;
+        canvas.ToolShortcutRequested -= OnToolShortcutRequested;
+        canvas.BpmSectionChosen -= OnBpmSectionChosen;
+        canvas.ResetBpmRequested -= OnResetBpmRequested;
+        if (session != null) session.OnTimingChanged -= OnSessionTimingChanged;
         canvas.PlayToggleRequested -= playback.Toggle;
         canvas.ManualMoveStarting -= StopPlaybackWithSnap;
         canvas.SeekStarted -= StopPlaybackWithoutSnap;
@@ -259,6 +274,120 @@ public class EditorScene : SceneBase
     private bool CanUseHistory()
     {
         return isReady && !isLeaving && !isSaving && !notePlacer.IsPressing;
+    }
+
+    /// <summary>도구 단축키 1 · 2 · 3. 롱노트를 드래그하는 중이면 무시한다</summary>
+    private void OnToolShortcutRequested(EditorTool tool)
+    {
+        if (!CanUseHistory()) return;
+        canvas.SetTool(tool);
+    }
+
+    /// <summary>
+    /// 세션의 BPM 구간·offset이 바뀌었다 (구간 편집, 실행 취소·다시 실행, F1 곡 조정). 노트는 박 위치 그대로라 현재 박을 유지한 채
+    /// 그리드 높이·곡 끝·목록·타임라인을 다시 맞추고, 재생 중이면 그 자리에서 다시 재생한다.
+    /// </summary>
+    private void OnSessionTimingChanged()
+    {
+        if (!isReady) return;
+
+        grid.SetTiming(session.Timing);
+        grid.SetTotalBeats(session.TotalBeats);
+        canvas.RefreshTiming();
+        playback.Restart();
+    }
+
+    /// <summary>
+    /// BPM 구간 도구 왼쪽 클릭: 그 위치에 구간이 있으면 수정, 없으면 추가 창을 연다 (재생 중이면 멈춘다).
+    /// </summary>
+    private void OnBpmSectionClicked(int tick)
+    {
+        if (!CanUseHistory() || GameManager.UI.HasOpenPopup) return;
+
+        playback.Stop(false);
+        int notesAfter = BpmSectionRules.CountNotesAfter(session.Data.Notes, tick);
+        canvas.BpmSectionPopup.Show(session.BpmSections, tick, session.Data.TotalTicks, notesAfter, OnBpmSectionConfirmed);
+    }
+
+    /// <summary>BPM 구간 창에서 확인: 그 위치에 구간이 있으면 수정, 없으면 추가</summary>
+    private void OnBpmSectionConfirmed(int tick, float bpm)
+    {
+        bool isEdit = BpmSectionRules.IndexOf(session.BpmSections, tick) >= 0;
+        BpmSectionError error;
+        bool done = isEdit ? session.SetBpmSection(tick, bpm, out error) : session.AddBpmSection(tick, bpm, out error);
+        if (!done)
+        {
+            Debug.LogWarning($"[EditorScene] BPM 구간을 {(isEdit ? "수정" : "추가")}하지 못했습니다 ({error}): {BpmSectionRules.FormatPosition(tick)}, BPM {bpm}", this);
+            ShowTimedStatus(BpmSectionRules.GetMessage(error));
+            return;
+        }
+
+        string format = isEdit ? GameConstants.Editor.BpmSectionChangedFormat : GameConstants.Editor.BpmSectionAddedFormat;
+        ShowTimedStatus(string.Format(format, BpmSectionRules.FormatPosition(tick), SongData.FormatBpm(bpm)));
+        Debug.Log($"[EditorScene] BPM 구간 {(isEdit ? "수정" : "추가")}: {BpmSectionRules.FormatPosition(tick)} = {SongData.FormatBpm(bpm)} BPM, 구간 {session.BpmSections.Count}개", this);
+    }
+
+    /// <summary>
+    /// 구간선 오른쪽 클릭: 곡 시작 구간이면 아무것도 하지 않는다. 그 구간 뒤에 노트가 있으면 확인 팝업을 띄우고, 없으면 바로 지운다.
+    /// </summary>
+    private void OnBpmSectionRemoveRequested(int tick)
+    {
+        if (!CanUseHistory() || GameManager.UI.HasOpenPopup) return;
+        if (BpmSectionRules.ValidateRemove(session.BpmSections, tick) != BpmSectionError.None) return;
+
+        int notesAfter = BpmSectionRules.CountNotesAfter(session.Data.Notes, tick);
+        if (notesAfter == 0)
+        {
+            RemoveBpmSection(tick);
+            return;
+        }
+
+        playback.Stop(false);
+        string message = string.Format(GameConstants.Confirm.BpmSectionRemoveMessageFormat, notesAfter);
+        if (BpmSectionRules.GetMergedNextTick(session.BpmSections, tick) >= 0) message += GameConstants.Confirm.BpmSectionRemoveMergedLine;
+        GameManager.UI.Confirm(message, GameConstants.Confirm.BpmSectionRemoveLabel, () => RemoveBpmSection(tick));
+    }
+
+    private void RemoveBpmSection(int tick)
+    {
+        if (!session.RemoveBpmSection(tick, out BpmSectionError error, out int removedNextTick))
+        {
+            ShowTimedStatus(BpmSectionRules.GetMessage(error));
+            return;
+        }
+
+        ShowTimedStatus(string.Format(GameConstants.Editor.BpmSectionRemovedFormat, BpmSectionRules.FormatPosition(tick)));
+        Debug.Log($"[EditorScene] BPM 구간 삭제: {BpmSectionRules.FormatPosition(tick)}" +
+                  (removedNextTick >= 0 ? $" + 같은 BPM이 된 {BpmSectionRules.FormatPosition(removedNextTick)}" : "") + $", 구간 {session.BpmSections.Count}개", this);
+    }
+
+    /// <summary>
+    /// BPM 구간 목록 줄 클릭: 그 구간선이 현재 위치 선에 오도록 옮긴다 (현재 박 = 구간 박). 재생 중이면 그 위치에서 다시 재생한다.
+    /// </summary>
+    private void OnBpmSectionChosen(int tick)
+    {
+        if (!isReady || isLeaving) return;
+
+        bool wasPlaying = playback.IsPlaying;
+        playback.Stop(false);
+        grid.SetCurrentBeat(BeatGridMath.TickToBeat(tick));
+        canvas.RefreshTimeline();
+        if (wasPlaying) playback.Play();
+    }
+
+    /// <summary>Btn_ResetBpm: 확인 팝업 뒤 곡 기본 BPM 하나로 되돌린다</summary>
+    private void OnResetBpmRequested()
+    {
+        if (!CanUseHistory() || session.IsSongDefaultBpm) return;
+
+        playback.Stop(false);
+        string message = string.Format(GameConstants.Confirm.BpmResetMessageFormat, SongData.FormatBpm(session.SongDefaultBpm));
+        GameManager.UI.Confirm(message, GameConstants.Confirm.BpmResetLabel, () =>
+        {
+            if (!session.ResetBpmToSongDefault()) return;
+            ShowTimedStatus(GameConstants.Editor.BpmResetDoneMessage);
+            Debug.Log($"[EditorScene] 곡 기본 BPM으로 되돌림: {SongData.FormatBpm(session.SongDefaultBpm)}", this);
+        });
     }
 
     private void StopPlaybackWithSnap()
@@ -304,11 +433,10 @@ public class EditorScene : SceneBase
         // 바꾸기 전 Timing으로 지금 보고 있는 시간을 구해 두고, 바꾼 뒤 Timing으로 박을 다시 구한다
         float currentSeconds = (float)session.Timing.BeatToSeconds(grid.CurrentBeat);
 
+        // 그리드·목록·타임라인은 OnSessionTimingChanged가 맞춘다. 여기서는 보던 시간을 유지하도록 현재 박만 다시 정한다
         session.SetTiming(bpm, offsetMs);
-        grid.SetTiming(session.Timing);
-        grid.SetTotalBeats(session.TotalBeats);
         grid.SetCurrentBeat((float)session.Timing.SecondsToBeat(currentSeconds));
-        canvas.RefreshTiming();
+        canvas.RefreshTimeline();
         playback.Restart();
 
         Debug.Log($"[EditorScene] 박자 정보 변경: bpm={session.Bpm}, offsetMs={session.OffsetMs}, 곡 끝 {session.TotalBeats:0.###}박, " +

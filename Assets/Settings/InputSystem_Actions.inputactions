@@ -592,6 +592,33 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "ToolShortNote",
+                    "type": "Button",
+                    "id": "8a734417-f0eb-41e0-8295-60f9c96a111a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ToolLongNote",
+                    "type": "Button",
+                    "id": "e2f935e4-9258-4ae0-9383-47bd64cc6ff1",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ToolBpmSection",
+                    "type": "Button",
+                    "id": "85218bec-86fb-4d8b-aad0-7d8d4ee844bc",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -790,6 +817,39 @@
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "ToggleTuning",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6ac8b603-4cf6-488c-ba64-5a4355ae3111",
+                    "path": "<Keyboard>/1",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "ToolShortNote",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ea999a21-c52d-41d7-8072-0da325175222",
+                    "path": "<Keyboard>/2",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "ToolLongNote",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "da5ecd28-f86b-4b95-b741-8a0997e3dae4",
+                    "path": "<Keyboard>/3",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "ToolBpmSection",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
