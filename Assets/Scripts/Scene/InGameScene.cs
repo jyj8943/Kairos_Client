@@ -592,18 +592,12 @@ public class InGameScene : SceneBase
 #endif
         score.Apply(result);
         longReleaseStats.Add(result);
-        if (result.ShowsJudgeText)
-        {
-            // 숏노트·롱노트 종합: 판정 글자(처음부터 다시 재생) + FAST/SLOW(대상일 때만 새로 띄움, 아니면 남은 시간만큼 그대로) + 판정 패널
-            canvas.ShowJudge(result.Type, FastSlowRules.GetDisplay(result), score.Combo, score.Score);
-            canvas.RefreshJudgePanel(score);
-        }
-        else
-        {
-            canvas.ShowCombo(score.Combo, score.Score);
-            // 롱노트 시작: 판정 글자는 그대로 두고 FAST/SLOW만 바꾼다. 유지 틱은 건드리지 않는다
-            if (result.Kind == JudgeKind.LongStart) canvas.ShowFastSlow(FastSlowRules.GetDisplay(result));
-        }
+        // 모든 결과(숏노트·롱노트 시작·유지 틱·롱노트 종합)가 판정 글자를 처음부터 다시 재생한다. 등급은 JudgeResult.JudgeTextType
+        // (틱은 시작 판정). FAST/SLOW는 대상일 때만 새로 띄우고(틱은 항상 None), 아니면 떠 있던 것이 남은 시간만큼 그대로 남는다.
+        // 같은 프레임에 여러 결과가 오면 마지막 것이 보인다 (매번 처음부터라 화면상 문제 없음).
+        canvas.ShowJudge(result.JudgeTextType, FastSlowRules.GetDisplay(result), score.Combo, score.Score);
+        // 판정 패널은 판정 개수가 바뀌는 숏노트·롱노트 종합 때만
+        if (result.CountsAsJudgement) canvas.RefreshJudgePanel(score);
 
         if (result.Kind == JudgeKind.LongFinal && judge.GetLongState(result.NoteIndex) == LongNoteState.Done)
         {

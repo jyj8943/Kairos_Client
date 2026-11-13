@@ -87,7 +87,7 @@ public readonly struct JudgeResult
     public readonly int NoteIndex;
     public readonly int Lane;
 
-    /// <summary>판정. 롱노트 종합 판정이면 시작·끝 중 낮은 쪽, 틱이면 Perfect(의미 없음)</summary>
+    /// <summary>판정. 롱노트 종합 판정이면 시작·끝 중 낮은 쪽, 틱이면 Perfect(점수·집계에 쓰지 않음. 화면 등급은 StartType)</summary>
     public readonly JudgeType Type;
 
     /// <summary>입력 − 노트 (ms, 늦으면 +). 롱노트 종합 판정은 뗀 시각 − 끝 시각, 놓친 MISS는 판정한 시각 기준</summary>
@@ -98,7 +98,7 @@ public readonly struct JudgeResult
 
     public readonly JudgeKind Kind;
 
-    /// <summary>롱노트 종합 판정의 시작 판정 (그 밖에는 Type과 같다)</summary>
+    /// <summary>롱노트의 시작 판정: 종합 판정·유지 틱이면 그 롱노트의 시작 판정 (틱은 판정 글자를 이 등급으로 띄운다), 그 밖에는 Type과 같다</summary>
     public readonly JudgeType StartType;
 
     /// <summary>
@@ -124,8 +124,18 @@ public readonly struct JudgeResult
         EndType = endType;
     }
 
-    /// <summary>판정 글자를 띄울 결과면 true (숏노트, 롱노트 종합). 시작·틱은 콤보만 올린다</summary>
-    public bool ShowsJudgeText => Kind == JudgeKind.Short || Kind == JudgeKind.LongFinal;
+    /// <summary>
+    /// 판정 개수·점수에 들어가는 판정이면 true (숏노트, 롱노트 종합). 판정 패널을 이때만 바꾼다.
+    /// 롱노트 시작·유지 틱은 콤보만 올린다.
+    /// </summary>
+    public bool CountsAsJudgement => Kind == JudgeKind.Short || Kind == JudgeKind.LongFinal;
+
+    /// <summary>
+    /// 판정 글자로 띄울 등급 (DJMAX RESPECT V·PLATiNA :: LAB 방식). 모든 결과가 판정 글자를 처음부터 다시 재생한다.
+    /// - 숏노트·롱노트 시작: 그 판정 / 롱노트 종합: 최종 판정 (일찍 떼면 MISS)
+    /// - 유지 틱: 그 롱노트의 시작 판정 (GREAT로 시작하면 누르는 동안 계속 GREAT)
+    /// </summary>
+    public JudgeType JudgeTextType => Kind == JudgeKind.Tick ? StartType : Type;
 }
 
 /// <summary>
@@ -138,7 +148,7 @@ public readonly struct JudgeResult
 ///     범위 안에서 떼면 끝 판정 = 시작 판정 (끝이 판정을 깎지도 올리지도 않는다).
 ///     범위보다 일찍 떼면 끝 MISS (종합 MISS, 콤보 0, 남은 틱 인정 안 함). 끝 + 범위를 지나도록 누르고 있으면 그 순간 끝 GOOD (모든 틱 인정).
 ///   - 종합 판정 = 시작과 끝 중 낮은 쪽 (범위 안이면 결국 시작 판정). 한 번 떼면 끝이다 (다시 누르기 불가).
-///   - 유지 틱: 누르고 있는 동안 지난 틱마다 Tick 결과. 늦게 눌러 이미 지난 틱도 인정하고(다음 CollectTimeouts·TryRelease에서),
+///   - 유지 틱: 누르고 있는 동안 지난 틱마다 Tick 결과 (StartType = 시작 판정). 늦게 눌러 이미 지난 틱도 인정하고(다음 CollectTimeouts·TryRelease에서),
 ///     일찍 떼서 남은 틱과 종합 MISS 뒤 남은 틱은 인정하지 않는다.
 /// - 판정 중에는 메모리를 새로 잡지 않는다 (매 프레임 GC 할당 없음).
 /// </summary>
@@ -372,7 +382,8 @@ public class NoteJudge
         {
             double deltaMs = (time - note.GetTickTime(heldTickCursor[lane])) * 1000.0;
             heldTickCursor[lane]++;
-            results.Add(new JudgeResult(noteIndex, lane, JudgeType.Perfect, deltaMs, false, JudgeKind.Tick, JudgeType.Perfect, JudgeType.Perfect));
+            // 틱 Type은 Perfect 그대로 (점수·집계에 쓰지 않음), StartType에 시작 판정을 담아 판정 글자 등급으로 쓴다
+            results.Add(new JudgeResult(noteIndex, lane, JudgeType.Perfect, deltaMs, false, JudgeKind.Tick, heldStartType[lane], JudgeType.Perfect));
         }
     }
 

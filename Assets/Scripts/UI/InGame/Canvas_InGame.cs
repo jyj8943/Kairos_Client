@@ -200,9 +200,10 @@ public class Canvas_InGame : UIBase
     }
 
     /// <summary>
-    /// 판정 하나를 표시한다 (판정 글자·FAST/SLOW·콤보·점수). 숏노트·롱노트 종합 판정 때 부른다.
-    /// 판정 글자는 판정 색으로 바꾸고 애니메이션을 처음부터 다시 재생한다.
+    /// 판정 결과 하나를 표시한다 (판정 글자·FAST/SLOW·콤보·점수). 숏노트·롱노트 시작·유지 틱·롱노트 종합 모두 부른다.
+    /// 판정 글자는 판정 색으로 바꾸고 애니메이션을 처음부터 다시 재생한다. 어떤 등급을 띄울지는 InGameScene이 정해 넘긴다.
     /// </summary>
+    /// <param name="judge">띄울 등급 (JudgeResult.JudgeTextType: 틱은 시작 판정)</param>
     /// <param name="fastSlow">판정 글자 위에 띄울 방향 (FastSlowRules.GetDisplay). None이면 앞의 FAST/SLOW를 건드리지 않는다</param>
     public void ShowJudge(JudgeType judge, FastSlow fastSlow, int combo, int score)
     {
@@ -221,7 +222,7 @@ public class Canvas_InGame : UIBase
     /// <summary>
     /// 판정 글자 위 FAST / SLOW를 띄운다: 글자·색을 바꾸고 유지 시간을 처음부터 센다.
     /// None이면 아무것도 하지 않는다 (앞의 FAST/SLOW는 남은 시간만큼 그대로 떠 있다).
-    /// 롱노트 시작 판정은 판정 글자를 바꾸지 않고 이것만 부른다. 같은 프레임에 여러 번 부르면 마지막 것이 보인다.
+    /// 같은 프레임에 여러 번 부르면 마지막 것이 보인다.
     /// </summary>
     public void ShowFastSlow(FastSlow fastSlow)
     {
@@ -249,7 +250,7 @@ public class Canvas_InGame : UIBase
     public Txt_FastSlow FastSlowText => fastSlowText;
 
     /// <summary>
-    /// 판정 글자는 그대로 두고 콤보·점수만 바꾼다 (롱노트 시작 판정·유지 틱).
+    /// 판정 글자는 그대로 두고 콤보·점수만 바꾼다.
     /// </summary>
     public void ShowCombo(int combo, int score)
     {
