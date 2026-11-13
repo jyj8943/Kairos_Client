@@ -11,7 +11,7 @@ using UnityEngine.TestTools;
 /// - 나만의 채보 테스트 플레이: CUSTOM 뱃지·채보 이름·Lv.·테스트 플레이(자동 플레이) 표시
 /// - 곡 진행 바가 오르고, 일시정지 중에는 멈춘다
 /// - 자동 플레이가 노트를 칠 때 키 칸이 밝아지고, 일시정지하면 꺼진다
-/// - 일찍 쳐 GREAT면 판정 글자 위 FAST와 판정 패널 GREAT·FAST 개수가 오르고, 다음 PERFECT에서 FAST가 지워진다
+/// - 일찍 쳐 GREAT면 판정 글자 위 FAST와 판정 패널 GREAT·FAST 개수가 오르고, 다음 PERFECT가 나도 FAST는 남은 시간(0.47초 유지)만큼 남는다
 /// </summary>
 public class InGameHudPlayTests
 {
@@ -136,7 +136,7 @@ public class InGameHudPlayTests
         Debug.Log($"[InGameHudPlayTest] H1: 뱃지 CUSTOM, 채보 이름 보임, 진행 바 {progress:0.000} → 일시정지 1초 뒤 {canvas.Progress:0.000}, 키 칸 눌림 봄 {sawPressed}");
     }
 
-    /// <summary>H2: 일찍 쳐 GREAT → FAST 표시·판정 패널 GREAT 1·FAST 1·정확도, 다음 PERFECT → FAST 지움·PERFECT 1</summary>
+    /// <summary>H2: 일찍 쳐 GREAT → FAST 표시·판정 패널 GREAT 1·FAST 1·정확도, 0.2초 뒤 PERFECT → FAST 그대로·PERFECT 1, 판정 글자는 PERFECT로 처음부터 다시</summary>
     [UnityTest]
     public IEnumerator H2_FastSlowAndJudgePanel()
     {
@@ -168,10 +168,14 @@ public class InGameHudPlayTests
             Assert.Less(Time.realtimeSinceStartup, deadline, "둘째 노트 대기 시간 초과");
             yield return null;
         }
+        float fastElapsedBefore = canvas.FastSlowText.Animation.Elapsed;
         scene.TestPress(second.Lane, second.Time);
-        Assert.AreEqual(string.Empty, canvas.FastSlowShown, "다음 PERFECT에서 FAST 지움");
+        Assert.AreEqual(GameConstants.Play.FastText, canvas.FastSlowShown, "다음 PERFECT가 나도 FAST는 남음");
+        Assert.AreEqual(fastElapsedBefore, canvas.FastSlowText.Animation.Elapsed, 1e-6f, "FAST 시간은 다시 세지 않음");
+        Assert.AreEqual(GameConstants.Play.PerfectText, canvas.Judge.Text);
+        Assert.AreEqual(0f, canvas.Judge.Animation.Elapsed, 1e-6f, "판정 글자는 처음부터 다시");
         StringAssert.Contains(">1<", Get<TMP_Text>(panel, "perfectCount").text);
         Assert.AreEqual("85.00%", Get<TMP_Text>(panel, "accuracy").text, "(100 + 70) ÷ 2");
-        Debug.Log($"[InGameHudPlayTest] H2: GREAT FAST → 패널 {Get<TMP_Text>(panel, "greatCount").text} / {Get<TMP_Text>(panel, "fastCount").text}, PERFECT 뒤 FAST/SLOW '{canvas.FastSlowShown}', 정확도 {Get<TMP_Text>(panel, "accuracy").text}");
+        Debug.Log($"[InGameHudPlayTest] H2: GREAT FAST → 패널 {Get<TMP_Text>(panel, "greatCount").text} / {Get<TMP_Text>(panel, "fastCount").text}, PERFECT 뒤 FAST/SLOW '{canvas.FastSlowShown}' (경과 {canvas.FastSlowText.Animation.Elapsed:0.000}초), 정확도 {Get<TMP_Text>(panel, "accuracy").text}");
     }
 }

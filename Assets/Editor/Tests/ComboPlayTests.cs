@@ -20,6 +20,7 @@ public class ComboPlayTests
     private NoteJudge judge;
     private ScoreCalculator score;
     private Txt_Combo combo;
+    private Canvas_InGame canvas;
 
     [UnitySetUp]
     public IEnumerator SetUp()
@@ -110,7 +111,8 @@ public class ComboPlayTests
         }
         judge = Get<NoteJudge>(scene, "judge");
         score = Get<ScoreCalculator>(scene, "score");
-        combo = Get<Canvas_InGame>(scene, "canvas").Combo;
+        canvas = Get<Canvas_InGame>(scene, "canvas");
+        combo = canvas.Combo;
     }
 
     private IEnumerator WaitCombo(int target)
@@ -147,9 +149,12 @@ public class ComboPlayTests
         Call("RequestPause", "콤보 테스트");
         Assert.IsTrue(Get<bool>(scene, "isPaused"), "일시정지됨");
         float pausedElapsed = combo.Motion.Elapsed;
+        float pausedJudgeElapsed = canvas.Judge.Animation.Elapsed;
         int pausedCombo = combo.Motion.Combo;
         yield return WaitRealtime(1.5f);
         Assert.AreEqual(pausedElapsed, combo.Motion.Elapsed, 1e-6f, "일시정지 중 시간이 흐르지 않음");
+        Assert.AreEqual(pausedJudgeElapsed, canvas.Judge.Animation.Elapsed, 1e-6f, "판정 글자 애니메이션도 멈춤");
+        Assert.IsTrue(canvas.Judge.IsVisible, "일시정지 1.5초 동안 판정 글자가 사라지지 않음");
         Assert.AreEqual(pausedCombo, combo.Motion.Combo);
         Assert.AreEqual(1f, combo.Group.alpha, 1e-4f, "일시정지 중 콤보가 사라지지 않음");
 
@@ -157,6 +162,7 @@ public class ComboPlayTests
         yield return WaitRealtime(GameConstants.Pause.CountdownSeconds - 0.5f);
         Assert.IsTrue(Get<bool>(scene, "isPaused"), "아직 카운트다운 중");
         Assert.AreEqual(pausedElapsed, combo.Motion.Elapsed, 1e-6f, "카운트다운 중에도 멈춤");
+        Assert.AreEqual(pausedJudgeElapsed, canvas.Judge.Animation.Elapsed, 1e-6f, "카운트다운 중 판정 글자도 멈춤");
         Assert.AreEqual(1f, combo.Group.alpha, 1e-4f);
 
         float deadline = Time.realtimeSinceStartup + 20f;

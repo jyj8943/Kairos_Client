@@ -1058,8 +1058,8 @@ MonoBehaviour:
   - {r: 0.8627451, g: 0.14901961, b: 0.14901961, a: 1}
   customBadgeColor: {r: 0.4862745, g: 0.22745098, b: 0.92941177, a: 1}
   judgePanel: {fileID: 149242951}
-  judgeText: {fileID: 1051957748}
-  fastSlowText: {fileID: 246106861}
+  judgeText: {fileID: 1051957749}
+  fastSlowText: {fileID: 246106863}
   comboText: {fileID: 1968536809}
   comboTitleText: {fileID: 1398719573}
   scoreText: {fileID: 1763120514}
@@ -1689,6 +1689,7 @@ GameObject:
   - component: {fileID: 246106860}
   - component: {fileID: 246106862}
   - component: {fileID: 246106861}
+  - component: {fileID: 246106863}
   m_Layer: 5
   m_Name: Txt_FastSlow
   m_TagString: Untagged
@@ -1815,6 +1816,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 246106859}
   m_CullTransparentMesh: 1
+--- !u!114 &246106863
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 246106859}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 602381322de2e3c42967c48ad66dd599, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Txt_FastSlow
+  holdSeconds: 0.47
+  fadeOutSeconds: 0.15
 --- !u!1 &278583290
 GameObject:
   m_ObjectHideFlags: 0
@@ -4693,6 +4708,7 @@ GameObject:
   - component: {fileID: 1051957746}
   - component: {fileID: 1051957747}
   - component: {fileID: 1051957748}
+  - component: {fileID: 1051957749}
   m_Layer: 5
   m_Name: Txt_Judge
   m_TagString: Untagged
@@ -4819,6 +4835,23 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1051957749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1051957745}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 132f451fbee026647ba01472ebf90196, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Txt_Judge
+  startScale: 0.7
+  scaleInSeconds: 0.08
+  fadeInSeconds: 0.04
+  holdSeconds: 0.82
+  fadeOutSeconds: 0.13
 --- !u!1 &1104285006
 GameObject:
   m_ObjectHideFlags: 0

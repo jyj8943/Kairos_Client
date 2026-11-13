@@ -345,8 +345,8 @@ public class InGameScene : SceneBase
         if (skipNextFrameSample) skipNextFrameSample = false;
         else frameStats.Add(Time.unscaledDeltaTime);
 
-        // 콤보 애니메이션·쉬는 시간 (일시정지·카운트다운 중에는 위에서 돌아가 멈춘다. 모든 노트 판정 뒤 결과 전까지는 계속)
-        canvas.TickCombo(Time.unscaledDeltaTime);
+        // 콤보·판정 글자·FAST/SLOW 애니메이션 (일시정지·카운트다운 중에는 위에서 돌아가 멈춘다. 모든 노트 판정 뒤 결과 전까지는 계속)
+        canvas.TickAnimations(Time.unscaledDeltaTime);
 
         double songTime = GameManager.Sound.SongTime;
 
@@ -594,7 +594,7 @@ public class InGameScene : SceneBase
         longReleaseStats.Add(result);
         if (result.ShowsJudgeText)
         {
-            // 숏노트·롱노트 종합: 판정 글자 + FAST/SLOW(없으면 지움) + 판정 패널
+            // 숏노트·롱노트 종합: 판정 글자(처음부터 다시 재생) + FAST/SLOW(대상일 때만 새로 띄움, 아니면 남은 시간만큼 그대로) + 판정 패널
             canvas.ShowJudge(result.Type, FastSlowRules.GetDisplay(result), score.Combo, score.Score);
             canvas.RefreshJudgePanel(score);
         }

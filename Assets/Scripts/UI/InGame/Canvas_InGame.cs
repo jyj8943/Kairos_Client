@@ -9,7 +9,9 @@ using UnityEngine.UI;
 /// - 왼쪽 판정 패널(Img_JudgePanel): 판정 개수·FAST/SLOW 개수·정확도(Img_JudgePanel 스크립트) + 맨 아래 점수.
 /// - 기어 위쪽 콤보(Txt_Combo: 오름·쉬면 숨기기 애니메이션), 판정선 위 판정 글자와 그 위 FAST/SLOW(Txt_FastSlow), 안내 문구, 재개 카운트다운.
 ///   FAST/SLOW를 띄울지는 InGameScene이 FastSlowRules로 정해 넘긴다 (이 스크립트는 규칙을 판단하지 않는다).
-///   판정 글자에는 페이드가 없어 다음 판정까지 남고, FAST/SLOW도 판정 글자와 함께 바뀐다 (시간으로 움직이지 않아 일시정지 중에도 그대로).
+///   판정 글자(Txt_Judge)는 판정마다 처음부터 등장(크기 0.7 → 1, 투명도 0 → 1) → 0.82초 유지 → 사라짐,
+///   FAST/SLOW(Txt_FastSlow)는 판정 글자와 따로 0.47초 유지 → 사라짐 (다음 PERFECT에서 지우지 않음).
+///   콤보·판정 글자·FAST/SLOW 애니메이션은 TickAnimations로만 흐른다 (일시정지·카운트다운 중에는 InGameScene이 부르지 않아 멈춤).
 /// - 플레이 중 배속을 바꾸면 곡 정보의 배속을 고치고, 기어 옆(Txt_SpeedChange)에 "x5.6"을 잠깐(SpeedChangeShowSeconds) 보여준다.
 /// - 결과는 결과 씬(ResultScene)이 보여준다.
 /// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다. 진행 바는 채움의 anchorMax.x만 바꾼다.
@@ -52,9 +54,10 @@ public class Canvas_InGame : UIBase
     [SerializeField] private Img_JudgePanel judgePanel;
 
     [Header("화면 가운데")]
-    [SerializeField] private TMP_Text judgeText;
-    [Tooltip("판정 글자 위 FAST / SLOW (Txt_FastSlow, GREAT · GOOD일 때만)")]
-    [SerializeField] private TMP_Text fastSlowText;
+    [Tooltip("판정 글자 (Txt_Judge, 판정선 위). 등장·유지·퇴장 애니메이션을 맡는다")]
+    [SerializeField] private Txt_Judge judgeText;
+    [Tooltip("판정 글자 위 FAST / SLOW (Txt_FastSlow, GREAT · GOOD일 때만). 자기 시간만큼 유지 뒤 사라진다")]
+    [SerializeField] private Txt_FastSlow fastSlowText;
     [Tooltip("콤보 숫자 (Combo/Txt_Combo). 오름·쉬면 숨기기 애니메이션을 맡는다")]
     [SerializeField] private Txt_Combo comboText;
     [Tooltip("콤보 숫자 위 제목 (Combo/Txt_ComboTitle). 움직이지 않는다")]
@@ -109,8 +112,8 @@ public class Canvas_InGame : UIBase
         speedChangeHideAt = -1f;
         shownProgress = -1f;
         SetProgress(0f);
-        judgeText.text = string.Empty;
-        ShowFastSlow(FastSlow.None);
+        judgeText.ResetView();
+        if (fastSlowText != null) fastSlowText.ResetView();
         if (judgePanel != null) judgePanel.Init(perfectColor, greatColor, goodColor, missColor, fastColor, slowColor);
         if (comboTitleText != null) comboTitleText.text = GameConstants.Play.ComboTitleText;
         comboText.ResetView();
@@ -198,16 +201,17 @@ public class Canvas_InGame : UIBase
 
     /// <summary>
     /// 판정 하나를 표시한다 (판정 글자·FAST/SLOW·콤보·점수). 숏노트·롱노트 종합 판정 때 부른다.
+    /// 판정 글자는 판정 색으로 바꾸고 애니메이션을 처음부터 다시 재생한다.
     /// </summary>
-    /// <param name="fastSlow">판정 글자 위에 띄울 방향 (FastSlowRules.GetDisplay). None이면 앞의 FAST/SLOW를 지운다</param>
+    /// <param name="fastSlow">판정 글자 위에 띄울 방향 (FastSlowRules.GetDisplay). None이면 앞의 FAST/SLOW를 건드리지 않는다</param>
     public void ShowJudge(JudgeType judge, FastSlow fastSlow, int combo, int score)
     {
         switch (judge)
         {
-            case JudgeType.Perfect: judgeText.text = GameConstants.Play.PerfectText; judgeText.color = perfectColor; break;
-            case JudgeType.Great: judgeText.text = GameConstants.Play.GreatText; judgeText.color = greatColor; break;
-            case JudgeType.Good: judgeText.text = GameConstants.Play.GoodText; judgeText.color = goodColor; break;
-            default: judgeText.text = GameConstants.Play.MissText; judgeText.color = missColor; break;
+            case JudgeType.Perfect: judgeText.Show(GameConstants.Play.PerfectText, perfectColor); break;
+            case JudgeType.Great: judgeText.Show(GameConstants.Play.GreatText, greatColor); break;
+            case JudgeType.Good: judgeText.Show(GameConstants.Play.GoodText, goodColor); break;
+            default: judgeText.Show(GameConstants.Play.MissText, missColor); break;
         }
 
         ShowFastSlow(fastSlow);
@@ -215,17 +219,17 @@ public class Canvas_InGame : UIBase
     }
 
     /// <summary>
-    /// 판정 글자 위 FAST / SLOW를 바꾼다. None이면 숨긴다 (앞의 FAST/SLOW가 다음 PERFECT에 붙어 남지 않게).
-    /// 롱노트 시작 판정은 판정 글자를 바꾸지 않고 이것만 부른다.
+    /// 판정 글자 위 FAST / SLOW를 띄운다: 글자·색을 바꾸고 유지 시간을 처음부터 센다.
+    /// None이면 아무것도 하지 않는다 (앞의 FAST/SLOW는 남은 시간만큼 그대로 떠 있다).
+    /// 롱노트 시작 판정은 판정 글자를 바꾸지 않고 이것만 부른다. 같은 프레임에 여러 번 부르면 마지막 것이 보인다.
     /// </summary>
     public void ShowFastSlow(FastSlow fastSlow)
     {
         if (fastSlowText == null) return;
         switch (fastSlow)
         {
-            case FastSlow.Fast: fastSlowText.text = GameConstants.Play.FastText; fastSlowText.color = fastColor; break;
-            case FastSlow.Slow: fastSlowText.text = GameConstants.Play.SlowText; fastSlowText.color = slowColor; break;
-            default: fastSlowText.text = string.Empty; break;
+            case FastSlow.Fast: fastSlowText.Show(GameConstants.Play.FastText, fastColor); break;
+            case FastSlow.Slow: fastSlowText.Show(GameConstants.Play.SlowText, slowColor); break;
         }
     }
 
@@ -235,8 +239,14 @@ public class Canvas_InGame : UIBase
         if (judgePanel != null) judgePanel.Refresh(score);
     }
 
-    /// <summary>지금 FAST / SLOW 글자 (확인용, 숨김이면 빈 문자열)</summary>
-    public string FastSlowShown => fastSlowText != null ? fastSlowText.text : string.Empty;
+    /// <summary>지금 보이는 FAST / SLOW 글자 (확인용, 숨김이면 빈 문자열)</summary>
+    public string FastSlowShown => fastSlowText != null && fastSlowText.IsVisible ? fastSlowText.Text : string.Empty;
+
+    /// <summary>판정 글자 (확인용)</summary>
+    public Txt_Judge Judge => judgeText;
+
+    /// <summary>FAST / SLOW 글자 (확인용)</summary>
+    public Txt_FastSlow FastSlowText => fastSlowText;
 
     /// <summary>
     /// 판정 글자는 그대로 두고 콤보·점수만 바꾼다 (롱노트 시작 판정·유지 틱).
@@ -248,11 +258,14 @@ public class Canvas_InGame : UIBase
     }
 
     /// <summary>
-    /// 콤보 애니메이션·쉬는 시간을 진행한다. InGameScene이 플레이 중 매 프레임 부른다 (일시정지·재개 카운트다운 중에는 부르지 않는다).
+    /// 콤보·판정 글자·FAST/SLOW 애니메이션 시간을 진행한다. InGameScene이 플레이 중 매 프레임 부른다
+    /// (일시정지·재개 카운트다운 중에는 부르지 않아 셋 다 멈추고, 풀리면 이어서 진행한다).
     /// </summary>
-    public void TickCombo(float deltaTime)
+    public void TickAnimations(float deltaTime)
     {
         comboText.Tick(deltaTime);
+        judgeText.Tick(deltaTime);
+        if (fastSlowText != null) fastSlowText.Tick(deltaTime);
     }
 
     /// <summary>콤보 표시 (확인용)</summary>

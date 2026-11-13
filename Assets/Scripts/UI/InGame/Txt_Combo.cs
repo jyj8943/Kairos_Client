@@ -6,7 +6,7 @@ using UnityEngine;
 /// - 오름: 콤보가 오르면 숫자만 아래에서 투명하게 나타나 제자리로 올라온다 (anchoredPosition.y와 텍스트 알파만 바꾼다, 크기는 그대로).
 ///   COMBO 제목은 움직이지 않는다.
 /// - 쉬면 숨기기: 한동안 안 오르면 Combo 그룹 전체가 조금 내려가며 사라진다 (CanvasGroup 알파 + 그룹 위치).
-/// - 값 계산은 ComboMotion이 하고, 시간은 Canvas_InGame.TickCombo → Tick으로만 흐른다 (자체 Update 없음, 일시정지 중에는 멈춘다).
+/// - 값 계산은 ComboMotion이 하고, 시간은 Canvas_InGame.TickAnimations → Tick으로만 흐른다 (자체 Update 없음, 일시정지 중에는 멈춘다).
 /// - 숫자는 SetText("{0}", combo)로 바꿔 GC 할당을 만들지 않는다.
 /// (DJMAX RESPECT V 기본 기어·PLATiNA :: LAB 기본 스킨 플레이 영상을 프레임 단위로 잰 값을 기본값으로 둔다)
 /// </summary>
