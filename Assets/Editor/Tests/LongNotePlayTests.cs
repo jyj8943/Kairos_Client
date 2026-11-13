@@ -228,9 +228,9 @@ public class LongNotePlayTests
         Assert.Less(top2, top1, "P11: 위 끝은 계속 내려온다");
     }
 
-    /// <summary>P2: 낮은 쪽 규칙 ① 시작 +60 / 끝 +0 → GREAT ② 시작 +0 / 끝 −100 → GOOD</summary>
+    /// <summary>P2: 끝 ±120ms 안에서 떼면 시작 판정 그대로 ① 시작 +60 / 끝 +0 → GREAT (끝이 올려 주지 않음) ② 시작 +0 / 끝 −100 → PERFECT (끝이 깎지 않음)</summary>
     [UnityTest]
-    public IEnumerator P2_LowerOfStartAndEnd()
+    public IEnumerator P2_ReleaseKeepsStartJudge()
     {
         yield return StartPlay(Chart(Long(6f, 8f, 0), Long(10f, 12f, 1)));
         int a = LongIndex(0), b = LongIndex(1);
@@ -244,11 +244,11 @@ public class LongNotePlayTests
         Debug.Log(Describe("P2① 시작 +60 / 끝 +0", a));
         Debug.Log(Describe("P2② 시작 +0 / 끝 −100", b));
         Assert.AreEqual(JudgeType.Great, Final(a).StartType);
-        Assert.AreEqual(JudgeType.Perfect, Final(a).EndType);
+        Assert.AreEqual(JudgeType.Great, Final(a).EndType, "끝 판정 = 시작 판정");
         Assert.AreEqual(JudgeType.Great, Final(a).Type, "①");
         Assert.AreEqual(JudgeType.Perfect, Final(b).StartType);
-        Assert.AreEqual(JudgeType.Good, Final(b).EndType);
-        Assert.AreEqual(JudgeType.Good, Final(b).Type, "②");
+        Assert.AreEqual(JudgeType.Perfect, Final(b).EndType, "끝 판정 = 시작 판정");
+        Assert.AreEqual(JudgeType.Perfect, Final(b).Type, "②");
     }
 
     /// <summary>P3: 끝 −130ms에 뗌 → 끝 MISS·종합 MISS, 그 순간 콤보 0, 남은 틱 미인정</summary>

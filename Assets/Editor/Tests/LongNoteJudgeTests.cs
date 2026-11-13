@@ -59,43 +59,57 @@ public class LongNoteJudgeTests
 
     // ───── 종합 판정 ─────
 
-    /// <summary>
-    /// 종합 판정 표 16칸 = 시작·끝 중 낮은 쪽. 시작 MISS면 끝과 상관없이 MISS.
-    /// 시작 오프셋: P 0ms · G +60ms · GOOD +100ms · MISS +140ms (MISS 범위에서 누름)
-    /// 끝 오프셋: P 0ms · G −60ms · GOOD −100ms · MISS −130ms (GOOD 범위보다 일찍 뗌)
-    /// </summary>
-    [TestCase(JudgeType.Perfect, JudgeType.Perfect, JudgeType.Perfect)]
-    [TestCase(JudgeType.Perfect, JudgeType.Great, JudgeType.Great)]
-    [TestCase(JudgeType.Perfect, JudgeType.Good, JudgeType.Good)]
-    [TestCase(JudgeType.Perfect, JudgeType.Miss, JudgeType.Miss)]
-    [TestCase(JudgeType.Great, JudgeType.Perfect, JudgeType.Great)]
-    [TestCase(JudgeType.Great, JudgeType.Great, JudgeType.Great)]
-    [TestCase(JudgeType.Great, JudgeType.Good, JudgeType.Good)]
-    [TestCase(JudgeType.Great, JudgeType.Miss, JudgeType.Miss)]
-    [TestCase(JudgeType.Good, JudgeType.Perfect, JudgeType.Good)]
-    [TestCase(JudgeType.Good, JudgeType.Great, JudgeType.Good)]
-    [TestCase(JudgeType.Good, JudgeType.Good, JudgeType.Good)]
-    [TestCase(JudgeType.Good, JudgeType.Miss, JudgeType.Miss)]
-    [TestCase(JudgeType.Miss, JudgeType.Perfect, JudgeType.Miss)]
-    [TestCase(JudgeType.Miss, JudgeType.Great, JudgeType.Miss)]
-    [TestCase(JudgeType.Miss, JudgeType.Good, JudgeType.Miss)]
-    [TestCase(JudgeType.Miss, JudgeType.Miss, JudgeType.Miss)]
-    public void FinalJudge_Table(JudgeType start, JudgeType end, JudgeType expected)
+    /// <summary>시작 판정별 누른 오프셋 (초): P 0ms · G +60ms · GOOD +100ms · MISS +140ms (MISS 범위에서 누름)</summary>
+    private static double StartOffset(JudgeType start)
     {
-        double[] startOffset = { 0, 0.06, 0.1, 0.14 };
-        double[] endOffset = { 0, -0.06, -0.1, -0.13 };
+        switch (start)
+        {
+            case JudgeType.Perfect: return 0;
+            case JudgeType.Great: return 0.06;
+            case JudgeType.Good: return 0.1;
+            default: return 0.14;
+        }
+    }
 
+    /// <summary>
+    /// 종합 판정 표 (DJMAX RESPECT 방식): (시작 판정, 뗀 오차 ms) → 종합 판정.
+    /// 끝 ±120ms 안에서 떼면 끝 판정 = 시작 판정이라 종합 = 시작 판정 그대로, −120ms보다 일찍 떼면 끝 MISS → 종합 MISS.
+    /// 시작 MISS면 뗀 오차와 상관없이 MISS (누르고 있는 롱노트가 없다).
+    /// </summary>
+    [TestCase(JudgeType.Perfect, 0.0, JudgeType.Perfect)]
+    [TestCase(JudgeType.Perfect, -60.0, JudgeType.Perfect)]
+    [TestCase(JudgeType.Perfect, -100.0, JudgeType.Perfect)]
+    [TestCase(JudgeType.Perfect, -120.0, JudgeType.Perfect)]
+    [TestCase(JudgeType.Perfect, 100.0, JudgeType.Perfect)]
+    [TestCase(JudgeType.Perfect, -130.0, JudgeType.Miss)]
+    [TestCase(JudgeType.Great, 0.0, JudgeType.Great)]
+    [TestCase(JudgeType.Great, -60.0, JudgeType.Great)]
+    [TestCase(JudgeType.Great, -100.0, JudgeType.Great)]
+    [TestCase(JudgeType.Great, 100.0, JudgeType.Great)]
+    [TestCase(JudgeType.Great, -130.0, JudgeType.Miss)]
+    [TestCase(JudgeType.Good, 0.0, JudgeType.Good)]
+    [TestCase(JudgeType.Good, -60.0, JudgeType.Good)]
+    [TestCase(JudgeType.Good, -100.0, JudgeType.Good)]
+    [TestCase(JudgeType.Good, 100.0, JudgeType.Good)]
+    [TestCase(JudgeType.Good, -130.0, JudgeType.Miss)]
+    [TestCase(JudgeType.Miss, 0.0, JudgeType.Miss)]
+    [TestCase(JudgeType.Miss, -60.0, JudgeType.Miss)]
+    [TestCase(JudgeType.Miss, -130.0, JudgeType.Miss)]
+    public void FinalJudge_Table(JudgeType start, double releaseMs, JudgeType expected)
+    {
         PlayNote note = Long(Slow, 0, 1, 3);
         NoteJudge judge = new NoteJudge(new[] { note }, 4, DefaultWindows());
         List<JudgeResult> results = new List<JudgeResult>();
+        double releaseTime = note.EndTime + releaseMs / 1000.0;
 
-        Assert.IsTrue(judge.TryHit(0, note.Time + startOffset[(int)start], out JudgeResult hit));
+        Assert.IsTrue(judge.TryHit(0, note.Time + StartOffset(start), out JudgeResult hit));
         if (start == JudgeType.Miss)
         {
             Assert.AreEqual(JudgeKind.LongFinal, hit.Kind, "시작 MISS는 바로 종합 MISS");
             Assert.AreEqual(JudgeType.Miss, hit.Type);
+            Assert.AreEqual(JudgeType.Miss, hit.EndType);
             Assert.AreEqual(LongNoteState.Missed, judge.GetLongState(hit.NoteIndex));
-            Assert.IsFalse(judge.TryRelease(0, note.EndTime + endOffset[(int)end], results), "누르고 있는 롱노트가 없다");
+            Assert.IsFalse(judge.TryRelease(0, releaseTime, results), "누르고 있는 롱노트가 없다");
             Assert.AreEqual(expected, hit.Type);
             return;
         }
@@ -104,33 +118,174 @@ public class LongNoteJudgeTests
         Assert.AreEqual(start, hit.Type);
         Assert.IsTrue(judge.TryGetHeld(0, out _));
 
-        Assert.IsTrue(judge.TryRelease(0, note.EndTime + endOffset[(int)end], results));
+        Assert.IsTrue(judge.TryRelease(0, releaseTime, results));
         JudgeResult final = results[results.Count - 1];
         Assert.AreEqual(JudgeKind.LongFinal, final.Kind);
         Assert.AreEqual(start, final.StartType);
-        Assert.AreEqual(end, final.EndType);
+        Assert.AreEqual(expected == JudgeType.Miss ? JudgeType.Miss : start, final.EndType, "범위 안이면 끝 판정 = 시작 판정, 일찍 떼면 Miss");
         Assert.AreEqual(expected, final.Type);
+        Assert.AreEqual(releaseMs, final.DeltaMs, 1e-6, "DeltaMs = 뗀 시각 − 끝 시각");
+        Assert.IsTrue(final.IsHit);
         Assert.IsTrue(judge.AllJudged);
         Assert.IsFalse(judge.TryGetHeld(0, out _));
     }
 
-    /// <summary>일찍 뗌 경계: 끝 −120ms는 끝 GOOD, −121ms는 끝 MISS</summary>
-    [TestCase(-0.120, JudgeType.Good)]
+    /// <summary>뗀 오차 경계 (GREAT 시작): −120ms·+80ms·+120ms는 끝 판정 = 시작 판정(GREAT), −120.1ms보다 일찍이면 끝 MISS</summary>
+    [TestCase(-0.120, JudgeType.Great)]
     [TestCase(-0.1201, JudgeType.Miss)]
     [TestCase(-0.121, JudgeType.Miss)]
     [TestCase(-0.5, JudgeType.Miss)]
-    [TestCase(-0.04, JudgeType.Perfect)]
+    [TestCase(-0.04, JudgeType.Great)]
     [TestCase(0.08, JudgeType.Great)]
-    [TestCase(0.12, JudgeType.Good)]
+    [TestCase(0.12, JudgeType.Great)]
     public void EarlyRelease_Boundary(double releaseOffset, JudgeType expectedEnd)
     {
         PlayNote note = Long(Slow, 1, 0, 2);
         NoteJudge judge = new NoteJudge(new[] { note }, 4, DefaultWindows());
         List<JudgeResult> results = new List<JudgeResult>();
 
-        Assert.IsTrue(judge.TryHit(1, note.Time, out _));
+        Assert.IsTrue(judge.TryHit(1, note.Time + StartOffset(JudgeType.Great), out JudgeResult hit));
+        Assert.AreEqual(JudgeType.Great, hit.Type);
         Assert.IsTrue(judge.TryRelease(1, note.EndTime + releaseOffset, results));
-        Assert.AreEqual(expectedEnd, results[results.Count - 1].EndType);
+        JudgeResult final = results[results.Count - 1];
+        Assert.AreEqual(expectedEnd, final.EndType);
+        Assert.AreEqual(expectedEnd, final.Type, "범위 안이면 종합 = 시작 판정, 일찍 떼면 MISS");
+    }
+
+    /// <summary>GREAT 시작 + 끝에서 정확히 뗌 → GREAT (끝이 올려 주지 않는다)</summary>
+    [Test]
+    public void GreatStart_ExactRelease_StaysGreat()
+    {
+        PlayNote note = Long(Slow, 2, 0, 2);
+        NoteJudge judge = new NoteJudge(new[] { note }, 4, DefaultWindows());
+        List<JudgeResult> results = new List<JudgeResult>();
+
+        Assert.IsTrue(judge.TryHit(2, note.Time + StartOffset(JudgeType.Great), out _));
+        Assert.IsTrue(judge.TryRelease(2, note.EndTime, results));
+        JudgeResult final = results[results.Count - 1];
+        Assert.AreEqual(JudgeType.Great, final.EndType);
+        Assert.AreEqual(JudgeType.Great, final.Type);
+    }
+
+    /// <summary>GOOD 시작 + 끝 −100ms에 뗌 → GOOD</summary>
+    [Test]
+    public void GoodStart_EarlyInRange_StaysGood()
+    {
+        PlayNote note = Long(Slow, 3, 0, 2);
+        NoteJudge judge = new NoteJudge(new[] { note }, 4, DefaultWindows());
+        List<JudgeResult> results = new List<JudgeResult>();
+
+        Assert.IsTrue(judge.TryHit(3, note.Time + StartOffset(JudgeType.Good), out _));
+        Assert.IsTrue(judge.TryRelease(3, note.EndTime - 0.1, results));
+        JudgeResult final = results[results.Count - 1];
+        Assert.AreEqual(JudgeType.Good, final.EndType);
+        Assert.AreEqual(JudgeType.Good, final.Type);
+    }
+
+    /// <summary>
+    /// 끝 + 1/4박(216 BPM ≈ 69ms) 뒤 같은 라인 숏노트: 끝에서 떼고 숏노트를 정시에 누르면
+    /// 롱노트 = 시작 판정, 숏노트 = PERFECT로 따로 판정된다 (끝 범위 ±120ms가 다음 노트를 먹지 않는다).
+    /// </summary>
+    [TestCase(JudgeType.Perfect)]
+    [TestCase(JudgeType.Great)]
+    public void ShortNoteRightAfterLongEnd_JudgedSeparately(JudgeType start)
+    {
+        TimingMap fast = TimingMap.Single(216f, 0);
+        PlayNote longNote = Long(fast, 0, 4, 6);
+        PlayNote shortNote = new PlayNote(0, fast.BeatToSeconds(6.25));
+        Assert.AreEqual(69.44, (shortNote.Time - longNote.EndTime) * 1000.0, 0.01, "1/4박 ≈ 69ms");
+
+        NoteJudge judge = new NoteJudge(new[] { longNote, shortNote }, 4, DefaultWindows());
+        List<JudgeResult> results = new List<JudgeResult>();
+
+        Assert.IsTrue(judge.TryHit(0, longNote.Time + StartOffset(start), out JudgeResult hit));
+        Assert.AreEqual(start, hit.Type);
+
+        judge.CollectTimeouts(longNote.EndTime, results);
+        results.Clear();
+        Assert.IsTrue(judge.TryRelease(0, longNote.EndTime, results));
+        JudgeResult final = results[results.Count - 1];
+        Assert.AreEqual(JudgeKind.LongFinal, final.Kind);
+        Assert.AreEqual(start, final.Type, "롱노트 = 시작 판정");
+
+        judge.CollectTimeouts(shortNote.Time, results);
+        Assert.IsEmpty(results, "숏노트는 아직 MISS가 아니다");
+        Assert.IsTrue(judge.TryHit(0, shortNote.Time, out JudgeResult next));
+        Assert.AreEqual(JudgeKind.Short, next.Kind);
+        Assert.AreEqual(JudgeType.Perfect, next.Type, "숏노트 = PERFECT");
+        Assert.IsTrue(judge.AllJudged);
+    }
+
+    // ───── 끝 판정 통계 ─────
+
+    /// <summary>LongReleaseStats 구간: 일찍 MISS / −120~−40 / −40~+40 / +40~+120 / 자동 GOOD, 평균은 자동 GOOD·시작 MISS 제외</summary>
+    [Test]
+    public void LongReleaseStats_Buckets()
+    {
+        LongReleaseStats stats = new LongReleaseStats(GameConstants.Play.LongReleaseMs, GameConstants.Play.DefaultPerfectMs);
+
+        stats.Add(-500.0);   // 일찍 MISS
+        stats.Add(-120.1);   // 일찍 MISS
+        stats.Add(-120.0);   // −120~−40 (경계 포함)
+        stats.Add(-40.1);    // −120~−40
+        stats.Add(-40.0);    // −40~+40 (경계 포함)
+        stats.Add(0.0);      // −40~+40
+        stats.Add(40.0);     // −40~+40 (경계 포함)
+        stats.Add(40.1);     // +40~+120
+        stats.Add(120.0);    // +40~+120 (경계 포함)
+        stats.Add(120.1);    // 자동 GOOD (평균 제외)
+        stats.Add(150.0);    // 자동 GOOD (평균 제외)
+
+        // JudgeResult로: 시작 MISS는 따로 세고, 롱노트 종합 판정이 아닌 것은 무시
+        stats.Add(new JudgeResult(0, 0, JudgeType.Miss, 140, true, JudgeKind.LongFinal, JudgeType.Miss, JudgeType.Miss));
+        stats.Add(new JudgeResult(0, 0, JudgeType.Perfect, 0, true));
+        stats.Add(new JudgeResult(0, 0, JudgeType.Perfect, 0, true, JudgeKind.LongStart, JudgeType.Perfect, JudgeType.Perfect));
+        stats.Add(new JudgeResult(0, 0, JudgeType.Perfect, 5, false, JudgeKind.Tick, JudgeType.Perfect, JudgeType.Perfect));
+        stats.Add(new JudgeResult(0, 0, JudgeType.Great, 10, true, JudgeKind.LongFinal, JudgeType.Great, JudgeType.Great)); // −40~+40
+
+        Assert.AreEqual(2, stats.EarlyMissCount);
+        Assert.AreEqual(2, stats.EarlyCount);
+        Assert.AreEqual(4, stats.OnTimeCount);
+        Assert.AreEqual(2, stats.LateCount);
+        Assert.AreEqual(2, stats.AutoGoodCount);
+        Assert.AreEqual(1, stats.StartMissCount);
+        Assert.AreEqual(10, stats.ReleasedCount);
+        Assert.AreEqual(13, stats.TotalCount);
+
+        double sum = -500.0 - 120.1 - 120.0 - 40.1 - 40.0 + 0.0 + 40.0 + 40.1 + 120.0 + 10.0;
+        Assert.AreEqual(sum / 10, stats.AverageDeltaMs, 1e-9);
+
+        stats.Reset();
+        Assert.AreEqual(0, stats.TotalCount);
+        Assert.AreEqual(0, stats.AverageDeltaMs);
+    }
+
+    /// <summary>LongReleaseStats를 NoteJudge 결과로 채우면 일찍 뗌·정시·자동 GOOD이 맞는 구간에 들어간다</summary>
+    [Test]
+    public void LongReleaseStats_FromJudge()
+    {
+        PlayNote a = Long(Slow, 0, 0, 2);
+        PlayNote b = Long(Slow, 1, 0, 2);
+        PlayNote c = Long(Slow, 2, 0, 2);
+        NoteJudge judge = new NoteJudge(new[] { a, b, c }, 4, DefaultWindows());
+        LongReleaseStats stats = new LongReleaseStats(GameConstants.Play.LongReleaseMs, GameConstants.Play.DefaultPerfectMs);
+        List<JudgeResult> results = new List<JudgeResult>();
+
+        Assert.IsTrue(judge.TryHit(0, 0, out _));
+        Assert.IsTrue(judge.TryHit(1, 0, out _));
+        Assert.IsTrue(judge.TryHit(2, 0, out _));
+
+        judge.TryRelease(0, 1.0, results);         // 끝 −1000ms → 일찍 MISS
+        judge.TryRelease(1, 2.0 + 0.010, results); // 끝 +10ms → −40~+40
+        foreach (JudgeResult r in results) stats.Add(r);
+        judge.CollectTimeouts(2.0 + 0.2, results); // 끝 +200ms까지 누름 → 자동 GOOD
+        foreach (JudgeResult r in results) stats.Add(r);
+
+        Assert.AreEqual(1, stats.EarlyMissCount);
+        Assert.AreEqual(1, stats.OnTimeCount);
+        Assert.AreEqual(1, stats.AutoGoodCount);
+        Assert.AreEqual(3, stats.TotalCount);
+        Assert.AreEqual((-1000.0 + 10.0) / 2, stats.AverageDeltaMs, 1e-6);
     }
 
     /// <summary>늦게 뗌: 끝 + 120ms까지는 판정 없음, 그 뒤 처음 보는 프레임에 끝 GOOD 종합 판정 (모든 틱 인정)</summary>

@@ -131,6 +131,11 @@ public class InGameScene : SceneBase
     private readonly FrameTimeStats frameStats = new FrameTimeStats();
     private bool skipNextFrameSample;
 
+    /// <summary>
+    /// 한 판의 롱노트 끝 판정 통계 (플레이테스트용). 결과로 가기 전에 fps 로그와 같은 곳에서 한 줄로 남긴다 (빌드 Player.log 포함, 테스트·자동 플레이도)
+    /// </summary>
+    private readonly LongReleaseStats longReleaseStats = new LongReleaseStats(GameConstants.Play.LongReleaseMs, GameConstants.Play.DefaultPerfectMs);
+
     /// <summary>롱노트 끝 판정 키음을 낸 수 (확인용)</summary>
     private int longEndKeySoundCount;
 
@@ -191,6 +196,7 @@ public class InGameScene : SceneBase
         }
         allJudgedSongTime = -1;
         frameStats.Reset();
+        longReleaseStats.Reset();
         skipNextFrameSample = true;
         isWaitingResult = false;
 #if UNITY_EDITOR
@@ -576,12 +582,13 @@ public class InGameScene : SceneBase
         TestJudgeObserver?.Invoke(result);
 #endif
         score.Apply(result);
+        longReleaseStats.Add(result);
         if (result.ShowsJudgeText) canvas.ShowJudge(result.Type, score.Combo, score.Score);
         else canvas.ShowCombo(score.Combo, score.Score);
 
         if (result.Kind == JudgeKind.LongFinal && judge.GetLongState(result.NoteIndex) == LongNoteState.Done)
         {
-            // 끝 판정 키음: 뗄 때, 또는 끝 + GOOD 범위에서 자동 GOOD이 나는 순간
+            // 끝 판정 키음: 뗄 때, 또는 끝 + LongReleaseMs에서 자동 GOOD이 나는 순간
             if (DevPlaySettings.KeySoundEnabled) GameManager.Sound.PlaySfx(keySound);
             noteLayer.OnNoteHit(result.NoteIndex);
             longEndKeySoundCount++;
@@ -615,6 +622,7 @@ public class InGameScene : SceneBase
                   $"노트 풀 {noteLayer.PooledCount}개(추가 생성 {noteLayer.GrowCount})", this);
         Debug.Log($"[InGameScene] 프레임: 평균 {frameStats.AverageFps:0.0}fps, 최저 {frameStats.MinFps:0.0}fps (가장 긴 프레임 {frameStats.MaxSeconds * 1000:0.0}ms), " +
                   $"프레임 {frameStats.Count}개 / {frameStats.TotalSeconds:0.0}초, vSyncCount {QualitySettings.vSyncCount}, targetFrameRate {Application.targetFrameRate}", this);
+        LogLongReleaseStats();
 #if UNITY_EDITOR
         Debug.Log($"[InGameScene] 싱크 진단: 곡 시간과 음원 재생 위치 차이 최대 {maxSyncErrorSeconds * 1000:0.#}ms (경고 기준 {GameConstants.Play.SyncWarningSeconds * 1000:0}ms)", this);
 #endif
@@ -629,6 +637,19 @@ public class InGameScene : SceneBase
         result.returnTarget = CreateReturnTarget();
 
         GameManager.Scene.Load(GameConstants.Scenes.Result, result);
+    }
+
+    /// <summary>
+    /// 롱노트 끝 판정 통계를 한 줄로 남긴다 (Finish, 결과로 가기 전 한 번).
+    /// </summary>
+    private void LogLongReleaseStats()
+    {
+        LongReleaseStats s = longReleaseStats;
+        float r = GameConstants.Play.LongReleaseMs;
+        float p = GameConstants.Play.DefaultPerfectMs;
+        Debug.Log($"[InGameScene] 롱노트 끝: 롱노트 {s.TotalCount}개{(isAutoPlay ? " (자동 플레이)" : "")}{(IsTestPlay ? " (테스트 플레이)" : "")} — " +
+                  $"일찍 MISS(<−{r:0}) {s.EarlyMissCount} / −{r:0}~−{p:0} {s.EarlyCount} / −{p:0}~+{p:0} {s.OnTimeCount} / +{p:0}~+{r:0} {s.LateCount} / 자동 GOOD {s.AutoGoodCount}, " +
+                  $"시작 MISS {s.StartMissCount}, 평균 뗀 오차 {s.AverageDeltaMs:+0.0;-0.0;0.0}ms ({s.ReleasedCount}개, 자동 GOOD·시작 MISS 제외)", this);
     }
 
     /// <summary>

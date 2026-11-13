@@ -32,6 +32,12 @@ public static class GameConstants
         public const float DefaultGoodMs = 120f;
         public const float DefaultMissMs = 160f;
 
+        /// <summary>
+        /// 롱노트를 뗄 때 시작 판정을 그대로 인정하는 범위 ±ms. 이보다 일찍 떼면 끝 MISS, 이보다 오래 누르면 끝 GOOD.
+        /// (DJMAX RESPECT 방식. 기획서 2-1의 "끝 판정 범위 = 숏노트와 같은 범위"와 일부러 다르게 간다)
+        /// </summary>
+        public const float LongReleaseMs = DefaultGoodMs;
+
         /// <summary>만점</summary>
         public const int MaxScore = 1000000;
 
