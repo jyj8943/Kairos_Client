@@ -592,8 +592,18 @@ public class InGameScene : SceneBase
 #endif
         score.Apply(result);
         longReleaseStats.Add(result);
-        if (result.ShowsJudgeText) canvas.ShowJudge(result.Type, score.Combo, score.Score);
-        else canvas.ShowCombo(score.Combo, score.Score);
+        if (result.ShowsJudgeText)
+        {
+            // 숏노트·롱노트 종합: 판정 글자 + FAST/SLOW(없으면 지움) + 판정 패널
+            canvas.ShowJudge(result.Type, FastSlowRules.GetDisplay(result), score.Combo, score.Score);
+            canvas.RefreshJudgePanel(score);
+        }
+        else
+        {
+            canvas.ShowCombo(score.Combo, score.Score);
+            // 롱노트 시작: 판정 글자는 그대로 두고 FAST/SLOW만 바꾼다. 유지 틱은 건드리지 않는다
+            if (result.Kind == JudgeKind.LongStart) canvas.ShowFastSlow(FastSlowRules.GetDisplay(result));
+        }
 
         if (result.Kind == JudgeKind.LongFinal && judge.GetLongState(result.NoteIndex) == LongNoteState.Done)
         {
@@ -625,7 +635,7 @@ public class InGameScene : SceneBase
         double finishSongTime = GameManager.Sound.SongTime;
         GameManager.Sound.StopMusic();
 
-        Debug.Log($"[InGameScene] 결과 (모든 노트 판정 뒤 곡 시간 {finishSongTime - allJudgedSongTime:0.000}초): 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, " +
+        Debug.Log($"[InGameScene] 결과 (모든 노트 판정 뒤 곡 시간 {finishSongTime - allJudgedSongTime:0.000}초): 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, FAST/SLOW {score.FastCount}/{score.SlowCount}, " +
                   $"최대 콤보 {score.MaxCombo}/{score.MaxPossibleCombo} (노트 {score.TotalNotes} + 유지 틱 {score.TotalTicks}), 롱노트 끝 키음 {longEndKeySoundCount}번, 정확도 {score.Accuracy:0.00}%, FC={score.IsFullCombo}, AP={score.IsAllPerfect}, " +
                   $"판정 오차(친 노트 {hitCount}개) 평균 {(hitCount > 0 ? hitErrorSumMs / hitCount : 0):0.###}ms · 최대 {hitErrorMaxMs:0.###}ms, " +
                   $"노트 풀 {noteLayer.PooledCount}개(추가 생성 {noteLayer.GrowCount})", this);

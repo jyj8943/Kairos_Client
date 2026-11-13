@@ -159,6 +159,14 @@ public static class GameConstants
         public const string GreatText = "GREAT";
         public const string GoodText = "GOOD";
         public const string MissText = "MISS";
+
+        /// <summary>FAST / SLOW 글자 (판정 글자 위, 판정 패널 라벨). GREAT · GOOD에서만 쓴다</summary>
+        public const string FastText = "FAST";
+        public const string SlowText = "SLOW";
+
+        /// <summary>FAST / SLOW 기본 색 (Canvas_InGame Inspector에서 바꿀 수 있다). 판정 색과 겹치지 않는 청록 · 주황</summary>
+        public static readonly Color32 FastColor = new Color32(0x2D, 0xD4, 0xBF, 0xFF);
+        public static readonly Color32 SlowColor = new Color32(0xFB, 0x92, 0x3C, 0xFF);
         public const string FullComboText = "FULL COMBO";
         public const string AllPerfectText = "ALL PERFECT";
 

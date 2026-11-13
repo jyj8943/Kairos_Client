@@ -8,6 +8,9 @@
 ///   - 시작 PERFECT·GREAT·GOOD은 콤보만 +1 (AddLongStart), 유지 틱도 콤보만 +1 (AddTick).
 ///   - 종합 판정이 MISS면 그 순간 콤보 0, MISS가 아니면 콤보는 그대로 (시작에서 이미 +1 했다).
 ///   - 끝까지 잘 누르면 최대 콤보 = 노트 수 + 전체 틱 수 (MaxPossibleCombo).
+/// - FAST / SLOW 개수: Apply로 넣은 결과 중 FastSlowRules.GetCount가 방향을 돌려준 것(숏노트·롱노트 종합의 GREAT·GOOD)만 센다
+///   → Apply만 쓰면 항상 FastCount + SlowCount = GreatCount + GoodCount.
+/// - 정확도: 결과 화면용 Accuracy(전체 노트 수로 나눔)와 플레이 중 표시용 LiveAccuracy(지금까지 판정한 수로 나눔)를 따로 둔다.
 /// </summary>
 public class ScoreCalculator
 {
@@ -18,6 +21,12 @@ public class ScoreCalculator
     public int MissCount { get; private set; }
     public int Combo { get; private set; }
     public int MaxCombo { get; private set; }
+
+    /// <summary>GREAT · GOOD 중 일찍 친(뗀) 개수 (기획서 3-4 판정 패널)</summary>
+    public int FastCount { get; private set; }
+
+    /// <summary>GREAT · GOOD 중 늦게 친(뗀) 개수 (끝을 지나 계속 눌러 자동 GOOD 포함)</summary>
+    public int SlowCount { get; private set; }
 
     /// <summary>전체 유지 틱 수</summary>
     public int TotalTicks { get; }
@@ -70,7 +79,7 @@ public class ScoreCalculator
         if (judge == JudgeType.Miss) Combo = 0;
     }
 
-    /// <summary>판정 결과의 종류에 맞는 함수를 부른다 (NoteJudge 결과를 그대로 넣을 때).</summary>
+    /// <summary>판정 결과의 종류에 맞는 함수를 부르고 FAST / SLOW를 센다 (NoteJudge 결과를 그대로 넣을 때).</summary>
     public void Apply(JudgeResult result)
     {
         switch (result.Kind)
@@ -79,6 +88,12 @@ public class ScoreCalculator
             case JudgeKind.Tick: AddTick(); break;
             case JudgeKind.LongFinal: AddLongFinal(result.Type); break;
             default: Add(result.Type); break;
+        }
+
+        switch (FastSlowRules.GetCount(result))
+        {
+            case FastSlow.Fast: FastCount++; break;
+            case FastSlow.Slow: SlowCount++; break;
         }
     }
 
@@ -123,6 +138,12 @@ public class ScoreCalculator
 
     /// <summary>정확도 (%) = (PERFECT×100 + GREAT×70 + GOOD×30) ÷ 전체 노트 수</summary>
     public double Accuracy => TotalNotes == 0 ? 0 : (double)WeightedSum / TotalNotes;
+
+    /// <summary>
+    /// 플레이 중 정확도 (%) = 비율 합 ÷ 지금까지 판정한 수 (기획서 3-4: 전체로 나누면 초반에 0%에서 거의 오르지 않는다).
+    /// 아직 판정이 없으면 100.
+    /// </summary>
+    public double LiveAccuracy => JudgedCount == 0 ? 100.0 : (double)WeightedSum / JudgedCount;
 
     public PlayRank Rank => GetRank(Score);
 

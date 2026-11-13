@@ -25,6 +25,10 @@ public class ResultData
     public int greatCount;
     public int goodCount;
     public int missCount;
+
+    /// <summary>GREAT · GOOD 중 일찍 / 늦게 친 개수 (FAST + SLOW = GREAT + GOOD). 결과 화면 표시는 아직 없다</summary>
+    public int fastCount;
+    public int slowCount;
     public int maxCombo;
     public int totalNotes;
 
@@ -74,6 +78,8 @@ public class ResultData
             greatCount = score.GreatCount,
             goodCount = score.GoodCount,
             missCount = score.MissCount,
+            fastCount = score.FastCount,
+            slowCount = score.SlowCount,
             maxCombo = score.MaxCombo,
             totalNotes = score.TotalNotes,
             maxPossibleCombo = score.MaxPossibleCombo,
