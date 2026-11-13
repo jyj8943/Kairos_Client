@@ -217,7 +217,10 @@ public class InGameScene : SceneBase
         System.Array.Clear(autoGlowOffAt, 0, autoGlowOffAt.Length);
 
         input.Init(OnUserLanePressed, OnUserLaneReleased, OnUserLaneHeld);
-        canvas.Init(song.Title, chart.chartName, chart.level, IsTestPlay, isAutoPlay, noteLayer.ScrollMultiplier);
+        gear.SetKeyLabels(input.GetLaneKeyLabels());
+        // 채보 종류는 채보 데이터(type)로 정한다 (테스트 플레이·자동 플레이도 같은 규칙). 모르는 값이면 나만의 채보로 본다
+        ChartType chartType = ChartData.TryParseType(chart.type, out ChartType parsedType) ? parsedType : ChartType.Custom;
+        canvas.Init(song.Title, chartType, chart.difficulty, chart.chartName, chart.level, IsTestPlay, isAutoPlay, noteLayer.ScrollMultiplier);
         entry.scrollMultiplier = noteLayer.ScrollMultiplier;
 
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
@@ -346,6 +349,9 @@ public class InGameScene : SceneBase
         canvas.TickCombo(Time.unscaledDeltaTime);
 
         double songTime = GameManager.Sound.SongTime;
+
+        // 곡 진행 바 (일시정지·카운트다운 중에는 위에서 돌아가 멈춘다)
+        canvas.SetProgress(InGameHudRules.ProgressRatio(songTime, song.Length));
 
         if (isAutoPlay)
         {

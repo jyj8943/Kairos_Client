@@ -103,8 +103,31 @@ public static class GameConstants
         public const string SpeedChangeFormat = "x{0:0.0}";
         public const float SpeedChangeShowSeconds = 0.8f;
 
-        /// <summary>인게임 곡 정보: {0} 곡 제목, {1} 채보 이름, {2} 레벨, {3} 배속</summary>
-        public const string InGameSongInfoFormat = "{0} · {1} · Lv.{2} · 배속 x{3:0.0}";
+        /// <summary>인게임 곡 정보 패널 3줄: {0} 배속 (플레이 중 1 / 2 키로 바꾸면 다시 쓴다)</summary>
+        public const string InGameSpeedFormat = "배속 x{0:0.0} · [1] [2]로 변경";
+
+        /// <summary>인게임 곡 정보 패널 레벨: {0} 레벨</summary>
+        public const string InGameLevelFormat = "Lv.{0}";
+
+        /// <summary>인게임 곡 정보 패널: 나만의 채보 뱃지 문구 (공식 채보는 난이도 이름을 쓴다)</summary>
+        public const string ChartBadgeCustomText = "CUSTOM";
+
+        /// <summary>인게임 곡 정보 패널 뱃지 기본 색 (Canvas_InGame Inspector에서 바꿀 수 있다). 난이도 순서는 Chart.Difficulties와 같다</summary>
+        public static readonly Color32 ChartBadgeEasyColor = new Color32(0x16, 0xA3, 0x4A, 0xFF);
+        public static readonly Color32 ChartBadgeNormalColor = new Color32(0x25, 0x63, 0xEB, 0xFF);
+        public static readonly Color32 ChartBadgeHardColor = new Color32(0xDC, 0x26, 0x26, 0xFF);
+        public static readonly Color32 ChartBadgeCustomColor = new Color32(0x7C, 0x3A, 0xED, 0xFF);
+
+        /// <summary>키 칸 글자 (입력 에셋 바인딩에서 읽지 못했을 때 쓴다). Lane0 ~ Lane3 순서</summary>
+        public static readonly string[] LaneKeyLabels = { "A", "S", ";", "'" };
+
+        /// <summary>
+        /// 키 칸 크기 (1080 화면 기준 px). 화면 아래 끝에 붙이고, 칸 폭 = 라인 폭 − 양옆 여백 × 2.
+        /// 월드 크기는 카메라 높이(orthographicSize × 2)를 KeyCellReferenceHeightPx로 나눠 바꾼다 (해상도가 바뀌어도 같은 비율)
+        /// </summary>
+        public const float KeyCellHeightPx = 120f;
+        public const float KeyCellSidePaddingPx = 4f;
+        public const float KeyCellReferenceHeightPx = 1080f;
 
         /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
         public const double TestPlayLeadInSeconds = 2.0;
@@ -114,8 +137,6 @@ public static class GameConstants
 
         /// <summary>테스트 플레이 표시와 결과 화면 돌아가기 버튼 문구</summary>
         public const string TestPlayLabel = "테스트 플레이";
-        public const string TestPlayInGameText = "테스트 플레이 · ESC 일시정지";
-        public const string AutoTestPlayInGameText = "테스트 플레이 · 자동 플레이 · ESC 일시정지";
         public const string AutoTestPlayLabel = "테스트 플레이 · 자동 플레이";
 
         /// <summary>인게임 개발용 F1 패널 상태 한 줄 ({0} 빛기둥, {1} 키음에 켬·끔이 들어간다)</summary>

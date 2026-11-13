@@ -100,6 +100,26 @@ public class InGameInput : MonoBehaviour
         return action != null && action.IsPressed();
     }
 
+    /// <summary>
+    /// 라인 키 이름 (키 칸 글자). 입력 에셋 바인딩의 표시 이름을 읽고, 비었거나 칸에 안 들어가는 긴 이름(예: "Semicolon")이면
+    /// GameConstants.Play.LaneKeyLabels를 쓴다.
+    /// Init 때 한 번만 부른다 (배열을 새로 만든다).
+    /// </summary>
+    public string[] GetLaneKeyLabels()
+    {
+        string[] fallback = GameConstants.Play.LaneKeyLabels;
+        string[] labels = new string[GameConstants.Editor.LaneCount];
+        for (int lane = 0; lane < labels.Length; lane++)
+        {
+            string label = null;
+            InputAction action = laneActions != null && lane < laneActions.Length && laneActions[lane] != null ? laneActions[lane].action : null;
+            if (action != null) label = action.GetBindingDisplayString();
+            if (string.IsNullOrEmpty(label) || label.Length > 2) label = lane < fallback.Length ? fallback[lane] : string.Empty;
+            labels[lane] = label.ToUpperInvariant();
+        }
+        return labels;
+    }
+
     private void OnStarted(int lane, InputAction.CallbackContext context)
     {
         // 팝업이 열려 있으면 라인 키를 받지 않는다
