@@ -12,7 +12,7 @@ using UnityEngine;
 ///   읽기에 실패하면 .bak으로 다시 시도하고, 둘 다 실패하면 깨진 파일을 broken 이름으로 옮기고 기본값으로 시작한다 (경고 로그).
 ///   불러온 설정은 SettingsManager·SoundManager·Screen.SetResolution에 적용한다 (화면은 파일에서 읽었을 때만).
 /// - 저장 (Save): 지금 설정(음량·오프셋·화면)을 모아 settings에 넣고 savedAt을 갱신해 쓴다. 설정 창을 닫을 때, 결과 씬에서 기록을 넣을 때,
-///   에디터에서 나만의 채보를 저장해 기록을 지울 때 부른다.
+///   에디터에서 나만의 채보를 저장해 기록을 지울 때, 마지막 배속이 바뀌었을 때(SetLastScrollMultiplier) 부른다.
 /// - 값은 인스턴스 필드에만 둔다 (static 값 없음). 도메인 리로드를 끈 설정에서도 Play를 다시 시작하면 파일에서 다시 읽는다.
 /// </summary>
 public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
@@ -73,7 +73,8 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
 
         SettingsSaveData s = data.settings;
         Debug.Log($"{LogPrefix} 불러오기 {LoadedFrom}: 기록 {book.Records.Count}개, 음량 {s.masterVolume}/{s.musicVolume}/{s.sfxVolume}, " +
-                  $"오프셋 {s.offsetMs}ms, 화면 {s.resolutionWidth}×{s.resolutionHeight} {s.windowMode}{(fromFile ? "" : " (적용 안 함)")}, 경로 {store.FilePath}", this);
+                  $"오프셋 {s.offsetMs}ms, 화면 {s.resolutionWidth}×{s.resolutionHeight} {s.windowMode}{(fromFile ? "" : " (적용 안 함)")}, " +
+                  $"마지막 배속 x{data.lastSelection.scrollMultiplier:0.0}, 경로 {store.FilePath}", this);
     }
 
     // ───── 설정 ─────
@@ -143,6 +144,28 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
         else
             Debug.LogError($"{LogPrefix} 저장하지 못했습니다: {store.LastError} ({store.FilePath})", this);
         return LastSaveSucceeded;
+    }
+
+    // ───── 마지막 선택 (곡 선택) ─────
+
+    /// <summary>저장된 마지막 배속. Init 전이거나 저장된 값이 없으면 기본 배속(1.0)</summary>
+    public float LastScrollMultiplier => data != null && data.lastSelection != null
+        ? data.lastSelection.scrollMultiplier
+        : GameConstants.Play.DefaultScrollMultiplier;
+
+    /// <summary>
+    /// 마지막 배속을 바꾸고 바로 저장한다. 값이 같으면(0.1 단위로 정리한 뒤) 저장하지 않는다.
+    /// 일반 플레이에 들어갈 때·떠날 때만 부른다 (테스트 플레이·자동 플레이는 부르지 않는다, PlayerDataRules.ShouldSaveLastScrollMultiplier).
+    /// </summary>
+    /// <returns>저장했으면 true</returns>
+    public bool SetLastScrollMultiplier(float value)
+    {
+        if (data == null) return false;
+        if (data.lastSelection == null) data.lastSelection = new LastSelectionSaveData();
+        if (!PlayerDataRules.TrySetLastScrollMultiplier(data.lastSelection, value)) return false;
+
+        Debug.Log($"{LogPrefix} 마지막 배속 x{data.lastSelection.scrollMultiplier:0.0} 저장", this);
+        return Save();
     }
 
     // ───── 기록 ─────

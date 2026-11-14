@@ -118,7 +118,7 @@ public class Canvas_SongSelect : UIBase
     /// <summary>
     /// 곡 목록과 난이도 버튼을 만들고 버튼 리스너를 연결한 뒤, 처음 상태(곡·탭·채보·배속)로 시작한다.
     /// </summary>
-    /// <param name="entry">곡 선택으로 돌아온 경우의 선택 상태. null이면 첫 곡·공식 탭·기본 배속</param>
+    /// <param name="entry">곡 선택으로 돌아온 경우의 선택 상태. null이면 첫 곡·공식 탭·저장된 마지막 배속</param>
     public void Init(IReadOnlyList<SongData> songs, SongSelectEntryData entry)
     {
         isLeaving = false;
@@ -132,7 +132,11 @@ public class Canvas_SongSelect : UIBase
         myChartEmptyText.text = GameConstants.SongSelect.MyChartEmpty;
         ShowRecord(null);
 
-        speedSteps = ScrollSpeedRules.ToSteps(entry != null ? entry.scrollMultiplier : GameConstants.Play.DefaultScrollMultiplier);
+        // 인게임·결과에서 돌아오면 넘겨받은 배속, 타이틀에서 들어오면(entry 없음) PlayerData.json에 저장된 마지막 배속 (없으면 1.0)
+        float startSpeed = entry != null
+            ? entry.scrollMultiplier
+            : (PlayerDataManager.HasInstance ? GameManager.PlayerData.LastScrollMultiplier : GameConstants.Play.DefaultScrollMultiplier);
+        speedSteps = ScrollSpeedRules.ToSteps(startSpeed);
         SetSpeedText(ScrollMultiplier);
 
         currentTab = entry != null ? entry.chartType : ChartType.Official;
@@ -657,7 +661,11 @@ public class Canvas_SongSelect : UIBase
 
         LogState("시작");
         if (GameManager.Scene.Load(GameConstants.Scenes.InGame, data))
+        {
             SetLeaving();
+            // 곡 선택에서 시작하는 것은 항상 일반 플레이다 (값이 같으면 파일을 쓰지 않는다)
+            if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastScrollMultiplier(data.scrollMultiplier);
+        }
     }
 
     /// <summary>

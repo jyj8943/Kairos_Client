@@ -25,6 +25,7 @@ using UnityEngine.InputSystem;
 /// - 배속: 1 / 2 키(Gameplay/SpeedDown·SpeedUp)로 플레이 중에도 0.1배씩 바꾼다 (누르고 있으면 0.4초 뒤부터 0.08초마다 반복).
 ///   팝업(일시정지·확인)이 열려 있으면 받지 않고, 재개 카운트다운 중에는 받는다. 바꾼 배속은 진입 데이터(entry.scrollMultiplier)에 남겨
 ///   재시작·다시 하기·곡 선택·에디터 복귀로 이어 넘긴다 (싱글톤에 남기지 않는다).
+///   일반 플레이를 떠날 때(결과·재시작·나가기)는 그 배속을 PlayerData.json의 마지막 배속으로도 저장한다 (판 도중 키를 누를 때는 쓰지 않는다).
 /// - 판정 오프셋(설정): 판이 시작될 때 GameManager.Settings.OffsetMs를 한 번 읽어(appliedOffsetMs) 곡 offset에 더해 TimingMap을 만든다.
 ///   노트 시간 전체(화면·판정·롱노트 틱·MISS·테스트 플레이 시작 위치)가 함께 움직이고 입력 시각은 그대로다. + = 노트를 늦게, - = 빠르게.
 ///   일시정지 중 설정 창에서 바꾸고 닫으면 재시작을 묻는다 (OnSettingsClosed). 에디터 재생·메트로놈에는 적용하지 않는다.
@@ -655,6 +656,7 @@ public class InGameScene : SceneBase
         result.retryEntry = entry.Clone();
         result.returnTarget = CreateReturnTarget();
 
+        SaveLastScrollMultiplier();
         GameManager.Scene.Load(GameConstants.Scenes.Result, result);
     }
 
@@ -818,6 +820,7 @@ public class InGameScene : SceneBase
 
         StopForLeave();
         Debug.Log("[InGameScene] 재시작", this);
+        SaveLastScrollMultiplier();
         GameManager.Scene.Load(GameConstants.Scenes.InGame, entry.Clone());
     }
 
@@ -844,7 +847,19 @@ public class InGameScene : SceneBase
         ResultReturnTarget target = CreateReturnTarget();
         StopForLeave();
         Debug.Log($"[InGameScene] 나가기 → {target.sceneName}", this);
+        SaveLastScrollMultiplier();
         GameManager.Scene.Load(target.sceneName, target.sceneData);
+    }
+
+    /// <summary>
+    /// 인게임을 떠날 때(결과로 감·재시작·나가기) 지금 배속(1·2 키로 바꾼 값)을 PlayerData.json에 남긴다.
+    /// 일반 플레이만 저장하고 테스트 플레이·자동 플레이는 저장하지 않는다. 값이 같으면 파일을 쓰지 않는다.
+    /// </summary>
+    private void SaveLastScrollMultiplier()
+    {
+        if (entry == null || !PlayerDataManager.HasInstance) return;
+        if (!PlayerDataRules.ShouldSaveLastScrollMultiplier(IsTestPlay, isAutoPlay)) return;
+        GameManager.PlayerData.SetLastScrollMultiplier(entry.scrollMultiplier);
     }
 
     /// <summary>

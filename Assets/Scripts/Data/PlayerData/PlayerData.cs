@@ -18,6 +18,9 @@ public class PlayerData
     /// <summary>설정 값</summary>
     public SettingsSaveData settings = new SettingsSaveData();
 
+    /// <summary>곡 선택의 마지막 선택 상태 (지금은 배속만). 이 칸이 없는 예전 파일은 기본값(1.0배)으로 읽는다</summary>
+    public LastSelectionSaveData lastSelection = new LastSelectionSaveData();
+
     /// <summary>채보별 기록 (chartId마다 하나)</summary>
     public List<ChartRecordData> records = new List<ChartRecordData>();
 }

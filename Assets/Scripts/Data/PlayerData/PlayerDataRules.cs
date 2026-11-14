@@ -41,6 +41,14 @@ public static class PlayerDataRules
         }
         SanitizeSettings(data.settings, log);
 
+        // lastSelection은 나중에 추가한 칸이라 예전 파일에는 없다. 없으면 기본값으로 채운다 (형식 버전은 그대로 1)
+        if (data.lastSelection == null)
+        {
+            log?.Add("lastSelection 없음 → 기본값");
+            data.lastSelection = new LastSelectionSaveData();
+        }
+        SanitizeLastSelection(data.lastSelection, log);
+
         // 기록 목록은 새로 만들지 않고 같은 List 안에서 정리한다 (이 목록을 들고 있는 PlayerRecordBook과 어긋나지 않게)
         List<ChartRecordData> merged = MergeRecords(data.records, log);
         if (data.records == null) data.records = merged;
@@ -75,6 +83,40 @@ public static class PlayerDataRules
         FullScreenMode mode = ParseWindowMode(s.windowMode);
         if (mode.ToString() != s.windowMode) log?.Add($"windowMode \"{s.windowMode}\" → {mode}");
         s.windowMode = mode.ToString();
+    }
+
+    /// <summary>마지막 선택 값을 정리한다: 배속을 1.0 ~ 8.0 범위·0.1 단위로 (ScrollSpeedRules). 넘긴 s를 고친다</summary>
+    public static void SanitizeLastSelection(LastSelectionSaveData s, List<string> log = null)
+    {
+        float speed = SanitizeScrollMultiplier(s.scrollMultiplier);
+        if (!speed.Equals(s.scrollMultiplier)) log?.Add($"lastSelection.scrollMultiplier {s.scrollMultiplier} → {speed}");
+        s.scrollMultiplier = speed;
+    }
+
+    /// <summary>배속을 범위(1.0 ~ 8.0)·0.1 단위로 맞춘다. NaN·무한대면 기본 배속</summary>
+    public static float SanitizeScrollMultiplier(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value)) return GameConstants.Play.DefaultScrollMultiplier;
+        return ScrollSpeedRules.FromSteps(ScrollSpeedRules.ToSteps(value));
+    }
+
+    /// <summary>
+    /// 마지막 배속을 value로 바꾼다 (정리한 값으로). 바뀌었으면 true — 호출하는 쪽은 true일 때만 파일에 저장한다.
+    /// </summary>
+    public static bool TrySetLastScrollMultiplier(LastSelectionSaveData s, float value)
+    {
+        float speed = SanitizeScrollMultiplier(value);
+        if (ScrollSpeedRules.ToSteps(speed) == ScrollSpeedRules.ToSteps(s.scrollMultiplier)) return false;
+        s.scrollMultiplier = speed;
+        return true;
+    }
+
+    /// <summary>
+    /// 인게임에 들어갈 때·떠날 때 마지막 배속을 저장할지. 일반 플레이만 저장하고, 테스트 플레이·자동 플레이는 저장하지 않는다.
+    /// </summary>
+    public static bool ShouldSaveLastScrollMultiplier(bool isTestPlay, bool isAutoPlay)
+    {
+        return !isTestPlay && !isAutoPlay;
     }
 
     private static int ClampVolume(int value, string name, List<string> log)

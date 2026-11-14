@@ -351,4 +351,135 @@ public class PlayerDataTests
         Assert.IsNull(reloaded.Find("my_20261110_143229_b5ra"));
         Assert.AreEqual(1, reloaded.Records.Count);
     }
+
+    // ───── 마지막 배속 (lastSelection) ─────
+
+    private const float SpeedDelta = 1e-5f;
+
+    [Test]
+    public void NewPlayerData_LastScrollMultiplierIsDefault()
+    {
+        PlayerData data = new PlayerData();
+        Assert.IsNotNull(data.lastSelection);
+        Assert.AreEqual(GameConstants.Play.DefaultScrollMultiplier, data.lastSelection.scrollMultiplier, SpeedDelta);
+        Assert.AreEqual(1f, data.lastSelection.scrollMultiplier, SpeedDelta);
+    }
+
+    [Test]
+    public void Load_OldFileWithoutLastSelection_StartsAtDefault_AndKeepsOtherValues()
+    {
+        // lastSelection 칸이 생기기 전 형식 (version 1, settings + records)
+        const string oldJson = @"{
+    ""version"": 1,
+    ""savedAt"": ""2026-11-12T01:00:00Z"",
+    ""settings"": {
+        ""masterVolume"": 80, ""musicVolume"": 55, ""sfxVolume"": 30, ""offsetMs"": -35,
+        ""resolutionWidth"": 1600, ""resolutionHeight"": 900, ""windowMode"": ""Windowed""
+    },
+    ""records"": [
+        { ""chartId"": ""song_001_hard"", ""songId"": ""song_001"", ""chartType"": ""Official"", ""bestScore"": 912345, ""bestRank"": ""A"",
+          ""bestAccuracy"": 93.25, ""maxCombo"": 321, ""isFullCombo"": true, ""isAllPerfect"": false, ""playCount"": 4,
+          ""firstPlayedAt"": ""2026-11-10T01:00:00Z"", ""lastPlayedAt"": ""2026-11-12T01:00:00Z"" }
+    ]
+}";
+        File.WriteAllText(filePath, oldJson);
+
+        PlayerDataStore store = new PlayerDataStore(filePath);
+        Assert.AreEqual(PlayerDataStore.LoadSource.Main, store.Load(out PlayerData loaded));
+        List<string> log = new List<string>();
+        PlayerData data = PlayerDataRules.Sanitize(loaded, log);
+
+        Assert.AreEqual(GameConstants.PlayerData.CurrentVersion, data.version, "형식 버전은 그대로");
+        Assert.IsNotNull(data.lastSelection);
+        Assert.AreEqual(1f, data.lastSelection.scrollMultiplier, SpeedDelta);
+        Assert.AreEqual(80, data.settings.masterVolume);
+        Assert.AreEqual(55, data.settings.musicVolume);
+        Assert.AreEqual(30, data.settings.sfxVolume);
+        Assert.AreEqual(-35, data.settings.offsetMs);
+        Assert.AreEqual(1600, data.settings.resolutionWidth);
+        Assert.AreEqual(900, data.settings.resolutionHeight);
+        Assert.AreEqual("Windowed", data.settings.windowMode);
+        Assert.AreEqual(1, data.records.Count);
+        Assert.AreEqual(912345, data.records[0].bestScore);
+        Assert.AreEqual(4, data.records[0].playCount);
+        // JsonUtility가 없는 칸을 기본값 객체로 두든 null로 두든, lastSelection 외에는 고칠 값이 없어야 한다
+        log.RemoveAll(line => line.StartsWith("lastSelection"));
+        CollectionAssert.IsEmpty(log, "예전 파일을 읽어도 다른 값은 고치지 않는다: " + string.Join(", ", log));
+    }
+
+    [Test]
+    public void Sanitize_NullLastSelection_BecomesDefault()
+    {
+        PlayerData data = Sample();
+        data.lastSelection = null;
+        List<string> log = new List<string>();
+        PlayerDataRules.Sanitize(data, log);
+        Assert.IsNotNull(data.lastSelection);
+        Assert.AreEqual(1f, data.lastSelection.scrollMultiplier, SpeedDelta);
+        Assert.That(log, Has.Some.Contains("lastSelection"));
+    }
+
+    [TestCase(0.5f, 1.0f)]
+    [TestCase(9.0f, 8.0f)]
+    [TestCase(3.14f, 3.1f)]
+    [TestCase(0f, 1.0f)]
+    [TestCase(-2f, 1.0f)]
+    [TestCase(float.NaN, 1.0f)]
+    [TestCase(5.5f, 5.5f)]
+    public void Sanitize_LastScrollMultiplier_ClampsAndRoundsToStep(float saved, float expected)
+    {
+        PlayerData data = Sample();
+        data.lastSelection = new LastSelectionSaveData { scrollMultiplier = saved };
+        PlayerDataRules.Sanitize(data);
+        Assert.AreEqual(expected, data.lastSelection.scrollMultiplier, SpeedDelta);
+    }
+
+    [Test]
+    public void Load_OutOfRangeLastScrollMultiplierInFile_IsSanitized()
+    {
+        File.WriteAllText(filePath, @"{ ""version"": 1, ""lastSelection"": { ""scrollMultiplier"": 3.14 } }");
+        PlayerDataStore store = new PlayerDataStore(filePath);
+        store.Load(out PlayerData loaded);
+        Assert.AreEqual(3.1f, PlayerDataRules.Sanitize(loaded).lastSelection.scrollMultiplier, SpeedDelta);
+    }
+
+    [Test]
+    public void SaveThenLoad_KeepsLastScrollMultiplier()
+    {
+        PlayerData data = Sample();
+        Assert.IsTrue(PlayerDataRules.TrySetLastScrollMultiplier(data.lastSelection, 5.5f));
+
+        PlayerDataStore store = new PlayerDataStore(filePath);
+        Assert.IsTrue(store.Save(data));
+        StringAssert.Contains("\"lastSelection\"", File.ReadAllText(filePath));
+
+        Assert.AreEqual(PlayerDataStore.LoadSource.Main, store.Load(out PlayerData loaded));
+        PlayerData reloaded = PlayerDataRules.Sanitize(loaded);
+        Assert.AreEqual(5.5f, reloaded.lastSelection.scrollMultiplier, SpeedDelta);
+        Assert.AreEqual(80, reloaded.settings.masterVolume, "다른 값도 그대로");
+    }
+
+    [Test]
+    public void TrySetLastScrollMultiplier_SameValue_ReturnsFalse_SoNoFileWrite()
+    {
+        LastSelectionSaveData s = new LastSelectionSaveData();
+        Assert.IsFalse(PlayerDataRules.TrySetLastScrollMultiplier(s, 1.0f), "기본값과 같으면 바뀌지 않음");
+
+        Assert.IsTrue(PlayerDataRules.TrySetLastScrollMultiplier(s, 6.0f));
+        Assert.AreEqual(6.0f, s.scrollMultiplier, SpeedDelta);
+        Assert.IsFalse(PlayerDataRules.TrySetLastScrollMultiplier(s, 6.0f), "같은 값이면 저장하지 않음 (재시작 중복)");
+        Assert.IsFalse(PlayerDataRules.TrySetLastScrollMultiplier(s, 6.04f), "0.1 단위로 정리하면 같은 값");
+
+        Assert.IsTrue(PlayerDataRules.TrySetLastScrollMultiplier(s, 12f), "범위 밖은 8.0으로 정리해 넣음");
+        Assert.AreEqual(8.0f, s.scrollMultiplier, SpeedDelta);
+    }
+
+    [TestCase(false, false, true)]
+    [TestCase(true, false, false)]
+    [TestCase(false, true, false)]
+    [TestCase(true, true, false)]
+    public void ShouldSaveLastScrollMultiplier_OnlyNormalPlay(bool isTestPlay, bool isAutoPlay, bool expected)
+    {
+        Assert.AreEqual(expected, PlayerDataRules.ShouldSaveLastScrollMultiplier(isTestPlay, isAutoPlay));
+    }
 }
