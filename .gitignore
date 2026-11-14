@@ -77,3 +77,6 @@ CLAUDE.md
 /[Tt]ools/*
 # One-click build script is shared (no PC-specific paths, defaults can be overridden)
 !/[Tt]ools/build_unity.bat
+
+# Claude output files (analysis results, test audio, etc.)
+/Claude outputs/
