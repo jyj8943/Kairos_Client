@@ -15,7 +15,7 @@ using UnityEngine.TestTools;
 /// </summary>
 public class InGameHudPlayTests
 {
-    private const string Song = "critical_velocity";
+    private const string Song = TestCharts.OfficialSongId;
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
 
     private InGameScene scene;
@@ -144,7 +144,7 @@ public class InGameHudPlayTests
         NoteJudge judge = Get<NoteJudge>(scene, "judge");
         Img_JudgePanel panel = Get<Img_JudgePanel>(canvas, "judgePanel");
         Assert.AreEqual(string.Empty, canvas.FastSlowShown, "시작: FAST/SLOW 없음");
-        Assert.AreEqual("100.00%", Get<TMP_Text>(panel, "accuracy").text, "판정 전 정확도 100%");
+        Assert.AreEqual("0.00%", Get<TMP_Text>(panel, "accuracy").text, "판정 전 정확도 0% (기획서 3-4, 11/14)");
 
         double greatEarly = (GameConstants.Play.DefaultPerfectMs + GameConstants.Play.DefaultGreatMs) * 0.5 / 1000.0;
         PlayNote first = judge.Notes[0];

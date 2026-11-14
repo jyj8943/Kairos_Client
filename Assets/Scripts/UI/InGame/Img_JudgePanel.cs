@@ -35,9 +35,11 @@ public class Img_JudgePanel : MonoBehaviour
     [SerializeField] private TMP_Text accuracy;
 
     /// <summary>
-    /// 라벨 문구·색을 정하고 숫자를 0, 정확도를 100%로 둔다 (판정 전 LiveAccuracy와 같다).
+    /// 라벨 문구·색을 정하고 숫자·정확도를 이번 판의 점수 계산 값으로 채운다.
+    /// 판 시작에는 판정 개수 0, 정확도는 판정 전 LiveAccuracy(0.00%)가 된다 (초기값을 따로 두지 않는다).
     /// </summary>
-    public void Init(Color perfectColor, Color greatColor, Color goodColor, Color missColor, Color fastColor, Color slowColor)
+    /// <param name="score">이번 판의 점수 계산 (판정 전 상태)</param>
+    public void Init(Color perfectColor, Color greatColor, Color goodColor, Color missColor, Color fastColor, Color slowColor, ScoreCalculator score)
     {
         SetTitle(perfectTitle, GameConstants.Play.PerfectText, perfectColor);
         SetTitle(greatTitle, GameConstants.Play.GreatText, greatColor);
@@ -46,8 +48,7 @@ public class Img_JudgePanel : MonoBehaviour
         SetTitle(fastTitle, GameConstants.Play.FastText, fastColor);
         SetTitle(slowTitle, GameConstants.Play.SlowText, slowColor);
 
-        SetCounts(0, 0, 0, 0, 0, 0);
-        accuracy.SetText(AccuracyFormat, 100f);
+        Refresh(score);
     }
 
     /// <summary>판정 개수·FAST/SLOW·정확도를 점수 계산 값으로 바꾼다 (숏노트·롱노트 종합 판정 때)</summary>

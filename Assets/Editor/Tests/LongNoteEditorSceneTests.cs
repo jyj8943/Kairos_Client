@@ -18,7 +18,7 @@ using UnityEngine.UI;
 /// </summary>
 public class LongNoteEditorSceneTests
 {
-    private const string Song = "critical_velocity";
+    private const string Song = TestCharts.OfficialSongId;
     private const int T = GameConstants.Editor.TicksPerBeat;
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
 

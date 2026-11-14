@@ -12,7 +12,7 @@ using UnityEngine.TestTools;
 /// </summary>
 public class ScrollSpeedPlayTests
 {
-    private const string Song = "critical_velocity";
+    private const string Song = TestCharts.OfficialSongId;
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
     private const double InjectLeadSeconds = 0.05;
 
@@ -256,9 +256,11 @@ public class ScrollSpeedPlayTests
     {
         List<string> log = new List<string>();
 
-        // ① 보통 플레이 (공식 채보, 자동 플레이로 결과까지): 3.0으로 바꿈 → 재시작
-        InGameEntryData normal = new InGameEntryData { songId = Song, chartId = "critical_velocity_hard", chartType = ChartType.Official, mode = InGameMode.Normal };
+        // ① 보통 플레이 (테스트용 공식 채보 Critical Velocity EASY): 3.0으로 바꿈 → 재시작
+        InGameEntryData normal = new InGameEntryData { songId = Song, chartId = TestCharts.OfficialChartId, chartType = ChartType.Official, mode = InGameMode.Normal };
         yield return LoadInGame(normal);
+        Img_JudgePanel panel = Get<Img_JudgePanel>(Get<Canvas_InGame>(scene, "canvas"), "judgePanel");
+        Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "accuracy").text, "일반 플레이 시작: 판정 전 정확도 0%");
         TapTo(3f);
         scene.GetType().GetMethod("Restart", Private).Invoke(scene, null);
         yield return null;
@@ -266,9 +268,12 @@ public class ScrollSpeedPlayTests
         float afterRestart = layer.ScrollMultiplier;
         log.Add($"재시작 x{afterRestart:0.0}");
 
-        // ② 4.2로 바꾸고 자동 플레이로 결과까지 → 다시 하기 데이터·곡 선택 데이터
+        // ② 4.2로 바꾸고 결과로 → 다시 하기 데이터·곡 선택 데이터.
+        // 자동 플레이로 켜서(기록·마지막 배속을 저장하지 않게) 곡이 끝날 때와 같은 Finish를 바로 부른다.
+        // 테스트용 공식 채보(Critical Velocity EASY)는 곡 전체를 기다리면 약 2.5분이 걸린다.
         TapTo(4.2f);
         Set(scene, "isAutoPlay", true);
+        scene.GetType().GetMethod("Finish", Private).Invoke(scene, null);
         ResultScene resultScene = null;
         float deadline = Time.realtimeSinceStartup + 60f;
         while ((resultScene = UnityEngine.Object.FindFirstObjectByType<ResultScene>()) == null || GameManager.Scene.IsLoading)

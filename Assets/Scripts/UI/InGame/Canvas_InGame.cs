@@ -97,8 +97,9 @@ public class Canvas_InGame : UIBase
     /// <param name="difficulty">난이도 이름 (ChartData.difficulty)</param>
     /// <param name="isAutoPlay">자동 플레이면 테스트 플레이 표시에 "자동 플레이"를 함께 쓴다</param>
     /// <param name="scrollMultiplier">시작 배속 (곡 정보에 표시)</param>
+    /// <param name="score">이번 판의 점수 계산 (판정 패널의 시작 값: 판정 0개, 정확도 0.00%)</param>
     public void Init(string songTitle, ChartType chartType, string difficulty, string chartName, int level,
-        bool isTestPlay, bool isAutoPlay, float scrollMultiplier)
+        bool isTestPlay, bool isAutoPlay, float scrollMultiplier, ScoreCalculator score)
     {
         SongInfoDisplay info = InGameHudRules.BuildSongInfo(chartType, difficulty, chartName, level, isTestPlay, isAutoPlay);
         songTitleText.text = songTitle ?? string.Empty;
@@ -118,7 +119,7 @@ public class Canvas_InGame : UIBase
         judgeText.ResetView();
         if (clearEffect != null) clearEffect.ResetView();
         if (fastSlowText != null) fastSlowText.ResetView();
-        if (judgePanel != null) judgePanel.Init(perfectColor, greatColor, goodColor, missColor, fastColor, slowColor);
+        if (judgePanel != null) judgePanel.Init(perfectColor, greatColor, goodColor, missColor, fastColor, slowColor, score);
         if (comboTitleText != null) comboTitleText.text = GameConstants.Play.ComboTitleText;
         comboText.ResetView();
         scoreText.SetText("{0}", 0);

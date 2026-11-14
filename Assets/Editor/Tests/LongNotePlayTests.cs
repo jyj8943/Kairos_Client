@@ -17,7 +17,7 @@ using UnityEngine.TestTools;
 /// </summary>
 public class LongNotePlayTests
 {
-    private const string Song = "critical_velocity";
+    private const string Song = TestCharts.OfficialSongId;
     private const int T = GameConstants.Editor.TicksPerBeat;
 
     /// <summary>목표 시각보다 이만큼 먼저(곡 시간) 입력을 넣는다 (프레임이 늦어 목표 시각을 지나치지 않게)</summary>
@@ -496,12 +496,23 @@ public class LongNotePlayTests
         scene = null;
     }
 
-    /// <summary>P12: 숏노트만 있는 D Minor Descent HARD 자동 플레이 (롱노트 작업 전과 같은지)</summary>
+    /// <summary>
+    /// P12: 숏노트만 있는 채보 자동 플레이 (롱노트 작업 전 숏노트 동작과 같은지).
+    /// 공식 채보는 Critical Velocity EASY 하나뿐이고 롱노트가 있으므로, 그 채보를 불러와 롱노트를 뺀 숏노트만의 채보를 테스트 안에서 만든다
+    /// (공식 채보 파일은 고치지 않는다). 기대값은 남긴 숏노트 수에서 계산한다: 판정 수 = 최대 콤보 = 숏노트 수, 1,000,000점, ALL PERFECT.
+    /// </summary>
     [UnityTest, Category("Slow")]
-    public IEnumerator P12_ShortNoteRegression()
+    public IEnumerator P12_ShortNoteOnlyRegression()
     {
-        Assert.IsTrue(ChartRepository.TryLoad("d_minor_descent", "d_minor_descent_hard", ChartType.Official, out ChartData chart, out string error), error);
-        yield return StartPlay(chart, true, "d_minor_descent");
+        Assert.IsTrue(ChartRepository.TryLoad(TestCharts.OfficialSongId, TestCharts.OfficialChartId, ChartType.Official, out ChartData official, out string error), error);
+        ChartData chart = CreateShortNoteOnlyChart(official);
+        int shortCount = chart.notes.Count;
+        Assert.Greater(shortCount, 0, "숏노트가 있어야 한다");
+        Assert.Less(shortCount, official.notes.Count, "원래 채보에는 롱노트가 있다 (뺀 것이 있어야 숏노트만 조건을 확인한다)");
+        yield return StartPlay(chart, true, TestCharts.OfficialSongId);
+        Assert.AreEqual(0, judge.TotalTicks, "롱노트 유지 틱 없음");
+        Img_JudgePanel panel = Get<Img_JudgePanel>(Get<Canvas_InGame>(scene, "canvas"), "judgePanel");
+        Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "accuracy").text, "자동 플레이 시작: 판정 전 정확도 0%");
 
         float deadline = Time.realtimeSinceStartup + 200f;
         while (!judge.AllJudged)
@@ -509,12 +520,23 @@ public class LongNotePlayTests
             Assert.Less(Time.realtimeSinceStartup, deadline, "자동 플레이 대기 시간 초과");
             yield return null;
         }
-        Debug.Log($"[LongNoteTest] P12 D Minor Descent HARD: 노트 {judge.TotalCount}, 점수 {score.Score}, 최대 콤보 {score.MaxCombo}, AP {score.IsAllPerfect}, 노트 풀 추가 생성 {Get<NoteLayer>(scene, "noteLayer").GrowCount}");
+        Debug.Log($"[LongNoteTest] P12 Critical Velocity EASY 숏노트만 (원래 노트 {official.notes.Count}개 중 숏노트 {shortCount}개): 판정 {judge.TotalCount}, 점수 {score.Score}, " +
+                  $"최대 콤보 {score.MaxCombo}, AP {score.IsAllPerfect}, 노트 풀 추가 생성 {Get<NoteLayer>(scene, "noteLayer").GrowCount}");
 
-        Assert.AreEqual(315, judge.TotalCount);
-        Assert.AreEqual(315, score.MaxCombo);
+        Assert.AreEqual(shortCount, judge.TotalCount);
+        Assert.AreEqual(shortCount, score.MaxCombo);
         Assert.AreEqual(1000000, score.Score);
         Assert.IsTrue(score.IsAllPerfect);
+    }
+
+    /// <summary>공식 채보를 복사해 롱노트를 뺀다 (불러온 채보 객체는 고치지 않는다)</summary>
+    private static ChartData CreateShortNoteOnlyChart(ChartData source)
+    {
+        ChartData copy = JsonUtility.FromJson<ChartData>(JsonUtility.ToJson(source));
+        copy.type = ChartData.TypeCustom;
+        copy.chartName = "숏노트만 (Critical Velocity EASY에서)";
+        copy.notes = copy.notes.FindAll(note => note.type == NoteData.TypeShort);
+        return copy;
     }
 
     /// <summary>

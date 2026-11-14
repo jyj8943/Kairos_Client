@@ -279,13 +279,17 @@ public class FastSlowRulesTests
         UnityEngine.Debug.Log($"[FastSlowTest] 시뮬레이션: P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, FAST/SLOW {score.FastCount}/{score.SlowCount}, 실시간 정확도 {score.LiveAccuracy:0.00}%");
     }
 
-    /// <summary>10. LiveAccuracy: 판정 0개면 100%, 판정 뒤에는 비율 합 ÷ 판정한 수. 결과용 Accuracy는 전체 노트 수로 나눔 그대로</summary>
+    /// <summary>10. LiveAccuracy: 판정 0개(판 시작)면 0% (기획서 3-4, 11/14), 판정 뒤에는 비율 합 ÷ 판정한 수. 결과용 Accuracy는 전체 노트 수로 나눔 그대로</summary>
     [Test]
     public void LiveAccuracy()
     {
         ScoreCalculator calc = new ScoreCalculator(10);
-        Assert.AreEqual(100.0, calc.LiveAccuracy, 1e-9, "판정 전");
+        Assert.AreEqual(0.0, calc.LiveAccuracy, 1e-9, "판정 전 0%");
         Assert.AreEqual(0.0, calc.Accuracy, 1e-9);
+
+        ScoreCalculator first = new ScoreCalculator(10);
+        first.Add(JudgeType.Perfect);
+        Assert.AreEqual(100.0, first.LiveAccuracy, 1e-9, "첫 PERFECT에서 100%");
 
         calc.Add(JudgeType.Perfect);
         calc.Add(JudgeType.Great);

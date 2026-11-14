@@ -136,7 +136,7 @@ public class InputSubscriptionLeakTests
         ChartData chart = new ChartData
         {
             version = GameConstants.Chart.CurrentVersion,
-            songId = "critical_velocity",
+            songId = TestCharts.OfficialSongId,
             type = ChartData.TypeCustom,
             chartName = "구독 확인",
             keyCount = GameConstants.Editor.LaneCount,

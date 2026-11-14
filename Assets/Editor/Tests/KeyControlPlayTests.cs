@@ -15,7 +15,7 @@ using UnityEngine.TestTools;
 /// - K2 결과 Enter → 곡 선택 (Enter 한 번에 돌아가기 1번, 다시 하기 0번. 버튼이 선택돼 있어도 같음)
 /// - K3 결과 F5 → 인게임, K4 결과 ESC → 곡 선택
 /// - K5 타이틀 ESC → 종료 확인 팝업 (ESC 한 번 더 → 닫힘)
-/// - K6 인게임 F5 즉시 다시 하기: 플레이 중·일시정지 중은 됨, 확인 팝업이 맨 위면 안 됨
+/// - K6 인게임 F5 즉시 다시 하기: 플레이 중·일시정지 중은 됨, 확인 팝업이 맨 위면 안 됨. 시작·다시 하기 뒤 판정 패널 정확도 0.00%
 /// 인게임·결과는 테스트 플레이 데이터로 들어가 기록(PlayerData.json)을 남기지 않는다.
 /// </summary>
 public class KeyControlPlayTests
@@ -163,8 +163,10 @@ public class KeyControlPlayTests
 
         // 플레이 중: 실제 F5 키
         InGameScene first = Object.FindFirstObjectByType<InGameScene>();
+        Assert.AreEqual("0.00%", AccuracyText(first), "테스트 플레이 시작: 판정 전 정확도 0%");
         yield return Tap(Key.F5);
         yield return WaitNewInGame(first);
+        Assert.AreEqual("0.00%", AccuracyText(Object.FindFirstObjectByType<InGameScene>()), "F5 다시 하기 뒤에도 0%");
 
         // 일시정지 메뉴가 맨 위: 다시 하기 됨
         InGameScene second = Object.FindFirstObjectByType<InGameScene>();
@@ -186,7 +188,16 @@ public class KeyControlPlayTests
         yield return Tap(Key.F5);
         yield return WaitNewInGame(second);
         Assert.IsFalse(GameManager.UI.HasOpenPopup, "다시 시작하면 팝업이 닫혀 있다");
+        Assert.AreEqual("0.00%", AccuracyText(Object.FindFirstObjectByType<InGameScene>()), "일시정지 중 F5 뒤에도 0%");
         yield return new ExitPlayMode();
+    }
+
+    /// <summary>판정 패널 정확도 글자 (InGameScene → Canvas_InGame → Img_JudgePanel)</summary>
+    private static string AccuracyText(InGameScene scene)
+    {
+        object canvas = typeof(InGameScene).GetField("canvas", Private).GetValue(scene);
+        object panel = canvas.GetType().GetField("judgePanel", Private).GetValue(canvas);
+        return ((TMPro.TMP_Text)panel.GetType().GetField("accuracy", Private).GetValue(panel)).text;
     }
 
     // ───── 준비 ─────
@@ -203,7 +214,7 @@ public class KeyControlPlayTests
         return new ChartData
         {
             version = GameConstants.Chart.CurrentVersion,
-            songId = "critical_velocity",
+            songId = TestCharts.OfficialSongId,
             type = ChartData.TypeCustom,
             chartName = "조작 키 확인",
             keyCount = GameConstants.Editor.LaneCount,
@@ -240,7 +251,7 @@ public class KeyControlPlayTests
         data.returnTarget = new ResultReturnTarget
         {
             sceneName = GameConstants.Scenes.SongSelect,
-            sceneData = new SongSelectEntryData { songId = "critical_velocity" },
+            sceneData = new SongSelectEntryData { songId = TestCharts.OfficialSongId },
             buttonLabel = GameConstants.Play.ReturnToSongSelectLabel
         };
         return data;

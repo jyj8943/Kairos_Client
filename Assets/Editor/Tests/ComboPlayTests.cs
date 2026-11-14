@@ -13,7 +13,7 @@ using UnityEngine.TestTools;
 /// </summary>
 public class ComboPlayTests
 {
-    private const string Song = "critical_velocity";
+    private const string Song = TestCharts.OfficialSongId;
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
 
     private InGameScene scene;

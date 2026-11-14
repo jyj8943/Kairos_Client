@@ -141,9 +141,9 @@ public class ScoreCalculator
 
     /// <summary>
     /// 플레이 중 정확도 (%) = 비율 합 ÷ 지금까지 판정한 수 (기획서 3-4: 전체로 나누면 초반에 0%에서 거의 오르지 않는다).
-    /// 아직 판정이 없으면 100.
+    /// 아직 판정이 없으면(판 시작) 0 (기획서 3-4, 11/14에 100에서 변경).
     /// </summary>
-    public double LiveAccuracy => JudgedCount == 0 ? 100.0 : (double)WeightedSum / JudgedCount;
+    public double LiveAccuracy => JudgedCount == 0 ? 0.0 : (double)WeightedSum / JudgedCount;
 
     public PlayRank Rank => GetRank(Score);
 
