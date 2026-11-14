@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,7 +6,8 @@ using UnityEngine.UI;
 /// 타이틀 화면 UI. TitleScene이 Init()을 호출한다.
 /// - 버튼 OnClick은 인스펙터가 아니라 Init()에서 코드로 연결한다.
 /// - 플레이 → 곡 선택, 에디터 → 에디터 곡 고르기, 설정 → 공용 설정 창(GameManager.UI.OpenSettings), 종료 → 확인 팝업 → 게임 종료 (Unity 에디터에서는 플레이 모드 종료).
-/// - 키보드 이동(↑↓, Enter)은 EventSystem이 맡는다.
+/// - 키보드 이동(↑↓, Enter)은 EventSystem이 맡는다. ESC(TitleScene.OnBack)는 종료 확인 팝업을 연다 (RequestQuit).
+/// - 아래쪽 키 안내 줄(KeyGuideBar): ↑↓ 이동 · Enter 선택 · ESC 종료.
 /// </summary>
 public class Canvas_Title : UIBase
 {
@@ -17,17 +19,54 @@ public class Canvas_Title : UIBase
     [Tooltip("씬 이동을 시작하면 한 번에 막을 메뉴 버튼 (Btn_Play, Btn_Editor, Btn_Settings, Btn_Quit)")]
     [SerializeField] private Button[] menuButtons;
 
+    [Tooltip("화면 아래쪽 키 안내 줄 (KeyGuideBar 프리팹)")]
+    [SerializeField] private KeyGuideBar keyGuideBar;
+
+    private bool isLeaving;
+
     /// <summary>
-    /// 버튼 리스너를 연결한다.
+    /// 버튼 리스너와 키 안내 줄을 연결한다.
     /// </summary>
     public void Init()
     {
+        isLeaving = false;
         RemoveListeners();
         playButton.onClick.AddListener(OnClickPlay);
         editorButton.onClick.AddListener(OnClickEditor);
         if (settingsButton != null) settingsButton.onClick.AddListener(OnClickSettings);
         else Debug.LogWarning("[Canvas_Title] settingsButton이 연결되지 않았습니다.", this);
         quitButton.onClick.AddListener(OnClickQuit);
+        InitKeyGuide();
+    }
+
+    /// <summary>키 안내 줄: ↑↓ 이동 · Enter 선택 · ESC 종료 (모두 UI 맵 키라 고정 글자)</summary>
+    private void InitKeyGuide()
+    {
+        if (keyGuideBar == null)
+        {
+            Debug.LogWarning("[Canvas_Title] keyGuideBar가 연결되지 않았습니다.", this);
+            return;
+        }
+
+        keyGuideBar.Init(new List<KeyGuideEntry>
+        {
+            new KeyGuideEntry(GameConstants.KeyGuide.Move, KeyGuideKey.Fixed(GameConstants.KeyGuide.UpDownKeys)),
+            new KeyGuideEntry(GameConstants.KeyGuide.Select, KeyGuideKey.Fixed(GameConstants.KeyGuide.EnterKey)),
+            new KeyGuideEntry(GameConstants.KeyGuide.Quit, KeyGuideKey.Fixed(GameConstants.KeyGuide.EscKey))
+        });
+    }
+
+    /// <summary>키 안내 줄 (확인용)</summary>
+    public KeyGuideBar KeyGuide => keyGuideBar;
+
+    /// <summary>
+    /// ESC (TitleScene.OnBack): 종료 확인 팝업을 연다. 씬을 떠나는 중이면 무시한다.
+    /// 다른 팝업이 열려 있으면 UIManager가 그 팝업을 먼저 처리하므로 여기까지 오지 않는다.
+    /// </summary>
+    public void RequestQuit()
+    {
+        if (isLeaving) return;
+        OnClickQuit();
     }
 
     private void OnDestroy()
@@ -93,6 +132,7 @@ public class Canvas_Title : UIBase
 
     private void SetMenuInteractable(bool interactable)
     {
+        isLeaving = !interactable;
         foreach (Button button in menuButtons)
         {
             if (button != null) button.interactable = interactable;

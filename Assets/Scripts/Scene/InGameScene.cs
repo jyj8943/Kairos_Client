@@ -22,6 +22,7 @@ using UnityEngine.InputSystem;
 ///   라인 빛남을 짧게 켰다 끈다. 롱노트는 시작 시각에 누르고 끝 시각에 뗀다(OnLaneReleased, 누르는 동안 빛남 유지).
 ///   자동 플레이 중에는 사용자의 라인 키를 무시한다 (ESC 일시정지는 그대로).
 ///   일반 플레이(곡 선택에서 들어옴)는 진입 데이터에 testPlay가 없어 자동 플레이를 켤 수 없다.
+/// - F5(Gameplay/Restart): 확인 없이 즉시 다시 하기 (일시정지 메뉴 재시작과 같은 경로, QuickRestartRules). 일시정지 메뉴가 맨 위일 때도 받는다.
 /// - 배속: 1 / 2 키(Gameplay/SpeedDown·SpeedUp)로 플레이 중에도 0.1배씩 바꾼다 (누르고 있으면 0.4초 뒤부터 0.08초마다 반복).
 ///   팝업(일시정지·확인)이 열려 있으면 받지 않고, 재개 카운트다운 중에는 받는다. 바꾼 배속은 진입 데이터(entry.scrollMultiplier)에 남겨
 ///   재시작·다시 하기·곡 선택·에디터 복귀로 이어 넘긴다 (싱글톤에 남기지 않는다).
@@ -43,6 +44,9 @@ public class InGameScene : SceneBase
     [Header("배속 키 (입력 에셋 Gameplay/SpeedDown = 1, Gameplay/SpeedUp = 2)")]
     [SerializeField] private InputActionReference speedDownAction;
     [SerializeField] private InputActionReference speedUpAction;
+
+    [Header("즉시 다시 하기 키 (입력 에셋 Gameplay/Restart = F5)")]
+    [SerializeField] private InputActionReference restartAction;
 
     [Header("소리")]
     [Tooltip("라인 키를 누를 때마다 내는 키음 (NoteSFX). 판정과 상관없이 누를 때마다 난다")]
@@ -71,6 +75,7 @@ public class InGameScene : SceneBase
     private readonly KeyRepeat speedDownRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
     private readonly KeyRepeat speedUpRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
     private bool isSpeedInputEnabled;
+    private bool isRestartInputEnabled;
     private readonly List<JudgeResult> releaseResults = new List<JudgeResult>();
 
     /// <summary>재개할 때 라인 키가 눌려 있는지 묻는 함수 (한 번만 만들어 둔다)</summary>
@@ -164,7 +169,7 @@ public class InGameScene : SceneBase
 
         isPaused = false;
         countdownRoutine = null;
-        pausePopup.Init(OnClickResume, OnClickRestart, OnClickExit);
+        pausePopup.Init(OnClickResume, OnClickRestart, OnClickExit, restartAction);
 
         entry = GameManager.Scene.TakeSceneData<InGameEntryData>() ?? CreateTestEntry();
         if (entry.mode == InGameMode.TestPlay && entry.testPlay == null)
@@ -247,6 +252,7 @@ public class InGameScene : SceneBase
         GameManager.Sound.PlayMusicScheduled(song.Clip, startDelaySeconds, musicStartPosition);
         input.EnableInput();
         EnableSpeedInput();
+        EnableRestartInput();
         SubscribeSettingsClosed();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.EnableInput();
@@ -263,6 +269,7 @@ public class InGameScene : SceneBase
         StopCountdown();
         if (input != null) input.DisableInput();
         DisableSpeedInput();
+        DisableRestartInput();
         UnsubscribeSettingsClosed();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.DisableInput();
@@ -278,6 +285,7 @@ public class InGameScene : SceneBase
     private void OnDestroy()
     {
         DisableSpeedInput();
+        DisableRestartInput();
         UnsubscribeSettingsClosed();
     }
 
@@ -823,6 +831,69 @@ public class InGameScene : SceneBase
         SaveLastScrollMultiplier();
         GameManager.Scene.Load(GameConstants.Scenes.InGame, entry.Clone());
     }
+
+    // ───── F5 즉시 다시 하기 ─────
+
+    /// <summary>F5(Gameplay/Restart) 구독을 시작한다 (OnEnter). 액션은 Disable하지 않고 구독만 끊는다.</summary>
+    private void EnableRestartInput()
+    {
+        if (isRestartInputEnabled) return;
+        if (restartAction == null)
+        {
+            Debug.LogWarning("[InGameScene] restartAction이 연결되지 않아 F5 즉시 다시 하기를 받지 않습니다.", this);
+            return;
+        }
+
+        restartAction.action.performed += OnRestartKey;
+        restartAction.action.Enable();
+        isRestartInputEnabled = true;
+    }
+
+    /// <summary>F5 구독을 끊는다 (OnExit, OnDestroy).</summary>
+    private void DisableRestartInput()
+    {
+        if (!isRestartInputEnabled) return;
+        restartAction.action.performed -= OnRestartKey;
+        isRestartInputEnabled = false;
+    }
+
+    /// <summary>F5를 지금 받을 수 있으면 true (QuickRestartRules). 일시정지 메뉴가 맨 위일 때는 받고, 확인 팝업·설정 창이 맨 위면 받지 않는다</summary>
+    private bool CanQuickRestart
+    {
+        get
+        {
+            bool hasPopup = UIManager.HasInstance && GameManager.UI.HasOpenPopup;
+            bool pauseOnTop = hasPopup && GameManager.UI.TopPopup == pausePopup;
+            return QuickRestartRules.CanQuickRestart(isReady, isPlaying, isFinished, GameManager.Scene.IsLoading, hasPopup, pauseOnTop);
+        }
+    }
+
+    private void OnRestartKey(InputAction.CallbackContext context)
+    {
+        QuickRestart("F5");
+    }
+
+    /// <summary>
+    /// 즉시 다시 하기 (확인 팝업 없음): 일시정지 메뉴의 재시작과 같은 경로(Restart)에서 확인 단계만 건너뛴다.
+    /// 테스트 플레이면 같은 시작 위치부터. 결과 씬을 거치지 않으므로 기록은 남지 않는다.
+    /// </summary>
+    /// <returns>다시 시작했으면 true</returns>
+    private bool QuickRestart(string reason)
+    {
+        if (!CanQuickRestart) return false;
+
+        Debug.Log($"[InGameScene] 즉시 다시 하기 ({reason})", this);
+        Restart();
+        return true;
+    }
+
+#if UNITY_EDITOR
+    /// <summary>테스트 전용 (Unity 에디터): F5를 누른 것과 같다 (키 콜백과 같은 QuickRestart 경로)</summary>
+    public bool TestPressRestartKey()
+    {
+        return QuickRestart("테스트");
+    }
+#endif
 
     /// <summary>
     /// 나가기: 보통 플레이는 확인 팝업 뒤, 테스트 플레이는 확인 없이 이전 화면으로 간다 (결과 씬은 거치지 않는다).

@@ -321,7 +321,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB2E4\uC2DC \uD558\uAE30 (R)"
+  m_text: "\uB2E4\uC2DC \uD558\uAE30"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
   m_sharedMaterial: {fileID: -6662165456191364081, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
@@ -843,7 +843,6 @@ GameObject:
   - component: {fileID: 532883192}
   - component: {fileID: 532883191}
   - component: {fileID: 532883194}
-  - component: {fileID: 532883190}
   - component: {fileID: 532883189}
   m_Layer: 5
   m_Name: Btn_Retry
@@ -885,18 +884,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIPressFeedback
   holdDuration: 0.12
---- !u!114 &532883190
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 532883187}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d7b1398d4cfdd5499600b3dd5f31970, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UISelectOnHover
 --- !u!114 &532883191
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1069,6 +1056,119 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 534967215}
   m_CullTransparentMesh: 1
+--- !u!1001 &691514811
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1419204401}
+    m_Modifications:
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 40
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4920258998478199755, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+      propertyPath: m_Name
+      value: KeyGuideBar
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+--- !u!114 &691514812 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7490213630790348016, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+  m_PrefabInstance: {fileID: 691514811}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d4d7cc815a40a541830b3de112cc877, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyGuideBar
+--- !u!224 &691514813 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4107129891543396921, guid: e264a8ba4fa52504592496538176a54a, type: 3}
+  m_PrefabInstance: {fileID: 691514811}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &756079282
 GameObject:
   m_ObjectHideFlags: 0
@@ -1381,7 +1481,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uACE1 \uC120\uD0DD\uC73C\uB85C (Enter)"
+  m_text: "\uACE1 \uC120\uD0DD\uC73C\uB85C"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
   m_sharedMaterial: {fileID: -6662165456191364081, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
@@ -1728,7 +1828,6 @@ GameObject:
   - component: {fileID: 1419204404}
   - component: {fileID: 1419204403}
   - component: {fileID: 1419204402}
-  - component: {fileID: 1419204400}
   - component: {fileID: 1419204399}
   m_Layer: 5
   m_Name: Canvas_Result
@@ -1764,21 +1863,9 @@ MonoBehaviour:
   retryLabelText: {fileID: 38730690}
   returnButton: {fileID: 1670568810}
   returnLabelText: {fileID: 1030345280}
-  selectionKeeper: {fileID: 1419204400}
   retryAction: {fileID: -2464982119268991557, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
---- !u!114 &1419204400
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1419204398}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 36c65901f9b00204a93d96fc2b9c9ff4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UISelectionKeeper
-  defaultSelectable: {fileID: 1670568810}
+  returnAction: {fileID: 333969680919240194, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  keyGuideBar: {fileID: 691514812}
 --- !u!224 &1419204401
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1798,6 +1885,7 @@ RectTransform:
   - {fileID: 1390293540}
   - {fileID: 532883188}
   - {fileID: 1670568805}
+  - {fileID: 691514813}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2017,7 +2105,6 @@ GameObject:
   - component: {fileID: 1670568809}
   - component: {fileID: 1670568808}
   - component: {fileID: 1670568810}
-  - component: {fileID: 1670568807}
   - component: {fileID: 1670568806}
   m_Layer: 5
   m_Name: Btn_Return
@@ -2059,18 +2146,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIPressFeedback
   holdDuration: 0.12
---- !u!114 &1670568807
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1670568804}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d7b1398d4cfdd5499600b3dd5f31970, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UISelectOnHover
 --- !u!114 &1670568808
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -11,7 +11,8 @@ using UnityEngine.UI;
 /// - 한 Canvas 안에서 공식 채보 탭(OfficialPanel)과 나만의 채보 탭(MyChartPanel)을 바꿔 보여준다.
 /// - 공통: 곡 목록(Btn_SongItem), 앨범 이미지, 곡 정보, 최고 기록(지금은 "-"), 배속, 시작 버튼, 탭 버튼, 조작 안내.
 /// - 공식 탭: 난이도 버튼(Btn_Difficulty) 3개. 나만의 채보 탭: 채보 목록(Btn_MyChartItem).
-/// - 조작: ↑↓ 곡(EventSystem 내비게이션), ←→ 난이도/채보, Tab 탭 전환, + / − 배속, Enter 시작, ESC 타이틀.
+/// - 조작 (기획서 3-9): ↑↓ 곡(EventSystem 내비게이션), ←→ 난이도/채보, Tab 탭 전환, 1 / 2 배속(꾹 누르면 인게임과 같은 KeyRepeat로 계속), Enter 시작, ESC 타이틀.
+///   아래쪽 키 안내 줄(KeyGuideBar)에 같은 순서로 보여주고, 키 이름은 바인딩에서 읽는다 (←→ 이름은 탭에 따라 난이도 ↔ 채보).
 ///   ↑↓ 외의 키는 입력 에셋의 SongSelect 맵으로 받는다. ESC는 UIManager가 받아 SongSelectScene.OnBack → ExitToTitle.
 ///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로도 곡·탭·난이도·채보·시작을 고른다.
 /// - 키보드 선택(EventSystem)은 항상 고른 곡 항목에 둔다. 마우스로 다른 것을 누르면 다음 프레임에 곡 항목으로 되돌린다.
@@ -68,7 +69,8 @@ public class Canvas_SongSelect : UIBase
 
     [Header("하단")]
     [SerializeField] private TMP_Text speedText;
-    [SerializeField] private TMP_Text keyHintText;
+    [Tooltip("화면 아래쪽 키 안내 줄 (KeyGuideBar 프리팹)")]
+    [SerializeField] private KeyGuideBar keyGuideBar;
     [SerializeField] private Button startButton;
 
     [Header("입력 (입력 에셋의 SongSelect 맵. ESC는 UIManager)")]
@@ -101,6 +103,10 @@ public class Canvas_SongSelect : UIBase
     private bool isInputEnabled;
     private bool isLeaving;
 
+    // 배속 키 반복 (인게임과 같은 값: 누른 순간 한 번, 0.4초 뒤부터 0.08초마다)
+    private readonly KeyRepeat speedDownRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
+    private readonly KeyRepeat speedUpRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
+
     /// <summary>지금 보이는 탭</summary>
     public ChartType CurrentTab => currentTab;
 
@@ -131,6 +137,7 @@ public class Canvas_SongSelect : UIBase
         officialEmptyText.text = GameConstants.SongSelect.OfficialEmpty;
         myChartEmptyText.text = GameConstants.SongSelect.MyChartEmpty;
         ShowRecord(null);
+        InitKeyGuide();
 
         // 인게임·결과에서 돌아오면 넘겨받은 배속, 타이틀에서 들어오면(entry 없음) PlayerData.json에 저장된 마지막 배속 (없으면 1.0)
         float startSpeed = entry != null
@@ -161,6 +168,32 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
+    /// 키 안내 줄: ↑↓ 곡 · ←→ 난이도(나만의 채보 탭은 채보) · Tab 탭 · 1 2 배속 · Enter 시작 · ESC 타이틀.
+    /// ↑↓ ←→는 한 액션으로 보이기 어려워 고정 글자, ESC는 UIManager(UI/Cancel)가 받아 고정 글자.
+    /// </summary>
+    private void InitKeyGuide()
+    {
+        if (keyGuideBar == null)
+        {
+            Debug.LogWarning($"{LogPrefix} keyGuideBar가 연결되지 않았습니다.", this);
+            return;
+        }
+
+        keyGuideBar.Init(new List<KeyGuideEntry>
+        {
+            new KeyGuideEntry(GameConstants.KeyGuide.Song, KeyGuideKey.Fixed(GameConstants.KeyGuide.UpDownKeys)),
+            new KeyGuideEntry(GameConstants.KeyGuide.Difficulty, KeyGuideKey.Fixed(GameConstants.KeyGuide.LeftRightKeys)).WithId(GameConstants.KeyGuide.ChartMoveId),
+            new KeyGuideEntry(GameConstants.KeyGuide.Tab, KeyGuideKey.FromAction(switchTabAction)),
+            new KeyGuideEntry(GameConstants.KeyGuide.Speed, KeyGuideKey.FromAction(speedDownAction), KeyGuideKey.FromAction(speedUpAction)),
+            new KeyGuideEntry(GameConstants.KeyGuide.Start, KeyGuideKey.FromAction(startAction, GameConstants.KeyGuide.EnterKey)),
+            new KeyGuideEntry(GameConstants.KeyGuide.ToTitle, KeyGuideKey.Fixed(GameConstants.KeyGuide.EscKey))
+        });
+    }
+
+    /// <summary>키 안내 줄 (확인용)</summary>
+    public KeyGuideBar KeyGuide => keyGuideBar;
+
+    /// <summary>
     /// 키 입력을 받기 시작한다. 씬의 OnEnter에서 호출한다.
     /// </summary>
     public void EnableInput()
@@ -170,8 +203,8 @@ public class Canvas_SongSelect : UIBase
         Subscribe(prevChartAction, OnPrevChart);
         Subscribe(nextChartAction, OnNextChart);
         Subscribe(switchTabAction, OnSwitchTab);
-        Subscribe(speedUpAction, OnSpeedUp);
-        Subscribe(speedDownAction, OnSpeedDown);
+        SubscribeHold(speedUpAction, OnSpeedUpStarted, OnSpeedUpCanceled);
+        SubscribeHold(speedDownAction, OnSpeedDownStarted, OnSpeedDownCanceled);
         Subscribe(startAction, OnStartKey);
         isInputEnabled = true;
     }
@@ -182,13 +215,14 @@ public class Canvas_SongSelect : UIBase
     /// </summary>
     public void DisableInput()
     {
+        ReleaseSpeedKeys();
         if (!isInputEnabled) return;
 
         Unsubscribe(prevChartAction, OnPrevChart);
         Unsubscribe(nextChartAction, OnNextChart);
         Unsubscribe(switchTabAction, OnSwitchTab);
-        Unsubscribe(speedUpAction, OnSpeedUp);
-        Unsubscribe(speedDownAction, OnSpeedDown);
+        UnsubscribeHold(speedUpAction, OnSpeedUpStarted, OnSpeedUpCanceled);
+        UnsubscribeHold(speedDownAction, OnSpeedDownStarted, OnSpeedDownCanceled);
         Unsubscribe(startAction, OnStartKey);
         isInputEnabled = false;
     }
@@ -210,12 +244,35 @@ public class Canvas_SongSelect : UIBase
         if (reference != null) reference.action.performed -= handler;
     }
 
+    /// <summary>꾹 누르는 키(배속): 누른 순간(started)과 뗀 순간(canceled)을 구독한다</summary>
+    private void SubscribeHold(InputActionReference reference, System.Action<InputAction.CallbackContext> onStarted, System.Action<InputAction.CallbackContext> onCanceled)
+    {
+        if (reference == null)
+        {
+            Debug.LogWarning($"{LogPrefix} 연결되지 않은 입력 액션이 있습니다.", this);
+            return;
+        }
+
+        reference.action.started += onStarted;
+        reference.action.canceled += onCanceled;
+        reference.action.Enable();
+    }
+
+    private static void UnsubscribeHold(InputActionReference reference, System.Action<InputAction.CallbackContext> onStarted, System.Action<InputAction.CallbackContext> onCanceled)
+    {
+        if (reference == null) return;
+        reference.action.started -= onStarted;
+        reference.action.canceled -= onCanceled;
+    }
+
     /// <summary>
     /// 키보드 선택을 고른 곡 항목에 둔다. 마우스로 탭·난이도·채보·시작을 눌러 선택이 옮겨 가면 곡 항목으로 되돌린다
     /// (↑↓가 계속 곡을 움직이게).
     /// </summary>
     private void Update()
     {
+        UpdateSpeedRepeat();
+
         // 팝업이 열려 있으면 팝업 버튼의 선택을 빼앗지 않는다
         if (chosenItem == null || IsShortcutBlocked) return;
 
@@ -301,7 +358,8 @@ public class Canvas_SongSelect : UIBase
         SetTabVisual(officialTabButton, officialTabText, isOfficial);
         SetTabVisual(myChartTabButton, myChartTabText, !isOfficial);
 
-        keyHintText.text = isOfficial ? GameConstants.SongSelect.KeyHintOfficial : GameConstants.SongSelect.KeyHintMyChart;
+        if (keyGuideBar != null)
+            keyGuideBar.SetLabel(GameConstants.KeyGuide.ChartMoveId, isOfficial ? GameConstants.KeyGuide.Difficulty : GameConstants.KeyGuide.Chart);
         RefreshChosenChart();
     }
 
@@ -576,23 +634,51 @@ public class Canvas_SongSelect : UIBase
         else MoveMyChart(direction);
     }
 
-    private void OnSpeedUp(InputAction.CallbackContext context)
-    {
-        ChangeSpeed(1);
-    }
+    private void OnSpeedUpStarted(InputAction.CallbackContext context) => PressSpeedKey(speedUpRepeat, 1);
+    private void OnSpeedDownStarted(InputAction.CallbackContext context) => PressSpeedKey(speedDownRepeat, -1);
+    private void OnSpeedUpCanceled(InputAction.CallbackContext context) => speedUpRepeat.Release();
+    private void OnSpeedDownCanceled(InputAction.CallbackContext context) => speedDownRepeat.Release();
 
-    private void OnSpeedDown(InputAction.CallbackContext context)
+    /// <summary>배속 키를 누른 순간: 한 번 바꾸고 반복을 시작한다. 팝업이 열려 있거나 떠나는 중이면 무시한다 (반복도 시작하지 않는다)</summary>
+    private void PressSpeedKey(KeyRepeat repeat, int delta)
     {
-        ChangeSpeed(-1);
+        if (IsShortcutBlocked) return;
+
+        repeat.Press(Time.realtimeSinceStartupAsDouble);
+        ChangeSpeed(delta);
     }
 
     /// <summary>
-    /// 배속을 한 단계(0.1) 올리거나 내린다 (+ / − 또는 2 / 1). 범위(1.0 ~ 8.0) 끝에서는 멈춘다.
+    /// 누르고 있는 배속 키의 반복 (매 프레임, 인게임과 같은 처리). 팝업이 열려 있거나 떠나는 중이면 반복 시각만 지나가고 배속은 바꾸지 않는다.
+    /// </summary>
+    private void UpdateSpeedRepeat()
+    {
+        double now = Time.realtimeSinceStartupAsDouble;
+        int down = speedDownRepeat.Tick(now);
+        int up = speedUpRepeat.Tick(now);
+        if (down + up == 0 || IsShortcutBlocked) return;
+        ChangeSpeed(up - down);
+    }
+
+    /// <summary>배속 키 반복을 멈춘다 (입력을 끊을 때, 씬을 떠날 때)</summary>
+    private void ReleaseSpeedKeys()
+    {
+        speedUpRepeat.Release();
+        speedDownRepeat.Release();
+    }
+
+#if UNITY_EDITOR
+    /// <summary>테스트 전용 (Unity 에디터): 배속 키를 누르고 있으면 true</summary>
+    public bool TestIsSpeedKeyHeld(bool up) => (up ? speedUpRepeat : speedDownRepeat).IsHeld;
+#endif
+
+    /// <summary>
+    /// 배속을 delta 단계(0.1배)만큼 올리거나 내린다 (2 / 1, 꾹 누르면 반복). 범위(1.0 ~ 8.0) 끝에서는 멈춘다.
     /// 인게임·에디터와 같은 ScrollSpeedRules로 정수 단계 계산을 한다.
     /// </summary>
     private void ChangeSpeed(int step)
     {
-        if (IsShortcutBlocked) return;
+        if (step == 0 || IsShortcutBlocked) return;
 
         int next = ScrollSpeedRules.Step(speedSteps, step);
         if (next == speedSteps) return;
@@ -674,6 +760,7 @@ public class Canvas_SongSelect : UIBase
     private void SetLeaving()
     {
         isLeaving = true;
+        ReleaseSpeedKeys();
         officialTabButton.interactable = false;
         myChartTabButton.interactable = false;
         startButton.interactable = false;

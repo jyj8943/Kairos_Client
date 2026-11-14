@@ -150,10 +150,6 @@ public static class GameConstants
         public const string ReturnToSongSelectLabel = "곡 선택으로";
         public const string RetryLabel = "다시 하기";
 
-        /// <summary>결과 버튼 단축키 표시 (버튼 문구 뒤에 붙인다)</summary>
-        public const string RetryKeyHint = " (R)";
-        public const string ReturnKeyHint = " (Enter)";
-
         /// <summary>판정 글자</summary>
         public const string PerfectText = "PERFECT";
         public const string GreatText = "GREAT";
@@ -259,11 +255,46 @@ public static class GameConstants
         public const string SettingsLabel = "설정";
         public const string ExitLabel = "나가기";
 
-        /// <summary>패널 아래 조작 안내</summary>
-        public const string HintText = "ESC 계속 · ↑↓ 이동 · Enter 선택";
-
         /// <summary>재개 카운트다운 (초, unscaled). 1초마다 숫자 하나씩 3 → 2 → 1</summary>
         public const int CountdownSeconds = 3;
+    }
+
+    /// <summary>
+    /// 화면 아래쪽 키 안내 줄(KeyGuideBar) 문구 (기획서 3-9 조작 키 표). 키 이름은 바인딩에서 읽고 여기에는 짧은 이름만 둔다.
+    /// 고정 글자는 바인딩 하나로 이름을 읽기 어려운 키(방향키 묶음, UI 맵의 Submit·Cancel)에만 쓴다.
+    /// </summary>
+    public static class KeyGuide
+    {
+        /// <summary>항목 틀 안 오브젝트 이름 (KeyGuideBar가 찾는다)</summary>
+        public const string KeyCapName = "Img_KeyCap";
+        public const string KeyLabelName = "Txt_KeyLabel";
+
+        /// <summary>고정 글자 키</summary>
+        public const string UpDownKeys = "↑↓";
+        public const string LeftRightKeys = "←→";
+        public const string EnterKey = "Enter";
+        public const string EscKey = "ESC";
+
+        /// <summary>짧은 이름</summary>
+        public const string Move = "이동";
+        public const string Select = "선택";
+        public const string Quit = "종료";
+        public const string Song = "곡";
+        public const string Difficulty = "난이도";
+        public const string Chart = "채보";
+        public const string Tab = "탭";
+        public const string Speed = "배속";
+        public const string Start = "시작";
+        public const string ToTitle = "타이틀";
+        public const string Resume = "계속";
+        public const string Retry = "다시 하기";
+        public const string ToSongSelect = "곡 선택";
+        public const string ToEditor = "에디터로";
+
+        /// <summary>이름을 바꾸는 항목의 ID (KeyGuideBar.SetLabel)</summary>
+        public const string ChartMoveId = "chartMove";
+        public const string ReturnId = "return";
+        public const string BackId = "back";
     }
 
     /// <summary>설정 창(Popup_Settings) 문구·값 범위 (기획서 3-7, 2-4). 저장은 PlayerData.json (GameConstants.PlayerData)</summary>
@@ -375,8 +406,8 @@ public static class GameConstants
         /// <summary>곡 정보 줄: {0} BPM, {1} 곡 길이</summary>
         public const string SongInfoFormat = "BPM {0} · {1}";
 
-        /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지)</summary>
-        public const string SpeedFormat = "배속 x{0:0.0} ( 1 / 2 · - / + )";
+        /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지). 바꾸는 키(1 · 2)는 아래쪽 키 안내 줄(KeyGuideBar)에 보여준다</summary>
+        public const string SpeedFormat = "배속 x{0:0.0}";
 
         /// <summary>최고 기록 칸: {0} 값. 점수는 천 단위 쉼표 (InvariantCulture)</summary>
         public const string RecordScoreFormat = "{0:N0}";
@@ -386,10 +417,6 @@ public static class GameConstants
         /// <summary>빈 상태 문구</summary>
         public const string OfficialEmpty = "공식 채보가 없습니다";
         public const string MyChartEmpty = "저장된 채보가 없습니다";
-
-        /// <summary>하단 조작 안내 (탭마다 ←→ 대상이 다르다)</summary>
-        public const string KeyHintOfficial = "↑↓ 곡 · ←→ 난이도 · Tab 탭 · ESC 타이틀";
-        public const string KeyHintMyChart = "↑↓ 곡 · ←→ 채보 · Tab 탭 · ESC 타이틀";
     }
 
     /// <summary>채보 에디터 규칙</summary>

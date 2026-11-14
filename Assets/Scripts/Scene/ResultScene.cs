@@ -7,6 +7,7 @@ using UnityEngine;
 /// - 들어올 때 기록을 갱신·저장하고(GameManager.PlayerData.SubmitResult, 테스트·자동 플레이는 기록하지 않음) 신기록 여부를 결과에 넣는다.
 ///   일시정지 → 나가기·재시작으로 끝난 판은 이 씬을 거치지 않으므로 기록되지 않는다.
 /// - 다시 하기: 같은 InGameEntryData로 인게임을 다시 시작한다 (테스트 플레이면 같은 시작 위치).
+/// - 키: F5 다시 하기 · Enter 돌아가기는 Canvas_Result가, ESC 돌아가기는 OnBack이 받는다 (기획서 3-9).
 /// - 돌아가기: ResultData의 돌아갈 곳(씬 이름·데이터)대로 이동한다. 이 씬은 에디터·곡 선택 씬을 직접 알지 않는다.
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 가짜 결과로 화면을 확인한다.
 /// </summary>
@@ -63,7 +64,7 @@ public class ResultScene : SceneBase
     }
 
     /// <summary>
-    /// 초기화가 끝나면 R 입력을 받는다.
+    /// 초기화가 끝나면 F5·Enter 입력을 받는다.
     /// </summary>
     protected override void OnEnter()
     {
@@ -76,6 +77,14 @@ public class ResultScene : SceneBase
     public override void OnExit()
     {
         if (canvas != null) canvas.DisableInput();
+    }
+
+    /// <summary>
+    /// ESC (팝업이 없을 때 UIManager가 부름): 돌아가기 (곡 선택 / 테스트 플레이면 에디터).
+    /// </summary>
+    public override void OnBack()
+    {
+        if (isReady && canvas != null) canvas.RequestReturn();
     }
 
     private void Retry()

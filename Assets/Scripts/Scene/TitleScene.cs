@@ -30,4 +30,12 @@ public class TitleScene : SceneBase
     {
         Debug.Log("[TitleScene] OnEnter");
     }
+
+    /// <summary>
+    /// ESC (팝업이 없을 때 UIManager가 부름): 게임 종료 확인 팝업을 연다.
+    /// </summary>
+    public override void OnBack()
+    {
+        if (canvasTitle != null) canvasTitle.RequestQuit();
+    }
 }
