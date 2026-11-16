@@ -93,6 +93,15 @@ public static class GameConstants
         /// <summary>배속을 정수로 계산할 때 곱하는 값 (0.1 단위 → 10)</summary>
         public const int ScrollMultiplierScale = 10;
 
+        /// <summary>
+        /// 인게임 마디선 굵기 (1080 화면 기준 px, 기획서 3-4 마디선). 월드 굵기 = 이 값 × GearView.UnitsPerReferencePx.
+        /// 살짝 보일 정도로 얇게 둔다. 너무 진하거나 흐리면 이 값과 MeasureLineAlpha만 바꾼다
+        /// </summary>
+        public const float MeasureLineThickness = 2f;
+
+        /// <summary>인게임 마디선 불투명도 (흰색에 곱하는 알파, 0 ~ 1)</summary>
+        public const float MeasureLineAlpha = 0.5f;
+
         /// <summary>인게임 배속 키(1 / 2)를 누르고 있을 때: 이 시간 뒤부터 반복 (초)</summary>
         public const double SpeedKeyRepeatDelaySeconds = 0.4;
 

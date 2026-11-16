@@ -30,6 +30,7 @@ using UnityEngine.InputSystem;
 /// - 판정 오프셋(설정): 판이 시작될 때 GameManager.Settings.OffsetMs를 한 번 읽어(appliedOffsetMs) 곡 offset에 더해 TimingMap을 만든다.
 ///   노트 시간 전체(화면·판정·롱노트 틱·MISS·테스트 플레이 시작 위치)가 함께 움직이고 입력 시각은 그대로다. + = 노트를 늦게, - = 빠르게.
 ///   일시정지 중 설정 창에서 바꾸고 닫으면 재시작을 묻는다 (OnSettingsClosed). 에디터 재생·메트로놈에는 적용하지 않는다.
+/// - 마디선(MeasureLineLayer, 기획서 3-4): NoteLayer.Init 다음에 Init하고, 매 프레임 노트와 같은 곡 시간으로 Refresh한다.
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -37,6 +38,8 @@ public class InGameScene : SceneBase
     [Header("화면")]
     [SerializeField] private GearView gear;
     [SerializeField] private NoteLayer noteLayer;
+    [Tooltip("마디선 (Gear/MeasureLines). NoteLayer 다음에 Init하고 같은 곡 시간으로 Refresh한다")]
+    [SerializeField] private MeasureLineLayer measureLineLayer;
     [SerializeField] private InGameInput input;
     [SerializeField] private Canvas_InGame canvas;
     [SerializeField] private Popup_Pause pausePopup;
@@ -161,9 +164,9 @@ public class InGameScene : SceneBase
     {
         isReady = false;
 
-        if (gear == null || noteLayer == null || input == null || canvas == null || pausePopup == null)
+        if (gear == null || noteLayer == null || measureLineLayer == null || input == null || canvas == null || pausePopup == null)
         {
-            Debug.LogError("[InGameScene] gear, noteLayer, input, canvas, pausePopup 중 연결되지 않은 것이 있습니다.", this);
+            Debug.LogError("[InGameScene] gear, noteLayer, measureLineLayer, input, canvas, pausePopup 중 연결되지 않은 것이 있습니다.", this);
             yield break;
         }
 
@@ -217,6 +220,10 @@ public class InGameScene : SceneBase
 #endif
         scrollMap = new ScrollMap();
         noteLayer.Init(gear, judge, scrollMap, entry.scrollMultiplier);
+        // 마디선: 0박(테스트 플레이는 시작 박)부터 마지막 노트가 든 마디의 끝까지 4박마다. 노트와 같은 TimingMap·ScrollMap·낙하 속도를 쓴다
+        float measureStartBeat = IsTestPlay ? entry.testPlay.startBeat : 0f;
+        measureLineLayer.Init(gear, noteLayer, scrollMap,
+            MeasureLineRules.GetMeasureTimes(timing, MeasureLineRules.GetLastBeat(chart.notes), measureStartBeat));
         isAutoPlay = IsTestPlay && entry.testPlay.autoPlay;
 #if UNITY_EDITOR
         if (autoPlay) isAutoPlay = true;
@@ -234,7 +241,7 @@ public class InGameScene : SceneBase
                   $"노트 {judge.TotalCount}개 (롱노트 {longCount}개, 유지 틱 {judge.TotalTicks}개 → 가능한 최대 콤보 {score.MaxPossibleCombo})" +
                   $"{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
                   $"bpm={timing.BpmAt(0)} (BPM 구간 {timing.PointCount}개), offsetMs={timing.OffsetMs} (곡 {song.OffsetMs} + 사용자 판정 오프셋 {appliedOffsetMs:+0;-0;0}), 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
-                  $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개 (롱노트 {noteLayer.PooledLongCount}개), " +
+                  $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개 (롱노트 {noteLayer.PooledLongCount}개), 마디선 {measureLineLayer.LineCount}개 (풀 {measureLineLayer.PooledCount}개), " +
                   $"배속 x{noteLayer.ScrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###}유닛/초 (1.0배 {noteLayer.BaseScrollSpeed:0.###}유닛/초 = 화면 위 끝~판정선 {gear.ScreenTopY - gear.JudgeLineY:0.###}유닛 ÷ {GameConstants.Play.BaseVisibleSeconds}초)", this);
 
         isReady = true;
@@ -376,6 +383,7 @@ public class InGameScene : SceneBase
         }
 
         noteLayer.Refresh(songTime);
+        measureLineLayer.Refresh(songTime);
 
 #if UNITY_EDITOR
         CheckSync(songTime);
@@ -647,7 +655,7 @@ public class InGameScene : SceneBase
         Debug.Log($"[InGameScene] 결과 (모든 노트 판정 뒤 곡 시간 {finishSongTime - allJudgedSongTime:0.000}초): 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, FAST/SLOW {score.FastCount}/{score.SlowCount}, " +
                   $"최대 콤보 {score.MaxCombo}/{score.MaxPossibleCombo} (노트 {score.TotalNotes} + 유지 틱 {score.TotalTicks}), 롱노트 끝 키음 {longEndKeySoundCount}번, 정확도 {score.Accuracy:0.00}%, FC={score.IsFullCombo}, AP={score.IsAllPerfect}, " +
                   $"판정 오차(친 노트 {hitCount}개) 평균 {(hitCount > 0 ? hitErrorSumMs / hitCount : 0):0.###}ms · 최대 {hitErrorMaxMs:0.###}ms, " +
-                  $"노트 풀 {noteLayer.PooledCount}개(추가 생성 {noteLayer.GrowCount})", this);
+                  $"노트 풀 {noteLayer.PooledCount}개(추가 생성 {noteLayer.GrowCount}), 마디선 풀 {measureLineLayer.PooledCount}개(추가 생성 {measureLineLayer.GrowCount})", this);
         Debug.Log($"[InGameScene] 프레임: 평균 {frameStats.AverageFps:0.0}fps, 최저 {frameStats.MinFps:0.0}fps (가장 긴 프레임 {frameStats.MaxSeconds * 1000:0.0}ms), " +
                   $"프레임 {frameStats.Count}개 / {frameStats.TotalSeconds:0.0}초, vSyncCount {QualitySettings.vSyncCount}, targetFrameRate {Application.targetFrameRate}", this);
         LogLongReleaseStats();

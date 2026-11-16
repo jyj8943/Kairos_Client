@@ -131,8 +131,14 @@ public class NoteLayer : MonoBehaviour
         spawnAheadSeconds = (gear.ScreenTopY + screenMargin - gear.JudgeLineY) / ScrollSpeed;
     }
 
-    /// <summary>배속의 낙하 속도 (유닛/초) = 화면 위 끝 ~ 판정선 거리 ÷ 2.69초 × 배속</summary>
-    private float SpeedFor(float multiplier)
+    /// <summary>화면 위아래 밖에 두는 여유 (월드 단위). 마디선(MeasureLineLayer)도 같은 값으로 꺼내고 돌려놓는다</summary>
+    public float ScreenMargin => screenMargin;
+
+    /// <summary>
+    /// 배속의 낙하 속도 (유닛/초) = 화면 위 끝 ~ 판정선 거리 ÷ 2.69초 × 배속. Init 뒤에 부른다.
+    /// 마디선 풀 크기 계산(가장 느린 배속)에 같은 식을 쓰도록 공개한다.
+    /// </summary>
+    public float SpeedFor(float multiplier)
     {
         return ScrollSpeedRules.ScrollSpeed(gear.ScreenTopY - gear.JudgeLineY, multiplier);
     }
