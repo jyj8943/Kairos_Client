@@ -124,6 +124,11 @@ public class CountInPlayTests
         double initialSongTime = -scene.StartDelaySeconds;
         for (int i = 0; i < 4; i++) Assert.Less(dsp[i], musicStartDsp, $"{i + 1}번째 클릭이 노래 시작 전");
 
+        // −1마디에는 마디선이 없다: 첫 선 = 0박
+        TimingMap timing = Get<TimingMap>(scene, "timing");
+        MeasureLineLayer lines = Get<MeasureLineLayer>(scene, "measureLineLayer");
+        Assert.AreEqual(timing.BeatToSeconds(0), lines.GetTime(0), 1e-9, "첫 마디선 = 0박 (−1마디 선 없음)");
+
         float deadline = TestSpeed.Deadline(10f);
         while (GameManager.Sound.SongTime < 0.05)
         {

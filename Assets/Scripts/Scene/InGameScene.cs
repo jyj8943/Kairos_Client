@@ -32,7 +32,8 @@ using UnityEngine.InputSystem;
 ///   일시정지 중 설정 창에서 바꾸고 닫으면 재시작을 묻는다 (OnSettingsClosed). 에디터 재생·메트로놈에는 적용하지 않는다.
 /// - 마디선(MeasureLineLayer, 기획서 3-4): NoteLayer.Init 다음에 Init하고, 매 프레임 노트와 같은 곡 시간으로 Refresh한다.
 /// - 시작 메트로놈(기획서 3-4, CountInRules): 0박부터 플레이하면(일반 플레이는 항상, 테스트 플레이는 시작 박이 0박일 때만) 판을 −1마디부터 시작하고
-///   −4·−3·−2·−1박에 에디터 메트로놈 박 소리를 ScheduleSfx로 예약한다 (곡 offset만 반영, 판정 오프셋 제외). −1마디 마디선도 그린다.
+///   −4·−3·−2·−1박에 에디터 메트로놈 박 소리를 ScheduleSfx로 예약한다 (곡 offset만 반영, 판정 오프셋 제외).
+///   −1마디에는 마디선을 그리지 않는다 (판정선 위에서 0박 선이 내려온다).
 ///   판 시작·재시작(일시정지 메뉴, F5)·자동 플레이에서 울리고, 일시정지·재시작·나가기 때 아직 안 울린 클릭은 취소한다 (재개해도 다시 예약하지 않는다).
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
@@ -248,11 +249,11 @@ public class InGameScene : SceneBase
 #endif
         scrollMap = new ScrollMap();
         noteLayer.Init(gear, judge, scrollMap, entry.scrollMultiplier);
-        // 마디선: 0박(테스트 플레이는 시작 박)부터 마지막 노트가 든 마디의 끝까지 4박마다. 시작 메트로놈을 쓰면 −1마디(−4박) 선도 그린다.
+        // 마디선: 0박(테스트 플레이는 시작 박)부터 마지막 노트가 든 마디의 끝까지 4박마다. 시작 메트로놈(−1마디)에는 그리지 않는다.
         // 노트와 같은 TimingMap·ScrollMap·낙하 속도를 쓴다
         float measureStartBeat = IsTestPlay ? entry.testPlay.startBeat : 0f;
         measureLineLayer.Init(gear, noteLayer, scrollMap,
-            MeasureLineRules.GetMeasureTimes(timing, MeasureLineRules.GetLastBeat(chart.notes), measureStartBeat, usesCountIn));
+            MeasureLineRules.GetMeasureTimes(timing, MeasureLineRules.GetLastBeat(chart.notes), measureStartBeat));
         isAutoPlay = IsTestPlay && entry.testPlay.autoPlay;
 #if UNITY_EDITOR
         if (autoPlay) isAutoPlay = true;

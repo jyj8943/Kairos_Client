@@ -11,22 +11,6 @@ public class MeasureLineRulesTests
     private static NoteData Short(float beat) => new NoteData { beat = beat, lane = 0, type = NoteData.TypeShort };
     private static NoteData Long(float beat, float endBeat) => new NoteData { beat = beat, endBeat = endBeat, lane = 0, type = NoteData.TypeLong };
 
-    /// <summary>시작 메트로놈: countIn이면 첫 선이 −4박(−1마디 시작)이고 나머지는 그대로. 아니면 예전 규칙 그대로</summary>
-    [Test]
-    public void CountIn_AddsLineAtMinusFourBeats()
-    {
-        List<int> plain = MeasureLineRules.GetMeasureBeats(17f, 0f);
-        List<int> countIn = MeasureLineRules.GetMeasureBeats(17f, 0f, true);
-        CollectionAssert.AreEqual(new[] { 0, 4, 8, 12, 16, 20 }, plain, "countIn 아님");
-        CollectionAssert.AreEqual(new[] { -4, 0, 4, 8, 12, 16, 20 }, countIn, "countIn");
-
-        TimingMap timing = TimingMap.Single(150.61f, 18);
-        List<double> times = MeasureLineRules.GetMeasureTimes(timing, 17f, 0f, true);
-        Assert.AreEqual(timing.BeatToSeconds(-4), times[0], SecondsTolerance, "−1마디 선 시각");
-        Assert.AreEqual(CountInRules.GetClickTimes(timing)[0], times[0], SecondsTolerance, "−1마디 선 = 첫 클릭");
-        Assert.AreEqual(0, MeasureLineRules.GetMeasureBeats(-1f, 0f, true).Count, "노트 없으면 선 없음");
-    }
-
     /// <summary>1: BPM 하나(150.61)면 간격 = 4 × 60 ÷ 150.61초, 첫 선 = 0박 시각(offset 반영)</summary>
     [Test]
     public void SingleBpm_IntervalAndFirstLine()
