@@ -7,6 +7,8 @@ using UnityEngine.UI;
 /// - 고른 곡에 그 난이도 채보가 없으면 레벨을 "-"로 두고 버튼을 비활성으로 보인다.
 /// - 고른 난이도는 배경을 그 난이도 색으로, 난이도 이름·레벨 글자를 짝 글자색으로 칠한다 (DifficultyColors: EASY 초록 · NORMAL 노랑 · HARD 빨강).
 ///   선택 안 됨·채보 없음(회색)은 프리팹 기본 색 그대로다. 난이도 색은 직렬화하지 않는다.
+/// - 선택된 동안만 이름·레벨 글자에 외곽선 프리셋 머티리얼(chosenTextMaterial)을 쓰고, 풀리면 원래 머티리얼로 되돌린다.
+///   글꼴 기본(공유) 머티리얼은 고치지 않는다.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_Difficulty : MonoBehaviour
@@ -16,12 +18,16 @@ public class Btn_Difficulty : MonoBehaviour
     [SerializeField] private TMP_Text levelText;
 
     [Header("색")]
+    [Tooltip("선택됐을 때 이름·레벨 글자 머티리얼 (NEXON Lv2 Gothic SDF Outline Difficulty, 얇은 어두운 외곽선)")]
+    [SerializeField] private Material chosenTextMaterial;
     [SerializeField] private Color unavailableTextColor = new Color32(0xC4, 0xC4, 0xC8, 0xFF);
 
     private Button button;
     private Color normalBackgroundColor;
     private Color normalNameColor;
     private Color normalLevelColor;
+    private Material normalNameMaterial;
+    private Material normalLevelMaterial;
 
     private string difficulty;
     private ChartData chart;
@@ -51,6 +57,8 @@ public class Btn_Difficulty : MonoBehaviour
         normalBackgroundColor = background.color;
         normalNameColor = difficultyText.color;
         normalLevelColor = levelText.color;
+        normalNameMaterial = difficultyText.fontSharedMaterial;
+        normalLevelMaterial = levelText.fontSharedMaterial;
     }
 
     /// <summary>
@@ -85,6 +93,9 @@ public class Btn_Difficulty : MonoBehaviour
         bool isChosen = chosen && chart != null;
         DifficultyColorPair chosenColor = DifficultyColors.Get(difficulty);
         background.color = isChosen ? (Color)chosenColor.Background : normalBackgroundColor;
+        bool useOutline = isChosen && chosenTextMaterial != null;
+        difficultyText.fontSharedMaterial = useOutline ? chosenTextMaterial : normalNameMaterial;
+        levelText.fontSharedMaterial = useOutline ? chosenTextMaterial : normalLevelMaterial;
 
         if (isChosen)
         {

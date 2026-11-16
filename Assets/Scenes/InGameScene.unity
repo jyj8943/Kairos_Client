@@ -1047,6 +1047,7 @@ MonoBehaviour:
   songTitleText: {fileID: 875250032}
   chartBadgeImage: {fileID: 1923394641}
   chartBadgeText: {fileID: 877103165}
+  chartBadgeTextMaterial: {fileID: 2100000, guid: 0032740fa8418bf4190a3af3aa264fce, type: 2}
   chartNameText: {fileID: 2082809746}
   levelText: {fileID: 1281089891}
   speedText: {fileID: 278583292}

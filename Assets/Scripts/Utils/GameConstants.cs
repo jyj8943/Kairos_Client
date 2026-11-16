@@ -634,21 +634,28 @@ public static class GameConstants
     /// <summary>채보 파일 형식과 저장 위치 (기획서 2-2, 2-4)</summary>
     /// <summary>
     /// 난이도 표기 색 (곡 선택 난이도 버튼·인게임 채보 뱃지가 같이 쓴다. 고르는 함수는 DifficultyColors.Get).
-    /// 배경과 그 위 글자색을 짝으로 둔다. 노랑(NORMAL) 위에는 어두운 글자를 쓴다. 씬에 색을 직렬화하지 않는다.
+    /// 밝은 배경 + 흰 글자 + 얇은 어두운 외곽선(B안). 외곽선은 난이도 색 위 글자에만 쓰는 머티리얼 프리셋
+    /// (Assets/Fonts/NEXON_Lv2_Gothic/TTF/NEXON Lv2 Gothic SDF Outline Difficulty.mat)에 들어 있고, 그 값이 아래 Outline 상수다.
+    /// 씬에 색을 직렬화하지 않는다.
     /// </summary>
     public static class DifficultyColor
     {
-        /// <summary>EASY 배경 #15803D. 흰 글자 명암비가 4.5:1 이상이 되게 기획 초안 #22A34A(3.28:1)보다 진하게 정했다</summary>
-        public static readonly Color32 EasyBackground = new Color32(0x15, 0x80, 0x3D, 0xFF);
+        public static readonly Color32 EasyBackground = new Color32(0x22, 0xC5, 0x5E, 0xFF);
         public static readonly Color32 EasyText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
-        public static readonly Color32 NormalBackground = new Color32(0xF5, 0xB8, 0x00, 0xFF);
-        public static readonly Color32 NormalText = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
-        public static readonly Color32 HardBackground = new Color32(0xDC, 0x26, 0x26, 0xFF);
+        public static readonly Color32 NormalBackground = new Color32(0xFA, 0xCC, 0x15, 0xFF);
+        public static readonly Color32 NormalText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+        public static readonly Color32 HardBackground = new Color32(0xEF, 0x44, 0x44, 0xFF);
         public static readonly Color32 HardText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
 
         /// <summary>나만의 채보·테스트 플레이(CUSTOM) 뱃지 색 (인게임에서만 쓴다). 모르는 난이도 이름도 이 색이다</summary>
-        public static readonly Color32 CustomBackground = new Color32(0x7C, 0x3A, 0xED, 0xFF);
+        public static readonly Color32 CustomBackground = new Color32(0x8B, 0x5C, 0xF6, 0xFF);
         public static readonly Color32 CustomText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+
+        /// <summary>난이도 색 위 글자 외곽선 색 (검정, 불투명도 45%)</summary>
+        public static readonly Color OutlineColor = new Color(0f, 0f, 0f, 0.45f);
+
+        /// <summary>난이도 색 위 글자 외곽선 굵기 (TMP _OutlineWidth, 0~1). 글자가 두꺼워 보이지 않게 얇게 둔다</summary>
+        public const float OutlineWidth = 0.12f;
     }
 
     public static class Chart

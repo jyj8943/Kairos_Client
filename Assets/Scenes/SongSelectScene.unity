@@ -1571,6 +1571,7 @@ MonoBehaviour:
   background: {fileID: 388680354}
   difficultyText: {fileID: 1855680753}
   levelText: {fileID: 82222755}
+  chosenTextMaterial: {fileID: 2100000, guid: 0032740fa8418bf4190a3af3aa264fce, type: 2}
   unavailableTextColor: {r: 0.76862746, g: 0.76862746, b: 0.78431374, a: 1}
 --- !u!1 &470050721
 GameObject:
@@ -2242,6 +2243,7 @@ MonoBehaviour:
   background: {fileID: 813312315}
   difficultyText: {fileID: 1226551628}
   levelText: {fileID: 470050723}
+  chosenTextMaterial: {fileID: 2100000, guid: 0032740fa8418bf4190a3af3aa264fce, type: 2}
   unavailableTextColor: {r: 0.76862746, g: 0.76862746, b: 0.78431374, a: 1}
 --- !u!1 &822045761
 GameObject:
@@ -3862,6 +3864,7 @@ MonoBehaviour:
   background: {fileID: 1572546726}
   difficultyText: {fileID: 1746022727}
   levelText: {fileID: 1479655286}
+  chosenTextMaterial: {fileID: 2100000, guid: 0032740fa8418bf4190a3af3aa264fce, type: 2}
   unavailableTextColor: {r: 0.76862746, g: 0.76862746, b: 0.78431374, a: 1}
 --- !u!1 &1625396945
 GameObject:

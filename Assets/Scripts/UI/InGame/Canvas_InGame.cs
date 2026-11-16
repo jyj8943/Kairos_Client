@@ -25,6 +25,8 @@ public class Canvas_InGame : UIBase
     [SerializeField] private Image chartBadgeImage;
     [Tooltip("채보 뱃지 글자 (Img_ChartBadge/Txt_ChartBadge)")]
     [SerializeField] private TMP_Text chartBadgeText;
+    [Tooltip("채보 뱃지 글자 머티리얼 (NEXON Lv2 Gothic SDF Outline Difficulty, 난이도 색 위 얇은 어두운 외곽선)")]
+    [SerializeField] private Material chartBadgeTextMaterial;
     [Tooltip("나만의 채보 이름 (Txt_ChartName). 나만의 채보일 때만 켜고, 넘치면 이 글자만 줄임표")]
     [SerializeField] private TMP_Text chartNameText;
     [Tooltip("레벨 (Txt_Level, \"Lv.3\"). 항상 보인다")]
@@ -96,6 +98,7 @@ public class Canvas_InGame : UIBase
         DifficultyColorPair badgeColor = GetBadgeColor(info);
         chartBadgeImage.color = badgeColor.Background;
         chartBadgeText.color = badgeColor.Text;
+        if (chartBadgeTextMaterial != null) chartBadgeText.fontSharedMaterial = chartBadgeTextMaterial;
         chartNameText.text = info.ChartName;
         chartNameText.gameObject.SetActive(info.ShowChartName);
         levelText.text = info.LevelText;
