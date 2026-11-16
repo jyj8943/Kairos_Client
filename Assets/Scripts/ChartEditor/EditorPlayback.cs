@@ -251,7 +251,8 @@ public class EditorPlayback : MonoBehaviour
         // 다시 예약할 위치는 위에서 "아직 안 울림"을 가른 기준(dspTime)과 같은 시각에서 찾는다.
         // (realtime으로 보간한 곡 시간은 dspTime보다 몇 ms 앞서 있어, 그 사이 노트가 취소만 되고 다시 예약되지 않는다)
         double songTimeNow = GameManager.Sound.GetSongTimeAtRealtime(Time.realtimeSinceStartupAsDouble);
-        double songTimeAtDsp = songTimeNow - (GameManager.Sound.GetDspTimeOfSongTime(songTimeNow) - dspNow);
+        // DSP 차이(실제 초)를 곡 시간으로 바꿔 뺀다 (재생 배율, 보통 1.0)
+        double songTimeAtDsp = songTimeNow - (GameManager.Sound.GetDspTimeOfSongTime(songTimeNow) - dspNow) * GameManager.Sound.PlaybackRate;
         if (songTimeAtDsp < session.Timing.BeatToSeconds(playStartBeat))
         {
             // 아직 시작 지연 중이면 시작 위치의 박·노트는 울리기 전이므로 시작 위치부터 다시 잡는다
@@ -332,7 +333,7 @@ public class EditorPlayback : MonoBehaviour
                     double sourceTime = GameManager.Sound.MusicSourceTime;
                     if (sourceTime > 0 && songTime > session.Timing.BeatToSeconds(playStartBeat))
                     {
-                        double beatDspFromSource = dspNow + (clickTime - sourceTime);
+                        double beatDspFromSource = dspNow + (clickTime - sourceTime) / GameManager.Sound.PlaybackRate;
                         double errorMs = Math.Abs(dsp - beatDspFromSource) * 1000.0;
                         if (errorMs > maxClickErrorMs) maxClickErrorMs = errorMs;
                     }

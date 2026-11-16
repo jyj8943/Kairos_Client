@@ -58,7 +58,7 @@ public class LongNoteEditorSceneTests
     /// <summary>에디터 씬을 연다. chartId가 없으면 새 채보.</summary>
     private IEnumerator OpenEditor(string chartId)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -296,7 +296,7 @@ public class LongNoteEditorSceneTests
         playback.Play();
 
         double endTime = session.Timing.BeatToSeconds(8f);
-        float deadline = Time.realtimeSinceStartup + 10f;
+        float deadline = TestSpeed.Deadline(10f);
         while (GameManager.Sound.SongTime < endTime + 0.3)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "재생 대기 시간 초과");

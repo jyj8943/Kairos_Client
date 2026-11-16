@@ -50,7 +50,7 @@ public class EditorUndoPlayTests
 
     private IEnumerator OpenEditor(EditorEntryData entry)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -62,7 +62,7 @@ public class EditorUndoPlayTests
 
     private IEnumerator WaitEditor()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         yield return null;
         while (true)
         {
@@ -205,7 +205,7 @@ public class EditorUndoPlayTests
         Assert.AreEqual(1, session.RedoCount);
 
         Call(editorScene, "OnTestPlayRequested");
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         InGameScene inGame = null;
         while (true)
         {
@@ -245,7 +245,7 @@ public class EditorUndoPlayTests
         Assert.IsTrue(session.AddNote(1, 9 * T));
 
         Get<UnityEngine.UI.Button>(canvas, "testPlayButton").onClick.Invoke();
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         InGameScene inGame;
         while (true)
         {

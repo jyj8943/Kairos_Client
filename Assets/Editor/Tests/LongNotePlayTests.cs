@@ -71,7 +71,7 @@ public class LongNotePlayTests
     /// <summary>테스트 플레이로 인게임에 들어가 재생이 시작될 때까지 기다린다.</summary>
     private IEnumerator StartPlay(ChartData chart, bool autoPlay = false, string songId = Song)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저 초기화 대기 시간 초과");
@@ -117,7 +117,7 @@ public class LongNotePlayTests
     /// <summary>곡 시간이 time이 될 때까지 기다린다 (일시정지 중에는 곡 시간이 멈춘다).</summary>
     private static IEnumerator WaitSongTime(double time, float timeoutSeconds = 30f)
     {
-        float deadline = Time.realtimeSinceStartup + timeoutSeconds;
+        float deadline = TestSpeed.Deadline(timeoutSeconds);
         while (SongTime < time)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, $"곡 시간 {time:0.000}초 대기 시간 초과 (지금 {SongTime:0.000}초)");
@@ -143,7 +143,7 @@ public class LongNotePlayTests
     /// <summary>노트가 판정될 때까지 기다린다.</summary>
     private IEnumerator WaitJudged(int noteIndex, float timeoutSeconds = 15f)
     {
-        float deadline = Time.realtimeSinceStartup + timeoutSeconds;
+        float deadline = TestSpeed.Deadline(timeoutSeconds);
         while (!judge.IsJudged(noteIndex))
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, $"노트 {noteIndex} 판정 대기 시간 초과");
@@ -279,7 +279,8 @@ public class LongNotePlayTests
     }
 
     /// <summary>P4: 떼지 않음 → 끝 +120ms 지나 자동 끝 GOOD, 종합 GOOD, 그 순간 끝 키음</summary>
-    [UnityTest]
+    // 배율 1.0: +110ms ~ +120ms(곡 시간 10ms) 사이를 프레임 단위로 본다. 배율을 올리면 한 프레임에 곡 시간이 10ms보다 많이 흘러 경계를 건너뛴다
+    [UnityTest, NormalSpeed]
     public IEnumerator P4_HoldPastEnd()
     {
         yield return StartPlay(Chart(Long(6f, 8f, 0)));
@@ -326,7 +327,8 @@ public class LongNotePlayTests
     }
 
     /// <summary>P6·P11: 시작 놓침 → +120ms 지나 바로 종합 MISS, Missed(회색), 몸통 도중 누름은 빈 타격, 콤보 0</summary>
-    [UnityTest]
+    // 배율 1.0: +110ms ~ +120ms(곡 시간 10ms) 사이를 프레임 단위로 본다. 배율을 올리면 한 프레임에 곡 시간이 10ms보다 많이 흘러 경계를 건너뛴다
+    [UnityTest, NormalSpeed]
     public IEnumerator P6_StartMissed()
     {
         yield return StartPlay(Chart(Long(6f, 8f, 0)));
@@ -425,7 +427,7 @@ public class LongNotePlayTests
     private IEnumerator Resume()
     {
         scene.GetType().GetMethod("OnClickResume", Private).Invoke(scene, null);
-        float deadline = Time.realtimeSinceStartup + GameConstants.Pause.CountdownSeconds + 3f;
+        float deadline = TestSpeed.Deadline(GameConstants.Pause.CountdownSeconds + 3f);
         while (Get<bool>(scene, "isPaused"))
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "재개 대기 시간 초과");
@@ -467,7 +469,7 @@ public class LongNotePlayTests
         int longCount = chart.notes.FindAll(x => x.type == NoteData.TypeLong).Count;
 
         yield return StartPlay(chart, true);
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!judge.AllJudged)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "자동 플레이 대기 시간 초과");
@@ -487,7 +489,7 @@ public class LongNotePlayTests
         Assert.AreEqual(longCount, EndKeySounds);
 
         // 결과 씬으로 넘어가는지 (모든 노트 판정 뒤 3초)
-        deadline = Time.realtimeSinceStartup + 8f;
+        deadline = TestSpeed.Deadline(8f);
         while (UnityEngine.Object.FindFirstObjectByType<ResultScene>() == null)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "결과 씬 대기 시간 초과");
@@ -514,7 +516,7 @@ public class LongNotePlayTests
         Img_JudgePanel panel = Get<Img_JudgePanel>(Get<Canvas_InGame>(scene, "canvas"), "judgePanel");
         Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "accuracy").text, "자동 플레이 시작: 판정 전 정확도 0%");
 
-        float deadline = Time.realtimeSinceStartup + 200f;
+        float deadline = TestSpeed.Deadline(200f);
         while (!judge.AllJudged)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "자동 플레이 대기 시간 초과");

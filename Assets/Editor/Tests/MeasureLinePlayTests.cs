@@ -61,7 +61,7 @@ public class MeasureLinePlayTests
 
     private IEnumerator LoadInGame(InGameEntryData entry)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -73,7 +73,7 @@ public class MeasureLinePlayTests
 
     private IEnumerator WaitInGameStarted()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (true)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "인게임 시작 대기 시간 초과");
@@ -121,7 +121,7 @@ public class MeasureLinePlayTests
 
         HashSet<int> checkedLines = new HashSet<int>();
         double maxError = 0;
-        float deadline = Time.realtimeSinceStartup + 60f;
+        float deadline = TestSpeed.Deadline(60f);
         while (checkedLines.Count < CheckLineCount)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "마디선·노트 비교 대기 시간 초과");

@@ -121,11 +121,6 @@ public static class GameConstants
         /// <summary>인게임 곡 정보 패널: 나만의 채보 뱃지 문구 (공식 채보는 난이도 이름을 쓴다)</summary>
         public const string ChartBadgeCustomText = "CUSTOM";
 
-        /// <summary>인게임 곡 정보 패널 뱃지 기본 색 (Canvas_InGame Inspector에서 바꿀 수 있다). 난이도 순서는 Chart.Difficulties와 같다</summary>
-        public static readonly Color32 ChartBadgeEasyColor = new Color32(0x16, 0xA3, 0x4A, 0xFF);
-        public static readonly Color32 ChartBadgeNormalColor = new Color32(0x25, 0x63, 0xEB, 0xFF);
-        public static readonly Color32 ChartBadgeHardColor = new Color32(0xDC, 0x26, 0x26, 0xFF);
-        public static readonly Color32 ChartBadgeCustomColor = new Color32(0x7C, 0x3A, 0xED, 0xFF);
 
         /// <summary>키 칸 글자 (입력 에셋 바인딩에서 읽지 못했을 때 쓴다). Lane0 ~ Lane3 순서</summary>
         public static readonly string[] LaneKeyLabels = { "A", "S", ";", "'" };
@@ -637,6 +632,25 @@ public static class GameConstants
     }
 
     /// <summary>채보 파일 형식과 저장 위치 (기획서 2-2, 2-4)</summary>
+    /// <summary>
+    /// 난이도 표기 색 (곡 선택 난이도 버튼·인게임 채보 뱃지가 같이 쓴다. 고르는 함수는 DifficultyColors.Get).
+    /// 배경과 그 위 글자색을 짝으로 둔다. 노랑(NORMAL) 위에는 어두운 글자를 쓴다. 씬에 색을 직렬화하지 않는다.
+    /// </summary>
+    public static class DifficultyColor
+    {
+        /// <summary>EASY 배경 #15803D. 흰 글자 명암비가 4.5:1 이상이 되게 기획 초안 #22A34A(3.28:1)보다 진하게 정했다</summary>
+        public static readonly Color32 EasyBackground = new Color32(0x15, 0x80, 0x3D, 0xFF);
+        public static readonly Color32 EasyText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+        public static readonly Color32 NormalBackground = new Color32(0xF5, 0xB8, 0x00, 0xFF);
+        public static readonly Color32 NormalText = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
+        public static readonly Color32 HardBackground = new Color32(0xDC, 0x26, 0x26, 0xFF);
+        public static readonly Color32 HardText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+
+        /// <summary>나만의 채보·테스트 플레이(CUSTOM) 뱃지 색 (인게임에서만 쓴다). 모르는 난이도 이름도 이 색이다</summary>
+        public static readonly Color32 CustomBackground = new Color32(0x7C, 0x3A, 0xED, 0xFF);
+        public static readonly Color32 CustomText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+    }
+
     public static class Chart
     {
         /// <summary>지금 쓰는 채보 형식 버전. 이 값과 다른 파일은 읽지 않는다</summary>
@@ -657,8 +671,13 @@ public static class GameConstants
         /// <summary>공식 채보 작성자 (F1 패널의 공식 채보로 추가)</summary>
         public const string OfficialAuthor = "Kairos";
 
+        /// <summary>공식 채보 난이도 이름 (공식 채보 파일 이름이기도 하다)</summary>
+        public const string DifficultyEasy = "EASY";
+        public const string DifficultyNormal = "NORMAL";
+        public const string DifficultyHard = "HARD";
+
         /// <summary>공식 채보 난이도 (낮은 것부터). 공식 채보 파일 이름이기도 하다</summary>
-        public static readonly string[] Difficulties = { "EASY", "NORMAL", "HARD" };
+        public static readonly string[] Difficulties = { DifficultyEasy, DifficultyNormal, DifficultyHard };
 
         public const string FileExtension = ".json";
 

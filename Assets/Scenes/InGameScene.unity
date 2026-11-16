@@ -1053,11 +1053,6 @@ MonoBehaviour:
   progressFill: {fileID: 1027711461}
   testPlayBadge: {fileID: 2039783713}
   testPlayText: {fileID: 2063597065}
-  difficultyBadgeColors:
-  - {r: 0.08627451, g: 0.6392157, b: 0.2901961, a: 1}
-  - {r: 0.14509805, g: 0.3882353, b: 0.92156863, a: 1}
-  - {r: 0.8627451, g: 0.14901961, b: 0.14901961, a: 1}
-  customBadgeColor: {r: 0.4862745, g: 0.22745098, b: 0.92941177, a: 1}
   clearEffect: {fileID: 927219507}
   judgePanel: {fileID: 149242951}
   judgeText: {fileID: 1051957749}

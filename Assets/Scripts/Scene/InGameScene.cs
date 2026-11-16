@@ -731,12 +731,24 @@ public class InGameScene : SceneBase
         RequestPause("ESC");
     }
 
+#if UNITY_EDITOR
     /// <summary>
-    /// 창 포커스를 잃으면 자동으로 일시정지한다.
+    /// 테스트 전용 (Unity 에디터): true면 창 포커스를 잃거나 앱이 백그라운드로 가도 자동 일시정지하지 않는다.
+    /// 테스트가 도는 동안 다른 창을 써도 판이 멈추지 않게 TestSpeedRunCallback이 켜고, 실행이 끝나면 끈다.
+    /// </summary>
+    public static bool IgnoreFocusPauseForTests;
+
+    private static bool IsFocusPauseIgnored => IgnoreFocusPauseForTests;
+#else
+    private static bool IsFocusPauseIgnored => false;
+#endif
+
+    /// <summary>
+    /// 창 포커스를 잃으면 자동으로 일시정지한다 (테스트 실행 중에는 하지 않는다).
     /// </summary>
     private void OnApplicationFocus(bool hasFocus)
     {
-        if (!hasFocus) RequestPause("창 포커스 잃음");
+        if (!hasFocus && !IsFocusPauseIgnored) RequestPause("창 포커스 잃음");
     }
 
     /// <summary>
@@ -744,7 +756,7 @@ public class InGameScene : SceneBase
     /// </summary>
     private void OnApplicationPause(bool pauseStatus)
     {
-        if (pauseStatus) RequestPause("앱 일시정지");
+        if (pauseStatus && !IsFocusPauseIgnored) RequestPause("앱 일시정지");
     }
 
     /// <summary>

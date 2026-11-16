@@ -39,7 +39,8 @@ public class KeyControlPlayTests
         InputSystem.settings.backgroundBehavior = savedBackground;
     }
 
-    [UnityTest]
+    // 배율 1.0: 배속 키 반복(0.4초 지연, 0.08초 간격)은 실제 시간으로 재므로, 실제 시간 8초 마감을 줄이면 안 된다
+    [UnityTest, NormalSpeed]
     public IEnumerator K1_SongSelectHold2_RepeatsAfterDelay_StopsOnRelease()
     {
         yield return new EnterPlayMode();
@@ -51,7 +52,7 @@ public class KeyControlPlayTests
         // 바닥(1.0)에서 시작하도록 1을 꾹 누른다 (저장된 마지막 배속에서 시작하므로 최고 8.0 → 1.0도 넉넉히: 0.4 + 69 × 0.08 ≈ 6초)
         float start = songSelect.ScrollMultiplier;
         Press(Key.Digit1);
-        float deadline = Time.realtimeSinceStartup + 8f;
+        float deadline = TestSpeed.Deadline(8f);
         while (songSelect.ScrollMultiplier > 1f + 1e-4f)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, $"1을 꾹 누르면 최저 배속까지 내려간다 (x{start:0.0} → x{songSelect.ScrollMultiplier:0.0})");
@@ -307,7 +308,7 @@ public class KeyControlPlayTests
 
     private static IEnumerator WaitManagers()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -324,7 +325,7 @@ public class KeyControlPlayTests
 
     private static IEnumerator WaitScene(string sceneName)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (GameManager.Scene.IsLoading || SceneManager.GetActiveScene().name != sceneName)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, $"{sceneName} 대기 시간 초과");
@@ -336,7 +337,7 @@ public class KeyControlPlayTests
 
     private static IEnumerator WaitInGamePlaying()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (true)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "인게임 시작 대기 시간 초과");
@@ -349,7 +350,7 @@ public class KeyControlPlayTests
     /// <summary>F5로 인게임을 다시 불러와 새 InGameScene이 플레이를 시작할 때까지</summary>
     private static IEnumerator WaitNewInGame(InGameScene previous)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (true)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "인게임 다시 시작 대기 시간 초과");

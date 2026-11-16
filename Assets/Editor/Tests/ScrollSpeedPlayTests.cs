@@ -67,7 +67,7 @@ public class ScrollSpeedPlayTests
 
     private static IEnumerator WaitManagers()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -84,7 +84,7 @@ public class ScrollSpeedPlayTests
 
     private IEnumerator WaitInGameStarted()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (true)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "인게임 시작 대기 시간 초과");
@@ -121,7 +121,7 @@ public class ScrollSpeedPlayTests
 
     private static IEnumerator WaitSongTime(double time, float timeoutSeconds = 30f)
     {
-        float deadline = Time.realtimeSinceStartup + timeoutSeconds;
+        float deadline = TestSpeed.Deadline(timeoutSeconds);
         while (SongTime < time)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, $"곡 시간 {time:0.000}초 대기 시간 초과");
@@ -173,7 +173,7 @@ public class ScrollSpeedPlayTests
             Assert.AreEqual(ExpectedSpeed(targets[i]), layer.ScrollSpeed, 1e-4f);
         }
 
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!judge.AllJudged)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "자동 플레이 대기 시간 초과");
@@ -275,7 +275,7 @@ public class ScrollSpeedPlayTests
         Set(scene, "isAutoPlay", true);
         scene.GetType().GetMethod("Finish", Private).Invoke(scene, null);
         ResultScene resultScene = null;
-        float deadline = Time.realtimeSinceStartup + 60f;
+        float deadline = TestSpeed.Deadline(60f);
         while ((resultScene = UnityEngine.Object.FindFirstObjectByType<ResultScene>()) == null || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "결과 씬 대기 시간 초과");
@@ -297,7 +297,7 @@ public class ScrollSpeedPlayTests
         // 곡 선택으로 돌아가기 (결과 화면 데이터와 같은 경로) → 곡 선택 배속
         Assert.IsTrue(GameManager.Scene.Load(result.returnTarget.sceneName, result.returnTarget.sceneData));
         Canvas_SongSelect songSelect = null;
-        deadline = Time.realtimeSinceStartup + 20f;
+        deadline = TestSpeed.Deadline(20f);
         while ((songSelect = UnityEngine.Object.FindFirstObjectByType<Canvas_SongSelect>()) == null || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "곡 선택 대기 시간 초과");
@@ -313,7 +313,7 @@ public class ScrollSpeedPlayTests
         TapTo(6.6f);
         scene.GetType().GetMethod("OnClickExit", Private).Invoke(scene, null);
         Canvas_Editor editorCanvas = null;
-        deadline = Time.realtimeSinceStartup + 20f;
+        deadline = TestSpeed.Deadline(20f);
         while ((editorCanvas = UnityEngine.Object.FindFirstObjectByType<Canvas_Editor>()) == null || GameManager.Scene.IsLoading
                || !Get<bool>(UnityEngine.Object.FindFirstObjectByType<EditorScene>(), "isReady"))
         {
@@ -341,7 +341,7 @@ public class ScrollSpeedPlayTests
         yield return WaitManagers();
         Assert.IsTrue(GameManager.Scene.Load(GameConstants.Scenes.Editor, new EditorEntryData { songId = Song, chartName = "배속 확인", level = 1 }));
         EditorScene editor = null;
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while ((editor = UnityEngine.Object.FindFirstObjectByType<EditorScene>()) == null || GameManager.Scene.IsLoading || !Get<bool>(editor, "isReady"))
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "에디터 대기 시간 초과");

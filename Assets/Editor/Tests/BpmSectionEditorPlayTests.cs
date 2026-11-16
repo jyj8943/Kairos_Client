@@ -44,7 +44,7 @@ public class BpmSectionEditorPlayTests
 
     private IEnumerator OpenEditor()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -56,7 +56,7 @@ public class BpmSectionEditorPlayTests
 
     private IEnumerator WaitEditor()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         yield return null;
         while (true)
         {
@@ -301,7 +301,7 @@ public class BpmSectionEditorPlayTests
 
         MethodInfo start = typeof(EditorScene).GetMethod("OnTestPlayRequested", Private);
         start.Invoke(editorScene, null);
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         InGameScene inGame;
         while (true)
         {

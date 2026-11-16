@@ -7,6 +7,9 @@ using UnityEngine;
 /// - 다른 스크립트보다 먼저 Update해 그 프레임의 SongTime을 맞춰 둔다.
 /// - 음량: 노래·BGM = 메인 × 음악, 키음·효과음(예약 효과음 포함) = 메인 × 효과음 (ApplyVolumes). 설정 창이 MasterVolume·MusicVolume·SfxVolume을 바꾼다.
 ///   앞으로 추가하는 BGM·효과음도 따로 AudioSource를 두지 말고 이 매니저를 거쳐 재생해야 음량이 적용된다.
+/// - 재생 배율(PlaybackRate, 기본 1.0): 에디터 테스트를 빠르게 돌릴 때만 바꾼다 (SetPlaybackRateForTests, Unity 에디터 전용).
+///   노래 pitch, 곡 시간(MusicClock), 곡 시간 ↔ DSP 시각, 입력 시각 → 곡 시간이 모두 같은 배율을 따른다. 키음·효과음 pitch는 바꾸지 않는다.
+///   게임 코드·설정 창에서는 바꾸지 않는다. 1.0이면 배율이 없던 때와 동작·숫자가 같다.
 /// </summary>
 [DefaultExecutionOrder(-100)]
 public class SoundManager : MonoSingleton<SoundManager>, IGameModule
@@ -25,6 +28,34 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     [Range(0f, 1f)] [SerializeField] private float sfxVolume = 1f;
 
     private readonly MusicClock clock = new MusicClock();
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// 테스트가 정한 재생 배율. 플레이 모드에 들어갈 때 도메인을 다시 불러오지 않는 설정이라(Enter Play Mode Options)
+    /// 정적 값이 플레이 모드를 넘어 남는다. 테스트 실행이 끝나면 테스트 쪽(TestSpeedRunCallback)이 1.0으로 되돌린다.
+    /// </summary>
+    private static double editorTestPlaybackRate = 1.0;
+
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): 재생 배율을 바꾼다. 게임 코드·설정 창에서 부르지 않는다.
+    /// 매니저가 있으면 바로 적용하고(재생 중이면 곡 시간이 튀지 않게), 없으면 다음 Init부터 적용한다.
+    /// </summary>
+    /// <param name="rate">배율 (0 이하면 1.0)</param>
+    public static void SetPlaybackRateForTests(double rate)
+    {
+        editorTestPlaybackRate = rate > 0 ? rate : 1.0;
+        if (HasInstance) Instance.ApplyPlaybackRate();
+    }
+
+    /// <summary>지금 재생 배율 (정적, 매니저가 없어도 읽는다. 테스트의 마감 시간 계산용)</summary>
+    public static double CurrentPlaybackRate => editorTestPlaybackRate;
+#else
+    /// <summary>지금 재생 배율 (빌드에서는 항상 1.0)</summary>
+    public static double CurrentPlaybackRate => 1.0;
+#endif
+
+    /// <summary>재생 배율 (실제 1초에 흐르는 곡 시간, 기본 1.0). 테스트에서만 바뀐다</summary>
+    public double PlaybackRate => CurrentPlaybackRate;
     private int nextSfxIndex;
     private int nextScheduledSfxIndex;
 
@@ -134,6 +165,15 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         CancelScheduledSfx();
         StopMusic();
         ApplyVolumes();
+        ApplyPlaybackRate();
+    }
+
+    /// <summary>재생 배율을 노래 pitch와 곡 시간 계산에 적용한다 (배율이 같으면 아무것도 바꾸지 않는다)</summary>
+    private void ApplyPlaybackRate()
+    {
+        double rate = PlaybackRate;
+        if (musicSource != null) musicSource.pitch = (float)rate;
+        clock.SetRate(rate, AudioSettings.dspTime, Time.realtimeSinceStartupAsDouble);
     }
 
     private void Update()
@@ -143,6 +183,9 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
 
     /// <summary>
     /// 지금 DSP 시각 + delaySeconds에 노래를 시작하도록 예약한다. 곡 시간은 −delay에서 시작해 늘어난다.
+    /// delaySeconds는 곡 시간 기준이다: 실제로 기다리는 시간 = delay ÷ 재생 배율 (배율 1.0이면 같다).
+    /// 배율을 올려도 예약 여유가 오디오 버퍼보다 짧아져 시작이 늦지 않게, 실제 대기는 min(delay, SeekStartDelaySeconds)보다 짧아지지 않는다
+    /// (배율 1.0이면 delay 그대로).
     /// </summary>
     /// <param name="startPositionSeconds">음원 안에서 시작할 위치 (초)</param>
     public void PlayMusicScheduled(AudioClip clip, double delaySeconds, double startPositionSeconds = 0)
@@ -158,8 +201,11 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         musicSource.clip = clip;
         musicSource.timeSamples = ToSamples(clip, startPositionSeconds);
 
+        ApplyPlaybackRate();
         double dspNow = AudioSettings.dspTime;
-        double startDsp = dspNow + System.Math.Max(0, delaySeconds);
+        double delay = System.Math.Max(0, delaySeconds);
+        double realDelay = System.Math.Max(delay / PlaybackRate, System.Math.Min(delay, SeekStartDelaySeconds));
+        double startDsp = dspNow + realDelay;
         musicSource.PlayScheduled(startDsp);
         clock.Schedule(startDsp, startPositionSeconds, dspNow, Time.realtimeSinceStartupAsDouble);
     }
@@ -217,7 +263,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     }
 
     /// <summary>
-    /// 입력 이벤트 시각(realtimeSinceStartup 기준)을 곡 시간으로 바꾼다.
+    /// 입력 이벤트 시각(realtimeSinceStartup 기준)을 곡 시간으로 바꾼다 (재생 배율 반영).
     /// </summary>
     public double GetSongTimeAtRealtime(double realtime)
     {

@@ -5,7 +5,8 @@ using UnityEngine.UI;
 /// <summary>
 /// 곡 선택 화면(공식 채보 탭)의 난이도 버튼 하나 (EASY · NORMAL · HARD + 레벨).
 /// - 고른 곡에 그 난이도 채보가 없으면 레벨을 "-"로 두고 버튼을 비활성으로 보인다.
-/// - 고른 난이도는 배경을 검게, 글자를 희게 표시한다 (Btn_SongItem과 같은 모양).
+/// - 고른 난이도는 배경을 그 난이도 색으로, 난이도 이름·레벨 글자를 짝 글자색으로 칠한다 (DifficultyColors: EASY 초록 · NORMAL 노랑 · HARD 빨강).
+///   선택 안 됨·채보 없음(회색)은 프리팹 기본 색 그대로다. 난이도 색은 직렬화하지 않는다.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_Difficulty : MonoBehaviour
@@ -15,8 +16,6 @@ public class Btn_Difficulty : MonoBehaviour
     [SerializeField] private TMP_Text levelText;
 
     [Header("색")]
-    [SerializeField] private Color chosenBackgroundColor = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
-    [SerializeField] private Color chosenTextColor = Color.white;
     [SerializeField] private Color unavailableTextColor = new Color32(0xC4, 0xC4, 0xC8, 0xFF);
 
     private Button button;
@@ -84,12 +83,13 @@ public class Btn_Difficulty : MonoBehaviour
     public void SetChosen(bool chosen)
     {
         bool isChosen = chosen && chart != null;
-        background.color = isChosen ? chosenBackgroundColor : normalBackgroundColor;
+        DifficultyColorPair chosenColor = DifficultyColors.Get(difficulty);
+        background.color = isChosen ? (Color)chosenColor.Background : normalBackgroundColor;
 
         if (isChosen)
         {
-            difficultyText.color = chosenTextColor;
-            levelText.color = chosenTextColor;
+            difficultyText.color = chosenColor.Text;
+            levelText.color = chosenColor.Text;
         }
         else if (chart == null)
         {

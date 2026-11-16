@@ -38,17 +38,6 @@ public class Canvas_InGame : UIBase
     [Tooltip("테스트 플레이 표시 글자 (Img_TestPlay/Txt_TestPlay)")]
     [SerializeField] private TMP_Text testPlayText;
 
-    [Header("뱃지 색")]
-    [Tooltip("공식 채보 난이도별 뱃지 색 (GameConstants.Chart.Difficulties 순서: EASY · NORMAL · HARD)")]
-    [SerializeField] private Color[] difficultyBadgeColors =
-    {
-        GameConstants.Play.ChartBadgeEasyColor,
-        GameConstants.Play.ChartBadgeNormalColor,
-        GameConstants.Play.ChartBadgeHardColor
-    };
-    [Tooltip("나만의 채보(CUSTOM) 뱃지 색. 모르는 난이도 이름도 이 색을 쓴다")]
-    [SerializeField] private Color customBadgeColor = GameConstants.Play.ChartBadgeCustomColor;
-
     [Header("FULL COMBO / ALL PERFECT 연출 (ClearEffect)")]
     [SerializeField] private ClearEffect clearEffect;
 
@@ -104,7 +93,9 @@ public class Canvas_InGame : UIBase
         SongInfoDisplay info = InGameHudRules.BuildSongInfo(chartType, difficulty, chartName, level, isTestPlay, isAutoPlay);
         songTitleText.text = songTitle ?? string.Empty;
         chartBadgeText.text = info.BadgeText;
-        chartBadgeImage.color = GetBadgeColor(info);
+        DifficultyColorPair badgeColor = GetBadgeColor(info);
+        chartBadgeImage.color = badgeColor.Background;
+        chartBadgeText.color = badgeColor.Text;
         chartNameText.text = info.ChartName;
         chartNameText.gameObject.SetActive(info.ShowChartName);
         levelText.text = info.LevelText;
@@ -127,12 +118,10 @@ public class Canvas_InGame : UIBase
         HideCountdown();
     }
 
-    /// <summary>뱃지 색: 나만의 채보·모르는 난이도는 CUSTOM 색, 공식은 난이도 순번의 색</summary>
-    private Color GetBadgeColor(SongInfoDisplay info)
+    /// <summary>뱃지 배경·글자색: 나만의 채보(테스트 플레이 포함)는 CUSTOM, 공식은 난이도 이름의 색 (DifficultyColors, 모르는 이름도 CUSTOM)</summary>
+    private static DifficultyColorPair GetBadgeColor(SongInfoDisplay info)
     {
-        if (info.IsCustom || difficultyBadgeColors == null) return customBadgeColor;
-        if (info.DifficultyIndex < 0 || info.DifficultyIndex >= difficultyBadgeColors.Length) return customBadgeColor;
-        return difficultyBadgeColors[info.DifficultyIndex];
+        return info.IsCustom ? DifficultyColors.Custom : DifficultyColors.Get(info.BadgeText);
     }
 
     /// <summary>

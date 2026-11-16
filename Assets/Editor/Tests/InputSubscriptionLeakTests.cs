@@ -122,7 +122,7 @@ public class InputSubscriptionLeakTests
 
     private static IEnumerator WaitManagers()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -153,7 +153,7 @@ public class InputSubscriptionLeakTests
         };
         Assert.IsTrue(GameManager.Scene.Load(GameConstants.Scenes.InGame, entry));
 
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (true)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "인게임 시작 대기 시간 초과");
@@ -168,7 +168,7 @@ public class InputSubscriptionLeakTests
         yield return WaitManagers();
         Assert.IsTrue(GameManager.Scene.Load(GameConstants.Scenes.SongSelect));
         yield return null;
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (Object.FindFirstObjectByType<Canvas_SongSelect>() == null || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "곡 선택 대기 시간 초과");

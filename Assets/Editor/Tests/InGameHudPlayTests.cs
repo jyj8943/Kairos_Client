@@ -70,7 +70,7 @@ public class InGameHudPlayTests
 
     private IEnumerator Load(bool autoPlay = true)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -112,7 +112,7 @@ public class InGameHudPlayTests
         // 첫 노트(약 2.4초) 뒤까지 기다리며 키 칸이 밝아지는지 본다
         NoteJudge judge = Get<NoteJudge>(scene, "judge");
         bool sawPressed = false;
-        float deadline = Time.realtimeSinceStartup + 15f;
+        float deadline = TestSpeed.Deadline(15f);
         while (judge.JudgedCount < 8)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "자동 플레이 대기 시간 초과");
@@ -149,7 +149,7 @@ public class InGameHudPlayTests
         double greatEarly = (GameConstants.Play.DefaultPerfectMs + GameConstants.Play.DefaultGreatMs) * 0.5 / 1000.0;
         PlayNote first = judge.Notes[0];
         PlayNote second = judge.Notes[1];
-        float deadline = Time.realtimeSinceStartup + 15f;
+        float deadline = TestSpeed.Deadline(15f);
         while (GameManager.Sound.SongTime < first.Time - greatEarly)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "첫 노트 대기 시간 초과");
@@ -192,7 +192,7 @@ public class InGameHudPlayTests
         Assert.AreEqual(ClearKind.None, clear.Kind, "시작: 연출 없음");
         Assert.IsFalse(clear.Frame.Visible);
 
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         for (int i = 0; i < judge.Notes.Count; i++)
         {
             PlayNote note = judge.Notes[i];

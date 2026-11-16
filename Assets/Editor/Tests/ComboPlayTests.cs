@@ -84,7 +84,7 @@ public class ComboPlayTests
 
     private IEnumerator LoadInGame()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -96,7 +96,7 @@ public class ComboPlayTests
 
     private IEnumerator WaitStarted()
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
@@ -117,7 +117,7 @@ public class ComboPlayTests
 
     private IEnumerator WaitCombo(int target)
     {
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (score.Combo < target)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, $"콤보 {target} 대기 시간 초과");
@@ -165,7 +165,7 @@ public class ComboPlayTests
         Assert.AreEqual(pausedJudgeElapsed, canvas.Judge.Animation.Elapsed, 1e-6f, "카운트다운 중 판정 글자도 멈춤");
         Assert.AreEqual(1f, combo.Group.alpha, 1e-4f);
 
-        float deadline = Time.realtimeSinceStartup + 20f;
+        float deadline = TestSpeed.Deadline(20f);
         while (!judge.AllJudged)
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "자동 플레이 대기 시간 초과");
@@ -176,11 +176,12 @@ public class ComboPlayTests
         Assert.AreEqual(ClearKind.None, canvas.Clear.Kind, "자동 플레이는 ALL PERFECT여도 연출 없음");
         Assert.AreEqual(1f, combo.Group.alpha, 1e-4f, "마지막 판정 직후에는 보임");
 
-        // 결과로 가기 전 3초 동안 Tick이 계속 흐른다 → 0.74초 뒤 숨김
-        yield return WaitRealtime(1.0f);
+        // 결과로 가기 전 3초(곡 시간) 동안 Tick이 계속 흐른다 → 0.74초(실제 시간) 뒤 숨김.
+        // 결과 대기는 곡 시간이라 재생 배율만큼 짧아진다 (x3.0이면 실제 1.0초). 0.74초 ~ 1.0초 사이인 0.85초만 기다린다
+        yield return WaitRealtime(0.85f);
         Assert.IsFalse(Get<bool>(scene, "isFinished"), "아직 결과 대기 중");
         Assert.AreEqual(0f, combo.Group.alpha, 1e-4f, "결과 대기 중 쉬면 숨김");
-        Debug.Log($"[ComboPlayTest] C1: 일시정지 때 콤보 {pausedCombo} · 경과 {pausedElapsed:0.000}초 유지, 마지막 콤보 {combo.Motion.Combo}, 결과 대기 1초 뒤 그룹 알파 {combo.Group.alpha:0.00}");
+        Debug.Log($"[ComboPlayTest] C1: 일시정지 때 콤보 {pausedCombo} · 경과 {pausedElapsed:0.000}초 유지, 마지막 콤보 {combo.Motion.Combo}, 결과 대기 0.85초 뒤 그룹 알파 {combo.Group.alpha:0.00}");
     }
 
     /// <summary>C2: 재시작하면 처음 상태 (콤보 0, 숨김, 숫자 제자리)</summary>

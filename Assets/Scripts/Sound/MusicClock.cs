@@ -2,7 +2,8 @@ using System;
 
 /// <summary>
 /// 노래 재생 시간(곡 시간) 계산. MonoBehaviour가 아닌 일반 클래스라 EditMode 테스트로 검사할 수 있다.
-/// - 곡 시간 = dspTime − 노래 시작 DSP 시각 + 시작 위치 (초). 시작 전(준비 시간)에는 음수다.
+/// - 곡 시간 = (dspTime − 노래 시작 DSP 시각) × 재생 배율 + 시작 위치 (초). 시작 전(준비 시간)에는 음수다.
+///   재생 배율(Rate)은 보통 1.0이고 에디터 테스트에서만 바꾼다 (SoundManager.SetPlaybackRateForTests). 1.0이면 배율이 없던 때와 숫자가 같다.
 /// - dspTime은 오디오 버퍼 단위로 띄엄띄엄 바뀌므로, 같은 값이 이어지는 동안은 realtime으로 앞으로 보간하고
 ///   dspTime이 바뀌면 그 값 쪽으로 다시 맞춘다. 보정 때문에 곡 시간이 뒤로 가지는 않는다.
 /// - 재개하면 멈춘 곡 시간에서 이어지도록 시작 DSP 시각을 다시 정해, 멈춘 시간만큼 밀리지 않게 한다.
@@ -31,6 +32,33 @@ public class MusicClock
 
     /// <summary>마지막 Tick 시점의 곡 시간 (초). 시작 전에는 음수</summary>
     public double SongTime { get; private set; }
+
+    /// <summary>재생 배율 (실제 1초에 흐르는 곡 시간, 기본 1.0). 0보다 커야 한다</summary>
+    public double Rate { get; private set; } = 1.0;
+
+    /// <summary>
+    /// 재생 배율을 바꾼다. 재생 중이면 지금 곡 시간이 튀지 않도록 시작 DSP 시각을 다시 정한다
+    /// (곡 시간 = (dsp − 시작 DSP) × 배율 + 시작 위치가 dspNow에서 같은 값이 되게).
+    /// </summary>
+    /// <param name="rate">새 배율 (0 이하면 바꾸지 않는다)</param>
+    public void SetRate(double rate, double dspNow, double realtimeNow)
+    {
+        if (!(rate > 0) || rate == Rate) return;
+
+        if (IsRunning && !IsPaused)
+        {
+            double songTimeAtDsp = DspToSongTime(dspNow);
+            Rate = rate;
+            startDsp = dspNow - (songTimeAtDsp - startPosition) / rate;
+
+            // 보간 기준점을 지금 표시 값으로 옮겨 앞으로는 새 배율로 늘어나게 한다
+            syncSongTime = SongTime;
+            syncRealtime = realtimeNow;
+            lastTickRealtime = realtimeNow;
+            return;
+        }
+        Rate = rate;
+    }
 
     /// <summary>
     /// 노래를 예약한다. startDsp에 곡의 startPosition 위치가 재생된다고 본다.
@@ -62,7 +90,7 @@ public class MusicClock
         }
 
         // 지난 기준점에서 흐른 realtime으로 예상한 값
-        double predicted = syncSongTime + (realtimeNow - syncRealtime);
+        double predicted = syncSongTime + (realtimeNow - syncRealtime) * Rate;
 
         if (dspNow != lastDsp)
         {
@@ -83,7 +111,7 @@ public class MusicClock
     }
 
     /// <summary>
-    /// 마지막 Tick 시점에서 realtime 차이만큼 앞뒤로 옮긴 곡 시간. 입력 이벤트 시각을 곡 시간으로 바꿀 때 쓴다.
+    /// 마지막 Tick 시점에서 realtime 차이(× 재생 배율)만큼 앞뒤로 옮긴 곡 시간. 입력 이벤트 시각을 곡 시간으로 바꿀 때 쓴다.
     /// 재생 중이 아니면 SongTime을 그대로 돌려준다.
     /// </summary>
     public double GetSongTimeAtRealtime(double realtime)
@@ -91,8 +119,8 @@ public class MusicClock
         if (!IsRunning || IsPaused) return SongTime;
 
         // 재개 직후 붙잡아 두는 동안은 표시용 SongTime이 아니라 실제로 흐르는 시간으로 바꾼다 (음원이 아직 그 위치에 오지 않았다)
-        if (IsHolding) return syncSongTime + (realtime - syncRealtime);
-        return SongTime + (realtime - lastTickRealtime);
+        if (IsHolding) return syncSongTime + (realtime - syncRealtime) * Rate;
+        return SongTime + (realtime - lastTickRealtime) * Rate;
     }
 
     /// <summary>
@@ -123,7 +151,7 @@ public class MusicClock
 
     /// <summary>
     /// 재개한다. 멈춘 곡 시간에서 이어지도록 시작 DSP 시각을 다시 정한다 (멈춘 시간만큼 밀리지 않는다).
-    /// minLeadSeconds를 주면 ResumePosition을 재생할 DSP 시각이 지금보다 최소 그만큼 뒤가 되도록 미룬다
+    /// minLeadSeconds(실제 초)를 주면 ResumePosition을 재생할 DSP 시각이 지금보다 최소 그만큼 뒤가 되도록 미룬다
     /// (음원을 PlayScheduled로 다시 예약할 때 시작이 늦지 않게). 그 여유 동안 곡 시간은 멈춘 값에 머물고 뒤로 가지 않는다.
     /// </summary>
     /// <param name="minLeadSeconds">재생 예약까지 둘 최소 여유 (초). 0이면 지금 바로 이어진다</param>
@@ -131,18 +159,18 @@ public class MusicClock
     {
         if (!IsRunning || !IsPaused) return;
 
-        // 지금 DSP 시각에 곡 시간이 멈춘 값(SongTime)이 되도록 한다
-        startDsp = dspNow - SongTime + startPosition;
+        // 지금 DSP 시각에 곡 시간이 멈춘 값(SongTime)이 되도록 한다 (배율 1.0이면 dspNow − SongTime + startPosition)
+        startDsp = dspNow - SongTime / Rate + startPosition / Rate;
 
-        // 다시 재생할 위치까지 남은 시간이 여유보다 짧으면 그 차이만큼 더 미룬다
-        double lead = ResumePosition - SongTime;
+        // 다시 재생할 위치까지 남은 실제 시간이 여유보다 짧으면 그 차이만큼 더 미룬다 (extra는 실제 초)
+        double lead = (ResumePosition - SongTime) / Rate;
         double extra = Math.Max(0, minLeadSeconds - lead);
         startDsp += extra;
         IsPaused = false;
         IsHolding = extra > 0;
 
         lastDsp = dspNow;
-        syncSongTime = SongTime - extra;
+        syncSongTime = SongTime - extra * Rate;
         syncRealtime = realtimeNow;
         lastTickRealtime = realtimeNow;
     }
@@ -160,7 +188,7 @@ public class MusicClock
 
     private double DspToSongTime(double dsp)
     {
-        return dsp - startDsp + startPosition;
+        return (dsp - startDsp) * Rate + startPosition;
     }
 
     /// <summary>
@@ -169,6 +197,6 @@ public class MusicClock
     /// </summary>
     public double SongTimeToDsp(double songTime)
     {
-        return songTime - startPosition + startDsp;
+        return (songTime - startPosition) / Rate + startDsp;
     }
 }
