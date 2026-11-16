@@ -90,7 +90,7 @@ public class EditorPlayback : MonoBehaviour
             Debug.LogWarning("[EditorPlayback] keySound(NoteSFX)가 연결되지 않아 에디터 키음을 낼 수 없습니다.", this);
 
         if (beatClick == null)
-            beatClick = ClickSoundFactory.Create("MetronomeBeat", GameConstants.Editor.MetronomeBeatFrequency, GameConstants.Editor.MetronomeClickSeconds);
+            beatClick = ClickSoundFactory.CreateMetronomeBeat();
         if (measureClick == null)
             measureClick = ClickSoundFactory.Create("MetronomeMeasure", GameConstants.Editor.MetronomeMeasureFrequency, GameConstants.Editor.MetronomeClickSeconds);
 

@@ -71,7 +71,18 @@ public static class TestPlayRules
     /// <param name="startTimeSeconds">시작 위치의 음원 시간 (초)</param>
     public static MusicStart GetMusicStart(double startTimeSeconds)
     {
-        double leadIn = GameConstants.Play.TestPlayLeadInSeconds;
+        return GetMusicStart(startTimeSeconds, GameConstants.Play.TestPlayLeadInSeconds);
+    }
+
+    /// <summary>
+    /// 준비 시간을 정해 노래 시작을 계산한다. 0박부터 시작해 시작 메트로놈을 쓰면 CountInRules.GetTestPlayLeadIn 값을 넘긴다
+    /// (곡 시간이 −1마디 첫 클릭 앞 여유부터 흐른다).
+    /// </summary>
+    /// <param name="startTimeSeconds">시작 위치의 음원 시간 (초)</param>
+    /// <param name="leadInSeconds">시작 위치 앞 준비 시간 (초)</param>
+    public static MusicStart GetMusicStart(double startTimeSeconds, double leadInSeconds)
+    {
+        double leadIn = leadInSeconds;
         double latency = GameConstants.Play.ScheduleLatencySeconds;
 
         double startPosition = startTimeSeconds - leadIn;

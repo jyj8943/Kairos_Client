@@ -13,6 +13,14 @@ public static class ClickSoundFactory
     private const float Amplitude = 0.6f;
 
     /// <summary>
+    /// 메트로놈 박 소리 (에디터 메트로놈의 박 클릭, 인게임 시작 메트로놈). 만든 쪽이 다 쓰면 Destroy한다.
+    /// </summary>
+    public static AudioClip CreateMetronomeBeat()
+    {
+        return Create("MetronomeBeat", GameConstants.Editor.MetronomeBeatFrequency, GameConstants.Editor.MetronomeClickSeconds);
+    }
+
+    /// <summary>
     /// 클릭 소리를 만든다.
     /// </summary>
     /// <param name="frequency">음 높이 (Hz)</param>

@@ -62,6 +62,15 @@ public static class GameConstants
         public const double MinStartDelaySeconds = 1.0;
 
         /// <summary>
+        /// 시작 메트로놈 (기획서 3-4, CountInRules): −1마디(곡 첫 박 앞 4박)에 클릭을 이만큼 울린다.
+        /// 클릭 소리는 에디터 메트로놈 박 소리(ClickSoundFactory.CreateMetronomeBeat)와 같다
+        /// </summary>
+        public const int CountInBeats = 4;
+
+        /// <summary>시작 메트로놈: 첫 클릭(−4박) 앞에 두는 여유 (초, 곡 시간). 판은 (−4박 시각 − 여유)부터 흐른다</summary>
+        public const double CountInMarginSeconds = 0.3;
+
+        /// <summary>
         /// 모든 노트가 판정된 뒤 결과 씬으로 넘어가기까지 기다리는 시간 (초, 곡 시간 기준).
         /// 이 동안 노래는 계속 흐르고, 일시정지는 받지 않는다 (결과로 넘어가는 중)
         /// </summary>

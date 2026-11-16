@@ -6,6 +6,7 @@ using System.Collections.Generic;
 ///   BPM 구간이 있어도 박 기준으로 4박마다다 (에디터 마디선과 같은 위치).
 /// - 마지막 선 = 마지막 노트(롱노트면 끝 박)가 들어 있는 마디의 끝. 마디 경계에 딱 맞는 노트는 그 경계에서 시작하는 마디에 들어 있다.
 /// - 테스트 플레이 시작 박 앞의 선은 뺀다. 박이 같으면 넣는다 (노트를 거르는 TestPlayRules.FilterNotesFrom과 같게 tick으로 비교).
+/// - 시작 메트로놈을 쓰면(countIn, CountInRules.UsesCountIn) −1마디 시작(−4박) 선을 맨 앞에 더한다. 곡 중간 테스트 플레이는 더하지 않는다.
 /// </summary>
 public static class MeasureLineRules
 {
@@ -31,10 +32,12 @@ public static class MeasureLineRules
     /// </summary>
     /// <param name="lastBeat">마지막 노트 박 (GetLastBeat)</param>
     /// <param name="startBeat">테스트 플레이 시작 박 (보통 플레이는 0)</param>
-    public static List<int> GetMeasureBeats(float lastBeat, float startBeat)
+    /// <param name="countIn">시작 메트로놈을 쓰면 true: −1마디 시작(−4박) 선을 더한다</param>
+    public static List<int> GetMeasureBeats(float lastBeat, float startBeat, bool countIn = false)
     {
         List<int> beats = new List<int>();
         if (lastBeat < 0f) return beats;
+        if (countIn) beats.Add(-GameConstants.Editor.BeatsPerMeasure);
 
         int beatsPerMeasure = GameConstants.Editor.BeatsPerMeasure;
         int ticksPerMeasure = beatsPerMeasure * GameConstants.Editor.TicksPerBeat;
@@ -56,9 +59,10 @@ public static class MeasureLineRules
     /// <param name="timing">채보의 박 ↔ 시간 변환 (곡 offset + 사용자 판정 오프셋 반영)</param>
     /// <param name="lastBeat">마지막 노트 박 (GetLastBeat)</param>
     /// <param name="startBeat">테스트 플레이 시작 박 (보통 플레이는 0)</param>
-    public static List<double> GetMeasureTimes(TimingMap timing, float lastBeat, float startBeat)
+    /// <param name="countIn">시작 메트로놈을 쓰면 true: −1마디 시작(−4박) 선을 더한다</param>
+    public static List<double> GetMeasureTimes(TimingMap timing, float lastBeat, float startBeat, bool countIn = false)
     {
-        List<int> beats = GetMeasureBeats(lastBeat, startBeat);
+        List<int> beats = GetMeasureBeats(lastBeat, startBeat, countIn);
         List<double> times = new List<double>(beats.Count);
         if (timing == null) return times;
 

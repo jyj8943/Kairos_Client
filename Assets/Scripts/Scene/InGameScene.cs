@@ -31,6 +31,9 @@ using UnityEngine.InputSystem;
 ///   노트 시간 전체(화면·판정·롱노트 틱·MISS·테스트 플레이 시작 위치)가 함께 움직이고 입력 시각은 그대로다. + = 노트를 늦게, - = 빠르게.
 ///   일시정지 중 설정 창에서 바꾸고 닫으면 재시작을 묻는다 (OnSettingsClosed). 에디터 재생·메트로놈에는 적용하지 않는다.
 /// - 마디선(MeasureLineLayer, 기획서 3-4): NoteLayer.Init 다음에 Init하고, 매 프레임 노트와 같은 곡 시간으로 Refresh한다.
+/// - 시작 메트로놈(기획서 3-4, CountInRules): 0박부터 플레이하면(일반 플레이는 항상, 테스트 플레이는 시작 박이 0박일 때만) 판을 −1마디부터 시작하고
+///   −4·−3·−2·−1박에 에디터 메트로놈 박 소리를 ScheduleSfx로 예약한다 (곡 offset만 반영, 판정 오프셋 제외). −1마디 마디선도 그린다.
+///   판 시작·재시작(일시정지 메뉴, F5)·자동 플레이에서 울리고, 일시정지·재시작·나가기 때 아직 안 울린 클릭은 취소한다 (재개해도 다시 예약하지 않는다).
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -109,6 +112,24 @@ public class InGameScene : SceneBase
     private ScoreCalculator score;
     private double startDelaySeconds;
     private double musicStartPosition;
+
+    /// <summary>이번 판이 시작 메트로놈(−1마디 시작 + 클릭 4번)을 쓰면 true (CountInRules.UsesCountIn)</summary>
+    private bool usesCountIn;
+    /// <summary>시작 메트로놈 클릭 곡 시간 (초). 쓰지 않으면 빈 배열</summary>
+    private double[] countInClickTimes = new double[0];
+    /// <summary>OnEnter에서 예약한 클릭의 DSP 시각 (확인용)</summary>
+    private readonly List<double> countInClickDspTimes = new List<double>();
+    /// <summary>시작 메트로놈 클릭 소리 (에디터 메트로놈 박 소리와 같은 코드로 만든다. OnDestroy에서 지운다)</summary>
+    private AudioClip countInClick;
+
+    /// <summary>이번 판이 시작 메트로놈을 쓰면 true (확인용)</summary>
+    public bool UsesCountIn => usesCountIn;
+    /// <summary>시작 메트로놈 클릭 곡 시간 (확인용)</summary>
+    public IReadOnlyList<double> CountInClickSongTimes => countInClickTimes;
+    /// <summary>OnEnter에서 예약한 클릭의 DSP 시각 (확인용)</summary>
+    public IReadOnlyList<double> CountInClickDspTimes => countInClickDspTimes;
+    /// <summary>노래 시작 지연 (곡 시간 초, 확인용)</summary>
+    public double StartDelaySeconds => startDelaySeconds;
     /// <summary>모든 노트가 판정된 곡 시간 (결과까지 기다리는 기준). 아직이면 음수</summary>
     private double allJudgedSongTime = -1;
     /// <summary>모든 노트가 판정돼 결과로 넘어가기를 기다리는 중이면 true</summary>
@@ -192,17 +213,24 @@ public class InGameScene : SceneBase
         if (isLaneHeldForResume == null) isLaneHeldForResume = IsLaneHeldForResume;
 
         double firstNoteTime = judge.TotalCount > 0 ? judge.Notes[0].Time : 0;
+        // 시작 메트로놈: 클릭은 노래에 맞추므로 곡 offset만으로 만든 TimingMap을 쓴다 (판정 오프셋 제외)
+        usesCountIn = CountInRules.UsesCountIn(entry);
+        TimingMap songTiming = usesCountIn ? TimingMap.FromChart(chart, song.OffsetMs) : null;
+        countInClickTimes = usesCountIn ? CountInRules.GetClickTimes(songTiming) : new double[0];
         if (IsTestPlay)
         {
             double startTime = timing.BeatToSeconds(entry.testPlay.startBeat);
-            TestPlayRules.MusicStart start = TestPlayRules.GetMusicStart(startTime);
+            TestPlayRules.MusicStart start = usesCountIn
+                ? TestPlayRules.GetMusicStart(startTime, CountInRules.GetTestPlayLeadIn(songTiming, startTime))
+                : TestPlayRules.GetMusicStart(startTime);
             musicStartPosition = start.StartPositionSeconds;
             startDelaySeconds = start.DelaySeconds;
         }
         else
         {
             musicStartPosition = 0;
-            startDelaySeconds = System.Math.Max(GameConstants.Play.MinStartDelaySeconds, GameConstants.Play.LeadInSeconds - firstNoteTime);
+            startDelaySeconds = CountInRules.GetNormalStartDelay(firstNoteTime);
+            if (usesCountIn) startDelaySeconds = CountInRules.GetStartDelay(songTiming, startDelaySeconds);
         }
         allJudgedSongTime = -1;
         frameStats.Reset();
@@ -220,10 +248,11 @@ public class InGameScene : SceneBase
 #endif
         scrollMap = new ScrollMap();
         noteLayer.Init(gear, judge, scrollMap, entry.scrollMultiplier);
-        // 마디선: 0박(테스트 플레이는 시작 박)부터 마지막 노트가 든 마디의 끝까지 4박마다. 노트와 같은 TimingMap·ScrollMap·낙하 속도를 쓴다
+        // 마디선: 0박(테스트 플레이는 시작 박)부터 마지막 노트가 든 마디의 끝까지 4박마다. 시작 메트로놈을 쓰면 −1마디(−4박) 선도 그린다.
+        // 노트와 같은 TimingMap·ScrollMap·낙하 속도를 쓴다
         float measureStartBeat = IsTestPlay ? entry.testPlay.startBeat : 0f;
         measureLineLayer.Init(gear, noteLayer, scrollMap,
-            MeasureLineRules.GetMeasureTimes(timing, MeasureLineRules.GetLastBeat(chart.notes), measureStartBeat));
+            MeasureLineRules.GetMeasureTimes(timing, MeasureLineRules.GetLastBeat(chart.notes), measureStartBeat, usesCountIn));
         isAutoPlay = IsTestPlay && entry.testPlay.autoPlay;
 #if UNITY_EDITOR
         if (autoPlay) isAutoPlay = true;
@@ -241,6 +270,7 @@ public class InGameScene : SceneBase
                   $"노트 {judge.TotalCount}개 (롱노트 {longCount}개, 유지 틱 {judge.TotalTicks}개 → 가능한 최대 콤보 {score.MaxPossibleCombo})" +
                   $"{(IsTestPlay ? $" (시작 {entry.testPlay.startBeat}박 앞 {skippedBefore}개 제외)" : "")}, " +
                   $"bpm={timing.BpmAt(0)} (BPM 구간 {timing.PointCount}개), offsetMs={timing.OffsetMs} (곡 {song.OffsetMs} + 사용자 판정 오프셋 {appliedOffsetMs:+0;-0;0}), 음원 시작 위치 {musicStartPosition:0.###}초, 시작 지연 {startDelaySeconds:0.###}초, " +
+                  $"시작 메트로놈 {(usesCountIn ? "클릭 " + FormatTimes(countInClickTimes) + "초" : "없음")}, " +
                   $"첫 노트 {firstNoteTime:0.###}초, 노트 풀 {noteLayer.PooledCount}개 (롱노트 {noteLayer.PooledLongCount}개), 마디선 {measureLineLayer.LineCount}개 (풀 {measureLineLayer.PooledCount}개), " +
                   $"배속 x{noteLayer.ScrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###}유닛/초 (1.0배 {noteLayer.BaseScrollSpeed:0.###}유닛/초 = 화면 위 끝~판정선 {gear.ScreenTopY - gear.JudgeLineY:0.###}유닛 ÷ {GameConstants.Play.BaseVisibleSeconds}초)", this);
 
@@ -257,6 +287,7 @@ public class InGameScene : SceneBase
         // 앞 씬(에디터 메트로놈 등)이 예약해 둔 효과음이 남아 울리지 않게 모두 취소한다
         GameManager.Sound.CancelScheduledSfx();
         GameManager.Sound.PlayMusicScheduled(song.Clip, startDelaySeconds, musicStartPosition);
+        ScheduleCountInClicks();
         input.EnableInput();
         EnableSpeedInput();
         EnableRestartInput();
@@ -291,6 +322,7 @@ public class InGameScene : SceneBase
     /// </summary>
     private void OnDestroy()
     {
+        if (countInClick != null) Destroy(countInClick);
         DisableSpeedInput();
         DisableRestartInput();
         UnsubscribeSettingsClosed();
@@ -775,6 +807,8 @@ public class InGameScene : SceneBase
         {
             isPaused = true;
             GameManager.Sound.PauseMusic();
+            // 아직 안 울린 시작 메트로놈 클릭은 취소한다 (재개해도 다시 예약하지 않는다)
+            GameManager.Sound.CancelScheduledSfx();
         }
 
         pausePopup.Open();
@@ -963,6 +997,36 @@ public class InGameScene : SceneBase
         StopCountdown();
         input.DisableInput();
         GameManager.Sound.StopMusic();
+        GameManager.Sound.CancelScheduledSfx();
+    }
+
+    // ───── 시작 메트로놈 ─────
+
+    /// <summary>
+    /// 시작 메트로놈 클릭을 곡 시간 → DSP 시각으로 바꿔 예약한다 (OnEnter, 노래 예약 직후). 노래와 같은 시계라 재생 배율도 반영된다.
+    /// 이미 지난 곡 시간의 클릭은 예약하지 않는다.
+    /// </summary>
+    private void ScheduleCountInClicks()
+    {
+        countInClickDspTimes.Clear();
+        if (!usesCountIn || countInClickTimes.Length == 0) return;
+
+        if (countInClick == null) countInClick = ClickSoundFactory.CreateMetronomeBeat();
+        double now = GameManager.Sound.SongTime;
+        foreach (double clickTime in countInClickTimes)
+        {
+            if (clickTime <= now) continue;
+            double dsp = GameManager.Sound.GetDspTimeOfSongTime(clickTime);
+            if (GameManager.Sound.ScheduleSfx(countInClick, dsp)) countInClickDspTimes.Add(dsp);
+        }
+    }
+
+    /// <summary>시각 목록을 "0.123/0.456" 꼴로 (로그용)</summary>
+    private static string FormatTimes(double[] times)
+    {
+        string[] parts = new string[times.Length];
+        for (int i = 0; i < times.Length; i++) parts[i] = times[i].ToString("0.###");
+        return string.Join("/", parts);
     }
 
     /// <summary>
