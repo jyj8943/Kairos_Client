@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,6 +9,7 @@ using UnityEngine.UI;
 /// - 플레이 → 곡 선택, 에디터 → 에디터 곡 고르기, 설정 → 공용 설정 창(GameManager.UI.OpenSettings), 종료 → 확인 팝업 → 게임 종료 (Unity 에디터에서는 플레이 모드 종료).
 /// - 키보드 이동(↑↓, Enter)은 EventSystem이 맡는다. ESC(TitleScene.OnBack)는 종료 확인 팝업을 연다 (RequestQuit).
 /// - 아래쪽 키 안내 줄(KeyGuideBar): ↑↓ 이동 · Enter 선택 · ESC 종료.
+/// - 메뉴 버튼은 한글 + 영문 작은 글씨(GameConstants.Title), 선택된 버튼만 UISelectHighlight로 강조한다 (기획서 3-2, 11/17 개편).
 /// </summary>
 public class Canvas_Title : UIBase
 {
@@ -22,10 +24,22 @@ public class Canvas_Title : UIBase
     [Tooltip("화면 아래쪽 키 안내 줄 (KeyGuideBar 프리팹)")]
     [SerializeField] private KeyGuideBar keyGuideBar;
 
+    [Tooltip("로고 \"KAIROS\" (Txt_Logo). 글자 간격은 GameConstants.Title.LogoCharacterSpacing")]
+    [SerializeField] private TMP_Text logoText;
+
+    [Tooltip("메뉴 영문 작은 글씨 (Txt_PlayEn, Txt_EditorEn, Txt_SettingsEn, Txt_QuitEn)")]
+    [SerializeField] private TMP_Text playEnText;
+    [SerializeField] private TMP_Text editorEnText;
+    [SerializeField] private TMP_Text settingsEnText;
+    [SerializeField] private TMP_Text quitEnText;
+
+    [Tooltip("메뉴 버튼 선택 강조 (Btn_Play, Btn_Editor, Btn_Settings, Btn_Quit의 UISelectHighlight)")]
+    [SerializeField] private UISelectHighlight[] menuHighlights;
+
     private bool isLeaving;
 
     /// <summary>
-    /// 버튼 리스너와 키 안내 줄을 연결한다.
+    /// 버튼 리스너와 키 안내 줄을 연결하고, 메뉴 글자와 선택 강조를 맞춘다.
     /// </summary>
     public void Init()
     {
@@ -37,7 +51,46 @@ public class Canvas_Title : UIBase
         else Debug.LogWarning("[Canvas_Title] settingsButton이 연결되지 않았습니다.", this);
         quitButton.onClick.AddListener(OnClickQuit);
         InitKeyGuide();
+        InitMenuTexts();
+        SyncHighlights();
     }
+
+    /// <summary>로고 글자 간격과 메뉴 영문 글자 (GameConstants.Title)</summary>
+    private void InitMenuTexts()
+    {
+        if (logoText != null) logoText.characterSpacing = GameConstants.Title.LogoCharacterSpacing;
+        SetEnText(playEnText, GameConstants.Title.PlayEn);
+        SetEnText(editorEnText, GameConstants.Title.EditorEn);
+        SetEnText(settingsEnText, GameConstants.Title.SettingsEn);
+        SetEnText(quitEnText, GameConstants.Title.QuitEn);
+    }
+
+    private void SetEnText(TMP_Text text, string value)
+    {
+        if (text == null)
+        {
+            Debug.LogWarning($"[Canvas_Title] 영문 메뉴 글자({value})가 연결되지 않았습니다.", this);
+            return;
+        }
+        text.text = value;
+        text.characterSpacing = GameConstants.Title.MenuEnCharacterSpacing;
+    }
+
+    /// <summary>
+    /// 선택 강조를 EventSystem의 지금 선택에 맞춘다. 처음 선택(Btn_Play)은 EventSystem First Selected가 정하고,
+    /// 그 뒤 선택이 바뀌면 각 UISelectHighlight가 스스로 따라간다.
+    /// </summary>
+    private void SyncHighlights()
+    {
+        if (menuHighlights == null) return;
+        foreach (UISelectHighlight highlight in menuHighlights)
+        {
+            if (highlight != null) highlight.Sync();
+        }
+    }
+
+    /// <summary>메뉴 버튼 선택 강조 (확인용)</summary>
+    public IReadOnlyList<UISelectHighlight> MenuHighlights => menuHighlights;
 
     /// <summary>키 안내 줄: ↑↓ 이동 · Enter 선택 · ESC 종료 (모두 UI 맵 키라 고정 글자)</summary>
     private void InitKeyGuide()

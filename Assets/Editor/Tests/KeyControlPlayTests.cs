@@ -16,6 +16,7 @@ using UnityEngine.TestTools;
 /// - K3 결과 F5 → 인게임, K4 결과 ESC → 곡 선택
 /// - K5 타이틀 ESC → 종료 확인 팝업 (ESC 한 번 더 → 닫힘)
 /// - K6 인게임 F5 즉시 다시 하기: 플레이 중·일시정지 중은 됨, 확인 팝업이 맨 위면 안 됨. 시작·다시 하기 뒤 판정 패널 정확도 0.00%
+/// - K7 타이틀 선택 강조 (3-2): 들어오면 Btn_Play만 강조, ↓ → Btn_Editor만 강조, 종료 확인 팝업을 열었다 닫으면 Btn_Editor 강조로 돌아옴
 /// 인게임·결과는 테스트 플레이 데이터로 들어가 기록(PlayerData.json)을 남기지 않는다.
 /// </summary>
 public class KeyControlPlayTests
@@ -152,6 +153,42 @@ public class KeyControlPlayTests
         Assert.IsFalse(GameManager.UI.HasOpenPopup, "팝업이 열려 있으면 ESC는 팝업 취소");
         Assert.AreEqual(GameConstants.Scenes.Title, SceneManager.GetActiveScene().name, "게임은 끝나지 않는다");
         yield return new ExitPlayMode();
+    }
+
+    [UnityTest]
+    public IEnumerator K7_TitleMenu_HighlightFollowsSelection_AndReturnsAfterPopup()
+    {
+        yield return new EnterPlayMode();
+        PrepareInput();
+        yield return LoadAndWait(GameConstants.Scenes.Title, null);
+        Canvas_Title title = Object.FindFirstObjectByType<Canvas_Title>();
+        Assert.AreEqual(4, title.MenuHighlights.Count);
+
+        float deadline = TestSpeed.Deadline(2f);
+        while (EventSystem.current.currentSelectedGameObject == null)
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "처음 선택이 정해진다");
+            yield return null;
+        }
+        AssertOnlyHighlighted(title, "Btn_Play", "들어오면 Btn_Play만 강조");
+
+        yield return Tap(Key.DownArrow);
+        yield return null;
+        AssertOnlyHighlighted(title, "Btn_Editor", "↓ → Btn_Editor만 강조, Btn_Play는 글자만");
+
+        yield return Tap(Key.Escape);
+        Assert.IsTrue(GameManager.UI.TopPopup is Popup_Confirm, "ESC → 종료 확인 팝업");
+        yield return Tap(Key.Escape);
+        Assert.IsFalse(GameManager.UI.HasOpenPopup, "ESC 한 번 더 → 팝업 닫힘");
+        yield return null;
+        AssertOnlyHighlighted(title, "Btn_Editor", "팝업을 닫으면 원래 버튼(Btn_Editor) 강조로 돌아옴");
+        yield return new ExitPlayMode();
+    }
+
+    private static void AssertOnlyHighlighted(Canvas_Title title, string buttonName, string message)
+    {
+        foreach (UISelectHighlight highlight in title.MenuHighlights)
+            Assert.AreEqual(highlight.name == buttonName, highlight.IsHighlighted, $"{message} ({highlight.name})");
     }
 
     [UnityTest]

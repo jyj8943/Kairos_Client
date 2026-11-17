@@ -201,6 +201,42 @@ public static class GameConstants
         };
     }
 
+    /// <summary>타이틀 화면 (기획서 3-2, 11/17 개편)</summary>
+    public static class Title
+    {
+        /// <summary>메뉴 버튼의 영문 작은 글씨 (한글 이름 옆)</summary>
+        public const string PlayEn = "PLAY";
+        public const string EditorEn = "EDITOR";
+        public const string SettingsEn = "SETTINGS";
+        public const string QuitEn = "EXIT";
+
+        /// <summary>로고 "KAIROS" 글자 간격 (TMP Character Spacing, 와이어프레임 폭에 맞춤)</summary>
+        public const float LogoCharacterSpacing = 15f;
+
+        /// <summary>메뉴 영문 글자 간격 (TMP Character Spacing)</summary>
+        public const float MenuEnCharacterSpacing = 20f;
+    }
+
+    /// <summary>
+    /// 선택 강조 (UISelectHighlight) 색. 선택된 버튼: 하늘색 반투명 바탕 + 왼쪽 포인트색 막대 + 흰 Bold 한글 + 포인트색 영문.
+    /// 선택 안 된 버튼: 바탕·막대 없이 흐린 흰 글자만.
+    /// </summary>
+    public static class SelectHighlight
+    {
+        /// <summary>포인트색 하늘색 #7CC4FA (캐릭터 디자인 포인트색)</summary>
+        public static readonly Color32 AccentColor = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
+
+        /// <summary>선택된 버튼 바탕 불투명도 (포인트색 위에 곱함)</summary>
+        public const float SelectedBackgroundAlpha = 0.18f;
+
+        /// <summary>선택 안 된 버튼의 한글·영문 글자 불투명도 (흰색)</summary>
+        public const float NormalMainTextAlpha = 0.7f;
+        public const float NormalSubTextAlpha = 0.45f;
+
+        /// <summary>왼쪽 막대 폭 (px)</summary>
+        public const float AccentBarWidth = 4f;
+    }
+
     /// <summary>UI 공통 값 (UIManager, UIBase)</summary>
     public static class UI
     {
