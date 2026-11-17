@@ -19,6 +19,8 @@ public class SongData : ScriptableObject
     [SerializeField] private AudioClip clip;
     [Tooltip("선택. 없으면 회색 칸으로 표시")]
     [SerializeField] private Sprite cover;
+    [Tooltip("곡 선택 배경 일러스트 (1920×1080). 없으면 앨범 이미지(cover)로 대신한다")]
+    [SerializeField] private Sprite background;
 
     public string SongId => songId;
     public string Title => title;
@@ -30,6 +32,9 @@ public class SongData : ScriptableObject
 
     public AudioClip Clip => clip;
     public Sprite Cover => cover;
+
+    /// <summary>곡 선택 배경 일러스트. 없으면 앨범 이미지 (둘 다 없으면 null)</summary>
+    public Sprite Background => background != null ? background : cover;
 
     /// <summary>곡 길이(초). 음원이 없으면 0</summary>
     public float Length => clip != null ? clip.length : 0f;

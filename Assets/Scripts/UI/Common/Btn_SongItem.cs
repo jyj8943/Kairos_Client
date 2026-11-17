@@ -1,17 +1,34 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 곡 목록의 곡 아이템 하나 (Prefabs/Common/Btn_SongItem 프리팹). 에디터 곡 고르기와 곡 선택 화면이 같이 쓴다.
+/// 곡 목록의 곡 아이템 하나. 에디터 곡 고르기(Prefabs/Common/Btn_SongItem)와 곡 선택 화면(Prefabs/SongSelect/Btn_SongItem)이 같이 쓴다.
 /// - 키보드나 마우스로 선택되면 곧바로 그 곡을 고른다. (클릭 없이 이동만으로 곡이 바뀜)
-/// - 고른 곡은 배경을 검게, 글자를 희게 표시한다.
+/// - 고른 곡은 배경·글자색을 바꾼다 (색은 프리팹 값).
+/// - 곡 선택 프리팹만 쓰는 칸 (비워 두면 쓰지 않는다, 기획서 3-3 ② 11/17):
+///   왼쪽 하늘색 막대(selectBar), 고르면 크게(높이·앨범·제목 크기), 둘째 줄 아티스트(showArtist),
+///   오른쪽 난이도 칸(위 E · N · H 레벨, 아래 난이도별 최고 랭크 + FC/AP 도장, 없으면 —).
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_SongItem : MonoBehaviour, ISelectHandler
 {
+    /// <summary>
+    /// 오른쪽 난이도 칸 하나 (곡 선택 프리팹). difficulty는 GameConstants.Chart.Difficulties 중 하나.
+    /// </summary>
+    [Serializable]
+    public class DifficultyColumn
+    {
+        public string difficulty;
+        public Image levelTag;
+        public TMP_Text levelText;
+        public TMP_Text rankText;
+        public Img_Stamp stamp;
+    }
+
     [SerializeField] private Image background;
     [SerializeField] private Image cover;
     [SerializeField] private TMP_Text titleText;
@@ -21,6 +38,24 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     [SerializeField] private Color chosenBackgroundColor = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
     [SerializeField] private Color chosenTextColor = Color.white;
     [SerializeField] private Color emptyCoverColor = new Color32(0xD4, 0xD4, 0xD8, 0xFF);
+
+    [Header("곡 선택 화면 전용 (비워 두면 쓰지 않는다)")]
+    [Tooltip("둘째 줄에 BPM·길이 대신 아티스트를 쓴다")]
+    [SerializeField] private bool showArtist;
+    [Tooltip("고른 곡 왼쪽 하늘색 막대 (Img_SelectBar)")]
+    [SerializeField] private Image selectBar;
+    [SerializeField] private LayoutElement layoutElement;
+    [Tooltip("높이: 보통 / 고름 (0이면 바꾸지 않는다)")]
+    [SerializeField] private float normalHeight;
+    [SerializeField] private float chosenHeight;
+    [Tooltip("앨범 한 변: 보통 / 고름 (0이면 바꾸지 않는다)")]
+    [SerializeField] private float normalCoverSize;
+    [SerializeField] private float chosenCoverSize;
+    [Tooltip("제목 글자 크기: 보통 / 고름 (0이면 바꾸지 않는다)")]
+    [SerializeField] private float normalTitleSize;
+    [SerializeField] private float chosenTitleSize;
+    [Tooltip("난이도 칸 (EASY · NORMAL · HARD)")]
+    [SerializeField] private DifficultyColumn[] difficultyColumns = new DifficultyColumn[0];
 
     private Button button;
     private Color normalBackgroundColor;
@@ -35,8 +70,24 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
 
     public SongData Song => song;
 
+    /// <summary>고른 곡 표시 중이면 true (확인용)</summary>
+    public bool IsChosen { get; private set; }
+
+    /// <summary>난이도 칸 (확인용)</summary>
+    public IReadOnlyList<DifficultyColumn> DifficultyColumns => difficultyColumns;
+
     private void Awake()
     {
+        CacheComponents();
+    }
+
+    /// <summary>
+    /// 버튼과 기본 색을 한 번만 가져온다. 꺼진 오브젝트 안에서 만들어져 Awake보다 Init이 먼저 불려도 쓸 수 있게 Init에서도 부른다.
+    /// </summary>
+    private void CacheComponents()
+    {
+        if (button != null) return;
+
         button = GetComponent<Button>();
         normalBackgroundColor = background.color;
         normalTitleColor = titleText.color;
@@ -48,13 +99,21 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     /// </summary>
     public void Init(SongData song, Action<SongData> onChosen)
     {
+        CacheComponents();
         this.song = song;
         this.onChosen = onChosen;
 
         titleText.text = song.Title;
 
-        string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : "-";
-        infoText.text = $"BPM {bpmText} · {song.GetLengthText()}";
+        if (showArtist)
+        {
+            infoText.text = string.IsNullOrEmpty(song.Artist) ? string.Empty : song.Artist;
+        }
+        else
+        {
+            string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : "-";
+            infoText.text = $"BPM {bpmText} · {song.GetLengthText()}";
+        }
 
         cover.sprite = song.Cover;
         cover.color = song.Cover != null ? Color.white : emptyCoverColor;
@@ -63,13 +122,81 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     }
 
     /// <summary>
+    /// 난이도 칸을 채운다 (곡 선택 화면). 채보 없는 난이도는 레벨·랭크 모두 "—".
+    /// </summary>
+    /// <param name="charts">이 곡의 공식 채보</param>
+    /// <param name="findRecord">chartId → 기록 (없으면 null)</param>
+    public void SetDifficulties(IReadOnlyList<ChartData> charts, Func<string, ChartRecordData> findRecord)
+    {
+        if (difficultyColumns == null) return;
+
+        foreach (DifficultyColumn column in difficultyColumns)
+        {
+            if (column == null) continue;
+
+            ChartData chart = null;
+            if (charts != null)
+            {
+                foreach (ChartData candidate in charts)
+                {
+                    if (candidate == null || !string.Equals(candidate.difficulty, column.difficulty, StringComparison.OrdinalIgnoreCase)) continue;
+                    chart = candidate;
+                    break;
+                }
+            }
+
+            string initial = string.IsNullOrEmpty(column.difficulty) ? string.Empty : column.difficulty.Substring(0, 1);
+            Color difficultyColor = DifficultyColors.Get(column.difficulty).Background;
+            if (column.levelText != null)
+            {
+                column.levelText.text = string.Format(GameConstants.SongSelect.ListLevelFormat, initial,
+                    chart != null ? chart.level.ToString() : GameConstants.SongSelect.EmptyValue);
+                column.levelText.color = difficultyColor;
+            }
+            if (column.levelTag != null)
+            {
+                Color tag = difficultyColor;
+                tag.a = 0.22f;
+                column.levelTag.color = tag;
+            }
+
+            RecordTexts record = SongSelectRecordFormat.Build(chart != null ? findRecord?.Invoke(chart.chartId) : null);
+            if (column.rankText != null)
+            {
+                column.rankText.text = record.Rank;
+                column.rankText.color = record.IsRankS ? (Color)GameConstants.SongSelect.RankSColor : Color.white;
+            }
+            if (column.stamp != null) column.stamp.SetStamp(record.Stamp);
+        }
+    }
+
+    /// <summary>
     /// 고른 곡 표시를 켜거나 끈다.
     /// </summary>
     public void SetChosen(bool chosen)
     {
+        CacheComponents();
+        IsChosen = chosen;
         background.color = chosen ? chosenBackgroundColor : normalBackgroundColor;
         titleText.color = chosen ? chosenTextColor : normalTitleColor;
         infoText.color = chosen ? chosenTextColor : normalInfoColor;
+
+        if (selectBar != null) selectBar.gameObject.SetActive(chosen);
+        if (layoutElement != null && normalHeight > 0f && chosenHeight > 0f)
+            layoutElement.preferredHeight = chosen ? chosenHeight : normalHeight;
+        if (normalCoverSize > 0f && chosenCoverSize > 0f)
+        {
+            float size = chosen ? chosenCoverSize : normalCoverSize;
+            cover.rectTransform.sizeDelta = new Vector2(size, size);
+            LayoutElement coverLayout = cover.GetComponent<LayoutElement>();
+            if (coverLayout != null)
+            {
+                coverLayout.preferredWidth = size;
+                coverLayout.preferredHeight = size;
+            }
+        }
+        if (normalTitleSize > 0f && chosenTitleSize > 0f)
+            titleText.fontSize = chosen ? chosenTitleSize : normalTitleSize;
     }
 
     /// <summary>

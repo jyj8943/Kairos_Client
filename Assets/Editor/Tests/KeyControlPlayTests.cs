@@ -48,7 +48,7 @@ public class KeyControlPlayTests
         PrepareInput();
         yield return LoadAndWait(GameConstants.Scenes.SongSelect, null);
         Canvas_SongSelect songSelect = Object.FindFirstObjectByType<Canvas_SongSelect>();
-        CollectionAssert.AreEqual(new[] { "↑↓ 곡", "←→ 난이도", "Tab 탭", "1 2 배속", "Enter 시작", "ESC 타이틀" }, songSelect.KeyGuide.Describe());
+        CollectionAssert.AreEqual(new[] { "↑↓ 곡", "←→ 난이도", "Tab 공식 ↔ 나만의 채보", "1 2 배속", "Enter 시작", "ESC 타이틀" }, songSelect.KeyGuide.Describe());
 
         // 바닥(1.0)에서 시작하도록 1을 꾹 누른다 (저장된 마지막 배속에서 시작하므로 최고 8.0 → 1.0도 넉넉히: 0.4 + 69 × 0.08 ≈ 6초)
         float start = songSelect.ScrollMultiplier;

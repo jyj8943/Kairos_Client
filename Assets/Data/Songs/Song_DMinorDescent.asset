@@ -19,3 +19,4 @@ MonoBehaviour:
   offsetMs: 120
   clip: {fileID: 8300000, guid: 8d5ae56aee5e3614e8779fdd075df729, type: 3}
   cover: {fileID: 21300000, guid: 7195c36e7136d084dbc8a4f7583726d5, type: 3}
+  background: {fileID: 21300000, guid: 1678952a716b05c4c953be72a4a3d48c, type: 3}

@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -7,71 +9,94 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// 곡 선택 화면 UI (기획서 3-3). SongSelectScene이 Init()을 호출한다.
-/// - 한 Canvas 안에서 공식 채보 탭(OfficialPanel)과 나만의 채보 탭(MyChartPanel)을 바꿔 보여준다.
-/// - 공통: 곡 목록(Btn_SongItem), 앨범 이미지, 곡 정보, 최고 기록(지금은 "-"), 배속, 시작 버튼, 탭 버튼, 조작 안내.
-/// - 공식 탭: 난이도 버튼(Btn_Difficulty) 3개. 나만의 채보 탭: 채보 목록(Btn_MyChartItem).
-/// - 조작 (기획서 3-9): ↑↓ 곡(EventSystem 내비게이션), ←→ 난이도/채보, Tab 탭 전환, 1 / 2 배속(꾹 누르면 인게임과 같은 KeyRepeat로 계속), Enter 시작, ESC 타이틀.
-///   아래쪽 키 안내 줄(KeyGuideBar)에 같은 순서로 보여주고, 키 이름은 바인딩에서 읽는다 (←→ 이름은 탭에 따라 난이도 ↔ 채보).
-///   ↑↓ 외의 키는 입력 에셋의 SongSelect 맵으로 받는다. ESC는 UIManager가 받아 SongSelectScene.OnBack → ExitToTitle.
-///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로도 곡·탭·난이도·채보·시작을 고른다.
-/// - 키보드 선택(EventSystem)은 항상 고른 곡 항목에 둔다. 마우스로 다른 것을 누르면 다음 프레임에 곡 항목으로 되돌린다.
+/// 곡 선택 화면 UI (기획서 3-3 곡 선택 화면 개편 · 나만의 채보 탭 11/17). SongSelectScene이 Init()을 호출한다.
+/// - 배경: 고른 곡의 1920×1080 일러스트를 흐리게(UIBlurBackground) + 어두운 막. 곡을 바꾸면 크로스페이드, 들어올 때는 바로.
+/// - 공통(왼쪽): 앨범 · 곡 정보 · 최고 기록 카드(BEST SCORE · RATE/COMBO · RANK + FC/AP) · 배속. 하단 바: 키 안내 + 시작 버튼(Enter).
+/// - 공식 채보 탭(OfficialPanel): 난이도 카드 3개 + 오른쪽 곡 목록(Btn_SongItem). ↑↓ 곡(EventSystem 내비게이션), ←→ 난이도.
+/// - 나만의 채보 탭(MyChartPanel): 고른 채보 카드 + 오른쪽 곡별로 묶은 채보 목록(SongGroupHeader + Btn_MyChartItem).
+///   ↑↓ 채보 하나씩(곡이 달라도 바로 다음 채보, EventSystem 내비게이션), ←→ 이전·다음 곡 묶음의 첫 채보 (MyChartListNavigator). 왼쪽과 배경은 고른 채보의 곡을 따른다.
+/// - 들어오면 마지막으로 플레이한 탭·곡·채보로 시작한다 (진입 데이터가 있으면 그것, 없으면 PlayerData lastSelection, 없거나 지워졌으면 공식 첫 곡).
+/// - 조작 (기획서 3-9): Tab 탭 전환, 1 / 2 배속(꾹 누르면 KeyRepeat로 계속), Enter 시작, ESC 타이틀(UIManager → SongSelectScene.OnBack).
+///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로 곡·난이도·채보 클릭, 시작 버튼, 휠 스크롤.
+/// - 키보드 선택(EventSystem)은 항상 지금 탭의 고른 항목(곡 / 채보)에 둔다. 마우스로 다른 것을 누르면 다음 프레임에 되돌린다.
 /// </summary>
 public class Canvas_SongSelect : UIBase
 {
     private const string LogPrefix = "[Canvas_SongSelect]";
 
-    [Header("곡 목록")]
-    [SerializeField] private Btn_SongItem songItemPrefab;
-    [Tooltip("ScrollView_SongList")]
-    [SerializeField] private ScrollRect songListScrollRect;
-    [Tooltip("ScrollView_SongList/Viewport/Content")]
-    [SerializeField] private RectTransform songListContent;
-    [SerializeField] private UISelectionKeeper selectionKeeper;
+    [Header("배경")]
+    [SerializeField] private UIBlurBackground blurBackground;
+
+    [Header("화면 이름")]
+    [SerializeField] private TMP_Text screenNameText;
 
     [Header("탭")]
     [SerializeField] private Button officialTabButton;
     [SerializeField] private TMP_Text officialTabText;
+    [SerializeField] private TMP_Text officialTabEnText;
+    [SerializeField] private Image officialTabBorder;
     [SerializeField] private Button myChartTabButton;
     [SerializeField] private TMP_Text myChartTabText;
+    [SerializeField] private TMP_Text myChartTabEnText;
+    [SerializeField] private Image myChartTabBorder;
+    [Tooltip("탭 옆 Tab 키 글자 (바인딩에서 읽는다)")]
+    [SerializeField] private TMP_Text tabKeyText;
     [SerializeField] private GameObject officialPanel;
     [SerializeField] private GameObject myChartPanel;
-    [SerializeField] private Color chosenTabColor = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
-    [SerializeField] private Color chosenTabTextColor = Color.white;
-    [SerializeField] private Color normalTabColor = Color.white;
-    [SerializeField] private Color normalTabTextColor = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
 
     [Header("곡 정보")]
     [SerializeField] private Image coverImage;
     [SerializeField] private TMP_Text songTitleText;
     [SerializeField] private TMP_Text artistText;
     [SerializeField] private TMP_Text songInfoText;
-    [SerializeField] private Color emptyCoverColor = new Color32(0xD4, 0xD4, 0xD8, 0xFF);
 
     [Header("공식 채보 탭")]
     [Tooltip("EASY · NORMAL · HARD 순서 (GameConstants.Chart.Difficulties와 같은 순서)")]
     [SerializeField] private Btn_Difficulty[] difficultyButtons;
     [SerializeField] private TMP_Text officialEmptyText;
+    [SerializeField] private Btn_SongItem songItemPrefab;
+    [Tooltip("ScrollView_SongList")]
+    [SerializeField] private ScrollRect songListScrollRect;
+    [Tooltip("ScrollView_SongList/Viewport/Content")]
+    [SerializeField] private RectTransform songListContent;
+    [Tooltip("곡 목록 위쪽 숫자 (01 / 08)")]
+    [SerializeField] private TMP_Text songCountText;
 
     [Header("나만의 채보 탭")]
+    [Tooltip("고른 채보 정보 카드 (CUSTOM · 채보 이름 · Lv · 노트 수 · 롱노트 수 · 마지막 수정일)")]
+    [SerializeField] private GameObject myChartCard;
+    [SerializeField] private TMP_Text myChartNameText;
+    [SerializeField] private TMP_Text myChartLevelText;
+    [SerializeField] private TMP_Text myChartStatsText;
     [SerializeField] private Btn_MyChartItem myChartItemPrefab;
+    [SerializeField] private SongGroupHeader songGroupHeaderPrefab;
     [Tooltip("ScrollView_MyChart")]
     [SerializeField] private ScrollRect myChartScrollRect;
     [Tooltip("ScrollView_MyChart/Viewport/Content")]
     [SerializeField] private RectTransform myChartContent;
+    [Tooltip("채보 목록 위쪽 숫자 (채보 01 / 05)")]
+    [SerializeField] private TMP_Text myChartCountText;
     [SerializeField] private TMP_Text myChartEmptyText;
 
-    [Header("최고 기록 (고른 채보의 기록, 없으면 \"-\")")]
+    [Header("최고 기록 카드 (기록이 없으면 각 칸 \"—\")")]
     [SerializeField] private TMP_Text bestScoreText;
-    [SerializeField] private TMP_Text bestRankText;
-    [SerializeField] private TMP_Text bestComboText;
-    [SerializeField] private TMP_Text badgeText;
+    [SerializeField] private TMP_Text rateText;
+    [SerializeField] private TMP_Text comboText;
+    [SerializeField] private TMP_Text rankText;
+    [SerializeField] private Img_Stamp recordStamp;
 
-    [Header("하단")]
+    [Header("배속")]
     [SerializeField] private TMP_Text speedText;
+    [SerializeField] private TMP_Text speedDownKeyText;
+    [SerializeField] private TMP_Text speedUpKeyText;
+
+    [Header("하단 바")]
     [Tooltip("화면 아래쪽 키 안내 줄 (KeyGuideBar 프리팹)")]
     [SerializeField] private KeyGuideBar keyGuideBar;
     [SerializeField] private Button startButton;
+    [Tooltip("시작 버튼 안 Enter 키 글자 (바인딩에서 읽는다)")]
+    [SerializeField] private TMP_Text startKeyText;
+    [SerializeField] private UISelectionKeeper selectionKeeper;
 
     [Header("입력 (입력 에셋의 SongSelect 맵. ESC는 UIManager)")]
     [SerializeField] private InputActionReference prevChartAction;
@@ -82,23 +107,23 @@ public class Canvas_SongSelect : UIBase
     [SerializeField] private InputActionReference startAction;
 
     private readonly List<Btn_SongItem> songItems = new List<Btn_SongItem>();
+    private readonly Dictionary<string, SongData> songsById = new Dictionary<string, SongData>();
 
-    /// <summary>나만의 채보 항목 풀. 곡을 바꿀 때 앞에서부터 다시 쓰고 남는 것은 끈다</summary>
-    private readonly List<Btn_MyChartItem> myChartItemPool = new List<Btn_MyChartItem>();
-    private readonly List<Btn_MyChartItem> activeMyChartItems = new List<Btn_MyChartItem>();
+    /// <summary>나만의 채보 목록: 곡 순서대로 묶은 채보 항목 (한 줄 목록 순서) · 곡 제목 줄</summary>
+    private readonly List<Btn_MyChartItem> myChartRows = new List<Btn_MyChartItem>();
+    private readonly List<SongGroupHeader> songGroupHeaders = new List<SongGroupHeader>();
+    private readonly List<int> myChartRowGroup = new List<int>();
+    private MyChartListNavigator myChartNavigator = new MyChartListNavigator(null);
+
     private readonly Vector3[] worldCorners = new Vector3[4];
 
     private Btn_SongItem chosenItem;
-    private SongData chosenSong;
     private ChartType currentTab = ChartType.Official;
     private Btn_Difficulty chosenDifficulty;
-    private Btn_MyChartItem chosenMyChart;
+    private int chosenMyChartIndex = -1;
 
     /// <summary>배속 × GameConstants.Play.ScrollMultiplierScale (0.1 단위 오차 없이 계산)</summary>
     private int speedSteps;
-
-    /// <summary>곡을 처음 고를 때 이 채보를 고른다 (곡 선택으로 돌아온 경우). 한 번 쓰면 비운다</summary>
-    private string pendingChartId;
 
     private bool isInputEnabled;
     private bool isLeaving;
@@ -110,33 +135,50 @@ public class Canvas_SongSelect : UIBase
     /// <summary>지금 보이는 탭</summary>
     public ChartType CurrentTab => currentTab;
 
-    /// <summary>고른 곡 ID (없으면 null)</summary>
-    public string ChosenSongId => chosenSong != null ? chosenSong.SongId : null;
+    /// <summary>지금 탭의 곡 (공식: 고른 곡, 나만의 채보: 고른 채보의 곡). 없으면 null</summary>
+    public SongData CurrentSong => currentTab == ChartType.Official
+        ? (chosenItem != null ? chosenItem.Song : null)
+        : FindSong(ChosenMyChart != null ? ChosenMyChart.songId : null);
+
+    /// <summary>지금 탭의 곡 ID (없으면 null)</summary>
+    public string ChosenSongId => CurrentSong != null ? CurrentSong.SongId : null;
 
     /// <summary>지금 탭에서 고른 채보 (없으면 null)</summary>
     public ChartData ChosenChart => currentTab == ChartType.Official
         ? (chosenDifficulty != null ? chosenDifficulty.Chart : null)
-        : (chosenMyChart != null ? chosenMyChart.Chart : null);
+        : ChosenMyChart;
 
     /// <summary>지금 배속</summary>
     public float ScrollMultiplier => ScrollSpeedRules.FromSteps(speedSteps);
 
+    /// <summary>키 안내 줄 (확인용)</summary>
+    public KeyGuideBar KeyGuide => keyGuideBar;
+
+    /// <summary>배경 블러 (확인용)</summary>
+    public UIBlurBackground BlurBackground => blurBackground;
+
+    /// <summary>나만의 채보 목록 항목 (한 줄 목록 순서, 확인용)</summary>
+    public IReadOnlyList<Btn_MyChartItem> MyChartRows => myChartRows;
+
+    /// <summary>곡 목록 항목 (확인용)</summary>
+    public IReadOnlyList<Btn_SongItem> SongItems => songItems;
+
+    private ChartData ChosenMyChart => chosenMyChartIndex >= 0 && chosenMyChartIndex < myChartRows.Count ? myChartRows[chosenMyChartIndex].Chart : null;
+
     /// <summary>
-    /// 곡 목록과 난이도 버튼을 만들고 버튼 리스너를 연결한 뒤, 처음 상태(곡·탭·채보·배속)로 시작한다.
+    /// 곡 목록·채보 목록을 만들고 버튼 리스너를 연결한 뒤, 처음 상태(탭·곡·채보·배속)로 시작한다.
     /// </summary>
-    /// <param name="entry">곡 선택으로 돌아온 경우의 선택 상태. null이면 첫 곡·공식 탭·저장된 마지막 배속</param>
+    /// <param name="entry">곡 선택으로 돌아온 경우의 선택 상태. null이면 PlayerData의 마지막 선택(없으면 공식 첫 곡)·저장된 마지막 배속</param>
     public void Init(IReadOnlyList<SongData> songs, SongSelectEntryData entry)
     {
         isLeaving = false;
 
+        InitStaticTexts();
         InitDifficultyButtons();
         CreateSongItems(songs);
         ConnectSongNavigation();
+        CreateMyChartList();
         AddButtonListeners();
-
-        officialEmptyText.text = GameConstants.SongSelect.OfficialEmpty;
-        myChartEmptyText.text = GameConstants.SongSelect.MyChartEmpty;
-        ShowRecord(null);
         InitKeyGuide();
 
         // 인게임·결과에서 돌아오면 넘겨받은 배속, 타이틀에서 들어오면(entry 없음) PlayerData.json에 저장된 마지막 배속 (없으면 1.0)
@@ -146,30 +188,74 @@ public class Canvas_SongSelect : UIBase
         speedSteps = ScrollSpeedRules.ToSteps(startSpeed);
         SetSpeedText(ScrollMultiplier);
 
-        currentTab = entry != null ? entry.chartType : ChartType.Official;
-        pendingChartId = entry != null ? entry.chartId : null;
-        ShowTab(currentTab);
+        StartSelection start = ResolveStart(entry);
+        currentTab = start.ChartType;
 
-        if (songItems.Count == 0)
-        {
-            RefreshChosenChart();
-            return;
-        }
+        // 공식 탭 곡: 시작 곡 (나만의 채보로 시작해도 같은 곡을 골라 둔다). 없으면 첫 곡
+        Btn_SongItem firstItem = songItems.Find(item => item.Song.SongId == start.SongId) ?? (songItems.Count > 0 ? songItems[0] : null);
+        if (firstItem != null) ChooseSongItem(firstItem, start.ChartType == ChartType.Official ? start.ChartId : null);
 
-        Btn_SongItem firstItem = (entry != null ? songItems.Find(item => item.Song.SongId == entry.songId) : null) ?? songItems[0];
-        OnSongChosen(firstItem.Song);
-        pendingChartId = null;
+        int rowIndex = start.ChartType == ChartType.Custom ? myChartRows.FindIndex(row => row.Chart.chartId == start.ChartId) : -1;
+        SetChosenMyChart(rowIndex >= 0 ? rowIndex : (myChartRows.Count > 0 ? 0 : -1));
 
-        selectionKeeper.SetDefaultSelectable(firstItem.Button);
-        FocusChosenSong();
-        ScrollSongListToShow(firstItem);
-
-        LogState("시작");
+        ShowTab(currentTab, true);
+        LogState(start.FromLastSelection ? "시작 (마지막 선택)" : "시작");
     }
 
     /// <summary>
-    /// 키 안내 줄: ↑↓ 곡 · ←→ 난이도(나만의 채보 탭은 채보) · Tab 탭 · 1 2 배속 · Enter 시작 · ESC 타이틀.
-    /// ↑↓ ←→는 한 액션으로 보이기 어려워 고정 글자, ESC는 UIManager(UI/Cancel)가 받아 고정 글자.
+    /// 처음 고를 탭·곡·채보: 진입 데이터가 있으면 그것, 없으면 PlayerData의 마지막 선택. 곡·채보가 없으면 공식 첫 곡·첫 채보.
+    /// </summary>
+    private StartSelection ResolveStart(SongSelectEntryData entry)
+    {
+        LastSelectionSaveData last;
+        if (entry != null)
+        {
+            last = new LastSelectionSaveData { songId = entry.songId ?? string.Empty, chartId = entry.chartId ?? string.Empty, chartType = entry.chartType.ToString() };
+            // 진입 데이터에 채보가 없으면(곡만) 그 곡의 첫 채보로 시작한다
+            if (string.IsNullOrEmpty(last.chartId) && FindSong(entry.songId) != null)
+                return new StartSelection(entry.songId, null, entry.chartType, false);
+        }
+        else
+        {
+            last = PlayerDataManager.HasInstance ? GameManager.PlayerData.LastSelection : null;
+        }
+
+        List<string> songIds = new List<string>();
+        foreach (Btn_SongItem item in songItems) songIds.Add(item.Song.SongId);
+        return PlayerDataRules.ResolveStartSelection(last, songIds, ChartExists);
+    }
+
+    /// <summary>시작 선택 확인용: 그 곡의 채보가 지금 있는지 (공식: Resources, 나만의 채보: 목록에 읽힌 파일)</summary>
+    private bool ChartExists(string songId, string chartId, ChartType type)
+    {
+        if (type == ChartType.Custom) return myChartRows.Exists(row => row.Chart.songId == songId && row.Chart.chartId == chartId);
+        return ChartRepository.GetCharts(songId, ChartType.Official).Exists(chart => chart.chartId == chartId);
+    }
+
+    /// <summary>화면 고정 글자 (상수에서): 화면 이름 간격, 탭 이름, 빈 상태 문구, 키 글자</summary>
+    private void InitStaticTexts()
+    {
+        if (screenNameText != null)
+        {
+            screenNameText.text = GameConstants.SongSelect.ScreenName;
+            screenNameText.characterSpacing = GameConstants.SongSelect.ScreenNameCharacterSpacing;
+        }
+        officialTabText.text = GameConstants.SongSelect.TabOfficial;
+        myChartTabText.text = GameConstants.SongSelect.TabMyChart;
+        if (officialTabEnText != null) officialTabEnText.text = GameConstants.SongSelect.TabOfficialEn;
+        if (myChartTabEnText != null) myChartTabEnText.text = GameConstants.SongSelect.TabMyChartEn;
+        officialEmptyText.text = GameConstants.SongSelect.OfficialEmpty;
+        myChartEmptyText.text = GameConstants.SongSelect.MyChartEmpty;
+
+        if (tabKeyText != null) tabKeyText.text = KeyGuideBar.GetKeyText(KeyGuideKey.FromAction(switchTabAction));
+        if (speedDownKeyText != null) speedDownKeyText.text = KeyGuideBar.GetKeyText(KeyGuideKey.FromAction(speedDownAction));
+        if (speedUpKeyText != null) speedUpKeyText.text = KeyGuideBar.GetKeyText(KeyGuideKey.FromAction(speedUpAction));
+        if (startKeyText != null) startKeyText.text = KeyGuideBar.GetKeyText(KeyGuideKey.FromAction(startAction, GameConstants.KeyGuide.EnterKey));
+    }
+
+    /// <summary>
+    /// 키 안내 줄: ↑↓ 곡(나만의 채보: 채보) · ←→ 난이도(나만의 채보: 이전·다음 곡) · Tab 공식 ↔ 나만의 채보 · 1 2 배속 · Enter 시작 · ESC 타이틀.
+    /// ↑↓ ←→는 한 액션으로 보이기 어려워 고정 글자, ESC는 UIManager(UI/Cancel)가 받아 고정 글자. 탭을 바꾸면 이름을 바꾼다 (ShowTab).
     /// </summary>
     private void InitKeyGuide()
     {
@@ -181,17 +267,14 @@ public class Canvas_SongSelect : UIBase
 
         keyGuideBar.Init(new List<KeyGuideEntry>
         {
-            new KeyGuideEntry(GameConstants.KeyGuide.Song, KeyGuideKey.Fixed(GameConstants.KeyGuide.UpDownKeys)),
+            new KeyGuideEntry(GameConstants.KeyGuide.Song, KeyGuideKey.Fixed(GameConstants.KeyGuide.UpDownKeys)).WithId(GameConstants.KeyGuide.VerticalMoveId),
             new KeyGuideEntry(GameConstants.KeyGuide.Difficulty, KeyGuideKey.Fixed(GameConstants.KeyGuide.LeftRightKeys)).WithId(GameConstants.KeyGuide.ChartMoveId),
-            new KeyGuideEntry(GameConstants.KeyGuide.Tab, KeyGuideKey.FromAction(switchTabAction)),
+            new KeyGuideEntry(GameConstants.KeyGuide.TabSwitch, KeyGuideKey.FromAction(switchTabAction)),
             new KeyGuideEntry(GameConstants.KeyGuide.Speed, KeyGuideKey.FromAction(speedDownAction), KeyGuideKey.FromAction(speedUpAction)),
             new KeyGuideEntry(GameConstants.KeyGuide.Start, KeyGuideKey.FromAction(startAction, GameConstants.KeyGuide.EnterKey)),
             new KeyGuideEntry(GameConstants.KeyGuide.ToTitle, KeyGuideKey.Fixed(GameConstants.KeyGuide.EscKey))
         });
     }
-
-    /// <summary>키 안내 줄 (확인용)</summary>
-    public KeyGuideBar KeyGuide => keyGuideBar;
 
     /// <summary>
     /// 키 입력을 받기 시작한다. 씬의 OnEnter에서 호출한다.
@@ -227,7 +310,7 @@ public class Canvas_SongSelect : UIBase
         isInputEnabled = false;
     }
 
-    private void Subscribe(InputActionReference reference, System.Action<InputAction.CallbackContext> handler)
+    private void Subscribe(InputActionReference reference, Action<InputAction.CallbackContext> handler)
     {
         if (reference == null)
         {
@@ -239,13 +322,13 @@ public class Canvas_SongSelect : UIBase
         reference.action.Enable();
     }
 
-    private static void Unsubscribe(InputActionReference reference, System.Action<InputAction.CallbackContext> handler)
+    private static void Unsubscribe(InputActionReference reference, Action<InputAction.CallbackContext> handler)
     {
         if (reference != null) reference.action.performed -= handler;
     }
 
     /// <summary>꾹 누르는 키(배속): 누른 순간(started)과 뗀 순간(canceled)을 구독한다</summary>
-    private void SubscribeHold(InputActionReference reference, System.Action<InputAction.CallbackContext> onStarted, System.Action<InputAction.CallbackContext> onCanceled)
+    private void SubscribeHold(InputActionReference reference, Action<InputAction.CallbackContext> onStarted, Action<InputAction.CallbackContext> onCanceled)
     {
         if (reference == null)
         {
@@ -258,7 +341,7 @@ public class Canvas_SongSelect : UIBase
         reference.action.Enable();
     }
 
-    private static void UnsubscribeHold(InputActionReference reference, System.Action<InputAction.CallbackContext> onStarted, System.Action<InputAction.CallbackContext> onCanceled)
+    private static void UnsubscribeHold(InputActionReference reference, Action<InputAction.CallbackContext> onStarted, Action<InputAction.CallbackContext> onCanceled)
     {
         if (reference == null) return;
         reference.action.started -= onStarted;
@@ -266,24 +349,36 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
-    /// 키보드 선택을 고른 곡 항목에 둔다. 마우스로 탭·난이도·채보·시작을 눌러 선택이 옮겨 가면 곡 항목으로 되돌린다
-    /// (↑↓가 계속 곡을 움직이게).
+    /// 키보드 선택을 지금 탭의 고른 항목(곡 / 채보)에 둔다. 마우스로 탭·난이도·시작을 눌러 선택이 옮겨 가면 되돌린다
+    /// (↑↓가 계속 목록을 움직이게).
     /// </summary>
     private void Update()
     {
         UpdateSpeedRepeat();
 
         // 팝업이 열려 있으면 팝업 버튼의 선택을 빼앗지 않는다
-        if (chosenItem == null || IsShortcutBlocked) return;
+        if (IsShortcutBlocked) return;
 
         EventSystem eventSystem = EventSystem.current;
-        if (eventSystem == null) return;
+        GameObject target = CurrentFocusTarget;
+        if (eventSystem == null || target == null) return;
 
         GameObject selected = eventSystem.currentSelectedGameObject;
-        if (selected == null || selected == chosenItem.gameObject) return;
-        if (selected.GetComponent<Btn_SongItem>() != null) return;
+        if (selected == target) return;
+        if (selected != null && currentTab == ChartType.Official && selected.GetComponent<Btn_SongItem>() != null) return;
+        if (selected != null && currentTab == ChartType.Custom && selected.GetComponent<Btn_MyChartItem>() != null) return;
 
-        eventSystem.SetSelectedGameObject(chosenItem.gameObject);
+        eventSystem.SetSelectedGameObject(target);
+    }
+
+    /// <summary>지금 탭에서 키보드 선택을 둘 오브젝트 (공식: 고른 곡 항목, 나만의 채보: 고른 채보 항목)</summary>
+    private GameObject CurrentFocusTarget
+    {
+        get
+        {
+            if (currentTab == ChartType.Official) return chosenItem != null ? chosenItem.gameObject : null;
+            return chosenMyChartIndex >= 0 && chosenMyChartIndex < myChartRows.Count ? myChartRows[chosenMyChartIndex].gameObject : null;
+        }
     }
 
     private void OnDestroy()
@@ -339,15 +434,15 @@ public class Canvas_SongSelect : UIBase
     {
         if (isLeaving || tab == currentTab) return;
 
-        ShowTab(tab);
-        if (tab == ChartType.Custom && chosenMyChart != null) ScrollMyChartToShow(chosenMyChart);
+        ShowTab(tab, false);
         LogState("탭 전환");
     }
 
     /// <summary>
-    /// 탭 버튼 모양, 패널, 조작 안내, 시작 버튼을 지금 탭에 맞춘다.
+    /// 탭 버튼 모양, 패널, 조작 안내, 왼쪽 곡 정보·배경, 키보드 선택을 지금 탭에 맞춘다.
     /// </summary>
-    private void ShowTab(ChartType tab)
+    /// <param name="instantBackground">true면 배경을 페이드 없이 바로 바꾼다 (화면에 들어올 때)</param>
+    private void ShowTab(ChartType tab, bool instantBackground)
     {
         currentTab = tab;
         bool isOfficial = tab == ChartType.Official;
@@ -355,38 +450,89 @@ public class Canvas_SongSelect : UIBase
         officialPanel.SetActive(isOfficial);
         myChartPanel.SetActive(!isOfficial);
 
-        SetTabVisual(officialTabButton, officialTabText, isOfficial);
-        SetTabVisual(myChartTabButton, myChartTabText, !isOfficial);
+        SetTabVisual(officialTabButton, officialTabText, officialTabEnText, officialTabBorder, isOfficial);
+        SetTabVisual(myChartTabButton, myChartTabText, myChartTabEnText, myChartTabBorder, !isOfficial);
 
         if (keyGuideBar != null)
-            keyGuideBar.SetLabel(GameConstants.KeyGuide.ChartMoveId, isOfficial ? GameConstants.KeyGuide.Difficulty : GameConstants.KeyGuide.Chart);
+        {
+            keyGuideBar.SetLabel(GameConstants.KeyGuide.VerticalMoveId, isOfficial ? GameConstants.KeyGuide.Song : GameConstants.KeyGuide.Chart);
+            keyGuideBar.SetLabel(GameConstants.KeyGuide.ChartMoveId, isOfficial ? GameConstants.KeyGuide.Difficulty : GameConstants.KeyGuide.PrevNextSong);
+        }
+
+        ShowCurrentSong(instantBackground);
         RefreshChosenChart();
+        RefreshCounts();
+
+        Selectable focus = CurrentFocusTarget != null ? CurrentFocusTarget.GetComponent<Selectable>() : null;
+        if (focus != null) selectionKeeper.SetDefaultSelectable(focus);
+        FocusCurrent();
+
+        if (isOfficial && chosenItem != null) ScrollSongListToShow(chosenItem);
+        if (!isOfficial && chosenMyChartIndex >= 0) ScrollMyChartToShow(chosenMyChartIndex);
     }
 
-    private void SetTabVisual(Button tabButton, TMP_Text label, bool chosen)
+    private void SetTabVisual(Button tabButton, TMP_Text label, TMP_Text labelEn, Image border, bool chosen)
     {
-        if (tabButton.targetGraphic != null)
-            tabButton.targetGraphic.color = chosen ? chosenTabColor : normalTabColor;
-        label.color = chosen ? chosenTabTextColor : normalTabTextColor;
+        if (tabButton.targetGraphic != null) tabButton.targetGraphic.color = chosen ? (Color)GameConstants.SongSelect.TabChosenColor : (Color)GameConstants.SongSelect.TabNormalColor;
+        if (border != null) border.gameObject.SetActive(chosen);
+
+        UISelectHighlight.Look look = UISelectHighlight.GetLook(chosen);
+        label.color = look.MainTextColor;
+        label.fontStyle = look.MainFontStyle;
+        if (labelEn != null) labelEn.color = look.SubTextColor;
     }
 
-    // ───── 곡 ─────
+    // ───── 왼쪽 곡 정보 · 배경 ─────
 
     /// <summary>
-    /// 난이도 버튼에 GameConstants.Chart.Difficulties 순서대로 난이도 이름을 정한다.
+    /// 지금 탭의 곡으로 앨범·곡 정보·배경을 맞춘다. 곡이 없으면(나만의 채보 0개) 공식 탭에서 고른 곡을 그대로 보여 준다.
+    /// </summary>
+    private void ShowCurrentSong(bool instantBackground)
+    {
+        SongData song = CurrentSong ?? (chosenItem != null ? chosenItem.Song : null);
+        if (song == null) return;
+
+        coverImage.sprite = song.Cover;
+        coverImage.color = song.Cover != null ? Color.white : (Color)GameConstants.SongSelect.EmptyCoverColor;
+        songTitleText.text = song.Title;
+        artistText.text = string.IsNullOrEmpty(song.Artist) ? GameConstants.SongSelect.EmptyValue : song.Artist;
+
+        string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : GameConstants.SongSelect.EmptyValue;
+        songInfoText.text = string.Format(GameConstants.SongSelect.SongInfoFormat, bpmText, song.GetLengthText());
+
+        if (blurBackground != null) blurBackground.SetSource(song.Background, instantBackground);
+    }
+
+    private SongData FindSong(string songId)
+    {
+        if (string.IsNullOrEmpty(songId)) return null;
+        return songsById.TryGetValue(songId, out SongData song) ? song : null;
+    }
+
+    private void FocusCurrent()
+    {
+        GameObject target = CurrentFocusTarget;
+        if (EventSystem.current != null && target != null && EventSystem.current.currentSelectedGameObject != target)
+            EventSystem.current.SetSelectedGameObject(target);
+    }
+
+    // ───── 공식 채보 탭: 곡 목록 · 난이도 ─────
+
+    /// <summary>
+    /// 난이도 카드에 GameConstants.Chart.Difficulties 순서대로 난이도 이름을 정한다.
     /// </summary>
     private void InitDifficultyButtons()
     {
         string[] difficulties = GameConstants.Chart.Difficulties;
         if (difficultyButtons.Length != difficulties.Length)
-            Debug.LogWarning($"{LogPrefix} 난이도 버튼 수({difficultyButtons.Length})와 난이도 수({difficulties.Length})가 다릅니다.", this);
+            Debug.LogWarning($"{LogPrefix} 난이도 카드 수({difficultyButtons.Length})와 난이도 수({difficulties.Length})가 다릅니다.", this);
 
         for (int i = 0; i < difficultyButtons.Length && i < difficulties.Length; i++)
             difficultyButtons[i].Init(difficulties[i]);
     }
 
     /// <summary>
-    /// Content의 기존 자식을 비우고 곡마다 아이템을 생성한다.
+    /// Content의 기존 자식을 비우고 곡마다 아이템을 만든다. 오른쪽 난이도 칸(레벨·최고 랭크·도장)도 채운다.
     /// </summary>
     private void CreateSongItems(IReadOnlyList<SongData> songs)
     {
@@ -394,20 +540,23 @@ public class Canvas_SongSelect : UIBase
             Destroy(songListContent.GetChild(i).gameObject);
 
         songItems.Clear();
+        songsById.Clear();
 
         foreach (SongData song in songs)
         {
             if (song == null) continue;
+            songsById[song.SongId] = song;
 
             Btn_SongItem item = Instantiate(songItemPrefab, songListContent);
             item.name = songItemPrefab.name;
             item.Init(song, OnSongChosen);
+            item.SetDifficulties(ChartRepository.GetCharts(song.SongId, ChartType.Official), FindRecord);
             songItems.Add(item);
         }
     }
 
     /// <summary>
-    /// 곡 아이템끼리 위아래로만 이동하게 연결한다 (순환 없음). ←→는 난이도·채보 이동에 쓰므로 연결하지 않는다.
+    /// 곡 아이템끼리 위아래로만 이동하게 연결한다 (순환 없음). ←→는 난이도 이동에 쓰므로 연결하지 않는다.
     /// </summary>
     private void ConnectSongNavigation()
     {
@@ -423,8 +572,7 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
-    /// 곡 아이템이 선택되면 호출된다(↑↓, 마우스). 곡 정보·난이도·나만의 채보 목록을 다시 채운다.
-    /// 공식 탭은 그 곡에 있는 가장 낮은 난이도를, 나만의 채보 탭은 첫 채보를 고른다 (돌아온 경우는 그 채보).
+    /// 곡 아이템이 선택되면 호출된다(↑↓, 마우스). 난이도를 다시 채우고 왼쪽·배경을 바꾼다.
     /// </summary>
     private void OnSongChosen(SongData song)
     {
@@ -433,60 +581,47 @@ public class Canvas_SongSelect : UIBase
         Btn_SongItem item = songItems.Find(view => view.Song == song);
         if (item == null || item == chosenItem) return;
 
+        ChooseSongItem(item, null);
+        if (currentTab != ChartType.Official) return;
+
+        selectionKeeper.SetDefaultSelectable(item.Button);
+        ShowCurrentSong(false);
+        RefreshChosenChart();
+        RefreshCounts();
+        ScrollSongListToShow(item);
+        LogState("곡 변경");
+    }
+
+    /// <summary>공식 탭 곡을 고르고 난이도를 다시 채운다 (왼쪽 표시는 부르는 쪽이 맞춘다)</summary>
+    /// <param name="preferredChartId">이 채보가 있으면 고른다. 없으면 가장 낮은 난이도</param>
+    private void ChooseSongItem(Btn_SongItem item, string preferredChartId)
+    {
         if (chosenItem != null) chosenItem.SetChosen(false);
         item.SetChosen(true);
         chosenItem = item;
-        chosenSong = song;
-        selectionKeeper.SetDefaultSelectable(item.Button);
-
-        ShowSongInfo(song);
-        RefreshDifficulties(currentTab == ChartType.Official ? pendingChartId : null);
-        RefreshMyCharts(currentTab == ChartType.Custom ? pendingChartId : null);
-        RefreshChosenChart();
-        ScrollSongListToShow(item);
-
-        if (pendingChartId == null) LogState("곡 변경");
+        RefreshDifficulties(preferredChartId);
     }
-
-    private void ShowSongInfo(SongData song)
-    {
-        coverImage.sprite = song.Cover;
-        coverImage.color = song.Cover != null ? Color.white : emptyCoverColor;
-        songTitleText.text = song.Title;
-        artistText.text = string.IsNullOrEmpty(song.Artist) ? GameConstants.SongSelect.EmptyValue : song.Artist;
-
-        string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : GameConstants.SongSelect.EmptyValue;
-        songInfoText.text = string.Format(GameConstants.SongSelect.SongInfoFormat, bpmText, song.GetLengthText());
-    }
-
-    private void FocusChosenSong()
-    {
-        if (EventSystem.current != null && chosenItem != null)
-            EventSystem.current.SetSelectedGameObject(chosenItem.gameObject);
-    }
-
-    // ───── 공식 채보 (난이도) ─────
 
     /// <summary>
-    /// 고른 곡의 공식 채보로 난이도 버튼을 채우고 난이도를 고른다. 하나도 없으면 빈 상태 문구를 켠다.
+    /// 고른 곡의 공식 채보로 난이도 카드를 채우고 난이도를 고른다. 하나도 없으면 빈 상태 문구를 켠다.
     /// </summary>
     /// <param name="preferredChartId">이 채보가 있으면 고른다. 없으면 가장 낮은 난이도</param>
     private void RefreshDifficulties(string preferredChartId)
     {
-        List<ChartData> charts = ChartRepository.GetCharts(chosenSong.SongId, ChartType.Official);
+        List<ChartData> charts = ChartRepository.GetCharts(chosenItem.Song.SongId, ChartType.Official);
 
         foreach (Btn_Difficulty button in difficultyButtons)
-            button.SetChart(charts.Find(chart => chart.difficulty == button.Difficulty));
+            button.SetChart(charts.Find(chart => string.Equals(chart.difficulty, button.Difficulty, StringComparison.OrdinalIgnoreCase)));
 
         officialEmptyText.gameObject.SetActive(charts.Count == 0);
 
         Btn_Difficulty preferred = null;
         if (!string.IsNullOrEmpty(preferredChartId))
-            preferred = System.Array.Find(difficultyButtons, button => button.Chart != null && button.Chart.chartId == preferredChartId);
+            preferred = Array.Find(difficultyButtons, button => button.Chart != null && button.Chart.chartId == preferredChartId);
 
-        // 난이도 버튼은 낮은 난이도부터 놓여 있으므로 처음 만나는 채보 있는 버튼이 가장 낮은 난이도다
+        // 난이도 카드는 낮은 난이도부터 놓여 있으므로 처음 만나는 채보 있는 카드가 가장 낮은 난이도다
         chosenDifficulty = null;
-        SetChosenDifficulty(preferred ?? System.Array.Find(difficultyButtons, button => button.Chart != null));
+        SetChosenDifficulty(preferred ?? Array.Find(difficultyButtons, button => button.Chart != null));
     }
 
     private void SetChosenDifficulty(Btn_Difficulty target)
@@ -498,7 +633,7 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
-    /// 난이도 버튼 클릭. 채보가 없는 난이도는 버튼이 비활성이라 불리지 않는다.
+    /// 난이도 카드 클릭. 채보가 없는 난이도는 버튼이 비활성이라 불리지 않는다.
     /// </summary>
     private void ChooseDifficulty(Btn_Difficulty target)
     {
@@ -513,7 +648,7 @@ public class Canvas_SongSelect : UIBase
     /// </summary>
     private void MoveDifficulty(int direction)
     {
-        int current = System.Array.IndexOf(difficultyButtons, chosenDifficulty);
+        int current = Array.IndexOf(difficultyButtons, chosenDifficulty);
         if (current < 0) return;
 
         for (int i = current + direction; i >= 0 && i < difficultyButtons.Length; i += direction)
@@ -526,92 +661,138 @@ public class Canvas_SongSelect : UIBase
         }
     }
 
-    // ───── 나만의 채보 ─────
+    // ───── 나만의 채보 탭: 곡별로 묶은 채보 목록 ─────
 
     /// <summary>
-    /// 고른 곡의 나만의 채보로 목록을 채우고 채보를 고른다 (chartId 내림차순, 만든 시각이 늦은 것이 위).
-    /// 항목은 풀에서 앞에서부터 다시 쓰고, 모자랄 때만 새로 만든다.
+    /// 나만의 채보가 있는 곡만 곡 순서대로 묶어 목록을 만든다: 곡 제목 줄(선택 안 됨) 아래 채보 줄 (곡 안에서는 chartId 내림차순, 늦게 만든 것이 위).
+    /// 채보 줄끼리 ↑↓ 내비게이션을 연결한다 (곡 경계를 넘어 바로 다음 채보).
     /// </summary>
-    /// <param name="preferredChartId">이 채보가 있으면 고른다. 없으면 첫 채보</param>
-    private void RefreshMyCharts(string preferredChartId)
+    private void CreateMyChartList()
     {
-        List<ChartData> charts = ChartRepository.GetCharts(chosenSong.SongId, ChartType.Custom);
-        charts.Sort((a, b) => string.CompareOrdinal(b.chartId, a.chartId));
+        for (int i = myChartContent.childCount - 1; i >= 0; i--)
+            Destroy(myChartContent.GetChild(i).gameObject);
 
-        activeMyChartItems.Clear();
-        for (int i = 0; i < charts.Count; i++)
+        myChartRows.Clear();
+        songGroupHeaders.Clear();
+        myChartRowGroup.Clear();
+        List<int> groupSizes = new List<int>();
+
+        foreach (Btn_SongItem songItem in songItems)
         {
-            if (i >= myChartItemPool.Count)
-                myChartItemPool.Add(CreateMyChartItem());
+            SongData song = songItem.Song;
+            List<ChartData> charts = ChartRepository.GetCharts(song.SongId, ChartType.Custom);
+            if (charts.Count == 0) continue;
+            charts.Sort((a, b) => string.CompareOrdinal(b.chartId, a.chartId));
 
-            Btn_MyChartItem item = myChartItemPool[i];
-            item.gameObject.SetActive(true);
-            item.Init(charts[i], ChooseMyChart);
-            activeMyChartItems.Add(item);
+            SongGroupHeader header = Instantiate(songGroupHeaderPrefab, myChartContent);
+            header.name = songGroupHeaderPrefab.name;
+            header.Init(song, charts.Count);
+            songGroupHeaders.Add(header);
+
+            foreach (ChartData chart in charts)
+            {
+                Btn_MyChartItem row = Instantiate(myChartItemPrefab, myChartContent);
+                row.name = myChartItemPrefab.name;
+                row.Init(chart, OnMyChartClicked);
+                row.SetSelectCallback(OnMyChartSelected);
+                row.SetRecord(FindRecord(chart.chartId));
+                myChartRows.Add(row);
+                myChartRowGroup.Add(groupSizes.Count);
+            }
+            groupSizes.Add(charts.Count);
         }
 
-        for (int i = charts.Count; i < myChartItemPool.Count; i++)
-            myChartItemPool[i].gameObject.SetActive(false);
+        myChartNavigator = new MyChartListNavigator(groupSizes);
+        for (int i = 0; i < myChartRows.Count; i++)
+        {
+            int up = myChartNavigator.Vertical(i, -1);
+            int down = myChartNavigator.Vertical(i, 1);
+            myChartRows[i].Button.navigation = new Navigation
+            {
+                mode = Navigation.Mode.Explicit,
+                selectOnUp = up != i ? myChartRows[up].Button : null,
+                selectOnDown = down != i ? myChartRows[down].Button : null
+            };
+        }
 
-        myChartEmptyText.gameObject.SetActive(charts.Count == 0);
+        myChartEmptyText.gameObject.SetActive(myChartRows.Count == 0);
         myChartScrollRect.verticalNormalizedPosition = 1f;
-
-        Btn_MyChartItem preferred = string.IsNullOrEmpty(preferredChartId)
-            ? null
-            : activeMyChartItems.Find(item => item.Chart.chartId == preferredChartId);
-
-        chosenMyChart = null;
-        SetChosenMyChart(preferred ?? (activeMyChartItems.Count > 0 ? activeMyChartItems[0] : null));
-        if (chosenMyChart != null) ScrollMyChartToShow(chosenMyChart);
     }
 
-    /// <summary>
-    /// 나만의 채보 항목을 만든다. 키보드 선택이 곡 목록을 떠나지 않도록 마우스 올림 선택(UISelectOnHover)과 내비게이션을 끈다.
-    /// </summary>
-    private Btn_MyChartItem CreateMyChartItem()
+    /// <summary>채보 줄이 선택됐을 때(↑↓, 마우스 올림): 그 채보를 고른다</summary>
+    private void OnMyChartSelected(ChartData chart)
     {
-        Btn_MyChartItem created = Instantiate(myChartItemPrefab, myChartContent);
-        created.name = myChartItemPrefab.name;
+        if (isLeaving || currentTab != ChartType.Custom) return;
 
-        UISelectOnHover selectOnHover = created.GetComponent<UISelectOnHover>();
-        if (selectOnHover != null) selectOnHover.enabled = false;
-        created.GetComponent<Button>().navigation = new Navigation { mode = Navigation.Mode.None };
-        return created;
+        int index = myChartRows.FindIndex(row => row.Chart == chart);
+        if (index < 0 || index == chosenMyChartIndex) return;
+        ChooseMyChart(index, "채보 이동");
     }
 
-    private void SetChosenMyChart(Btn_MyChartItem target)
-    {
-        if (chosenMyChart != null) chosenMyChart.SetChosen(false);
-        chosenMyChart = target;
-        if (chosenMyChart != null) chosenMyChart.SetChosen(true);
-        RefreshChosenChart();
-    }
-
-    /// <summary>
-    /// 나만의 채보 항목 클릭.
-    /// </summary>
-    private void ChooseMyChart(ChartData chart)
+    /// <summary>채보 줄 클릭 (마우스)</summary>
+    private void OnMyChartClicked(ChartData chart)
     {
         if (isLeaving) return;
 
-        Btn_MyChartItem item = activeMyChartItems.Find(view => view.Chart == chart);
-        if (item == null) return;
-
-        SetChosenMyChart(item);
-        LogState("채보 선택");
+        int index = myChartRows.FindIndex(row => row.Chart == chart);
+        if (index < 0) return;
+        if (index != chosenMyChartIndex) ChooseMyChart(index, "채보 선택");
     }
 
     /// <summary>
-    /// ←→ (나만의 채보 탭): 목록에서 위(←)·아래(→) 채보로 옮긴다. 끝에서는 멈춘다.
+    /// ←→ (나만의 채보 탭): 이전·다음 곡 묶음의 첫 채보로. 끝에서는 멈춘다.
     /// </summary>
-    private void MoveMyChart(int direction)
+    private void MoveMyChartGroup(int direction)
     {
-        int next = activeMyChartItems.IndexOf(chosenMyChart) + direction;
-        if (chosenMyChart == null || next < 0 || next >= activeMyChartItems.Count) return;
+        int next = myChartNavigator.Group(chosenMyChartIndex, direction);
+        if (next < 0 || next == chosenMyChartIndex) return;
+        ChooseMyChart(next, "곡 묶음 이동");
+    }
 
-        SetChosenMyChart(activeMyChartItems[next]);
-        ScrollMyChartToShow(chosenMyChart);
-        LogState("채보 이동");
+    /// <summary>채보를 고르고 왼쪽·배경·숫자·스크롤·키보드 선택을 맞춘다</summary>
+    private void ChooseMyChart(int index, string reason)
+    {
+        string previousSongId = ChosenMyChart != null ? ChosenMyChart.songId : null;
+        SetChosenMyChart(index);
+
+        selectionKeeper.SetDefaultSelectable(myChartRows[index].Button);
+        if (previousSongId != myChartRows[index].Chart.songId) ShowCurrentSong(false);
+        RefreshChosenChart();
+        RefreshCounts();
+        ScrollMyChartToShow(index);
+        FocusCurrent();
+        LogState(reason);
+    }
+
+    private void SetChosenMyChart(int index)
+    {
+        if (chosenMyChartIndex >= 0 && chosenMyChartIndex < myChartRows.Count) myChartRows[chosenMyChartIndex].SetChosen(false);
+        chosenMyChartIndex = index;
+        if (index >= 0 && index < myChartRows.Count) myChartRows[index].SetChosen(true);
+    }
+
+    /// <summary>
+    /// 고른 채보 정보 카드: CUSTOM · 채보 이름 · Lv · 노트 수 · 롱노트 수 · 마지막 수정일 (파일 수정 시각, 없으면 —).
+    /// </summary>
+    private void ShowMyChartCard(ChartData chart)
+    {
+        if (myChartCard == null) return;
+        myChartCard.SetActive(chart != null);
+        if (chart == null) return;
+
+        int noteCount = chart.notes != null ? chart.notes.Count : 0;
+        int longCount = chart.notes != null ? chart.notes.FindAll(note => note.type == NoteData.TypeLong).Count : 0;
+        myChartNameText.text = chart.chartName;
+        myChartLevelText.text = string.Format(GameConstants.SongSelect.MyChartLevelFormat, chart.level);
+        myChartStatsText.text = string.Format(GameConstants.SongSelect.MyChartStatsFormat, noteCount, longCount, GetModifiedDateText(chart));
+    }
+
+    private static string GetModifiedDateText(ChartData chart)
+    {
+        string path = ChartRepository.GetChartPath(chart.songId, chart.chartId, ChartType.Custom);
+        return File.Exists(path)
+            ? File.GetLastWriteTime(path).ToString(GameConstants.SongSelect.ModifiedDateFormat, CultureInfo.InvariantCulture)
+            : GameConstants.SongSelect.EmptyValue;
     }
 
     // ───── 키 입력 ─────
@@ -631,7 +812,7 @@ public class Canvas_SongSelect : UIBase
         if (IsShortcutBlocked) return;
 
         if (currentTab == ChartType.Official) MoveDifficulty(direction);
-        else MoveMyChart(direction);
+        else MoveMyChartGroup(direction);
     }
 
     private void OnSpeedUpStarted(InputAction.CallbackContext context) => PressSpeedKey(speedUpRepeat, 1);
@@ -689,7 +870,7 @@ public class Canvas_SongSelect : UIBase
 
     private void SetSpeedText(float multiplier)
     {
-        speedText.text = string.Format(GameConstants.SongSelect.SpeedFormat, multiplier);
+        speedText.text = string.Format(CultureInfo.InvariantCulture, GameConstants.SongSelect.SpeedFormat, multiplier);
     }
 
     private void OnStartKey(InputAction.CallbackContext context)
@@ -716,29 +897,27 @@ public class Canvas_SongSelect : UIBase
 
     // ───── 시작 ─────
 
-    /// <summary>고른 채보가 바뀌었을 때: 시작 버튼과 최고 기록 칸을 다시 맞춘다</summary>
+    /// <summary>고른 채보가 바뀌었을 때: 시작 버튼, 최고 기록 카드, 고른 채보 카드를 다시 맞춘다</summary>
     private void RefreshChosenChart()
     {
-        RefreshStartButton();
-        ShowRecord(ChosenChart);
-    }
-
-    private void RefreshStartButton()
-    {
         startButton.interactable = !isLeaving && ChosenChart != null;
+        ShowRecord(ChosenChart);
+        if (currentTab == ChartType.Custom) ShowMyChartCard(ChosenMyChart);
     }
 
     /// <summary>
-    /// 고른 채보로 인게임을 시작한다 (Enter, 시작 버튼). 고른 채보가 없으면 아무것도 하지 않는다.
+    /// 고른 채보로 인게임을 시작한다 (Enter, 시작 버튼). 고른 채보가 없으면(나만의 채보 0개 등) 아무것도 하지 않는다.
+    /// 일반 플레이로 들어가므로 마지막 배속과 마지막으로 플레이한 곡·채보·탭을 저장한다 (값이 같으면 파일을 쓰지 않는다).
     /// </summary>
     private void StartGame()
     {
         ChartData chart = ChosenChart;
-        if (isLeaving || chosenSong == null || chart == null) return;
+        SongData song = CurrentSong;
+        if (isLeaving || song == null || chart == null) return;
 
         InGameEntryData data = new InGameEntryData
         {
-            songId = chosenSong.SongId,
+            songId = song.SongId,
             chartId = chart.chartId,
             chartType = currentTab,
             mode = InGameMode.Normal,
@@ -749,8 +928,7 @@ public class Canvas_SongSelect : UIBase
         if (GameManager.Scene.Load(GameConstants.Scenes.InGame, data))
         {
             SetLeaving();
-            // 곡 선택에서 시작하는 것은 항상 일반 플레이다 (값이 같으면 파일을 쓰지 않는다)
-            if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastScrollMultiplier(data.scrollMultiplier);
+            if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastPlayed(data.scrollMultiplier, data.songId, data.chartId, data.chartType);
         }
     }
 
@@ -766,20 +944,27 @@ public class Canvas_SongSelect : UIBase
         startButton.interactable = false;
         foreach (Btn_SongItem item in songItems) item.Button.interactable = false;
         foreach (Btn_Difficulty button in difficultyButtons) button.Button.interactable = false;
-        foreach (Btn_MyChartItem item in activeMyChartItems) item.Button.interactable = false;
+        foreach (Btn_MyChartItem item in myChartRows) item.Button.interactable = false;
     }
 
     // ───── 스크롤 ─────
 
     private void ScrollSongListToShow(Btn_SongItem item)
     {
+        if (!officialPanel.activeInHierarchy) return;
         ScrollToShow(songListScrollRect, songListContent, (RectTransform)item.transform);
     }
 
-    private void ScrollMyChartToShow(Btn_MyChartItem item)
+    /// <summary>고른 채보가 보이게 스크롤한다. 곡 묶음의 첫 채보면 곡 제목 줄도 보이게 한다</summary>
+    private void ScrollMyChartToShow(int index)
     {
-        if (!myChartPanel.activeInHierarchy) return;
-        ScrollToShow(myChartScrollRect, myChartContent, (RectTransform)item.transform);
+        if (!myChartPanel.activeInHierarchy || index < 0 || index >= myChartRows.Count) return;
+
+        int group = myChartRowGroup[index];
+        bool firstInGroup = index == 0 || myChartRowGroup[index - 1] != group;
+        if (firstInGroup && group < songGroupHeaders.Count)
+            ScrollToShow(myChartScrollRect, myChartContent, (RectTransform)songGroupHeaders[group].transform);
+        ScrollToShow(myChartScrollRect, myChartContent, (RectTransform)myChartRows[index].transform);
     }
 
     /// <summary>
@@ -805,31 +990,55 @@ public class Canvas_SongSelect : UIBase
         content.anchoredPosition = position;
     }
 
+    /// <summary>항목이 Viewport 안에 다 보이면 true (확인용)</summary>
+    public bool IsVisibleInList(RectTransform item)
+    {
+        ScrollRect scrollRect = item.GetComponentInParent<ScrollRect>();
+        if (scrollRect == null) return false;
+
+        Canvas.ForceUpdateCanvases();
+        RectTransform viewport = scrollRect.viewport;
+        item.GetWorldCorners(worldCorners);
+        float itemBottom = viewport.InverseTransformPoint(worldCorners[0]).y;
+        float itemTop = viewport.InverseTransformPoint(worldCorners[1]).y;
+        Rect view = viewport.rect;
+        return itemTop <= view.yMax + 0.5f && itemBottom >= view.yMin - 0.5f;
+    }
+
     // ───── 표시 ─────
 
+    /// <summary>목록 위쪽 숫자: 공식 "01 / 08" (곡 순번), 나만의 채보 "채보 01 / 05" (채보 순번). 채보가 없으면 숨긴다</summary>
+    private void RefreshCounts()
+    {
+        if (songCountText != null)
+        {
+            int index = chosenItem != null ? songItems.IndexOf(chosenItem) + 1 : 0;
+            songCountText.text = string.Format(GameConstants.SongSelect.SongCountFormat, index, songItems.Count);
+        }
+        if (myChartCountText != null)
+        {
+            myChartCountText.gameObject.SetActive(myChartRows.Count > 0);
+            myChartCountText.text = string.Format(GameConstants.SongSelect.MyChartCountFormat, Math.Max(0, chosenMyChartIndex + 1), myChartRows.Count);
+        }
+    }
+
+    private static ChartRecordData FindRecord(string chartId)
+    {
+        return PlayerDataManager.HasInstance ? GameManager.PlayerData.FindRecord(chartId) : null;
+    }
+
     /// <summary>
-    /// 최고 기록 칸: 고른 채보(공식 난이도 / 나만의 채보)의 기록을 GameManager.PlayerData에서 찾아 최고 점수(천 단위 쉼표)·랭크·최대 콤보·FC/AP를 보여준다.
-    /// 채보가 없거나 기록이 없으면 모두 "-".
+    /// 최고 기록 카드: 고른 채보(공식 난이도 / 나만의 채보)의 기록 (SongSelectRecordFormat). 채보가 없거나 기록이 없으면 각 칸 "—".
     /// </summary>
     private void ShowRecord(ChartData chart)
     {
-        ChartRecordData record = chart != null && PlayerDataManager.HasInstance ? GameManager.PlayerData.FindRecord(chart.chartId) : null;
-        string empty = GameConstants.SongSelect.EmptyValue;
-        if (record == null)
-        {
-            bestScoreText.text = empty;
-            bestRankText.text = string.Format(GameConstants.SongSelect.RecordRankFormat, empty);
-            bestComboText.text = string.Format(GameConstants.SongSelect.RecordComboFormat, empty);
-            badgeText.text = empty;
-            return;
-        }
-
-        bestScoreText.text = string.Format(CultureInfo.InvariantCulture, GameConstants.SongSelect.RecordScoreFormat, record.bestScore);
-        bestRankText.text = string.Format(GameConstants.SongSelect.RecordRankFormat, PlayerDataRules.ParseRank(record.bestRank));
-        bestComboText.text = string.Format(GameConstants.SongSelect.RecordComboFormat, record.maxCombo);
-        badgeText.text = record.isAllPerfect ? GameConstants.Play.AllPerfectText
-            : record.isFullCombo ? GameConstants.Play.FullComboText
-            : empty;
+        RecordTexts texts = SongSelectRecordFormat.Build(chart != null ? FindRecord(chart.chartId) : null);
+        bestScoreText.text = texts.Score;
+        rateText.text = texts.Rate;
+        comboText.text = texts.Combo;
+        rankText.text = texts.Rank;
+        rankText.color = texts.IsRankS ? (Color)GameConstants.SongSelect.RankSColor : Color.white;
+        if (recordStamp != null) recordStamp.SetStamp(texts.Stamp);
     }
 
     /// <summary>

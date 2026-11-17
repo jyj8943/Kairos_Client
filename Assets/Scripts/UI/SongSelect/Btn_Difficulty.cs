@@ -3,12 +3,11 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 곡 선택 화면(공식 채보 탭)의 난이도 버튼 하나 (EASY · NORMAL · HARD + 레벨).
-/// - 고른 곡에 그 난이도 채보가 없으면 레벨을 "-"로 두고 버튼을 비활성으로 보인다.
-/// - 고른 난이도는 배경을 그 난이도 색으로, 난이도 이름·레벨 글자를 짝 글자색으로 칠한다 (DifficultyColors: EASY 초록 · NORMAL 노랑 · HARD 빨강).
-///   선택 안 됨·채보 없음(회색)은 프리팹 기본 색 그대로다. 난이도 색은 직렬화하지 않는다.
-/// - 선택된 동안만 이름·레벨 글자에 외곽선 프리셋 머티리얼(chosenTextMaterial)을 쓰고, 풀리면 원래 머티리얼로 되돌린다.
-///   글꼴 기본(공유) 머티리얼은 고치지 않는다.
+/// 곡 선택 화면(공식 채보 탭)의 난이도 카드 하나 (EASY · NORMAL · HARD + 레벨, 기획서 3-3 ⑤ 11/17).
+/// - 어두운 카드 위에 난이도 이름을 그 난이도 색(DifficultyColors 배경색 그대로: EASY 초록 · NORMAL 노랑 · HARD 빨강), 레벨을 흰색으로 쓴다.
+/// - 고른 난이도는 하늘색 테두리(chosenBorder)를 켜고 카드 바탕을 조금 밝게 한다.
+/// - 고른 곡에 그 난이도 채보가 없으면 레벨을 "—"로 두고 버튼을 비활성, 글자를 회색으로 보인다.
+/// - 색 값은 직렬화하지 않고 DifficultyColors·프리팹 기본 색을 쓴다.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_Difficulty : MonoBehaviour
@@ -17,17 +16,15 @@ public class Btn_Difficulty : MonoBehaviour
     [SerializeField] private TMP_Text difficultyText;
     [SerializeField] private TMP_Text levelText;
 
-    [Header("색")]
-    [Tooltip("선택됐을 때 이름·레벨 글자 머티리얼 (NEXON Lv2 Gothic SDF Outline Difficulty, 얇은 어두운 외곽선)")]
-    [SerializeField] private Material chosenTextMaterial;
-    [SerializeField] private Color unavailableTextColor = new Color32(0xC4, 0xC4, 0xC8, 0xFF);
+    [Header("고름 표시")]
+    [Tooltip("고른 난이도의 하늘색 테두리 (Img_ChosenBorder)")]
+    [SerializeField] private Image chosenBorder;
+    [SerializeField] private Color chosenBackgroundColor = new Color32(0x2A, 0x3A, 0x55, 0xE6);
+    [SerializeField] private Color unavailableTextColor = new Color32(0x71, 0x71, 0x7A, 0xFF);
 
     private Button button;
     private Color normalBackgroundColor;
-    private Color normalNameColor;
     private Color normalLevelColor;
-    private Material normalNameMaterial;
-    private Material normalLevelMaterial;
 
     private string difficulty;
     private ChartData chart;
@@ -40,6 +37,9 @@ public class Btn_Difficulty : MonoBehaviour
 
     /// <summary>지금 곡의 이 난이도 채보. 없으면 null</summary>
     public ChartData Chart => chart;
+
+    /// <summary>고른 난이도 표시 중이면 true (확인용)</summary>
+    public bool IsChosen { get; private set; }
 
     private void Awake()
     {
@@ -55,10 +55,7 @@ public class Btn_Difficulty : MonoBehaviour
 
         button = GetComponent<Button>();
         normalBackgroundColor = background.color;
-        normalNameColor = difficultyText.color;
         normalLevelColor = levelText.color;
-        normalNameMaterial = difficultyText.fontSharedMaterial;
-        normalLevelMaterial = levelText.fontSharedMaterial;
     }
 
     /// <summary>
@@ -73,7 +70,7 @@ public class Btn_Difficulty : MonoBehaviour
     }
 
     /// <summary>
-    /// 지금 곡의 이 난이도 채보를 표시한다. null이면 레벨 "-"와 비활성으로 보인다.
+    /// 지금 곡의 이 난이도 채보를 표시한다. null이면 레벨 "—"와 비활성으로 보인다.
     /// </summary>
     public void SetChart(ChartData chart)
     {
@@ -90,27 +87,18 @@ public class Btn_Difficulty : MonoBehaviour
     /// </summary>
     public void SetChosen(bool chosen)
     {
-        bool isChosen = chosen && chart != null;
-        DifficultyColorPair chosenColor = DifficultyColors.Get(difficulty);
-        background.color = isChosen ? (Color)chosenColor.Background : normalBackgroundColor;
-        bool useOutline = isChosen && chosenTextMaterial != null;
-        difficultyText.fontSharedMaterial = useOutline ? chosenTextMaterial : normalNameMaterial;
-        levelText.fontSharedMaterial = useOutline ? chosenTextMaterial : normalLevelMaterial;
+        IsChosen = chosen && chart != null;
+        background.color = IsChosen ? chosenBackgroundColor : normalBackgroundColor;
+        if (chosenBorder != null) chosenBorder.gameObject.SetActive(IsChosen);
 
-        if (isChosen)
-        {
-            difficultyText.color = chosenColor.Text;
-            levelText.color = chosenColor.Text;
-        }
-        else if (chart == null)
+        if (chart == null)
         {
             difficultyText.color = unavailableTextColor;
             levelText.color = unavailableTextColor;
+            return;
         }
-        else
-        {
-            difficultyText.color = normalNameColor;
-            levelText.color = normalLevelColor;
-        }
+
+        difficultyText.color = DifficultyColors.Get(difficulty).Background;
+        levelText.color = normalLevelColor;
     }
 }

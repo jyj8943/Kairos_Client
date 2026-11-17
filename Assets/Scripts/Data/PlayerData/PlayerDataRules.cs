@@ -85,12 +85,76 @@ public static class PlayerDataRules
         s.windowMode = mode.ToString();
     }
 
-    /// <summary>마지막 선택 값을 정리한다: 배속을 1.0 ~ 8.0 범위·0.1 단위로 (ScrollSpeedRules). 넘긴 s를 고친다</summary>
+    /// <summary>
+    /// 마지막 선택 값을 정리한다. 넘긴 s를 고친다.
+    /// - 배속: 1.0 ~ 8.0 범위·0.1 단위로 (ScrollSpeedRules)
+    /// - 곡·채보 ID: null이면 빈 문자열. 둘 중 하나라도 비었으면 둘 다 비운다 (곡만 있고 채보가 없는 값은 쓰지 않는다)
+    /// - 탭: 모르는 이름이면 Official (예전 파일·빈 값 포함)
+    /// 곡·채보가 실제로 있는지는 곡 선택에 들어올 때 ResolveStartSelection으로 확인한다.
+    /// </summary>
     public static void SanitizeLastSelection(LastSelectionSaveData s, List<string> log = null)
     {
         float speed = SanitizeScrollMultiplier(s.scrollMultiplier);
         if (!speed.Equals(s.scrollMultiplier)) log?.Add($"lastSelection.scrollMultiplier {s.scrollMultiplier} → {speed}");
         s.scrollMultiplier = speed;
+
+        if (s.songId == null) s.songId = string.Empty;
+        if (s.chartId == null) s.chartId = string.Empty;
+        if (string.IsNullOrEmpty(s.songId) != string.IsNullOrEmpty(s.chartId))
+        {
+            log?.Add($"lastSelection 곡·채보 중 하나가 비어 있음 (songId \"{s.songId}\", chartId \"{s.chartId}\") → 비움");
+            s.songId = string.Empty;
+            s.chartId = string.Empty;
+        }
+
+        ChartType type = TryParseName(s.chartType, out ChartType parsed) ? parsed : ChartType.Official;
+        if (type.ToString() != s.chartType) log?.Add($"lastSelection.chartType \"{s.chartType}\" → {type}");
+        s.chartType = type.ToString();
+    }
+
+    /// <summary>
+    /// 마지막으로 플레이한 곡·채보·탭을 바꾼다. 바뀌었으면 true — 호출하는 쪽은 true일 때만 파일에 저장한다.
+    /// 곡·채보 ID가 비어 있으면 바꾸지 않는다.
+    /// </summary>
+    public static bool TrySetLastPlayed(LastSelectionSaveData s, string songId, string chartId, ChartType chartType)
+    {
+        if (string.IsNullOrEmpty(songId) || string.IsNullOrEmpty(chartId)) return false;
+
+        string type = chartType.ToString();
+        if (s.songId == songId && s.chartId == chartId && s.chartType == type) return false;
+
+        s.songId = songId;
+        s.chartId = chartId;
+        s.chartType = type;
+        return true;
+    }
+
+    /// <summary>
+    /// 곡 선택에 들어올 때 처음 고를 곡·채보·탭을 정한다 (순수 함수).
+    /// 마지막 선택의 곡이 목록에 있고 그 채보가 있으면(chartExists) 그대로, 아니면(삭제된 나만의 채보, 빈 값, 없는 ID) 공식 탭 첫 곡·첫 채보.
+    /// </summary>
+    /// <param name="songIds">곡 목록 순서대로의 곡 ID</param>
+    /// <param name="chartExists">(songId, chartId, 탭) 채보가 있으면 true</param>
+    /// <returns>시작 선택. 곡이 하나도 없으면 songId가 null. 공식 첫 곡으로 돌아가면 chartId가 null (그 곡의 가장 낮은 난이도)</returns>
+    public static StartSelection ResolveStartSelection(LastSelectionSaveData s, IReadOnlyList<string> songIds, Func<string, string, ChartType, bool> chartExists)
+    {
+        string firstSongId = songIds != null && songIds.Count > 0 ? songIds[0] : null;
+        StartSelection fallback = new StartSelection(firstSongId, null, ChartType.Official, false);
+        if (s == null || songIds == null || string.IsNullOrEmpty(s.songId) || string.IsNullOrEmpty(s.chartId)) return fallback;
+
+        bool songListed = false;
+        foreach (string id in songIds)
+        {
+            if (id != s.songId) continue;
+            songListed = true;
+            break;
+        }
+        if (!songListed) return fallback;
+
+        ChartType type = TryParseName(s.chartType, out ChartType parsed) ? parsed : ChartType.Official;
+        if (chartExists == null || !chartExists(s.songId, s.chartId, type)) return fallback;
+
+        return new StartSelection(s.songId, s.chartId, type, true);
     }
 
     /// <summary>배속을 범위(1.0 ~ 8.0)·0.1 단위로 맞춘다. NaN·무한대면 기본 배속</summary>

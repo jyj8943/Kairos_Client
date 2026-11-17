@@ -168,6 +168,28 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
         return Save();
     }
 
+    /// <summary>저장된 마지막 선택 (배속·마지막으로 플레이한 곡·채보·탭). Init 전이면 null. 고치지 않는다</summary>
+    public LastSelectionSaveData LastSelection => data != null ? data.lastSelection : null;
+
+    /// <summary>
+    /// 일반 플레이로 인게임에 들어갈 때 마지막 배속과 마지막으로 플레이한 곡·채보·탭을 바꾸고, 바뀐 것이 있으면 한 번 저장한다.
+    /// 테스트 플레이는 부르지 않는다 (곡 선택에서 시작하는 것은 항상 일반 플레이).
+    /// </summary>
+    /// <returns>저장했으면 true</returns>
+    public bool SetLastPlayed(float scrollMultiplier, string songId, string chartId, ChartType chartType)
+    {
+        if (data == null) return false;
+        if (data.lastSelection == null) data.lastSelection = new LastSelectionSaveData();
+
+        bool speedChanged = PlayerDataRules.TrySetLastScrollMultiplier(data.lastSelection, scrollMultiplier);
+        bool playedChanged = PlayerDataRules.TrySetLastPlayed(data.lastSelection, songId, chartId, chartType);
+        if (!speedChanged && !playedChanged) return false;
+
+        Debug.Log($"{LogPrefix} 마지막 선택 저장: 배속 x{data.lastSelection.scrollMultiplier:0.0}, " +
+                  $"곡 {data.lastSelection.songId}, 채보 {data.lastSelection.chartId}, 탭 {data.lastSelection.chartType}", this);
+        return Save();
+    }
+
     // ───── 기록 ─────
 
     /// <summary>chartId의 기록. 없으면 null (고치지 않는다)</summary>

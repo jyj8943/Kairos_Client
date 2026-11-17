@@ -339,9 +339,12 @@ public static class GameConstants
         public const string Retry = "다시 하기";
         public const string ToSongSelect = "곡 선택";
         public const string ToEditor = "에디터로";
+        public const string PrevNextSong = "이전 · 다음 곡";
+        public const string TabSwitch = "공식 ↔ 나만의 채보";
 
         /// <summary>이름을 바꾸는 항목의 ID (KeyGuideBar.SetLabel)</summary>
         public const string ChartMoveId = "chartMove";
+        public const string VerticalMoveId = "verticalMove";
         public const string ReturnId = "return";
         public const string BackId = "back";
     }
@@ -443,29 +446,113 @@ public static class GameConstants
         public const string TimeFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'";
     }
 
-    /// <summary>곡 선택 화면 표시 문구 (기획서 3-3)</summary>
+    /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17)</summary>
     public static class SongSelect
     {
-        /// <summary>값이 없을 때 표시 (최고 기록, 없는 난이도의 레벨)</summary>
-        public const string EmptyValue = "-";
+        /// <summary>
+        /// 공식 / 나만의 채보 탭 바탕색 (고른 탭 · 고르지 않은 탭). 씬에 직렬화하지 않고 여기 한 곳에서만 정한다
+        /// (예전 씬 값이 남아 고르지 않은 탭이 흰색으로 보이던 문제, 11/17).
+        /// </summary>
+        public static readonly Color32 TabChosenColor = new Color32(0x1E, 0x33, 0x4D, 0xE6);
+        public static readonly Color32 TabNormalColor = new Color32(0x10, 0x12, 0x1C, 0x99);
 
-        /// <summary>난이도 버튼 레벨: {0} 레벨</summary>
-        public const string LevelFormat = "Lv.{0}";
+        /// <summary>앨범 이미지가 없는 곡의 앨범 자리 색 (어두운 배경에 맞춘 회색)</summary>
+        public static readonly Color32 EmptyCoverColor = new Color32(0x3F, 0x3F, 0x46, 0xFF);
+
+        /// <summary>
+        /// 값이 없을 때 표시 (최고 기록·랭크, 없는 난이도의 레벨). 긴 줄표 모양이지만 게임 글꼴(NEXON Lv2 Gothic)에
+        /// U+2014(—)가 없어 같은 모양의 U+2015(―)를 쓴다.
+        /// </summary>
+        public const string EmptyValue = "―";
+
+        /// <summary>난이도 카드 레벨: {0} 레벨</summary>
+        public const string LevelFormat = "Lv. {0}";
 
         /// <summary>곡 정보 줄: {0} BPM, {1} 곡 길이</summary>
         public const string SongInfoFormat = "BPM {0} · {1}";
 
-        /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지). 바꾸는 키(1 · 2)는 아래쪽 키 안내 줄(KeyGuideBar)에 보여준다</summary>
-        public const string SpeedFormat = "배속 x{0:0.0}";
+        /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지)</summary>
+        public const string SpeedFormat = "x{0:0.0}";
 
-        /// <summary>최고 기록 칸: {0} 값. 점수는 천 단위 쉼표 (InvariantCulture)</summary>
-        public const string RecordScoreFormat = "{0:N0}";
-        public const string RecordRankFormat = "랭크 {0}";
-        public const string RecordComboFormat = "최대 콤보 {0}";
+        /// <summary>화면 이름 (타이틀 로고와 같은 형식)</summary>
+        public const string ScreenName = "SONG SELECT";
+        public const string ScreenNameKo = "곡 선택";
+        /// <summary>화면 이름 글자 간격 (TMP characterSpacing, 0.01em 단위)</summary>
+        public const float ScreenNameCharacterSpacing = 15f;
+
+        /// <summary>탭 이름 (한글 + 영문 작은 글씨)</summary>
+        public const string TabOfficial = "공식 채보";
+        public const string TabOfficialEn = "OFFICIAL";
+        public const string TabMyChart = "나만의 채보";
+        public const string TabMyChartEn = "MY CHARTS";
+
+        /// <summary>구역 머리글</summary>
+        public const string DifficultyHeader = "DIFFICULTY · 난이도";
+        public const string MyChartHeader = "MY CHART · 고른 채보";
+        public const string SongListHeader = "SONGS · 곡 목록";
+        public const string MyChartListHeader = "MY CHARTS · 곡별 나만의 채보";
+        public const string SpeedLabel = "SPEED · 배속";
+
+        /// <summary>목록 위쪽 숫자: {0} 지금 순번, {1} 전체 수 (두 자리)</summary>
+        public const string SongCountFormat = "{0:00} / {1:00}";
+        public const string MyChartCountFormat = "채보 {0:00} / {1:00}";
+
+        /// <summary>나만의 채보 곡 제목 줄 채보 수: {0} 채보 수 (1이면 단수)</summary>
+        public const string GroupChartCountFormat = "{0} CHARTS";
+        public const string GroupChartCountOne = "1 CHART";
+
+        /// <summary>목록 항목의 난이도 레벨 표시: {0} 난이도 첫 글자, {1} 레벨 (예: "E 3")</summary>
+        public const string ListLevelFormat = "{0} {1}";
+
+        /// <summary>나만의 채보 항목·카드의 레벨: {0} 레벨</summary>
+        public const string MyChartLevelFormat = "Lv. {0}";
+
+        /// <summary>고른 채보 카드 아랫줄: {0} 노트 수, {1} 롱노트 수, {2} 마지막 수정일 (MM/dd)</summary>
+        public const string MyChartStatsFormat = "노트 <b>{0}</b>    롱노트 <b>{1}</b>    마지막 수정 <b>{2}</b>";
+        public const string ModifiedDateFormat = "MM/dd";
+
+        /// <summary>최고 기록 카드 이름</summary>
+        public const string BestScoreLabel = "BEST SCORE";
+        public const string RateLabel = "RATE";
+        public const string ComboLabel = "COMBO";
+        public const string RankLabel = "RANK";
+
+        /// <summary>RATE 표시: 소수 둘째 자리 % (반올림하지 않고 버림, InvariantCulture)</summary>
+        public const string RateFormat = "{0:0.00}%";
+
+        /// <summary>FC/AP 도장 글자 (나중에 도장 이미지로 바꾼다)</summary>
+        public const string StampFullCombo = "FC";
+        public const string StampAllPerfect = "AP";
+
+        /// <summary>시작 버튼 (하단 바 오른쪽 끝)</summary>
+        public const string StartLabel = "시작";
+        public const string StartLabelEn = "START";
 
         /// <summary>빈 상태 문구</summary>
         public const string OfficialEmpty = "공식 채보가 없습니다";
-        public const string MyChartEmpty = "저장된 채보가 없습니다";
+        public const string MyChartEmpty = "에디터에서 채보를 만들어 보세요";
+
+        /// <summary>랭크 S 글자색 (하늘색 포인트색). 다른 랭크는 흰색</summary>
+        public static readonly Color32 RankSColor = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
+
+        /// <summary>도장 색: FC 하늘색, AP 금색</summary>
+        public static readonly Color32 StampFullComboColor = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
+        public static readonly Color32 StampAllPerfectColor = new Color32(0xFA, 0xCC, 0x15, 0xFF);
+
+        /// <summary>곡 배경 크로스페이드 시간 (초, 실제 시간)</summary>
+        public const float BackgroundFadeSeconds = 0.25f;
+
+        /// <summary>블러 처리 해상도 = 입력 ÷ 이 값</summary>
+        public const int BlurDownsample = 4;
+
+        /// <summary>블러 반복 횟수 (가로 1회 + 세로 1회가 한 번)</summary>
+        public const int BlurIterations = 2;
+
+        /// <summary>블러 결과 기준 화면 비율 (16:9). 다른 비율 입력은 가운데를 잘라 맞춘다</summary>
+        public const float BlurAspect = 16f / 9f;
+
+        /// <summary>배경 위 어두운 막 불투명도 (글자가 읽히게)</summary>
+        public const float BackgroundDimAlpha = 0.5f;
     }
 
     /// <summary>채보 에디터 규칙</summary>
