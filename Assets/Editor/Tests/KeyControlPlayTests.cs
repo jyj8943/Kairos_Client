@@ -91,7 +91,7 @@ public class KeyControlPlayTests
         yield return LoadAndWait(GameConstants.Scenes.Result, CreateResult());
         Canvas_Result canvas = Object.FindFirstObjectByType<Canvas_Result>();
         Assert.IsNull(EventSystem.current.currentSelectedGameObject, "결과 화면에 들어올 때 버튼을 미리 선택하지 않는다");
-        CollectionAssert.AreEqual(new[] { "F5 다시 하기", "Enter 곡 선택", "ESC 곡 선택" }, canvas.KeyGuide.Describe());
+        CollectionAssert.AreEqual(new[] { "F5 다시 하기", "Enter ESC 곡 선택으로" }, canvas.KeyGuide.Describe());
 
         // 다른 코드가 다시 하기 버튼을 선택해 둔 경우: 다음 프레임에 풀리므로 Enter는 돌아가기 하나만
         GameObject retryButton = ((UnityEngine.UI.Button)typeof(Canvas_Result).GetField("retryButton", Private).GetValue(canvas)).gameObject;

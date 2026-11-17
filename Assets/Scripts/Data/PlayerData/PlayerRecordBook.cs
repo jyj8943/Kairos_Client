@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// - 기록 규칙 (기획서 2-1(8), 공식·나만의 채보 같은 방식):
 ///   bestScore·bestAccuracy·maxCombo는 각각 따로 최고값, bestRank는 bestScore가 바뀔 때 그 판의 랭크,
 ///   isFullCombo·isAllPerfect는 한 번이라도 true면 true, playCount +1, 처음이면 firstPlayedAt, lastPlayedAt 갱신.
-///   신기록 = 처음 플레이했거나 bestScore가 올랐을 때.
+///   신기록 = 처음 플레이했거나 bestScore가 올랐을 때. 항목별 신기록(점수·정확도·최대 콤보)도 따로 돌려준다 (RecordUpdateResult).
 /// - 기록하지 않는 판: 테스트 플레이, 자동 플레이, chartId가 비어 있는 경우.
 /// </summary>
 public class PlayerRecordBook
@@ -74,6 +74,13 @@ public class PlayerRecordBook
         ChartRecordData record = Find(entry.chartId);
         update.hadPreviousRecord = record != null;
         update.previousBestScore = record != null ? record.bestScore : 0;
+        update.previousBestAccuracy = record != null ? record.bestAccuracy : 0;
+        update.previousMaxCombo = record != null ? record.maxCombo : 0;
+
+        // 항목별 신기록: 처음 플레이면 셋 다, 아니면 각각 더 높을 때만 (같은 값은 아님)
+        update.isNewBestScore = record == null || result.score > record.bestScore;
+        update.isNewBestAccuracy = record == null || result.accuracy > record.bestAccuracy;
+        update.isNewMaxCombo = record == null || result.maxCombo > record.maxCombo;
 
         if (record == null)
         {

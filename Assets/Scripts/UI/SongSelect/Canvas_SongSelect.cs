@@ -923,7 +923,7 @@ public class Canvas_SongSelect : UIBase
 
     /// <summary>
     /// 고른 채보로 인게임을 시작한다 (Enter, 시작 버튼). 고른 채보가 없으면(나만의 채보 0개 등) 아무것도 하지 않는다.
-    /// 일반 플레이로 들어가므로 마지막 배속과 마지막으로 플레이한 곡·채보·탭을 저장한다 (값이 같으면 파일을 쓰지 않는다).
+    /// 결과 다시 하기와 같은 경로(InGameLauncher)로 들어가며, 일반 플레이라 그 안에서 마지막 배속과 마지막으로 플레이한 곡·채보·탭을 저장한다.
     /// </summary>
     private void StartGame()
     {
@@ -931,21 +931,9 @@ public class Canvas_SongSelect : UIBase
         SongData song = CurrentSong;
         if (isLeaving || song == null || chart == null) return;
 
-        InGameEntryData data = new InGameEntryData
-        {
-            songId = song.SongId,
-            chartId = chart.chartId,
-            chartType = currentTab,
-            mode = InGameMode.Normal,
-            scrollMultiplier = ScrollMultiplier
-        };
-
+        InGameEntryData data = InGameLauncher.CreateNormalEntry(song.SongId, chart.chartId, currentTab, ScrollMultiplier);
         LogState("시작");
-        if (GameManager.Scene.Load(GameConstants.Scenes.InGame, data))
-        {
-            SetLeaving();
-            if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastPlayed(data.scrollMultiplier, data.songId, data.chartId, data.chartType);
-        }
+        if (InGameLauncher.Start(data)) SetLeaving();
     }
 
     /// <summary>

@@ -1,3 +1,5 @@
+using UnityEngine;
+
 /// <summary>
 /// 결과 화면에서 버튼으로 돌아갈 곳. 인게임이 정해서 넘기고, 결과 씬은 이 값대로 이동만 한다
 /// (결과 씬이 에디터·곡 선택 씬을 직접 알지 않게).
@@ -16,6 +18,7 @@ public class ResultReturnTarget
 
 /// <summary>
 /// 인게임 → 결과 씬으로 넘기는 한 판의 결과 (기획서 3-5).
+/// 곡 정보는 문자열 한 줄로 합치지 않고 항목별로 넘긴다 (결과 화면이 뱃지·줄임표를 따로 그린다).
 /// </summary>
 public class ResultData
 {
@@ -26,7 +29,7 @@ public class ResultData
     public int goodCount;
     public int missCount;
 
-    /// <summary>GREAT · GOOD 중 일찍 / 늦게 친 개수 (FAST + SLOW = GREAT + GOOD). 결과 화면 표시는 아직 없다</summary>
+    /// <summary>GREAT · GOOD 중 일찍 / 늦게 친 개수 (FAST + SLOW = GREAT + GOOD). 결과 화면 FAST/SLOW 막대</summary>
     public int fastCount;
     public int slowCount;
     public int maxCombo;
@@ -41,9 +44,25 @@ public class ResultData
     public bool isFullCombo;
     public bool isAllPerfect;
 
+    /// <summary>곡 정보 (결과 화면 ⑧): 곡 ID · 제목 · 아티스트 · 앨범 · 배경 일러스트(없으면 앨범)</summary>
+    public string songId;
     public string songTitle;
+    public string artist;
+    public Sprite cover;
+    public Sprite background;
+
+    /// <summary>공식 / 나만의 채보. 공식이면 난이도 뱃지, 나만의 채보면 CUSTOM 뱃지 + 채보 이름</summary>
+    public ChartType chartType = ChartType.Official;
+
+    /// <summary>난이도 이름 (EASY · NORMAL · HARD, 공식 채보)</summary>
+    public string difficulty;
+
+    /// <summary>채보 이름 (나만의 채보에서 보여 준다)</summary>
     public string chartName;
     public int level;
+
+    /// <summary>이 판을 끝냈을 때의 배속</summary>
+    public float scrollMultiplier = GameConstants.Play.DefaultScrollMultiplier;
 
     public bool isTestPlay;
     /// <summary>자동 플레이로 친 결과면 true (자동 테스트)</summary>
@@ -64,6 +83,11 @@ public class ResultData
     /// <summary>이 판 전에 기록이 있었으면 true, 그때의 최고 점수 (없었으면 0)</summary>
     public bool hadPreviousRecord;
     public int previousBestScore;
+
+    /// <summary>항목별 신기록 (점수 · 정확도 · 최대 콤보, RecordUpdateResult와 같은 규칙). 기록하지 않는 판이면 모두 false</summary>
+    public bool isNewBestScore;
+    public bool isNewBestAccuracy;
+    public bool isNewMaxCombo;
 
     /// <summary>
     /// 점수 계산 결과를 옮겨 담는다.

@@ -182,9 +182,8 @@ public static class GameConstants
         /// <summary>인게임 콤보 숫자 위 제목 (Txt_ComboTitle)</summary>
         public const string ComboTitleText = "COMBO";
 
-        /// <summary>결과 화면 신기록 표시 (기획서 3-5 ③). 처음 플레이: NewRecordText, 기록을 넘었을 때: {0} 이전 최고 점수 (천 단위 쉼표)</summary>
+        /// <summary>결과 화면 신기록 표시 (기획서 3-5 ③, SCORE · RATE · MAX COMBO 각각 옆)</summary>
         public const string NewRecordText = "NEW RECORD";
-        public const string NewRecordPreviousFormat = "NEW RECORD  (이전 {0:N0})";
 
         /// <summary>시작 MISS 롱노트의 비활성 색 (끝까지 이 색으로 내려간다)</summary>
         public static readonly Color32 LongNoteMissedColor = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
@@ -337,7 +336,7 @@ public static class GameConstants
         public const string ToTitle = "타이틀";
         public const string Resume = "계속";
         public const string Retry = "다시 하기";
-        public const string ToSongSelect = "곡 선택";
+        public const string ToSongSelect = "곡 선택으로";
         public const string ToEditor = "에디터로";
         public const string PrevNextSong = "이전 · 다음 곡";
         public const string TabSwitch = "공식 ↔ 나만의 채보";
@@ -444,6 +443,40 @@ public static class GameConstants
 
         /// <summary>기록 시각 형식 (UTC, ISO 8601)</summary>
         public const string TimeFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+    }
+
+    /// <summary>결과 화면 표시 문구 (기획서 3-5 결과 11/17). 색은 UITheme(메뉴 화면 톤)에 둔다</summary>
+    public static class Result
+    {
+        /// <summary>화면 이름 (곡 선택 "SONG SELECT"와 같은 형식)</summary>
+        public const string ScreenName = "RESULT";
+        public const string ScreenNameKo = "결과";
+
+        public const string ScoreLabel = "SCORE";
+        public const string RateLabel = "RATE";
+        public const string MaxComboLabel = "MAX COMBO";
+        public const string RankLabel = "RANK";
+
+        /// <summary>이전 최고 점수 줄: {0} 이전 최고 점수 (쉼표 없음). 뒤에 차이를 붙인다</summary>
+        public const string BestFormat = "BEST {0}";
+
+        /// <summary>점수 차이 부호 (게임 글꼴에 U+2212가 없어 "-")</summary>
+        public const string DiffPlus = "+";
+        public const string DiffMinus = "-";
+        public const string DiffZero = "±0";
+
+        /// <summary>최대 콤보 전체: {0} = 노트 수 + 롱노트 유지 틱 수</summary>
+        public const string MaxComboTotalFormat = "/ {0}";
+
+        /// <summary>FAST/SLOW 막대 양쪽: {0} 개수</summary>
+        public const string FastFormat = "FAST {0}";
+        public const string SlowFormat = "{0} SLOW";
+
+        /// <summary>곡 정보 셋째 줄 배속: {0} 배속</summary>
+        public const string SpeedFormat = "· x{0:0.0}";
+
+        /// <summary>나만의 채보 이름이 이 폭(px)을 넘으면 줄임표 (뱃지·Lv·배속은 항상 보이게)</summary>
+        public const float MaxChartNameWidth = 520f;
     }
 
     /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17). 색은 여기 두지 않고 UITheme(메뉴 화면 톤)에 둔다</summary>

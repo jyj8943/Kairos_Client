@@ -697,9 +697,16 @@ public class InGameScene : SceneBase
 #endif
 
         ResultData result = ResultData.FromScore(score);
+        result.songId = song.SongId;
         result.songTitle = song.Title;
+        result.artist = song.Artist;
+        result.cover = song.Cover;
+        result.background = song.Background;
+        result.chartType = entry.chartType;
+        result.difficulty = chart.difficulty;
         result.chartName = chart.chartName;
         result.level = chart.level;
+        result.scrollMultiplier = entry.scrollMultiplier;
         result.isTestPlay = IsTestPlay;
         result.isAutoPlay = isAutoPlay;
         result.retryEntry = entry.Clone();
