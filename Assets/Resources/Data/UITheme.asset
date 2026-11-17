@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 973ec2989d8680d40841663323bfd003, type: 3}
+  m_Name: UITheme
+  m_EditorClassIdentifier: Assembly-CSharp::UITheme
+  backgroundBase: {r: 0.90588236, g: 0.8862745, b: 0.93333334, a: 1}
+  illustrationSaturation: 0.45
+  illustrationBrightness: 1.2
+  overlayColor: {r: 0.9254902, g: 0.9098039, b: 0.9490196, a: 1}
+  overlayAlphaLeft: 0.8
+  overlayAlphaCenter: 0.62
+  overlayAlphaRight: 0.82
+  panel: {r: 1, g: 1, b: 1, a: 0.58}
+  bottomBar: {r: 1, g: 1, b: 1, a: 0.62}
+  divider: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.12}
+  emptyCover: {r: 0.8117647, g: 0.78431374, b: 0.85882354, a: 1}
+  accent: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 1}
+  onAccentText: {r: 1, g: 1, b: 1, a: 1}
+  selectedAlpha: 0.18
+  textPrimary: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 1}
+  textSecondary: {r: 0.24313726, g: 0.21960784, b: 0.32156864, a: 1}
+  textDescription: {r: 0.3529412, g: 0.32941177, b: 0.4392157, a: 1}
+  textMuted: {r: 0.47843137, g: 0.4509804, b: 0.5647059, a: 1}
+  judgePerfect: {r: 0.7176471, g: 0.5254902, b: 0.11764706, a: 1}
+  judgeGreat: {r: 0.18431373, g: 0.49803922, b: 0.78431374, a: 1}
+  judgeGood: {r: 0.18039216, g: 0.6117647, b: 0.41568628, a: 1}
+  judgeMiss: {r: 0.7882353, g: 0.3137255, b: 0.2901961, a: 1}
+  judgeFast: {r: 0.18039216, g: 0.6117647, b: 0.56078434, a: 1}
+  judgeSlow: {r: 0.8235294, g: 0.47843137, b: 0.23529412, a: 1}
+  difficultyEasy: {r: 0.18039216, g: 0.6117647, b: 0.41568628, a: 1}
+  difficultyNormal: {r: 0.18431373, g: 0.49803922, b: 0.78431374, a: 1}
+  difficultyHard: {r: 0.7607843, g: 0.27058825, b: 0.49411765, a: 1}
+  difficultyCustom: {r: 0.54509807, g: 0.49803922, b: 0.81960785, a: 1}
+  onDifficultyText: {r: 1, g: 1, b: 1, a: 1}
+  rankFont: {fileID: 11400000, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}

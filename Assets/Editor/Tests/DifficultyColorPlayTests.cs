@@ -9,7 +9,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 
 /// <summary>
-/// 난이도 표기 색 실제 씬 확인: 곡 선택 Btn_Difficulty(공식 탭 난이도 카드, 11/17 개편)와 인게임 채보 뱃지.
+/// 난이도 표기 색 실제 씬 확인: 곡 선택 Btn_Difficulty(공식 탭 난이도 카드, 메뉴용 UITheme 색)와 인게임 채보 뱃지(DifficultyColors).
 /// Critical Velocity에는 공식 채보가 NORMAL 하나뿐이라 EASY·HARD 버튼은 채보 없음(회색)이다.
 /// </summary>
 public class DifficultyColorPlayTests
@@ -75,8 +75,9 @@ public class DifficultyColorPlayTests
     }
 
 
-    /// <summary>3: 곡 선택 공식 탭에서 NORMAL 선택 (11/17 개편) → 하늘색 테두리 + 밝은 바탕, 이름 #FACC15(난이도 색), 레벨 흰색.
-    /// EASY·HARD는 채보가 없어 회색·레벨 —·테두리 없음. 곡 선택의 모든 글자는 외곽선 프리셋을 쓰지 않는다</summary>
+    /// <summary>3: 곡 선택 공식 탭에서 NORMAL 선택 (라벤더 톤, 메뉴용 UITheme 색) → 포인트색 테두리 + 선택 바탕(포인트색 18%),
+    /// 이름 뱃지 = 메뉴용 NORMAL 색 #2F7FC8 + 흰 글자, 레벨 기본 글자색. EASY·HARD는 채보가 없어 레벨 ―(흐린 글자)·테두리 없음·패널 바탕.
+    /// 곡 선택의 모든 글자는 외곽선 프리셋(인게임 뱃지용)을 쓰지 않는다</summary>
     [UnityTest]
     public IEnumerator D3_SongSelectNormalChosen_BorderAndDifficultyColorName()
     {
@@ -86,46 +87,45 @@ public class DifficultyColorPlayTests
         Assert.AreEqual(ChartType.Official, songSelect.CurrentTab);
         Assert.AreEqual(TestCharts.OfficialChartId, songSelect.ChosenChart.chartId);
 
-        // 11/17 개편: 어두운 카드 위 난이도 이름 = 그 난이도 색(DifficultyColors 배경색 그대로), 고른 카드 = 하늘색 테두리 + 밝은 바탕
+        UITheme theme = UITheme.Current;
         Btn_Difficulty[] buttons = Get<Btn_Difficulty[]>(songSelect, "difficultyButtons");
-        Color unavailable = Get<Color>(buttons[0], "unavailableTextColor");
         Material preset = OutlinePreset();
         List<string> log = new List<string>();
         foreach (Btn_Difficulty button in buttons)
         {
             Image background = Get<Image>(button, "background");
             Image border = Get<Image>(button, "chosenBorder");
+            Image badge = Get<Image>(button, "difficultyBadge");
             TMP_Text name = Get<TMP_Text>(button, "difficultyText");
             TMP_Text level = Get<TMP_Text>(button, "levelText");
-            log.Add($"{button.Difficulty}: 채보 {(button.Chart != null ? "있음" : "없음")}, 테두리 {(border.gameObject.activeSelf ? "켜짐" : "꺼짐")}, 글자 #{ColorUtility.ToHtmlStringRGB(name.color)}/#{ColorUtility.ToHtmlStringRGB(level.color)}");
+            log.Add($"{button.Difficulty}: 채보 {(button.Chart != null ? "있음" : "없음")}, 테두리 {(border.gameObject.activeSelf ? "켜짐" : "꺼짐")}, 뱃지 #{ColorUtility.ToHtmlStringRGBA(badge.color)}, 레벨 #{ColorUtility.ToHtmlStringRGB(level.color)}");
+            AssertColor(Color.white, name.color, $"{button.Difficulty}: 뱃지 위 이름 = 흰색");
 
             if (button.Difficulty == GameConstants.Chart.DifficultyNormal)
             {
-                DifficultyColorPair pair = DifficultyColors.Get(button.Difficulty);
                 Assert.IsTrue(button.IsChosen, "NORMAL 고름");
-                Assert.IsTrue(border.gameObject.activeSelf, "NORMAL 하늘색 테두리");
-                AssertColor(GameConstants.SelectHighlight.AccentColor, border.color, "테두리 = 포인트색 #7CC4FA");
-                AssertColor(Get<Color>(button, "chosenBackgroundColor"), background.color, "고른 카드 바탕");
-                AssertColor(new Color32(0xFA, 0xCC, 0x15, 0xFF), name.color, "NORMAL 이름 = #FACC15");
-                AssertColor(pair.Background, name.color, "NORMAL 이름 = DifficultyColors 상수");
-                AssertColor(new Color32(0xFF, 0xFF, 0xFF, 0xFF), level.color, "NORMAL 레벨 글자 = 흰색");
-                Assert.AreNotSame(preset, name.fontSharedMaterial, "어두운 카드에서는 외곽선 프리셋을 쓰지 않음");
+                Assert.IsTrue(border.gameObject.activeSelf, "NORMAL 포인트색 테두리");
+                AssertColor(theme.accent, border.color, "테두리 = 포인트색 #3E9BE0");
+                AssertColor(theme.SelectedBackground, background.color, "고른 카드 바탕 = 포인트색 18%");
+                AssertColor(new Color32(0x2F, 0x7F, 0xC8, 0xFF), badge.color, "NORMAL 뱃지 = 메뉴용 #2F7FC8");
+                AssertColor(theme.textPrimary, level.color, "레벨 = 기본 글자색");
+                Assert.AreNotSame(preset, name.fontSharedMaterial, "메뉴에서는 외곽선 프리셋을 쓰지 않음");
                 continue;
             }
 
             Assert.IsNull(button.Chart, $"{button.Difficulty}: 채보 없음");
             Assert.IsFalse(border.gameObject.activeSelf, $"{button.Difficulty}: 테두리 없음");
-            Assert.AreEqual(unavailable, name.color, $"{button.Difficulty}: 이름 회색");
-            Assert.AreEqual(unavailable, level.color, $"{button.Difficulty}: 레벨 회색");
-            Assert.AreEqual(GameConstants.SongSelect.EmptyValue, level.text, $"{button.Difficulty}: 레벨 —");
+            AssertColor(theme.panel, background.color, $"{button.Difficulty}: 패널 바탕");
+            AssertColor(theme.textMuted, level.color, $"{button.Difficulty}: 레벨 흐린 글자");
+            Assert.AreEqual(GameConstants.SongSelect.EmptyValue, level.text, $"{button.Difficulty}: 레벨 ―");
             Assert.IsFalse(button.Button.interactable, $"{button.Difficulty}: 누를 수 없음");
         }
 
-        // NORMAL 선택을 풀면 테두리가 꺼지고 이름은 난이도 색 그대로
+        // NORMAL 선택을 풀면 테두리가 꺼지고 뱃지는 난이도 색 그대로
         Btn_Difficulty normalButton = System.Array.Find(buttons, b => b.Difficulty == GameConstants.Chart.DifficultyNormal);
         normalButton.SetChosen(false);
         Assert.IsFalse(Get<Image>(normalButton, "chosenBorder").gameObject.activeSelf, "선택 풀림 → 테두리 꺼짐");
-        AssertColor(DifficultyColors.Get(normalButton.Difficulty).Background, Get<TMP_Text>(normalButton, "difficultyText").color, "선택 풀림 → 이름 난이도 색 유지");
+        AssertColor(theme.GetDifficulty(normalButton.Difficulty), normalButton.BadgeColor, "선택 풀림 → 뱃지 난이도 색 유지");
         normalButton.SetChosen(true);
 
         // 곡 선택의 모든 글자는 외곽선 프리셋을 쓰지 않는다

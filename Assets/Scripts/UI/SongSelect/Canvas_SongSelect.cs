@@ -10,7 +10,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 곡 선택 화면 UI (기획서 3-3 곡 선택 화면 개편 · 나만의 채보 탭 11/17). SongSelectScene이 Init()을 호출한다.
-/// - 배경: 고른 곡의 1920×1080 일러스트를 흐리게(UIBlurBackground) + 어두운 막. 곡을 바꾸면 크로스페이드, 들어올 때는 바로.
+/// - 배경: MenuBackground (바탕색 → 고른 곡의 1920×1080 일러스트를 흐리게·채도 낮춰 → 라벤더빛 덮기). 곡을 바꾸면 크로스페이드, 들어올 때는 바로.
+/// - 색: 메뉴 화면 톤 UITheme 한 곳 (기획서 3장 UI 톤 · 라벤더 안개). 고정 그래픽은 UIThemeColor 역할, 바뀌는 색(탭·목록 선택·난이도·랭크)은 UIThemePaint.
 /// - 공통(왼쪽): 앨범 · 곡 정보 · 최고 기록 카드(BEST SCORE · RATE/COMBO · RANK + FC/AP) · 배속. 하단 바: 키 안내 + 시작 버튼(Enter).
 /// - 공식 채보 탭(OfficialPanel): 난이도 카드 3개 + 오른쪽 곡 목록(Btn_SongItem). ↑↓ 곡(EventSystem 내비게이션), ←→ 난이도.
 /// - 나만의 채보 탭(MyChartPanel): 고른 채보 카드 + 오른쪽 곡별로 묶은 채보 목록(SongGroupHeader + Btn_MyChartItem).
@@ -24,8 +25,8 @@ public class Canvas_SongSelect : UIBase
 {
     private const string LogPrefix = "[Canvas_SongSelect]";
 
-    [Header("배경")]
-    [SerializeField] private UIBlurBackground blurBackground;
+    [Header("배경 (Prefabs/Common/MenuBackground: 바탕색 + 흐린 곡 일러스트 + 라벤더빛 덮기)")]
+    [SerializeField] private MenuBackground menuBackground;
 
     [Header("화면 이름")]
     [SerializeField] private TMP_Text screenNameText;
@@ -34,11 +35,9 @@ public class Canvas_SongSelect : UIBase
     [SerializeField] private Button officialTabButton;
     [SerializeField] private TMP_Text officialTabText;
     [SerializeField] private TMP_Text officialTabEnText;
-    [SerializeField] private Image officialTabBorder;
     [SerializeField] private Button myChartTabButton;
     [SerializeField] private TMP_Text myChartTabText;
     [SerializeField] private TMP_Text myChartTabEnText;
-    [SerializeField] private Image myChartTabBorder;
     [Tooltip("탭 옆 Tab 키 글자 (바인딩에서 읽는다)")]
     [SerializeField] private TMP_Text tabKeyText;
     [SerializeField] private GameObject officialPanel;
@@ -155,7 +154,7 @@ public class Canvas_SongSelect : UIBase
     public KeyGuideBar KeyGuide => keyGuideBar;
 
     /// <summary>배경 블러 (확인용)</summary>
-    public UIBlurBackground BlurBackground => blurBackground;
+    public UIBlurBackground BlurBackground => menuBackground != null ? menuBackground.Blur : null;
 
     /// <summary>나만의 채보 목록 항목 (한 줄 목록 순서, 확인용)</summary>
     public IReadOnlyList<Btn_MyChartItem> MyChartRows => myChartRows;
@@ -173,6 +172,9 @@ public class Canvas_SongSelect : UIBase
     {
         isLeaving = false;
 
+        // 메뉴 화면 톤 (UITheme): 고정 그래픽(UIThemeColor)과 배경을 먼저 칠한다. 선택에 따라 바뀌는 색은 각 표시 함수가 칠한다
+        UIThemeColor.ApplyAll(gameObject);
+        if (menuBackground != null) menuBackground.Init();
         InitStaticTexts();
         InitDifficultyButtons();
         CreateSongItems(songs);
@@ -450,8 +452,8 @@ public class Canvas_SongSelect : UIBase
         officialPanel.SetActive(isOfficial);
         myChartPanel.SetActive(!isOfficial);
 
-        SetTabVisual(officialTabButton, officialTabText, officialTabEnText, officialTabBorder, isOfficial);
-        SetTabVisual(myChartTabButton, myChartTabText, myChartTabEnText, myChartTabBorder, !isOfficial);
+        SetTabVisual(officialTabButton, officialTabText, officialTabEnText, isOfficial);
+        SetTabVisual(myChartTabButton, myChartTabText, myChartTabEnText, !isOfficial);
 
         if (keyGuideBar != null)
         {
@@ -471,16 +473,27 @@ public class Canvas_SongSelect : UIBase
         if (!isOfficial && chosenMyChartIndex >= 0) ScrollMyChartToShow(chosenMyChartIndex);
     }
 
-    private void SetTabVisual(Button tabButton, TMP_Text label, TMP_Text labelEn, Image border, bool chosen)
+    /// <summary>탭 모양 (UITheme): 고른 탭 = 포인트색 바탕 + 흰 글자, 고르지 않은 탭 = 패널색 + 보조 글자</summary>
+    private static void SetTabVisual(Button tabButton, TMP_Text label, TMP_Text labelEn, bool chosen)
     {
-        if (tabButton.targetGraphic != null) tabButton.targetGraphic.color = chosen ? (Color)GameConstants.SongSelect.TabChosenColor : (Color)GameConstants.SongSelect.TabNormalColor;
-        if (border != null) border.gameObject.SetActive(chosen);
+        UITheme theme = UITheme.Current;
+        if (tabButton.targetGraphic != null) tabButton.targetGraphic.color = chosen ? theme.accent : theme.panel;
 
-        UISelectHighlight.Look look = UISelectHighlight.GetLook(chosen);
-        label.color = look.MainTextColor;
-        label.fontStyle = look.MainFontStyle;
-        if (labelEn != null) labelEn.color = look.SubTextColor;
+        Color text = chosen ? theme.onAccentText : theme.textSecondary;
+        label.color = text;
+        label.fontStyle = chosen ? FontStyles.Bold : FontStyles.Normal;
+        if (labelEn != null) labelEn.color = chosen ? theme.onAccentText : theme.textDescription;
     }
+
+    /// <summary>탭 버튼 바탕색 (확인용)</summary>
+    public Color GetTabColor(ChartType tab)
+    {
+        Button button = tab == ChartType.Official ? officialTabButton : myChartTabButton;
+        return button != null && button.targetGraphic != null ? button.targetGraphic.color : Color.clear;
+    }
+
+    /// <summary>시작 버튼 바탕색 (확인용)</summary>
+    public Color StartButtonColor => startButton != null && startButton.targetGraphic != null ? startButton.targetGraphic.color : Color.clear;
 
     // ───── 왼쪽 곡 정보 · 배경 ─────
 
@@ -493,14 +506,14 @@ public class Canvas_SongSelect : UIBase
         if (song == null) return;
 
         coverImage.sprite = song.Cover;
-        coverImage.color = song.Cover != null ? Color.white : (Color)GameConstants.SongSelect.EmptyCoverColor;
+        coverImage.color = song.Cover != null ? Color.white : UITheme.Current.emptyCover;
         songTitleText.text = song.Title;
         artistText.text = string.IsNullOrEmpty(song.Artist) ? GameConstants.SongSelect.EmptyValue : song.Artist;
 
         string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : GameConstants.SongSelect.EmptyValue;
         songInfoText.text = string.Format(GameConstants.SongSelect.SongInfoFormat, bpmText, song.GetLengthText());
 
-        if (blurBackground != null) blurBackground.SetSource(song.Background, instantBackground);
+        if (menuBackground != null) menuBackground.SetIllustration(song.Background, instantBackground);
     }
 
     private SongData FindSong(string songId)
@@ -549,6 +562,7 @@ public class Canvas_SongSelect : UIBase
 
             Btn_SongItem item = Instantiate(songItemPrefab, songListContent);
             item.name = songItemPrefab.name;
+            UIThemeColor.ApplyAll(item.gameObject);
             item.Init(song, OnSongChosen);
             item.SetDifficulties(ChartRepository.GetCharts(song.SongId, ChartType.Official), FindRecord);
             songItems.Add(item);
@@ -686,6 +700,7 @@ public class Canvas_SongSelect : UIBase
 
             SongGroupHeader header = Instantiate(songGroupHeaderPrefab, myChartContent);
             header.name = songGroupHeaderPrefab.name;
+            UIThemeColor.ApplyAll(header.gameObject);
             header.Init(song, charts.Count);
             songGroupHeaders.Add(header);
 
@@ -693,6 +708,7 @@ public class Canvas_SongSelect : UIBase
             {
                 Btn_MyChartItem row = Instantiate(myChartItemPrefab, myChartContent);
                 row.name = myChartItemPrefab.name;
+                UIThemeColor.ApplyAll(row.gameObject);
                 row.Init(chart, OnMyChartClicked);
                 row.SetSelectCallback(OnMyChartSelected);
                 row.SetRecord(FindRecord(chart.chartId));
@@ -1036,8 +1052,11 @@ public class Canvas_SongSelect : UIBase
         bestScoreText.text = texts.Score;
         rateText.text = texts.Rate;
         comboText.text = texts.Combo;
-        rankText.text = texts.Rank;
-        rankText.color = texts.IsRankS ? (Color)GameConstants.SongSelect.RankSColor : Color.white;
+        UITextLevel valueLevel = texts.HasRecord ? UITextLevel.Primary : UITextLevel.Muted;
+        UIThemePaint.Text(bestScoreText, valueLevel);
+        UIThemePaint.Text(rateText, valueLevel);
+        UIThemePaint.Text(comboText, valueLevel);
+        UIThemePaint.Rank(rankText, texts);
         if (recordStamp != null) recordStamp.SetStamp(texts.Stamp);
     }
 

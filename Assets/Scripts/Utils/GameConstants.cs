@@ -446,19 +446,9 @@ public static class GameConstants
         public const string TimeFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'";
     }
 
-    /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17)</summary>
+    /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17). 색은 여기 두지 않고 UITheme(메뉴 화면 톤)에 둔다</summary>
     public static class SongSelect
     {
-        /// <summary>
-        /// 공식 / 나만의 채보 탭 바탕색 (고른 탭 · 고르지 않은 탭). 씬에 직렬화하지 않고 여기 한 곳에서만 정한다
-        /// (예전 씬 값이 남아 고르지 않은 탭이 흰색으로 보이던 문제, 11/17).
-        /// </summary>
-        public static readonly Color32 TabChosenColor = new Color32(0x1E, 0x33, 0x4D, 0xE6);
-        public static readonly Color32 TabNormalColor = new Color32(0x10, 0x12, 0x1C, 0x99);
-
-        /// <summary>앨범 이미지가 없는 곡의 앨범 자리 색 (어두운 배경에 맞춘 회색)</summary>
-        public static readonly Color32 EmptyCoverColor = new Color32(0x3F, 0x3F, 0x46, 0xFF);
-
         /// <summary>
         /// 값이 없을 때 표시 (최고 기록·랭크, 없는 난이도의 레벨). 긴 줄표 모양이지만 게임 글꼴(NEXON Lv2 Gothic)에
         /// U+2014(—)가 없어 같은 모양의 U+2015(―)를 쓴다.
@@ -532,13 +522,6 @@ public static class GameConstants
         public const string OfficialEmpty = "공식 채보가 없습니다";
         public const string MyChartEmpty = "에디터에서 채보를 만들어 보세요";
 
-        /// <summary>랭크 S 글자색 (하늘색 포인트색). 다른 랭크는 흰색</summary>
-        public static readonly Color32 RankSColor = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
-
-        /// <summary>도장 색: FC 하늘색, AP 금색</summary>
-        public static readonly Color32 StampFullComboColor = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
-        public static readonly Color32 StampAllPerfectColor = new Color32(0xFA, 0xCC, 0x15, 0xFF);
-
         /// <summary>곡 배경 크로스페이드 시간 (초, 실제 시간)</summary>
         public const float BackgroundFadeSeconds = 0.25f;
 
@@ -550,9 +533,6 @@ public static class GameConstants
 
         /// <summary>블러 결과 기준 화면 비율 (16:9). 다른 비율 입력은 가운데를 잘라 맞춘다</summary>
         public const float BlurAspect = 16f / 9f;
-
-        /// <summary>배경 위 어두운 막 불투명도 (글자가 읽히게)</summary>
-        public const float BackgroundDimAlpha = 0.5f;
     }
 
     /// <summary>채보 에디터 규칙</summary>

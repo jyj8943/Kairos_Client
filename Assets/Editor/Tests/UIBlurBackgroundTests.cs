@@ -102,6 +102,23 @@ public class UIBlurBackgroundTests
     }
 
     [Test]
+    public void ColorGrade_UsesRuntimeCopy_AssetUnchanged()
+    {
+        UIBlurBackground blur = Create();
+        Material asset = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/UIBlur.mat");
+        float assetSaturation = asset.GetFloat("_Saturation");
+        float assetBrightness = asset.GetFloat("_Brightness");
+
+        blur.SetColorGrade(0.45f, 1.2f);
+        Assert.AreEqual(new Vector2(0.45f, 1.2f), blur.ColorGrade);
+        blur.SetSource(textureA, true);
+        Assert.AreEqual(1, blur.ProcessCount);
+        Assert.AreEqual(assetSaturation, asset.GetFloat("_Saturation"), 1e-6f, "에셋 머티리얼 채도는 그대로 (실행용 사본에 넣는다)");
+        Assert.AreEqual(assetBrightness, asset.GetFloat("_Brightness"), 1e-6f, "에셋 머티리얼 밝기는 그대로");
+        Assert.AreEqual(3, asset.shader.passCount, "가로 · 세로 · 세로+색 보정 패스");
+    }
+
+    [Test]
     public void NullSource_ShowsBlack_NoProcess()
     {
         UIBlurBackground blur = Create();

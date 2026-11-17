@@ -2038,6 +2038,7 @@ MonoBehaviour:
   chosenBackgroundColor: {r: 0.16470589, g: 0.21960784, b: 0.32156864, a: 0.92156863}
   chosenTextColor: {r: 1, g: 1, b: 1, a: 1}
   emptyCoverColor: {r: 0.24705882, g: 0.24705882, b: 0.27450982, a: 1}
+  useMenuTheme: 1
   showArtist: 1
   selectBar: {fileID: 5499031870190186599}
   layoutElement: {fileID: 6457801902986009105}

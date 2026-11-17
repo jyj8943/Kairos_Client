@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 나만의 채보 탭 목록의 곡 제목 줄 (기획서 3-3 나만의 채보 탭 11/17). 정렬용 루트(SongGroupHeader)에 붙는다.
-/// - 작은 앨범 · 제목 · 아티스트 · 채보 수 ("2 CHARTS")를 보여 준다.
+/// - 작은 앨범 · 제목 · 아티스트 · 채보 수 ("2 CHARTS")를 보여 준다. 글자색은 UITheme (제목 기본, 아티스트·채보 수 설명), 가로선은 구분선 색(UIThemeColor).
 /// - 선택되지 않는 줄이다 (Selectable 없음). ↑↓는 채보 줄(Btn_MyChartItem)만 오간다.
 /// </summary>
 public class SongGroupHeader : MonoBehaviour
@@ -13,7 +13,6 @@ public class SongGroupHeader : MonoBehaviour
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text artistText;
     [SerializeField] private TMP_Text countText;
-    [SerializeField] private Color emptyCoverColor = new Color32(0x3F, 0x3F, 0x46, 0xFF);
 
     [Header("긴 제목·아티스트는 이 폭에서 줄임표 (가로선·채보 수가 밀려나지 않게)")]
     [SerializeField] private LayoutElement titleLayout;
@@ -31,7 +30,10 @@ public class SongGroupHeader : MonoBehaviour
     {
         Song = song;
         cover.sprite = song.Cover;
-        cover.color = song.Cover != null ? Color.white : emptyCoverColor;
+        cover.color = song.Cover != null ? Color.white : UITheme.Current.emptyCover;
+        UIThemePaint.Text(titleText, UITextLevel.Primary);
+        UIThemePaint.Text(artistText, UITextLevel.Description);
+        UIThemePaint.Text(countText, UITextLevel.Description);
         titleText.text = song.Title;
         artistText.text = string.IsNullOrEmpty(song.Artist) ? string.Empty : song.Artist;
         countText.text = chartCount == 1

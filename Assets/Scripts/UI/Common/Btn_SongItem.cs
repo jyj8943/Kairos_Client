@@ -8,7 +8,8 @@ using UnityEngine.UI;
 /// <summary>
 /// 곡 목록의 곡 아이템 하나. 에디터 곡 고르기(Prefabs/Common/Btn_SongItem)와 곡 선택 화면(Prefabs/SongSelect/Btn_SongItem)이 같이 쓴다.
 /// - 키보드나 마우스로 선택되면 곧바로 그 곡을 고른다. (클릭 없이 이동만으로 곡이 바뀜)
-/// - 고른 곡은 배경·글자색을 바꾼다 (색은 프리팹 값).
+/// - 고른 곡은 배경·글자색을 바꾼다. 에디터 프리팹은 프리팹 색, 곡 선택 프리팹(useMenuTheme)은 UITheme 색
+///   (보통 = 패널 흰색 58% + 기본·보조 글자, 고름 = 포인트색 18% 바탕 + 왼쪽 막대).
 /// - 곡 선택 프리팹만 쓰는 칸 (비워 두면 쓰지 않는다, 기획서 3-3 ② 11/17):
 ///   왼쪽 하늘색 막대(selectBar), 고르면 크게(높이·앨범·제목 크기), 둘째 줄 아티스트(showArtist),
 ///   오른쪽 난이도 칸(위 E · N · H 레벨, 아래 난이도별 최고 랭크 + FC/AP 도장, 없으면 —).
@@ -40,6 +41,8 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     [SerializeField] private Color emptyCoverColor = new Color32(0xD4, 0xD4, 0xD8, 0xFF);
 
     [Header("곡 선택 화면 전용 (비워 두면 쓰지 않는다)")]
+    [Tooltip("켜면 위 색 대신 메뉴 화면 톤(UITheme)으로 칠한다")]
+    [SerializeField] private bool useMenuTheme;
     [Tooltip("둘째 줄에 BPM·길이 대신 아티스트를 쓴다")]
     [SerializeField] private bool showArtist;
     [Tooltip("고른 곡 왼쪽 하늘색 막대 (Img_SelectBar)")]
@@ -116,7 +119,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         }
 
         cover.sprite = song.Cover;
-        cover.color = song.Cover != null ? Color.white : emptyCoverColor;
+        cover.color = song.Cover != null ? Color.white : (useMenuTheme ? UITheme.Current.emptyCover : emptyCoverColor);
 
         SetChosen(false);
     }
@@ -146,7 +149,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
             }
 
             string initial = string.IsNullOrEmpty(column.difficulty) ? string.Empty : column.difficulty.Substring(0, 1);
-            Color difficultyColor = DifficultyColors.Get(column.difficulty).Background;
+            Color difficultyColor = UITheme.Current.GetDifficulty(column.difficulty);
             if (column.levelText != null)
             {
                 column.levelText.text = string.Format(GameConstants.SongSelect.ListLevelFormat, initial,
@@ -156,16 +159,12 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
             if (column.levelTag != null)
             {
                 Color tag = difficultyColor;
-                tag.a = 0.22f;
+                tag.a = UITheme.Current.selectedAlpha;
                 column.levelTag.color = tag;
             }
 
             RecordTexts record = SongSelectRecordFormat.Build(chart != null ? findRecord?.Invoke(chart.chartId) : null);
-            if (column.rankText != null)
-            {
-                column.rankText.text = record.Rank;
-                column.rankText.color = record.IsRankS ? (Color)GameConstants.SongSelect.RankSColor : Color.white;
-            }
+            UIThemePaint.Rank(column.rankText, record);
             if (column.stamp != null) column.stamp.SetStamp(record.Stamp);
         }
     }
@@ -177,11 +176,19 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     {
         CacheComponents();
         IsChosen = chosen;
-        background.color = chosen ? chosenBackgroundColor : normalBackgroundColor;
-        titleText.color = chosen ? chosenTextColor : normalTitleColor;
-        infoText.color = chosen ? chosenTextColor : normalInfoColor;
-
-        if (selectBar != null) selectBar.gameObject.SetActive(chosen);
+        if (useMenuTheme)
+        {
+            UIThemePaint.SelectableRow(background, selectBar, chosen);
+            UIThemePaint.Text(titleText, UITextLevel.Primary);
+            UIThemePaint.Text(infoText, UITextLevel.Secondary);
+        }
+        else
+        {
+            background.color = chosen ? chosenBackgroundColor : normalBackgroundColor;
+            titleText.color = chosen ? chosenTextColor : normalTitleColor;
+            infoText.color = chosen ? chosenTextColor : normalInfoColor;
+            if (selectBar != null) selectBar.gameObject.SetActive(chosen);
+        }
         if (layoutElement != null && normalHeight > 0f && chosenHeight > 0f)
             layoutElement.preferredHeight = chosen ? chosenHeight : normalHeight;
         if (normalCoverSize > 0f && chosenCoverSize > 0f)

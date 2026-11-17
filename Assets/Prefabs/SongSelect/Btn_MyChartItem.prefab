@@ -707,6 +707,7 @@ MonoBehaviour:
   chartInfoText: {fileID: 7967140841372846340}
   selectedBackgroundColor: {r: 0.16470589, g: 0.21960784, b: 0.32156864, a: 0.92156863}
   selectedTextColor: {r: 1, g: 1, b: 1, a: 1}
+  useMenuTheme: 1
   showLevelOnly: 1
   selectBar: {fileID: 1979502971271356679}
   rankText: {fileID: 4408754795709990796}
@@ -859,6 +860,7 @@ GameObject:
   - component: {fileID: 4778127572923556302}
   - component: {fileID: 8161884741865319585}
   - component: {fileID: 6406955293198081254}
+  - component: {fileID: 4196426450552539723}
   m_Layer: 5
   m_Name: Txt_CustomBadge
   m_TagString: Untagged
@@ -985,6 +987,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4196426450552539723
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7997129336443050453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 393b359ec124f184f9280b28bc0ca0fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIThemeColor
+  role: 5
 --- !u!1 &8895495329674535871
 GameObject:
   m_ObjectHideFlags: 0
@@ -1133,6 +1148,7 @@ GameObject:
   - component: {fileID: 2915651296072337655}
   - component: {fileID: 9172659317338216729}
   - component: {fileID: 4916240621715971468}
+  - component: {fileID: 4697100270943923596}
   m_Layer: 5
   m_Name: Img_CustomBadge
   m_TagString: Untagged
@@ -1181,7 +1197,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.54509807, g: 0.36078432, b: 0.9647059, a: 1}
+  m_Color: {r: 0.54509807, g: 0.49803922, b: 0.81960785, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1198,3 +1214,16 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4697100270943923596
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8929933572472242139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 393b359ec124f184f9280b28bc0ca0fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIThemeColor
+  role: 12

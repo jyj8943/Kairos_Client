@@ -9,7 +9,8 @@ using UnityEngine.UI;
 /// - 에디터: 채보 이름과 "Lv.N · 노트 N"을 표시하고, 선택만으로는 열지 않고 클릭·Enter 때 onChosen을 부른다.
 /// - 곡 선택(기획서 3-3 나만의 채보 탭 11/17): CUSTOM 뱃지 · 채보 이름 · Lv · 최고 랭크 + FC/AP 도장.
 ///   키보드·마우스로 선택되면 곧바로 그 채보를 고른다 (SetSelectCallback). 고른 채보는 왼쪽 하늘색 막대(selectBar)와 밝은 배경.
-/// - 강조: 선택(또는 고른 채보)이면 배경·글자색을 바꾼다 (색은 프리팹 값).
+/// - 강조: 선택(또는 고른 채보)이면 배경·글자색을 바꾼다. 에디터 프리팹은 프리팹 색, 곡 선택 프리팹(useMenuTheme)은 UITheme 색
+///   (보통 = 패널 흰색 58%, 고름 = 포인트색 18% 바탕 + 왼쪽 막대, 글자 = 기본).
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
@@ -23,6 +24,8 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
     [SerializeField] private Color selectedTextColor = Color.white;
 
     [Header("곡 선택 화면 전용 (비워 두면 쓰지 않는다)")]
+    [Tooltip("켜면 위 색 대신 메뉴 화면 톤(UITheme)으로 칠한다")]
+    [SerializeField] private bool useMenuTheme;
     [Tooltip("켜면 chartInfoText에 레벨만 쓴다 (\"Lv. 6\")")]
     [SerializeField] private bool showLevelOnly;
     [Tooltip("고른 채보 왼쪽 하늘색 막대 (Img_SelectBar)")]
@@ -101,11 +104,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
     public void SetRecord(ChartRecordData record)
     {
         RecordTexts texts = SongSelectRecordFormat.Build(record);
-        if (rankText != null)
-        {
-            rankText.text = texts.Rank;
-            rankText.color = texts.IsRankS ? (Color)GameConstants.SongSelect.RankSColor : Color.white;
-        }
+        UIThemePaint.Rank(rankText, texts);
         if (stamp != null) stamp.SetStamp(texts.Stamp);
     }
 
@@ -146,6 +145,15 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
     private void SetSelected(bool selected)
     {
         bool highlighted = selected || isChosen;
+        if (useMenuTheme)
+        {
+            // 곡 선택은 선택 = 고른 채보라서 고른 채보만 강조한다
+            UIThemePaint.SelectableRow(background, selectBar, isChosen);
+            UIThemePaint.Text(chartNameText, UITextLevel.Primary);
+            UIThemePaint.Text(chartInfoText, UITextLevel.Primary);
+            return;
+        }
+
         background.color = highlighted ? selectedBackgroundColor : normalBackgroundColor;
         chartNameText.color = highlighted ? selectedTextColor : normalNameColor;
         chartInfoText.color = highlighted ? selectedTextColor : normalInfoColor;

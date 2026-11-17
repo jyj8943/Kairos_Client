@@ -7,7 +7,8 @@ using Debug = UnityEngine.Debug;
 /// 흐린 배경 (기획서 3-3 ⑨ 곡 선택 배경). 여러 화면에서 쓸 수 있는 공용 컴포넌트로, 앞 RawImage에 붙인다.
 /// - 입력은 Texture (Sprite의 texture, 나중에 BGA VideoPlayer의 RenderTexture도).
 /// - 처리: 입력을 기준 해상도(1920×1080)의 1/4 RenderTexture로 줄이고(16:9가 아니면 가운데를 잘라 맞춤) →
-///   블러 셰이더(Kairos/UIBlur)로 가로 1회·세로 1회를 BlurIterations번 반복 → 결과 RenderTexture를 RawImage에 표시.
+///   블러 셰이더(Kairos/UIBlur)로 가로 1회·세로 1회를 BlurIterations번 반복 (마지막 세로 패스에서 채도·밝기 보정, SetColorGrade) →
+///   결과 RenderTexture를 RawImage에 표시. 보정 값은 실행용 머티리얼 사본에 넣는다 (에셋 머티리얼은 그대로).
 /// - 기본은 입력이 바뀔 때 한 번만 처리한다. updateEveryFrame을 켜면 LateUpdate에서 매 프레임 처리한다 (BGA용, 지금은 끔).
 /// - RenderTexture는 처음 한 번 만들어(결과 2장 + 중간 1장) 계속 다시 쓰고, OnDestroy에서 해제한다.
 /// - 입력이 바뀌면 결과 2장을 번갈아 쓰고 앞·뒤 RawImage 알파로 섞는다 (BackgroundFadeSeconds, 실제 시간). 처음과 instant는 페이드 없이 바로.
@@ -24,6 +25,11 @@ public class UIBlurBackground : MonoBehaviour
 
     private const int HorizontalPass = 0;
     private const int VerticalPass = 1;
+    /// <summary>세로 + 색 보정(채도·밝기). 마지막 반복의 세로 패스 대신 한 번 쓴다</summary>
+    private const int VerticalGradePass = 2;
+
+    private static readonly int SaturationId = Shader.PropertyToID("_Saturation");
+    private static readonly int BrightnessId = Shader.PropertyToID("_Brightness");
 
     [Tooltip("블러 머티리얼 (Assets/Materials/UIBlur.mat, 셰이더 Kairos/UIBlur)")]
     [SerializeField] private Material blurMaterial;
@@ -35,6 +41,11 @@ public class UIBlurBackground : MonoBehaviour
     [SerializeField] private bool updateEveryFrame;
 
     private RawImage frontImage;
+
+    /// <summary>색 보정 값을 넣을 실행용 머티리얼 사본 (에셋 머티리얼은 고치지 않는다)</summary>
+    private Material runtimeMaterial;
+    private float saturation = 1f;
+    private float brightness = 1f;
     private readonly RenderTexture[] results = new RenderTexture[2];
     private RenderTexture temp;
     private int frontIndex = -1;
@@ -74,6 +85,18 @@ public class UIBlurBackground : MonoBehaviour
         GetFrontImage();
     }
 
+    /// <summary>
+    /// 색 보정 값 (채도 1 = 원래, 밝기 1 = 원래). 다음 처리부터 쓴다 (이미 처리한 결과는 그대로). 메뉴 화면은 UITheme 값을 넘긴다.
+    /// </summary>
+    public void SetColorGrade(float newSaturation, float newBrightness)
+    {
+        saturation = newSaturation;
+        brightness = newBrightness;
+    }
+
+    /// <summary>지금 색 보정 값 (확인용)</summary>
+    public Vector2 ColorGrade => new Vector2(saturation, brightness);
+
     /// <summary>Sprite 입력 (sprite.texture를 쓴다. Sprite Mode Single 기준)</summary>
     public void SetSource(Sprite sprite, bool instant)
     {
@@ -92,8 +115,9 @@ public class UIBlurBackground : MonoBehaviour
 
         if (texture == null)
         {
+            // 입력이 없으면 아래 바탕색이 보이게 투명하게 둔다
             front.texture = null;
-            front.color = Color.black;
+            front.color = Color.clear;
             HideBack();
             isFading = false;
             return;
@@ -139,6 +163,12 @@ public class UIBlurBackground : MonoBehaviour
     {
         for (int i = 0; i < results.Length; i++) Release(ref results[i]);
         Release(ref temp);
+        if (runtimeMaterial != null)
+        {
+            if (Application.isPlaying) Destroy(runtimeMaterial);
+            else DestroyImmediate(runtimeMaterial);
+            runtimeMaterial = null;
+        }
     }
 
     /// <summary>
@@ -154,12 +184,17 @@ public class UIBlurBackground : MonoBehaviour
         GetCrop(sourceAspect, GameConstants.SongSelect.BlurAspect, out Vector2 scale, out Vector2 offset);
         Graphics.Blit(texture, target, scale, offset);
 
-        if (blurMaterial != null)
+        Material material = GetRuntimeMaterial();
+        if (material != null)
         {
-            for (int i = 0; i < GameConstants.SongSelect.BlurIterations; i++)
+            material.SetFloat(SaturationId, saturation);
+            material.SetFloat(BrightnessId, brightness);
+            int iterations = Mathf.Max(1, GameConstants.SongSelect.BlurIterations);
+            for (int i = 0; i < iterations; i++)
             {
-                Graphics.Blit(target, temp, blurMaterial, HorizontalPass);
-                Graphics.Blit(temp, target, blurMaterial, VerticalPass);
+                bool last = i == iterations - 1;
+                Graphics.Blit(target, temp, material, HorizontalPass);
+                Graphics.Blit(temp, target, material, last ? VerticalGradePass : VerticalPass);
             }
         }
         else if (ProcessCount == 0)
@@ -170,6 +205,14 @@ public class UIBlurBackground : MonoBehaviour
         watch.Stop();
         LastProcessMilliseconds = watch.Elapsed.TotalMilliseconds;
         ProcessCount++;
+    }
+
+    /// <summary>에셋 머티리얼의 실행용 사본 (처음 한 번 만든다). 에셋이 없으면 null</summary>
+    private Material GetRuntimeMaterial()
+    {
+        if (runtimeMaterial == null && blurMaterial != null)
+            runtimeMaterial = new Material(blurMaterial) { name = $"{blurMaterial.name} (Runtime)", hideFlags = HideFlags.DontSave };
+        return runtimeMaterial;
     }
 
     /// <summary>
