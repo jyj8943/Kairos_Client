@@ -31,7 +31,7 @@ public class GearView : MonoBehaviour
     [SerializeField] private SpriteRenderer[] laneDividers;
 
     [Header("키 칸 (KeyCells, 라인 순서)")]
-    [Tooltip("키 칸 배경 (KeyCell_0 ~ 3, Sliced). 노트(sortingOrder 3)보다 위에 그린다")]
+    [Tooltip("키 칸 배경 (KeyCell_0 ~ 3, Sliced). 노트(sortingOrder 5)보다 위에 그린다")]
     [SerializeField] private SpriteRenderer[] keyCells;
     [Tooltip("키 칸 테두리 (KeyCell_n/Frame, Sliced)")]
     [SerializeField] private SpriteRenderer[] keyCellFrames;

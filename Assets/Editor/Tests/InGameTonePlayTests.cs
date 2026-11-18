@@ -228,7 +228,7 @@ public class InGameTonePlayTests
         float px = gear.UnitsPerReferencePx;
         Assert.AreEqual(gear.LaneWidth * GameConstants.Editor.LaneCount, line.size.x, 1e-4f, "폭 = 기어 폭");
         Assert.AreEqual(GameConstants.Play.JudgeLineThicknessPx * px, line.size.y, 1e-4f, "두께 = JudgeLineThicknessPx");
-        Assert.AreEqual(5, line.sortingOrder, "그리는 순서 그대로 (노트 3 위, 키 칸 6 아래)");
+        Assert.AreEqual(3, line.sortingOrder, "판정선은 노트(5)·노트 빛(4)보다 뒤, 라인 빛(2) 위 (11/18)");
 
         // 세로 중심 = 화면 위에서 900px (이전 JudgeLineY 그대로), 렌더러 중심도 같은 높이
         float expectedY = gear.ScreenTopY - 900f * px;
