@@ -104,12 +104,9 @@ public static class GameConstants
 
         /// <summary>
         /// 인게임 마디선 굵기 (1080 화면 기준 px, 기획서 3-4 마디선). 월드 굵기 = 이 값 × GearView.UnitsPerReferencePx.
-        /// 살짝 보일 정도로 얇게 둔다. 너무 진하거나 흐리면 이 값과 MeasureLineAlpha만 바꾼다
+        /// 살짝 보일 정도로 얇게 둔다. 색(불투명도)은 UITheme.measureLine
         /// </summary>
         public const float MeasureLineThickness = 2f;
-
-        /// <summary>인게임 마디선 불투명도 (흰색에 곱하는 알파, 0 ~ 1)</summary>
-        public const float MeasureLineAlpha = 0.5f;
 
         /// <summary>인게임 배속 키(1 / 2)를 누르고 있을 때: 이 시간 뒤부터 반복 (초)</summary>
         public const double SpeedKeyRepeatDelaySeconds = 0.4;
@@ -121,8 +118,15 @@ public static class GameConstants
         public const string SpeedChangeFormat = "x{0:0.0}";
         public const float SpeedChangeShowSeconds = 0.8f;
 
-        /// <summary>인게임 곡 정보 패널 3줄: {0} 배속 (플레이 중 1 / 2 키로 바꾸면 다시 쓴다)</summary>
-        public const string InGameSpeedFormat = "배속 x{0:0.0} · [1] [2]로 변경";
+        /// <summary>인게임 곡 정보 카드 3줄: {0} 배속 "x5.5" (플레이 중 1 / 2 키로 바꾸면 다시 쓴다). 뒤에 [1] [2] 키 모양 + SpeedKeyHint</summary>
+        public const string InGameSpeedFormat = "x{0:0.0}";
+
+        /// <summary>인게임 곡 정보 카드 3줄: 배속 키 모양 뒤 안내</summary>
+        public const string InGameSpeedKeyHint = "로 변경";
+
+        /// <summary>인게임 곡 정보 카드 배속 키 (입력 에셋 바인딩에서 읽지 못했을 때 쓴다)</summary>
+        public const string SpeedDownKeyFallback = "1";
+        public const string SpeedUpKeyFallback = "2";
 
         /// <summary>인게임 곡 정보 패널 레벨: {0} 레벨</summary>
         public const string InGameLevelFormat = "Lv.{0}";
@@ -173,23 +177,21 @@ public static class GameConstants
         public const string FastText = "FAST";
         public const string SlowText = "SLOW";
 
-        /// <summary>FAST / SLOW 기본 색 (Canvas_InGame Inspector에서 바꿀 수 있다). 판정 색과 겹치지 않는 청록 · 주황</summary>
-        public static readonly Color32 FastColor = new Color32(0x2D, 0xD4, 0xBF, 0xFF);
-        public static readonly Color32 SlowColor = new Color32(0xFB, 0x92, 0x3C, 0xFF);
         public const string FullComboText = "FULL COMBO";
         public const string AllPerfectText = "ALL PERFECT";
 
         /// <summary>인게임 콤보 숫자 위 제목 (Txt_ComboTitle)</summary>
         public const string ComboTitleText = "COMBO";
 
+        /// <summary>인게임 판정 패널 맨 아래 박스 라벨 (정확도 표기 이름 RATE, 곡 선택·결과와 같음)</summary>
+        public const string RateTitleText = "RATE";
+        public const string ScoreTitleText = "SCORE";
+
         /// <summary>결과 화면 신기록 표시 (기획서 3-5 ③, SCORE · RATE · MAX COMBO 각각 옆)</summary>
         public const string NewRecordText = "NEW RECORD";
 
-        /// <summary>시작 MISS 롱노트의 비활성 색 (끝까지 이 색으로 내려간다)</summary>
-        public static readonly Color32 LongNoteMissedColor = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
-
         /// <summary>
-        /// 라인별 노트 색 (A · S · ; · ' 순서). 에디터 Img_ShortNote의 기본 색과 같은 값이다.
+        /// 에디터 노트의 라인별 색 (A · S · ; · ' 순서, Img_ShortNote·Img_LongNote). 인게임 노트 색은 UITheme 인게임 묶음.
         /// </summary>
         public static readonly Color32[] LaneColors =
         {
@@ -777,32 +779,6 @@ public static class GameConstants
     }
 
     /// <summary>채보 파일 형식과 저장 위치 (기획서 2-2, 2-4)</summary>
-    /// <summary>
-    /// 난이도 표기 색 (곡 선택 난이도 버튼·인게임 채보 뱃지가 같이 쓴다. 고르는 함수는 DifficultyColors.Get).
-    /// 밝은 배경 + 흰 글자 + 얇은 어두운 외곽선(B안). 외곽선은 난이도 색 위 글자에만 쓰는 머티리얼 프리셋
-    /// (Assets/Fonts/NEXON_Lv2_Gothic/TTF/NEXON Lv2 Gothic SDF Outline Difficulty.mat)에 들어 있고, 그 값이 아래 Outline 상수다.
-    /// 씬에 색을 직렬화하지 않는다.
-    /// </summary>
-    public static class DifficultyColor
-    {
-        public static readonly Color32 EasyBackground = new Color32(0x22, 0xC5, 0x5E, 0xFF);
-        public static readonly Color32 EasyText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
-        public static readonly Color32 NormalBackground = new Color32(0xFA, 0xCC, 0x15, 0xFF);
-        public static readonly Color32 NormalText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
-        public static readonly Color32 HardBackground = new Color32(0xEF, 0x44, 0x44, 0xFF);
-        public static readonly Color32 HardText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
-
-        /// <summary>나만의 채보·테스트 플레이(CUSTOM) 뱃지 색 (인게임에서만 쓴다). 모르는 난이도 이름도 이 색이다</summary>
-        public static readonly Color32 CustomBackground = new Color32(0x8B, 0x5C, 0xF6, 0xFF);
-        public static readonly Color32 CustomText = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
-
-        /// <summary>난이도 색 위 글자 외곽선 색 (검정, 불투명도 45%)</summary>
-        public static readonly Color OutlineColor = new Color(0f, 0f, 0f, 0.45f);
-
-        /// <summary>난이도 색 위 글자 외곽선 굵기 (TMP _OutlineWidth, 0~1). 글자가 두꺼워 보이지 않게 얇게 둔다</summary>
-        public const float OutlineWidth = 0.12f;
-    }
-
     public static class Chart
     {
         /// <summary>지금 쓰는 채보 형식 버전. 이 값과 다른 파일은 읽지 않는다</summary>

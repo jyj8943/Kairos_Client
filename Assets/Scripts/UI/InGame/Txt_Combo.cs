@@ -61,6 +61,14 @@ public class Txt_Combo : MonoBehaviour
         rect = (RectTransform)transform;
     }
 
+    /// <summary>콤보 숫자 색 (UITheme 인게임 묶음). Canvas_InGame.Init에서 ResetView 전에 부른다</summary>
+    public void SetColor(Color color)
+    {
+        if (text == null) CacheComponents();
+        baseColor = color;
+        text.color = color;
+    }
+
     /// <summary>
     /// 처음 상태로 돌린다 (숨김, 콤보 0). Canvas_InGame.Init(씬 Init·재시작)에서 부른다.
     /// 처음 부를 때 Inspector에 둔 위치·색을 기준값으로 기억한다.

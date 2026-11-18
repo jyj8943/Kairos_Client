@@ -357,7 +357,7 @@ public class LongNotePlayTests
         Assert.AreEqual(0, score.Combo);
         Assert.AreEqual(0, CountTicks(n));
         Assert.IsNotNull(view, "회색으로 계속 내려가는 중");
-        Assert.AreEqual((Color)GameConstants.Play.LongNoteMissedColor, bodyColor, "P11: 시작 MISS 색");
+        Assert.AreEqual(UITheme.Current.longNoteMissed, bodyColor, "P11: 시작 MISS 색 (UITheme)");
         Assert.AreEqual(0, EndKeySounds, "시작 MISS는 끝 키음 없음");
     }
 
@@ -514,7 +514,7 @@ public class LongNotePlayTests
         yield return StartPlay(chart, true, TestCharts.OfficialSongId);
         Assert.AreEqual(0, judge.TotalTicks, "롱노트 유지 틱 없음");
         Img_JudgePanel panel = Get<Img_JudgePanel>(Get<Canvas_InGame>(scene, "canvas"), "judgePanel");
-        Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "accuracy").text, "자동 플레이 시작: 판정 전 정확도 0%");
+        Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "rate").text, "자동 플레이 시작: 판정 전 RATE 0%");
 
         float deadline = TestSpeed.Deadline(200f);
         while (!judge.AllJudged)

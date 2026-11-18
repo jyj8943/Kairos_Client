@@ -17,7 +17,10 @@ public enum UIColorRole
     KeyCapFrame,
     KeyCapFill,
     DifficultyCustom,
-    EmptyCover
+    EmptyCover,
+    PanelBorder,
+    StatBox,
+    StatBoxBorder
 }
 
 /// <summary>
@@ -78,6 +81,9 @@ public class UIThemeColor : MonoBehaviour
             case UIColorRole.KeyCapFill: return UITheme.WithAlpha(Color.white, 0.75f);
             case UIColorRole.DifficultyCustom: return theme.difficultyCustom;
             case UIColorRole.EmptyCover: return theme.emptyCover;
+            case UIColorRole.PanelBorder: return theme.panelBorder;
+            case UIColorRole.StatBox: return theme.statBox;
+            case UIColorRole.StatBoxBorder: return theme.statBoxBorder;
             default: return Color.magenta;
         }
     }

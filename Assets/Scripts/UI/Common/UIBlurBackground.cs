@@ -13,6 +13,8 @@ using Debug = UnityEngine.Debug;
 /// - RenderTexture는 처음 한 번 만들어(결과 2장 + 중간 1장) 계속 다시 쓰고, OnDestroy에서 해제한다.
 /// - 입력이 바뀌면 결과 2장을 번갈아 쓰고 앞·뒤 RawImage 알파로 섞는다 (BackgroundFadeSeconds, 실제 시간). 처음과 instant는 페이드 없이 바로.
 /// - 머티리얼(UIBlur.mat)은 직렬화 필드로 연결해 빌드에서 셰이더가 빠지지 않게 한다.
+/// - keepResultAcrossScenes를 켜면(인게임) 처리 결과 한 장을 씬을 넘어 남겨 두고, 다음 씬에서 같은 입력·같은 색 보정이면 다시 처리하지 않고 그대로 쓴다
+///   (인게임 재시작은 씬을 다시 불러오지만 같은 곡이라 블러를 다시 하지 않는다). 다른 입력이 오면 남겨 둔 결과를 해제하고 새로 처리한다.
 /// </summary>
 [RequireComponent(typeof(RawImage))]
 public class UIBlurBackground : MonoBehaviour
@@ -39,6 +41,14 @@ public class UIBlurBackground : MonoBehaviour
 
     [Tooltip("켜면 LateUpdate에서 매 프레임 다시 처리한다 (BGA 영상용). 지금은 끔")]
     [SerializeField] private bool updateEveryFrame;
+
+    [Tooltip("켜면 처리 결과를 씬을 넘어 남겨 두고 같은 입력이면 다시 처리하지 않는다 (인게임 재시작용). 크로스페이드는 하지 않는다")]
+    [SerializeField] private bool keepResultAcrossScenes;
+
+    /// <summary>씬을 넘어 남겨 둔 결과 (keepResultAcrossScenes 전용, 한 장)</summary>
+    private static RenderTexture keptResult;
+    private static Texture keptSource;
+    private static Vector2 keptGrade;
 
     private RawImage frontImage;
 
@@ -123,6 +133,12 @@ public class UIBlurBackground : MonoBehaviour
             return;
         }
 
+        if (keepResultAcrossScenes)
+        {
+            ShowKept(texture);
+            return;
+        }
+
         bool first = frontIndex < 0;
         int target = first ? 0 : 1 - frontIndex;
         Process(texture, target);
@@ -143,6 +159,41 @@ public class UIBlurBackground : MonoBehaviour
         fadeElapsed = 0f;
         isFading = true;
     }
+
+    /// <summary>
+    /// 남겨 둔 결과가 같은 입력·같은 색 보정이면 그대로 보이고, 아니면 새로 처리해 그 결과를 남겨 둔다 (앞 결과는 해제).
+    /// </summary>
+    private void ShowKept(Texture texture)
+    {
+        Vector2 grade = new Vector2(saturation, brightness);
+        if (keptResult == null || keptSource != texture || keptGrade != grade || !keptResult.IsCreated())
+        {
+            Process(texture, 0);
+            Release(ref keptResult);
+            keptResult = results[0];
+            results[0] = null;
+            keptSource = texture;
+            keptGrade = grade;
+        }
+        else
+        {
+            ReusedCount++;
+        }
+
+        frontIndex = 0;
+        RawImage front = GetFrontImage();
+        front.texture = keptResult;
+        front.color = Color.white;
+        front.enabled = true;
+        HideBack();
+        isFading = false;
+    }
+
+    /// <summary>씬을 넘어 남겨 둔 결과를 다시 쓴 횟수 (확인용)</summary>
+    public int ReusedCount { get; private set; }
+
+    /// <summary>씬을 넘어 남겨 둔 결과의 입력 (확인용)</summary>
+    public static Texture KeptSource => keptSource;
 
     private void LateUpdate()
     {

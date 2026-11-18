@@ -201,10 +201,10 @@ public class KeyControlPlayTests
 
         // 플레이 중: 실제 F5 키
         InGameScene first = Object.FindFirstObjectByType<InGameScene>();
-        Assert.AreEqual("0.00%", AccuracyText(first), "테스트 플레이 시작: 판정 전 정확도 0%");
+        Assert.AreEqual("0.00%", RateText(first), "테스트 플레이 시작: 판정 전 RATE 0%");
         yield return Tap(Key.F5);
         yield return WaitNewInGame(first);
-        Assert.AreEqual("0.00%", AccuracyText(Object.FindFirstObjectByType<InGameScene>()), "F5 다시 하기 뒤에도 0%");
+        Assert.AreEqual("0.00%", RateText(Object.FindFirstObjectByType<InGameScene>()), "F5 다시 하기 뒤에도 0%");
 
         // 일시정지 메뉴가 맨 위: 다시 하기 됨
         InGameScene second = Object.FindFirstObjectByType<InGameScene>();
@@ -226,16 +226,16 @@ public class KeyControlPlayTests
         yield return Tap(Key.F5);
         yield return WaitNewInGame(second);
         Assert.IsFalse(GameManager.UI.HasOpenPopup, "다시 시작하면 팝업이 닫혀 있다");
-        Assert.AreEqual("0.00%", AccuracyText(Object.FindFirstObjectByType<InGameScene>()), "일시정지 중 F5 뒤에도 0%");
+        Assert.AreEqual("0.00%", RateText(Object.FindFirstObjectByType<InGameScene>()), "일시정지 중 F5 뒤에도 0%");
         yield return new ExitPlayMode();
     }
 
-    /// <summary>판정 패널 정확도 글자 (InGameScene → Canvas_InGame → Img_JudgePanel)</summary>
-    private static string AccuracyText(InGameScene scene)
+    /// <summary>판정 패널 RATE 글자 (InGameScene → Canvas_InGame → Img_JudgePanel)</summary>
+    private static string RateText(InGameScene scene)
     {
         object canvas = typeof(InGameScene).GetField("canvas", Private).GetValue(scene);
         object panel = canvas.GetType().GetField("judgePanel", Private).GetValue(canvas);
-        return ((TMPro.TMP_Text)panel.GetType().GetField("accuracy", Private).GetValue(panel)).text;
+        return ((TMPro.TMP_Text)panel.GetType().GetField("rate", Private).GetValue(panel)).text;
     }
 
     // ───── 준비 ─────

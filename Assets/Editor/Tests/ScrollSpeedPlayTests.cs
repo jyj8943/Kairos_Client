@@ -260,7 +260,7 @@ public class ScrollSpeedPlayTests
         InGameEntryData normal = new InGameEntryData { songId = Song, chartId = TestCharts.OfficialChartId, chartType = ChartType.Official, mode = InGameMode.Normal };
         yield return LoadInGame(normal);
         Img_JudgePanel panel = Get<Img_JudgePanel>(Get<Canvas_InGame>(scene, "canvas"), "judgePanel");
-        Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "accuracy").text, "일반 플레이 시작: 판정 전 정확도 0%");
+        Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "rate").text, "일반 플레이 시작: 판정 전 RATE 0%");
         TapTo(3f);
         scene.GetType().GetMethod("Restart", Private).Invoke(scene, null);
         yield return null;

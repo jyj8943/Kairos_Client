@@ -3,52 +3,64 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 인게임 화면 UI (기획서 3-4 인게임 화면 배치 개정 11/13). InGameScene이 Init()을 호출한다.
-/// - 왼쪽 곡 정보 패널(Img_SongInfo): 곡 제목 / 뱃지(공식: 난이도 이름·난이도별 색, 나만의 채보: CUSTOM) + 채보 이름(나만의 채보만) + Lv.
-///   / 배속 + "[1] [2]로 변경" / 곡 진행 바 / 오른쪽 위 테스트 플레이 표시. 무엇을 보일지는 InGameHudRules.BuildSongInfo가 정한다.
-/// - 왼쪽 판정 패널(Img_JudgePanel): 판정 개수·FAST/SLOW 개수·정확도(Img_JudgePanel 스크립트) + 맨 아래 점수.
-/// - 기어 위쪽 콤보(Txt_Combo: 오름·쉬면 숨기기 애니메이션), 판정선 위 판정 글자와 그 위 FAST/SLOW(Txt_FastSlow), 안내 문구, 재개 카운트다운.
+/// 인게임 화면 UI (기획서 3-4, 배치 11/13 · 톤 11/18 라벤더 안개). InGameScene이 Init()을 호출한다.
+/// - 왼쪽 ⑧ 곡 정보 카드(Img_SongInfo, 흰색 58% 유리 패널 + 1px 테두리):
+///   윗줄 Img_Album(곡 앨범 150×150, 없으면 빈 앨범 색) + 오른쪽 3줄 (곡 제목 + 테스트 플레이 뱃지 / 난이도·CUSTOM 뱃지 + 채보 이름 + Lv. / 배속 + [1] [2]로 변경),
+///   아랫줄 카드 폭 전체 곡 진행 바(Img_Progress/Img_ProgressFill). 무엇을 보일지는 InGameHudRules.BuildSongInfo가 정한다.
+/// - 왼쪽 ⑥ 판정 패널(Img_JudgePanel): 판정 개수·FAST/SLOW 개수·RATE 박스(Img_JudgePanel 스크립트) + SCORE 박스(이 스크립트).
+/// - 기어 위쪽 콤보(Txt_Combo: 오름·쉬면 숨기기 애니메이션), 판정선 위 판정 글자(빛)와 그 위 FAST/SLOW(Txt_FastSlow), 안내 문구, 재개 카운트다운.
 ///   FAST/SLOW를 띄울지는 InGameScene이 FastSlowRules로 정해 넘긴다 (이 스크립트는 규칙을 판단하지 않는다).
-///   판정 글자(Txt_Judge)는 판정마다 처음부터 등장(크기 0.7 → 1, 투명도 0 → 1) → 0.82초 유지 → 사라짐,
-///   FAST/SLOW(Txt_FastSlow)는 판정 글자와 따로 0.47초 유지 → 사라짐 (다음 PERFECT에서 지우지 않음).
 ///   콤보·판정 글자·FAST/SLOW 애니메이션은 TickAnimations로만 흐른다 (일시정지·카운트다운 중에는 InGameScene이 부르지 않아 멈춤).
+/// - 색은 모두 UITheme에서 Init 때 읽는다 (씬에 색을 직렬화하지 않는다):
+///   왼쪽 패널(유리 패널 위)은 메뉴 묶음(글자·판정 이름·난이도 뱃지·포인트색), 기어 위 판정 글자·콤보는 인게임 묶음(밝은 색).
+///   바뀌지 않는 그래픽은 UIThemeColor 역할로 칠하고(UIThemeColor.ApplyAll), 바뀌는 색은 여기서 칠한다.
 /// - 플레이 중 배속을 바꾸면 곡 정보의 배속을 고치고, 기어 옆(Txt_SpeedChange)에 "x5.6"을 잠깐(SpeedChangeShowSeconds) 보여준다.
 /// - 결과는 결과 씬(ResultScene)이 보여준다.
-/// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다. 진행 바는 채움의 anchorMax.x만 바꾼다.
+/// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다 (점수는 곡 선택·결과와 같은 FormatScore, 바뀔 때만). 진행 바는 채움의 anchorMax.x만 바꾼다.
 /// </summary>
 public class Canvas_InGame : UIBase
 {
-    [Header("곡 정보 패널 (Img_SongInfo)")]
-    [Tooltip("곡 제목 (Txt_SongTitle, 넘치면 줄임표)")]
+    [Header("⑧ 곡 정보 카드 (Img_SongInfo)")]
+    [Tooltip("앨범 칸 (Img_Album, RoundedRect10 + Mask). 앨범이 없으면 이 칸의 빈 앨범 색이 보인다")]
+    [SerializeField] private Image albumFrame;
+    [Tooltip("앨범 이미지 (Img_Album/Img_AlbumCover). 진입 데이터 곡의 SongData.Cover")]
+    [SerializeField] private Image albumImage;
+    [Tooltip("곡 제목 (Txt_SongTitle, 넘치면 제목만 줄임표)")]
     [SerializeField] private TMP_Text songTitleText;
-    [Tooltip("채보 뱃지 배경 (Img_ChartBadge). 공식은 난이도별 색, 나만의 채보는 CUSTOM 색")]
+    [Tooltip("채보 뱃지 배경 (Img_ChartBadge). 공식은 메뉴용 난이도 색, 나만의 채보는 CUSTOM 색")]
     [SerializeField] private Image chartBadgeImage;
-    [Tooltip("채보 뱃지 글자 (Img_ChartBadge/Txt_ChartBadge)")]
+    [Tooltip("채보 뱃지 글자 (Img_ChartBadge/Txt_ChartBadge, 흰색)")]
     [SerializeField] private TMP_Text chartBadgeText;
-    [Tooltip("채보 뱃지 글자 머티리얼 (NEXON Lv2 Gothic SDF Outline Difficulty, 난이도 색 위 얇은 어두운 외곽선)")]
-    [SerializeField] private Material chartBadgeTextMaterial;
     [Tooltip("나만의 채보 이름 (Txt_ChartName). 나만의 채보일 때만 켜고, 넘치면 이 글자만 줄임표")]
     [SerializeField] private TMP_Text chartNameText;
     [Tooltip("레벨 (Txt_Level, \"Lv.3\"). 항상 보인다")]
     [SerializeField] private TMP_Text levelText;
-    [Tooltip("배속 (Txt_Speed, \"배속 x5.5 · [1] [2]로 변경\")")]
+    [Tooltip("배속 (Txt_Speed, \"x5.5\")")]
     [SerializeField] private TMP_Text speedText;
-    [Tooltip("곡 진행 바 채움 (Img_Progress/Img_ProgressFill, Sliced). 왼쪽 기준 anchorMax.x = 비율로 채운다")]
+    [Tooltip("배속 내리기 키 이름 (Img_SpeedDownKey/Txt_SpeedDownKey, 입력 에셋 바인딩)")]
+    [SerializeField] private TMP_Text speedDownKeyText;
+    [Tooltip("배속 올리기 키 이름 (Img_SpeedUpKey/Txt_SpeedUpKey, 입력 에셋 바인딩)")]
+    [SerializeField] private TMP_Text speedUpKeyText;
+    [Tooltip("키 모양 뒤 안내 (Txt_SpeedHint, \"로 변경\")")]
+    [SerializeField] private TMP_Text speedHintText;
+    [Tooltip("곡 진행 바 채움 (Img_Progress/Img_ProgressFill). 왼쪽 기준 anchorMax.x = 비율로 채운다")]
     [SerializeField] private RectTransform progressFill;
-    [Tooltip("테스트 플레이 표시 (Img_TestPlay). 테스트 플레이일 때만 켠다")]
+    [Tooltip("테스트 플레이 뱃지 (Img_TestPlay, 포인트색). 테스트 플레이일 때만 켠다")]
     [SerializeField] private GameObject testPlayBadge;
-    [Tooltip("테스트 플레이 표시 글자 (Img_TestPlay/Txt_TestPlay)")]
+    [Tooltip("테스트 플레이 뱃지 글자 (Img_TestPlay/Txt_TestPlay)")]
     [SerializeField] private TMP_Text testPlayText;
 
     [Header("FULL COMBO / ALL PERFECT 연출 (ClearEffect)")]
     [SerializeField] private ClearEffect clearEffect;
 
-    [Header("판정 패널 (Img_JudgePanel)")]
-    [Tooltip("판정 개수·FAST/SLOW·정확도. 점수는 scoreText")]
+    [Header("⑥ 판정 패널 (Img_JudgePanel)")]
+    [Tooltip("판정 개수·FAST/SLOW·RATE. 점수는 scoreText")]
     [SerializeField] private Img_JudgePanel judgePanel;
+    [Tooltip("점수 (Img_JudgePanel/Img_ScoreBox/Txt_Score, 오른쪽 아래)")]
+    [SerializeField] private TMP_Text scoreText;
 
-    [Header("화면 가운데")]
-    [Tooltip("판정 글자 (Txt_Judge, 판정선 위). 등장·유지·퇴장 애니메이션을 맡는다")]
+    [Header("화면 가운데 (기어 위)")]
+    [Tooltip("판정 글자 (Txt_Judge, 판정선 위). 등장·유지·퇴장 애니메이션과 빛을 맡는다")]
     [SerializeField] private Txt_Judge judgeText;
     [Tooltip("판정 글자 위 FAST / SLOW (Txt_FastSlow, GREAT · GOOD일 때만). 자기 시간만큼 유지 뒤 사라진다")]
     [SerializeField] private Txt_FastSlow fastSlowText;
@@ -56,8 +68,6 @@ public class Canvas_InGame : UIBase
     [SerializeField] private Txt_Combo comboText;
     [Tooltip("콤보 숫자 위 제목 (Combo/Txt_ComboTitle). 움직이지 않는다")]
     [SerializeField] private TMP_Text comboTitleText;
-    [Tooltip("점수 (Img_JudgePanel/Img_Score/Txt_Score, 오른쪽 정렬)")]
-    [SerializeField] private TMP_Text scoreText;
     [Tooltip("불러오기 실패 등 안내 문구 (Txt_Message)")]
     [SerializeField] private TMP_Text messageText;
     [Tooltip("일시정지 후 재개 카운트다운 숫자 (Txt_Countdown, 화면 가운데)")]
@@ -65,15 +75,11 @@ public class Canvas_InGame : UIBase
     [Tooltip("배속을 바꿀 때 기어 옆에 잠깐 보여주는 배속 (Txt_SpeedChange)")]
     [SerializeField] private TMP_Text speedChangeText;
 
-    [Header("판정 색")]
-    [SerializeField] private Color perfectColor = new Color32(0xFF, 0xD5, 0x4F, 0xFF);
-    [SerializeField] private Color greatColor = new Color32(0x6E, 0xC8, 0xF5, 0xFF);
-    [SerializeField] private Color goodColor = new Color32(0x9C, 0xCC, 0x65, 0xFF);
-    [SerializeField] private Color missColor = new Color32(0xEF, 0x53, 0x50, 0xFF);
+    /// <summary>테스트 플레이 뱃지 글자 좌우 여백 (px)</summary>
+    private const float BadgePaddingX = 12f;
 
-    [Header("FAST / SLOW 색 (판정 글자 위·판정 패널 라벨)")]
-    [SerializeField] private Color fastColor = GameConstants.Play.FastColor;
-    [SerializeField] private Color slowColor = GameConstants.Play.SlowColor;
+    /// <summary>점수 칸에 마지막으로 쓴 값 (같으면 다시 쓰지 않는다)</summary>
+    private int shownScore = -1;
 
     /// <summary>배속 변경 표시를 숨길 시각 (realtime, 음수면 숨김)</summary>
     private float speedChangeHideAt = -1f;
@@ -82,29 +88,44 @@ public class Canvas_InGame : UIBase
     private float shownProgress = -1f;
 
     /// <summary>
-    /// 곡 정보 패널·테스트 플레이 표시를 채우고 점수·콤보·진행 바를 비운다.
+    /// 테마 색을 칠하고, 곡 정보 카드·테스트 플레이 뱃지를 채우고, 점수·콤보·진행 바를 비운다.
     /// </summary>
+    /// <param name="cover">곡 앨범 (SongData.Cover). 없으면 빈 앨범 색</param>
+    /// <param name="speedDownKey">배속 내리기 키 이름 (입력 에셋 바인딩에서 읽은 것)</param>
+    /// <param name="speedUpKey">배속 올리기 키 이름</param>
     /// <param name="chartType">채보 종류 (ChartData.type). 공식이면 난이도 뱃지, 나만의 채보면 CUSTOM 뱃지 + 채보 이름</param>
     /// <param name="difficulty">난이도 이름 (ChartData.difficulty)</param>
     /// <param name="isAutoPlay">자동 플레이면 테스트 플레이 표시에 "자동 플레이"를 함께 쓴다</param>
     /// <param name="scrollMultiplier">시작 배속 (곡 정보에 표시)</param>
     /// <param name="score">이번 판의 점수 계산 (판정 패널의 시작 값: 판정 0개, 정확도 0.00%)</param>
-    public void Init(string songTitle, ChartType chartType, string difficulty, string chartName, int level,
-        bool isTestPlay, bool isAutoPlay, float scrollMultiplier, ScoreCalculator score)
+    public void Init(string songTitle, Sprite cover, ChartType chartType, string difficulty, string chartName, int level,
+        bool isTestPlay, bool isAutoPlay, float scrollMultiplier, string speedDownKey, string speedUpKey, ScoreCalculator score)
     {
+        UITheme theme = UITheme.Current;
+        UIThemeColor.ApplyAll(gameObject);
+
         SongInfoDisplay info = InGameHudRules.BuildSongInfo(chartType, difficulty, chartName, level, isTestPlay, isAutoPlay);
+        SetAlbum(cover);
         songTitleText.text = songTitle ?? string.Empty;
         chartBadgeText.text = info.BadgeText;
-        DifficultyColorPair badgeColor = GetBadgeColor(info);
-        chartBadgeImage.color = badgeColor.Background;
-        chartBadgeText.color = badgeColor.Text;
-        if (chartBadgeTextMaterial != null) chartBadgeText.fontSharedMaterial = chartBadgeTextMaterial;
+        UIThemePaint.Badge(chartBadgeImage, chartBadgeText, GetBadgeColor(theme, info));
         chartNameText.text = info.ChartName;
         chartNameText.gameObject.SetActive(info.ShowChartName);
         levelText.text = info.LevelText;
         testPlayText.text = info.TestPlayText;
         testPlayBadge.SetActive(info.ShowTestPlay);
+        // 줄 안에서 줄어들지 않을 것(테스트 플레이 뱃지·Lv.·배속 글자)은 글자 폭을 최소 폭으로 둔다.
+        // 넘치면 최소 폭 0인 곡 제목·채보 이름만 줄어들고 줄임표가 붙는다
+        FitWidthToText(testPlayBadge, testPlayText, BadgePaddingX * 2f);
+        FitWidthToText(levelText.gameObject, levelText, 0f);
 
+        if (speedDownKeyText != null) speedDownKeyText.text = speedDownKey;
+        if (speedUpKeyText != null) speedUpKeyText.text = speedUpKey;
+        if (speedHintText != null)
+        {
+            speedHintText.text = GameConstants.Play.InGameSpeedKeyHint;
+            FitWidthToText(speedHintText.gameObject, speedHintText, 0f);
+        }
         SetSpeed(scrollMultiplier, false);
         if (speedChangeText != null) speedChangeText.gameObject.SetActive(false);
         speedChangeHideAt = -1f;
@@ -113,19 +134,68 @@ public class Canvas_InGame : UIBase
         judgeText.ResetView();
         if (clearEffect != null) clearEffect.ResetView();
         if (fastSlowText != null) fastSlowText.ResetView();
-        if (judgePanel != null) judgePanel.Init(perfectColor, greatColor, goodColor, missColor, fastColor, slowColor, score);
-        if (comboTitleText != null) comboTitleText.text = GameConstants.Play.ComboTitleText;
+        if (judgePanel != null) judgePanel.Init(score);
+        if (comboTitleText != null)
+        {
+            comboTitleText.text = GameConstants.Play.ComboTitleText;
+            comboTitleText.color = theme.comboTitle;
+        }
+        comboText.SetColor(theme.comboNumber);
         comboText.ResetView();
-        scoreText.SetText("{0}", 0);
+        shownScore = -1;
+        SetScore(0);
         messageText.text = string.Empty;
         HideCountdown();
     }
 
-    /// <summary>뱃지 배경·글자색: 나만의 채보(테스트 플레이 포함)는 CUSTOM, 공식은 난이도 이름의 색 (DifficultyColors, 모르는 이름도 CUSTOM)</summary>
-    private static DifficultyColorPair GetBadgeColor(SongInfoDisplay info)
+    /// <summary>뱃지 색 (메뉴용 UITheme): 나만의 채보(테스트 플레이 포함)는 CUSTOM, 공식은 난이도 이름의 색 (모르는 이름도 CUSTOM). 글자는 흰색</summary>
+    private static Color GetBadgeColor(UITheme theme, SongInfoDisplay info)
     {
-        return info.IsCustom ? DifficultyColors.Custom : DifficultyColors.Get(info.BadgeText);
+        return info.IsCustom ? theme.difficultyCustom : theme.GetDifficulty(info.BadgeText);
     }
+
+    /// <summary>
+    /// 줄(HorizontalLayoutGroup) 안 항목의 최소·선호 폭을 글자 폭 + 여백으로 맞춘다 (LayoutElement가 있을 때만).
+    /// </summary>
+    private static void FitWidthToText(GameObject target, TMP_Text text, float padding)
+    {
+        if (target == null || text == null) return;
+        LayoutElement element = target.GetComponent<LayoutElement>();
+        if (element == null) return;
+        float width = Mathf.Ceil(text.GetPreferredValues(text.text, float.PositiveInfinity, float.PositiveInfinity).x + padding);
+        element.minWidth = width;
+        element.preferredWidth = width;
+    }
+
+    /// <summary>앨범을 넣는다. 없으면 앨범 이미지를 끄고 앨범 칸의 빈 앨범 색(UIThemeColor EmptyCover)이 보인다</summary>
+    private void SetAlbum(Sprite cover)
+    {
+        if (albumImage == null) return;
+        albumImage.sprite = cover;
+        albumImage.color = Color.white;
+        albumImage.preserveAspect = false;
+        albumImage.gameObject.SetActive(cover != null);
+    }
+
+    /// <summary>점수를 쓴다 (곡 선택·결과와 같은 형식: 쉼표 없음). 같은 값이면 다시 쓰지 않는다</summary>
+    private void SetScore(int score)
+    {
+        if (score == shownScore) return;
+        shownScore = score;
+        scoreText.text = SongSelectRecordFormat.FormatScore(score);
+    }
+
+    /// <summary>앨범 이미지 (확인용, 앨범이 없으면 null)</summary>
+    public Sprite AlbumSprite => albumImage != null && albumImage.gameObject.activeSelf ? albumImage.sprite : null;
+
+    /// <summary>채보 뱃지 바탕 색 (확인용)</summary>
+    public Color ChartBadgeColor => chartBadgeImage != null ? chartBadgeImage.color : Color.clear;
+
+    /// <summary>점수 글자 (확인용)</summary>
+    public string ScoreText => scoreText != null ? scoreText.text : string.Empty;
+
+    /// <summary>판정 패널 (확인용)</summary>
+    public Img_JudgePanel JudgePanel => judgePanel;
 
     /// <summary>
     /// 곡 정보의 배속을 바꾼다. showChange면 기어 옆에 "x5.6"을 잠깐 보여준다 (플레이 중 1 / 2 키).
@@ -133,6 +203,7 @@ public class Canvas_InGame : UIBase
     public void SetSpeed(float scrollMultiplier, bool showChange)
     {
         speedText.text = string.Format(GameConstants.Play.InGameSpeedFormat, scrollMultiplier);
+        FitWidthToText(speedText.gameObject, speedText, 0f);
         if (!showChange || speedChangeText == null) return;
 
         speedChangeText.text = string.Format(GameConstants.Play.SpeedChangeFormat, scrollMultiplier);
@@ -153,8 +224,8 @@ public class Canvas_InGame : UIBase
         progressFill.anchorMax = new Vector2(ratio, progressFill.anchorMax.y);
     }
 
-    /// <summary>진행 바를 다시 칠하는 최소 변화 (바 폭 552px 기준 약 1px)</summary>
-    private const float ProgressStep = 1f / 552f;
+    /// <summary>진행 바를 다시 칠하는 최소 변화 (바 폭 572px 기준 약 1px)</summary>
+    private const float ProgressStep = 1f / 572f;
 
     /// <summary>진행 바 채움 비율 (확인용)</summary>
     public float Progress => progressFill != null ? progressFill.anchorMax.x : 0f;
@@ -204,12 +275,13 @@ public class Canvas_InGame : UIBase
     /// <param name="fastSlow">판정 글자 위에 띄울 방향 (FastSlowRules.GetDisplay). None이면 앞의 FAST/SLOW를 건드리지 않는다</param>
     public void ShowJudge(JudgeType judge, FastSlow fastSlow, int combo, int score)
     {
+        Color color = UITheme.Current.GetInGameJudge(judge);
         switch (judge)
         {
-            case JudgeType.Perfect: judgeText.Show(GameConstants.Play.PerfectText, perfectColor); break;
-            case JudgeType.Great: judgeText.Show(GameConstants.Play.GreatText, greatColor); break;
-            case JudgeType.Good: judgeText.Show(GameConstants.Play.GoodText, goodColor); break;
-            default: judgeText.Show(GameConstants.Play.MissText, missColor); break;
+            case JudgeType.Perfect: judgeText.Show(GameConstants.Play.PerfectText, color); break;
+            case JudgeType.Great: judgeText.Show(GameConstants.Play.GreatText, color); break;
+            case JudgeType.Good: judgeText.Show(GameConstants.Play.GoodText, color); break;
+            default: judgeText.Show(GameConstants.Play.MissText, color); break;
         }
 
         ShowFastSlow(fastSlow);
@@ -226,8 +298,8 @@ public class Canvas_InGame : UIBase
         if (fastSlowText == null) return;
         switch (fastSlow)
         {
-            case FastSlow.Fast: fastSlowText.Show(GameConstants.Play.FastText, fastColor); break;
-            case FastSlow.Slow: fastSlowText.Show(GameConstants.Play.SlowText, slowColor); break;
+            case FastSlow.Fast: fastSlowText.Show(GameConstants.Play.FastText, UITheme.Current.inGameFast); break;
+            case FastSlow.Slow: fastSlowText.Show(GameConstants.Play.SlowText, UITheme.Current.inGameSlow); break;
         }
     }
 
@@ -252,7 +324,7 @@ public class Canvas_InGame : UIBase
     public void ShowCombo(int combo, int score)
     {
         comboText.SetCombo(combo);
-        scoreText.SetText("{0}", score);
+        SetScore(score);
     }
 
     /// <summary>

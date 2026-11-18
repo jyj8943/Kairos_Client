@@ -48,6 +48,12 @@ public class InGameScene : SceneBase
     [SerializeField] private Canvas_InGame canvas;
     [SerializeField] private Popup_Pause pausePopup;
 
+    [Header("⑨ 배경 (Canvas_InGameBackground/MenuBackground: 흐린 곡 일러스트 + 라벤더빛 덮기, 기어 뒤)")]
+    [SerializeField] private MenuBackground background;
+
+    /// <summary>배경 (확인용)</summary>
+    public MenuBackground Background => background;
+
     [Header("배속 키 (입력 에셋 Gameplay/SpeedDown = 1, Gameplay/SpeedUp = 2)")]
     [SerializeField] private InputActionReference speedDownAction;
     [SerializeField] private InputActionReference speedUpAction;
@@ -243,6 +249,12 @@ public class InGameScene : SceneBase
         nextSyncWarningRealtime = 0;
 #endif
 
+        // 배경: 판 시작 때 한 번만 흐리게 처리한다 (재시작은 같은 곡이라 UIBlurBackground가 앞 결과를 다시 쓴다)
+        if (background != null)
+        {
+            background.Init();
+            background.SetIllustration(song.Background, true);
+        }
         gear.Init();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.Init(gear);
@@ -264,7 +276,10 @@ public class InGameScene : SceneBase
         gear.SetKeyLabels(input.GetLaneKeyLabels());
         // 채보 종류는 채보 데이터(type)로 정한다 (테스트 플레이·자동 플레이도 같은 규칙). 모르는 값이면 나만의 채보로 본다
         ChartType chartType = ChartData.TryParseType(chart.type, out ChartType parsedType) ? parsedType : ChartType.Custom;
-        canvas.Init(song.Title, chartType, chart.difficulty, chart.chartName, chart.level, IsTestPlay, isAutoPlay, noteLayer.ScrollMultiplier, score);
+        canvas.Init(song.Title, song.Cover, chartType, chart.difficulty, chart.chartName, chart.level, IsTestPlay, isAutoPlay, noteLayer.ScrollMultiplier,
+            KeyGuideBar.GetKeyText(speedDownAction != null ? speedDownAction.action : null, GameConstants.Play.SpeedDownKeyFallback),
+            KeyGuideBar.GetKeyText(speedUpAction != null ? speedUpAction.action : null, GameConstants.Play.SpeedUpKeyFallback),
+            score);
         entry.scrollMultiplier = noteLayer.ScrollMultiplier;
 
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +

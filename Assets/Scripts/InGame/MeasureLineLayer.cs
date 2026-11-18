@@ -171,10 +171,10 @@ public class MeasureLineLayer : MonoBehaviour
         for (int i = from; i < to; i++) pool[i % pool.Count].gameObject.SetActive(false);
     }
 
-    /// <summary>흰색 × MeasureLineAlpha, 폭 = 레인 전체, 굵기 = LineThickness. 스프라이트 크기로 나눠 스케일을 정한다</summary>
+    /// <summary>UITheme 마디선 색(흰색 35%), 폭 = 레인 전체, 굵기 = LineThickness. 스프라이트 크기로 나눠 스케일을 정한다</summary>
     private void ApplyShape(SpriteRenderer line)
     {
-        line.color = new Color(1f, 1f, 1f, GameConstants.Play.MeasureLineAlpha);
+        line.color = UITheme.Current.measureLine;
         Vector2 spriteSize = line.sprite != null ? (Vector2)line.sprite.bounds.size : Vector2.one;
         if (line.drawMode != SpriteDrawMode.Simple)
         {

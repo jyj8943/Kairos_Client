@@ -107,7 +107,7 @@ public class InGameHudPlayTests
         Assert.AreEqual("Lv.7", Get<TMP_Text>(canvas, "levelText").text);
         Assert.IsTrue(Get<GameObject>(canvas, "testPlayBadge").activeInHierarchy, "테스트 플레이 표시 켜짐");
         Assert.AreEqual(GameConstants.Play.AutoTestPlayLabel, Get<TMP_Text>(canvas, "testPlayText").text);
-        StringAssert.StartsWith("배속 x1.0", Get<TMP_Text>(canvas, "speedText").text);
+        Assert.AreEqual("x1.0", Get<TMP_Text>(canvas, "speedText").text);
 
         // 첫 노트(약 2.4초) 뒤까지 기다리며 키 칸이 밝아지는지 본다
         NoteJudge judge = Get<NoteJudge>(scene, "judge");
@@ -144,7 +144,7 @@ public class InGameHudPlayTests
         NoteJudge judge = Get<NoteJudge>(scene, "judge");
         Img_JudgePanel panel = Get<Img_JudgePanel>(canvas, "judgePanel");
         Assert.AreEqual(string.Empty, canvas.FastSlowShown, "시작: FAST/SLOW 없음");
-        Assert.AreEqual("0.00%", Get<TMP_Text>(panel, "accuracy").text, "판정 전 정확도 0% (기획서 3-4, 11/14)");
+        Assert.AreEqual("0.00%", Get<TMP_Text>(panel, "rate").text, "판정 전 RATE 0% (기획서 3-4, 11/14)");
 
         double greatEarly = (GameConstants.Play.DefaultPerfectMs + GameConstants.Play.DefaultGreatMs) * 0.5 / 1000.0;
         PlayNote first = judge.Notes[0];
@@ -161,7 +161,7 @@ public class InGameHudPlayTests
         StringAssert.Contains(">1<", Get<TMP_Text>(panel, "greatCount").text);
         StringAssert.Contains(">1<", Get<TMP_Text>(panel, "fastCount").text);
         StringAssert.Contains(">0<", Get<TMP_Text>(panel, "slowCount").text);
-        Assert.AreEqual("70.00%", Get<TMP_Text>(panel, "accuracy").text, "GREAT 1개 → 70%");
+        Assert.AreEqual("70.00%", Get<TMP_Text>(panel, "rate").text, "GREAT 1개 → 70%");
 
         while (GameManager.Sound.SongTime < second.Time)
         {
@@ -175,8 +175,8 @@ public class InGameHudPlayTests
         Assert.AreEqual(GameConstants.Play.PerfectText, canvas.Judge.Text);
         Assert.AreEqual(0f, canvas.Judge.Animation.Elapsed, 1e-6f, "판정 글자는 처음부터 다시");
         StringAssert.Contains(">1<", Get<TMP_Text>(panel, "perfectCount").text);
-        Assert.AreEqual("85.00%", Get<TMP_Text>(panel, "accuracy").text, "(100 + 70) ÷ 2");
-        Debug.Log($"[InGameHudPlayTest] H2: GREAT FAST → 패널 {Get<TMP_Text>(panel, "greatCount").text} / {Get<TMP_Text>(panel, "fastCount").text}, PERFECT 뒤 FAST/SLOW '{canvas.FastSlowShown}' (경과 {canvas.FastSlowText.Animation.Elapsed:0.000}초), 정확도 {Get<TMP_Text>(panel, "accuracy").text}");
+        Assert.AreEqual("85.00%", Get<TMP_Text>(panel, "rate").text, "(100 + 70) ÷ 2");
+        Debug.Log($"[InGameHudPlayTest] H2: GREAT FAST → 패널 {Get<TMP_Text>(panel, "greatCount").text} / {Get<TMP_Text>(panel, "fastCount").text}, PERFECT 뒤 FAST/SLOW '{canvas.FastSlowShown}' (경과 {canvas.FastSlowText.Animation.Elapsed:0.000}초), RATE {Get<TMP_Text>(panel, "rate").text}");
     }
 
     /// <summary>

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// - 카드 바탕은 패널(흰색 58%). 난이도 이름은 뱃지(Img_DifficultyBadge, 메뉴용 난이도 색 + 흰 글자), 레벨은 기본 글자색.
 /// - 고른 난이도는 포인트색 테두리(chosenBorder)를 켜고 바탕을 선택 색(포인트색 18%)으로 한다.
 /// - 고른 곡에 그 난이도 채보가 없으면 레벨 "―"(흐린 글자), 뱃지도 흐린 색으로 두고 버튼을 비활성으로 한다.
-/// - 색은 모두 UITheme(메뉴용)에서 읽는다. 인게임 색(DifficultyColors)·외곽선 머티리얼은 쓰지 않는다.
+/// - 색은 모두 UITheme(메뉴용)에서 읽는다. 인게임 곡 정보 카드 뱃지도 같은 메뉴용 색을 쓴다.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_Difficulty : MonoBehaviour
