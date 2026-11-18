@@ -3,10 +3,10 @@ using UnityEngine;
 
 /// <summary>
 /// 에디터 씬 진입점. EditorScene.unity 루트의 "EditorScene" 오브젝트에 붙인다.
-/// - 곡 고르기 씬이 넘긴 채보 정보의 songId로 곡(SongData)을 찾아 BPM·offset·곡 길이로 편집을 시작한다.
-/// - 진입 데이터에 chartId가 있으면 그 내 채보를 불러와 세션을 채운다. 실패하면 곡 고르기로 돌아간다.
+/// - 곡 선택 나만의 채보 탭(편집 · 새 채보)이 넘긴 채보 정보의 songId로 곡(SongData)을 찾아 BPM·offset·곡 길이로 편집을 시작한다.
+/// - 진입 데이터에 chartId가 있으면 그 내 채보를 불러와 세션을 채운다. 실패하면 곡 선택 나만의 채보 탭으로 돌아간다.
 /// - 저장 요청(Btn_Save·Ctrl+S)을 받아 곡을 확인한 뒤 세션에 저장을 맡긴다.
-/// - 나가기 요청(Btn_Exit)을 받아 곡 고르기로 돌아간다 (저장 안 한 변경이 있으면 확인 팝업을 띄운다).
+/// - 나가기 요청(Btn_Exit)을 받아 곡 선택 나만의 채보 탭으로 돌아간다 (편집하던 채보를 고른 채로, 기획서 3-1 · 3-3. 저장 안 한 변경이 있으면 확인 팝업을 띄운다).
 /// - ESC(OnBack)는 지금 아무것도 하지 않는다 (기존 동작 그대로).
 /// - 테스트 플레이 요청(Btn_TestPlay)을 받아 지금 상태를 저장하지 않고 인게임으로 넘긴다.
 ///   돌아올 때는 진입 데이터의 restore로 노트·위치·스냅·그리드 높이·도구·수정 여부·실행 취소 기록을 되돌린다.
@@ -50,7 +50,7 @@ public class EditorScene : SceneBase
     /// <summary>잠깐 보여준 안내를 저장 상태 표시로 되돌릴 시각 (unscaledTime). 없으면 −1</summary>
     private float statusResetAt = -1f;
 
-    /// <summary>다른 씬(곡 고르기·인게임)으로 이동을 시작했으면 true</summary>
+    /// <summary>다른 씬(곡 선택·인게임)으로 이동을 시작했으면 true</summary>
     private bool isLeaving;
 
     /// <summary>
@@ -72,22 +72,22 @@ public class EditorScene : SceneBase
         song = FindSong(entry);
         if (song == null || song.Bpm <= 0f)
         {
-            Debug.LogError($"[EditorScene] 편집할 곡을 쓸 수 없어 곡 고르기로 돌아갑니다: songId={entry?.songId ?? "(없음)"}, " +
+            Debug.LogError($"[EditorScene] 편집할 곡을 쓸 수 없어 곡 선택(나만의 채보 탭)으로 돌아갑니다: songId={entry?.songId ?? "(없음)"}, " +
                            $"bpm={(song != null ? song.Bpm : 0f)}", this);
-            GameManager.Scene.Load(GameConstants.Scenes.EditorSongSelect);
+            GameManager.Scene.Load(GameConstants.Scenes.SongSelect, CreateSongSelectEntry(entry?.songId, entry?.chartId));
             yield break;
         }
 
         // 테스트 플레이에서 돌아온 경우: 파일을 읽지 않고 넘겨받은 편집 상태로 되돌린다
         EditorRestoreState restore = entry != null ? entry.restore : null;
 
-        // 내 채보 열기: chartId가 있으면 파일을 읽는다. 실패하면 곡 고르기로 돌아간다 (같은 곡이 선택되게)
+        // 내 채보 열기: chartId가 있으면 파일을 읽는다. 실패하면 곡 선택 나만의 채보 탭으로 돌아간다 (같은 곡이 선택되게)
         ChartData chart = restore != null ? restore.chart : null;
         if (restore == null && entry != null && !string.IsNullOrEmpty(entry.chartId)
             && !ChartRepository.TryLoad(entry.songId, entry.chartId, ChartType.Custom, out chart, out string loadError))
         {
-            Debug.LogError($"[EditorScene] 채보를 불러오지 못해 곡 고르기로 돌아갑니다: {loadError}", this);
-            GameManager.Scene.Load(GameConstants.Scenes.EditorSongSelect, new EditorSongSelectEntryData { songId = entry.songId });
+            Debug.LogError($"[EditorScene] 채보를 불러오지 못해 곡 선택(나만의 채보 탭)으로 돌아갑니다: {loadError}", this);
+            GameManager.Scene.Load(GameConstants.Scenes.SongSelect, CreateSongSelectEntry(entry.songId, entry.chartId));
             yield break;
         }
 
@@ -460,7 +460,7 @@ public class EditorScene : SceneBase
     }
 
     /// <summary>
-    /// 나가기 요청 (Btn_Exit). 곡 고르기로 돌아가며, 방금 편집한 곡이 선택된 상태로 시작한다.
+    /// 나가기 요청 (Btn_Exit). 곡 선택 나만의 채보 탭으로 돌아가며, 편집하던 채보(저장한 적 없는 새 채보면 그 곡의 + 줄)가 골라진 채로 시작한다.
     /// 저장하지 않은 변경(IsDirty)이 있으면 노래를 멈추고 확인 팝업을 띄운다 (취소하면 정지 상태 그대로 에디터에 남는다).
     /// 저장했으면 바로 나간다.
     /// </summary>
@@ -480,15 +480,24 @@ public class EditorScene : SceneBase
     }
 
     /// <summary>
-    /// 저장하지 않고 곡 고르기로 나간다.
+    /// 저장하지 않고 곡 선택 나만의 채보 탭으로 나간다 (편집하던 채보를 고른 채로).
     /// </summary>
     private void ExitToSongSelect()
     {
         if (isLeaving) return;
 
         playback.Stop(false);
-        if (GameManager.Scene.Load(GameConstants.Scenes.EditorSongSelect, new EditorSongSelectEntryData { songId = session.SongId }))
+        if (GameManager.Scene.Load(GameConstants.Scenes.SongSelect, CreateSongSelectEntry(session.SongId, session.ChartId)))
             isLeaving = true;
+    }
+
+    /// <summary>
+    /// 곡 선택 나만의 채보 탭으로 돌아갈 진입 데이터: chartId가 있으면 그 채보, 없으면(새 채보를 저장하지 않음) 그 곡의 + 줄.
+    /// 배속은 넘기지 않는다 (곡 선택이 저장된 마지막 배속을 쓴다). 에디터에서 돌아온 것은 lastSelection으로 저장하지 않는다.
+    /// </summary>
+    public static SongSelectEntryData CreateSongSelectEntry(string songId, string chartId)
+    {
+        return new SongSelectEntryData { songId = songId, chartType = ChartType.Custom, chartId = chartId };
     }
 
     /// <summary>

@@ -75,6 +75,20 @@ public class KeyGuideBar : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// ID가 같은 항목을 보이거나 숨긴다 (예: 곡 선택 "E 편집"은 나만의 채보 탭의 채보 줄일 때만). 없으면 false.
+    /// </summary>
+    public bool SetVisible(string id, bool visible)
+    {
+        foreach (ItemView item in items)
+        {
+            if (item.id != id) continue;
+            if (item.root.activeSelf != visible) item.root.SetActive(visible);
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>ID가 같은 항목의 지금 이름 (확인용, 없으면 null)</summary>
     public string GetLabel(string id)
     {
@@ -85,12 +99,13 @@ public class KeyGuideBar : MonoBehaviour
         return null;
     }
 
-    /// <summary>만든 항목의 "키 이름들 + 이름"을 한 줄씩 (확인 로그·테스트용, 예: "1 2 배속")</summary>
+    /// <summary>보이는 항목의 "키 이름들 + 이름"을 한 줄씩 (확인 로그·테스트용, 예: "1 2 배속"). 숨긴 항목(SetVisible)은 뺀다</summary>
     public List<string> Describe()
     {
         List<string> lines = new List<string>();
         foreach (ItemView item in items)
         {
+            if (item.root == null || !item.root.activeSelf) continue;
             List<string> parts = new List<string>();
             foreach (TMP_Text key in item.keyNames) parts.Add(key.text);
             parts.Add(item.label.text);

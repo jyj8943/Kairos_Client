@@ -17,7 +17,6 @@ public static class GameConstants
     {
         public const string Title = "TitleScene";
         public const string SongSelect = "SongSelectScene";
-        public const string EditorSongSelect = "EditorSongSelectScene";
         public const string Editor = "EditorScene";
         public const string InGame = "InGameScene";
         public const string Result = "ResultScene";
@@ -458,6 +457,18 @@ public static class GameConstants
         public const string PrevNextSong = "이전 · 다음 곡";
         public const string TabSwitch = "공식 ↔ 나만의 채보";
 
+        /// <summary>나만의 채보 탭 키 안내 (↑↓ 채보 · 새 채보 줄 · ←→ 이전 · 다음 곡 묶음 · E 편집)</summary>
+        public const string MyChartVertical = "채보 · 새 채보 줄";
+        public const string PrevNextSongGroup = "이전 · 다음 곡 묶음";
+        public const string Edit = "편집";
+        public const string EditKeyFallback = "E";
+        public const string StartId = "start";
+        public const string EditId = "edit";
+
+        /// <summary>새 채보 팝업 키 안내 (↑↓ 항목 · ←→ 레벨 · 버튼 · Enter 결정 · ESC 취소)</summary>
+        public const string NewChartItem = "항목";
+        public const string NewChartLevelOrButton = "레벨 · 버튼";
+
         /// <summary>확인 팝업 키 안내 (←→ 선택 · Enter 결정 · ESC 취소)</summary>
         public const string ConfirmSelect = "선택";
         public const string ConfirmDecide = "결정";
@@ -628,7 +639,7 @@ public static class GameConstants
         public const float MaxChartNameWidth = 520f;
     }
 
-    /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17). 색은 여기 두지 않고 UITheme(메뉴 화면 톤)에 둔다</summary>
+    /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17 · 나만의 채보 탭 11/18 개정 · 3-7 ④ 새 채보 팝업). 색은 여기 두지 않고 UITheme(메뉴 화면 톤)에 둔다</summary>
     public static class SongSelect
     {
         /// <summary>
@@ -661,17 +672,33 @@ public static class GameConstants
         /// <summary>구역 머리글</summary>
         public const string DifficultyHeader = "DIFFICULTY · 난이도";
         public const string MyChartHeader = "MY CHART · 고른 채보";
+        /// <summary>+ 줄을 골랐을 때 고른 채보 자리 머리글</summary>
+        public const string NewChartHeader = "NEW CHART · 새 채보";
         public const string SongListHeader = "SONGS · 곡 목록";
         public const string MyChartListHeader = "MY CHARTS · 곡별 나만의 채보";
         public const string SpeedLabel = "SPEED · 배속";
 
         /// <summary>목록 위쪽 숫자: {0} 지금 순번, {1} 전체 수 (두 자리)</summary>
         public const string SongCountFormat = "{0:00} / {1:00}";
-        public const string MyChartCountFormat = "채보 {0:00} / {1:00}";
+        /// <summary>나만의 채보 탭 위쪽 숫자: {0} 지금 고른 곡 순번, {1} 전체 곡 수, {2} 전체 채보 수 (예: "곡 02 / 08 · 채보 5")</summary>
+        public const string MyChartCountFormat = "곡 {0:00} / {1:00} · 채보 {2}";
 
-        /// <summary>나만의 채보 곡 제목 줄 채보 수: {0} 채보 수 (1이면 단수)</summary>
+        /// <summary>나만의 채보 곡 머리 줄 채보 수: {0} 채보 수 (1이면 단수, 0이면 NO CHART)</summary>
         public const string GroupChartCountFormat = "{0} CHARTS";
         public const string GroupChartCountOne = "1 CHART";
+        public const string GroupNoChart = "NO CHART";
+
+        /// <summary>"+ 새 채보 만들기" 줄 (Btn_NewChart): 이름 · 고르면 오른쪽 Enter 키 힌트</summary>
+        public const string NewChartRowLabel = "새 채보 만들기";
+        public const string NewChartRowPlus = "+";
+        public const string NewChartRowHint = "이름 · 레벨 입력";
+
+        /// <summary>+ 줄을 골랐을 때 왼쪽 점선 카드 (고른 채보 카드 자리)</summary>
+        public const string NewChartCardTitle = "이 곡으로 새 채보를 만들어요";
+        public const string NewChartCardHint = "Enter를 누르면 이름·레벨을 넣는 창이 열려요";
+
+        /// <summary>+ 줄을 골랐을 때 최고 기록 카드 불투명도 (값은 비우고 흐리게)</summary>
+        public const float NewChartRecordAlpha = 0.35f;
 
         /// <summary>목록 항목의 난이도 레벨 표시: {0} 난이도 첫 글자, {1} 레벨 (예: "E 3")</summary>
         public const string ListLevelFormat = "{0} {1}";
@@ -691,13 +718,31 @@ public static class GameConstants
         /// <summary>RATE 표시: 소수 둘째 자리 % (반올림하지 않고 버림, InvariantCulture)</summary>
         public const string RateFormat = "{0:0.00}%";
 
-        /// <summary>시작 버튼 (하단 바 오른쪽 끝)</summary>
+        /// <summary>시작 버튼 (하단 바 오른쪽 끝). + 줄을 고르면 "새 채보 / NEW"</summary>
         public const string StartLabel = "시작";
         public const string StartLabelEn = "START";
+        public const string NewChartStartLabel = "새 채보";
+        public const string NewChartStartLabelEn = "NEW";
 
         /// <summary>빈 상태 문구</summary>
         public const string OfficialEmpty = "공식 채보가 없습니다";
-        public const string MyChartEmpty = "에디터에서 채보를 만들어 보세요";
+
+        /// <summary>새 채보 팝업 (Popup_NewChart, 기획서 3-7 ④)</summary>
+        public const string NewChartTitle = "새 채보 만들기";
+        public const string NewChartTitleEn = "NEW CHART";
+        public const string NewChartNameLabel = "채보 이름";
+        public const string NewChartLevelLabelFormat = "레벨 ({0}~{1})";
+        public const string NewChartDefaultNameFormat = "새 채보 {0}";
+        public const string NewChartNameEmpty = "채보 이름을 입력해 주세요";
+        public const string NewChartCancelLabel = "취소";
+        public const string NewChartCreateLabel = "만들기";
+        /// <summary>곡 카드 둘째 줄: {0} 아티스트, {1} BPM, {2} 곡 길이</summary>
+        public const string NewChartSongInfoFormat = "{0} · BPM {1} · {2}";
+        /// <summary>처음 레벨</summary>
+        public const int NewChartDefaultLevel = 7;
+        /// <summary>팝업 폭 · 입력칸 높이 · 오류 테두리 두께</summary>
+        public const float NewChartWidth = 600f;
+        public const float NewChartInputHeight = 52f;
 
         /// <summary>곡 배경 크로스페이드 시간 (초, 실제 시간)</summary>
         public const float BackgroundFadeSeconds = 0.25f;
@@ -902,9 +947,6 @@ public static class GameConstants
 
         /// <summary>도구 패널 "테스트 플레이 배속" 칸(Txt_Speed): {0} 배속 (버튼으로만 바꾼다, 단축키 없음)</summary>
         public const string TestPlaySpeedFormat = "x{0:0.0}";
-
-        /// <summary>곡 고르기의 내 채보 항목 정보: {0} 레벨, {1} 노트 수</summary>
-        public const string MyChartInfoFormat = "Lv.{0} · 노트 {1}";
 
         /// <summary>박자 스냅 선택지 하나: 1박을 나누는 칸 수와 드롭다운 표시 이름</summary>
         public readonly struct SnapOption

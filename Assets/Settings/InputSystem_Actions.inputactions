@@ -1075,6 +1075,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "EditChart",
+                    "type": "Button",
+                    "id": "56b46e33-9a39-4cbb-90de-db4d1ed24fbd",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -1152,6 +1161,17 @@
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "SpeedDown",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1bfe3f32-b383-4c72-a279-909cde33324d",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "EditChart",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

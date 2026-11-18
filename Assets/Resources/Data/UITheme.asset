@@ -41,6 +41,7 @@ MonoBehaviour:
   difficultyHard: {r: 0.7607843, g: 0.27058825, b: 0.49411765, a: 1}
   difficultyCustom: {r: 0.54509807, g: 0.49803922, b: 0.81960785, a: 1}
   onDifficultyText: {r: 1, g: 1, b: 1, a: 1}
+  myChartChosenSongTitle: {r: 0.18431373, g: 0.49803922, b: 0.78431374, a: 1}
   rankEmptyFill: {r: 1, g: 1, b: 1, a: 0.55}
   rankEmptyDash: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.35}
   popupDim: {r: 0.14117648, g: 0.1254902, b: 0.18039216, a: 0.42}

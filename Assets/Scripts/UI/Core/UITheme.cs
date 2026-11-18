@@ -76,6 +76,10 @@ public class UITheme : ScriptableObject
     public Color difficultyCustom = new Color32(0x8B, 0x7F, 0xD1, 0xFF);
     public Color onDifficultyText = Color.white;
 
+    [Header("나만의 채보 탭 (기획서 3-3 「나만의 채보 탭 (11/17, 11/18 개정)」)")]
+    [Tooltip("지금 고른 곡의 머리 줄 곡 이름 (#2F7FC8)")]
+    public Color myChartChosenSongTitle = new Color32(0x2F, 0x7F, 0xC8, 0xFF);
+
     [Header("랭크 빈 자리 (기획서 3-3 「랭크·FC 표시 (11/18 개정)」, 기록이 없는 채보의 기록 카드 랭크 칸)")]
     [Tooltip("빈 자리 바탕 Img_RankEmpty (흰색 55%)")]
     public Color rankEmptyFill = new Color(1f, 1f, 1f, 0.55f);

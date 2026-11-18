@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 타이틀 화면 UI. TitleScene이 Init()을 호출한다.
 /// - 버튼 OnClick은 인스펙터가 아니라 Init()에서 코드로 연결한다.
-/// - 플레이 → 곡 선택, 에디터 → 에디터 곡 고르기, 설정 → 공용 설정 창(GameManager.UI.OpenSettings), 종료 → 확인 팝업 → 게임 종료 (Unity 에디터에서는 플레이 모드 종료).
+/// - 플레이 → 곡 선택, 에디터 → 곡 선택 나만의 채보 탭 (기획서 3-1, 11/18), 설정 → 공용 설정 창(GameManager.UI.OpenSettings), 종료 → 확인 팝업 → 게임 종료 (Unity 에디터에서는 플레이 모드 종료).
 /// - 키보드 이동(↑↓, Enter)은 EventSystem이 맡는다. ESC(TitleScene.OnBack)는 종료 확인 팝업을 연다 (RequestQuit).
 /// - 아래쪽 키 안내 줄(KeyGuideBar): ↑↓ 이동 · Enter 선택 · ESC 종료.
 /// - 메뉴 버튼은 한글 + 영문 작은 글씨(GameConstants.Title), 선택된 버튼만 UISelectHighlight로 강조한다 (기획서 3-2, 11/17 개편).
@@ -153,11 +153,11 @@ public class Canvas_Title : UIBase
     }
 
     /// <summary>
-    /// 에디터 곡 고르기 씬으로 이동한다. 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
+    /// 곡 선택을 나만의 채보 탭으로 연다 (첫 줄이 골라진 채로). 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
     /// </summary>
     private void OnClickEditor()
     {
-        if (GameManager.Scene.Load(GameConstants.Scenes.EditorSongSelect))
+        if (GameManager.Scene.Load(GameConstants.Scenes.SongSelect, new SongSelectEntryData { chartType = ChartType.Custom }))
             SetMenuInteractable(false);
     }
 

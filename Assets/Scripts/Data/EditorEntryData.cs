@@ -1,5 +1,5 @@
 /// <summary>
-/// 곡 고르기 씬(또는 인게임·결과) → 편집 씬으로 넘기는 데이터.
+/// 곡 선택 나만의 채보 탭(편집 · 새 채보, InGameLauncher.StartEditor) 또는 인게임 테스트 플레이 → 편집 씬으로 넘기는 데이터.
 /// GameManager.Scene.Load(sceneName, data)로 넘기고 EditorScene Init에서 TakeSceneData로 받는다.
 /// </summary>
 public class EditorEntryData

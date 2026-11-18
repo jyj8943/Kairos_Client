@@ -101,7 +101,7 @@ public class ChartEditSession : MonoBehaviour
     /// <summary>
     /// 곡 정보(BPM·offset·음원 길이)로 세션을 시작한다. EditorScene이 호출한다.
     /// </summary>
-    /// <param name="entry">곡 고르기 씬이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
+    /// <param name="entry">곡 선택 나만의 채보 탭이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
     public void Init(EditorEntryData entry, SongData song)
     {
         Init(entry, song.SongId, song.Bpm, song.OffsetMs, song.Length);
@@ -112,7 +112,7 @@ public class ChartEditSession : MonoBehaviour
     /// 곡 끝 tick은 곡 길이를 offset·BPM으로 바꾼 박에서 구하고, 곡 끝을 넘지 않게 내림한다.
     /// (EditMode 테스트처럼 음원 없이 시작할 때도 이 함수를 쓴다)
     /// </summary>
-    /// <param name="entry">곡 고르기 씬이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
+    /// <param name="entry">곡 선택 나만의 채보 탭이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
     public void Init(EditorEntryData entry, string songId, float bpm, int offsetMs, float songLengthSeconds)
     {
         if (entry == null)
