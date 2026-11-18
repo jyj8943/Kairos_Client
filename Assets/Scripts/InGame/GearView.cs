@@ -8,7 +8,6 @@ using UnityEngine;
 /// - 키 칸(KeyCells)은 화면 아래 끝에 붙인다. 크기·위치는 Init에서 카메라 높이로 계산한다 (1080 화면 기준 px → 월드, 해상도가 바뀌어도 같은 비율).
 ///   노트보다 위에 그려(sortingOrder) 놓친 노트가 판정선 아래를 지나 키 칸 뒤로 사라진다.
 /// - 색은 모두 UITheme 인게임 묶음에서 Init 때 읽어 칠한다 (기획서 3-4 「인게임 톤 개편 (11/18)」, 어두운 기어). 씬에 색을 직렬화하지 않는다.
-/// - 판정선 빛(JudgeLine/Glow)은 부드러운 가장자리 스프라이트(SoftGlow) 하나로 만든다 (후처리 Bloom·Light 없음).
 /// </summary>
 public class GearView : MonoBehaviour
 {
@@ -16,8 +15,6 @@ public class GearView : MonoBehaviour
     [Min(0.1f)] [SerializeField] private float laneWidth = 1f;
     [Tooltip("판정선 (Gear 아래 자식, SpriteRenderer). 노트가 이 높이에 닿는 순간이 노트 시간이다")]
     [SerializeField] private Transform judgeLine;
-    [Tooltip("판정선 빛 (JudgeLine/Glow, SoftGlow 스프라이트 Sliced). 판정선보다 아래 순서로 그린다")]
-    [SerializeField] private SpriteRenderer judgeLineGlow;
     [Tooltip("라인별 빛남 (A · S · ; · ' 순서). 키를 누르는 동안 켠다. 스프라이트는 아래가 진하고 위로 갈수록 투명한 LaneGlowGradient")]
     [SerializeField] private SpriteRenderer[] laneGlows;
     [Tooltip("화면 위아래 끝 계산에 쓰는 카메라")]
@@ -83,7 +80,7 @@ public class GearView : MonoBehaviour
             SetPressed(lane, false);
     }
 
-    /// <summary>기어 바탕·테두리·구분선·판정선(빛)·라인 빛 색을 테마로 칠한다 (키 칸은 SetPressed가 칠한다)</summary>
+    /// <summary>기어 바탕·테두리·구분선·판정선·라인 빛 색을 테마로 칠한다 (키 칸은 SetPressed가 칠한다)</summary>
     private void ApplyTheme(UITheme theme)
     {
         if (laneBackground != null) laneBackground.color = theme.gearBackground;
@@ -92,7 +89,6 @@ public class GearView : MonoBehaviour
         Paint(laneGlows, theme.laneGlow);
         SpriteRenderer line = judgeLine != null ? judgeLine.GetComponent<SpriteRenderer>() : null;
         if (line != null) line.color = theme.judgeLine;
-        if (judgeLineGlow != null) judgeLineGlow.color = theme.judgeLineGlow;
     }
 
     private static void Paint(SpriteRenderer[] renderers, Color color)

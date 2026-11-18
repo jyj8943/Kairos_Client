@@ -55,6 +55,14 @@ public static class GameConstants
         public const int RankCScore = 700000;
         public const int RankDScore = 600000;
 
+        /// <summary>
+        /// 랭크·FC 이미지 (기획서 3-3 「랭크·FC 표시 (11/18 개정)」, Resources 안 경로). 랭크 이미지 이름 = RankSpritePrefix + PlayRank 이름 (Rank_AP, Rank_S ~ Rank_F).
+        /// S~F는 542×542 정사각형, AP·FC는 737×477로 가로로 길다.
+        /// </summary>
+        public const string RankSpriteFolder = "Images/Rank/";
+        public const string RankSpritePrefix = "Rank_";
+        public const string FullComboSpriteName = "Clear_FC";
+
         /// <summary>첫 노트 전 최소 준비 시간 (초)</summary>
         public const double LeadInSeconds = 2.0;
 
@@ -457,7 +465,6 @@ public static class GameConstants
         public const string ScoreLabel = "SCORE";
         public const string RateLabel = "RATE";
         public const string MaxComboLabel = "MAX COMBO";
-        public const string RankLabel = "RANK";
 
         /// <summary>이전 최고 점수 줄: {0} 이전 최고 점수 (쉼표 없음). 뒤에 차이를 붙인다</summary>
         public const string BestFormat = "BEST {0}";
@@ -540,14 +547,9 @@ public static class GameConstants
         public const string BestScoreLabel = "BEST SCORE";
         public const string RateLabel = "RATE";
         public const string ComboLabel = "COMBO";
-        public const string RankLabel = "RANK";
 
         /// <summary>RATE 표시: 소수 둘째 자리 % (반올림하지 않고 버림, InvariantCulture)</summary>
         public const string RateFormat = "{0:0.00}%";
-
-        /// <summary>FC/AP 도장 글자 (나중에 도장 이미지로 바꾼다)</summary>
-        public const string StampFullCombo = "FC";
-        public const string StampAllPerfect = "AP";
 
         /// <summary>시작 버튼 (하단 바 오른쪽 끝)</summary>
         public const string StartLabel = "시작";

@@ -10,10 +10,13 @@ public enum JudgeType
 }
 
 /// <summary>
-/// 랭크 (기획서 2-1). 점수 기준은 GameConstants.Play.
+/// 랭크 (기획서 2-1 5), 11/18 AP 추가). 정하는 규칙은 RankRules.GetRank 한 곳, 점수 기준은 GameConstants.Play.
+/// - AP는 모든 판정이 PERFECT일 때 (점수가 아니라 판정 수로 본다).
+/// - 기록 JSON·씬에는 숫자가 아니라 이름 문자열("AP", "S" …)로 저장한다. 순서를 바꿔도 저장 값이 밀리지 않는다.
 /// </summary>
 public enum PlayRank
 {
+    AP,
     S,
     A,
     B,

@@ -529,6 +529,8 @@ public class LongNotePlayTests
         Assert.AreEqual(shortCount, score.MaxCombo);
         Assert.AreEqual(1000000, score.Score);
         Assert.IsTrue(score.IsAllPerfect);
+        Assert.AreEqual(PlayRank.AP, score.Rank, "전부 PERFECT → 랭크 AP (기획서 2-1 5), 11/18)");
+        Assert.AreEqual(PlayRank.AP, ResultData.FromScore(score).rank, "결과로 넘기는 랭크도 AP");
     }
 
     /// <summary>공식 채보를 복사해 롱노트를 뺀다 (불러온 채보 객체는 고치지 않는다)</summary>

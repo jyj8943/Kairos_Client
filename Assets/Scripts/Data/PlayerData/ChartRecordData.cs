@@ -16,7 +16,7 @@ public class ChartRecordData
     /// <summary>최고 점수 (0 ~ 1,000,000)</summary>
     public int bestScore;
 
-    /// <summary>최고 점수를 낸 판의 랭크 (PlayRank 이름)</summary>
+    /// <summary>최고 점수를 낸 판의 랭크 (PlayRank 이름: "AP", "S" ~ "F")</summary>
     public string bestRank = PlayRank.F.ToString();
 
     /// <summary>최고 정확도 (%, 0 ~ 100)</summary>

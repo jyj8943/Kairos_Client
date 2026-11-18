@@ -1,4 +1,3 @@
-using TMPro;
 using UnityEngine;
 
 /// <summary>글자 단계 (기획서 3장 UI 톤: 기본 · 보조 · 설명 · 흐린 글자)</summary>
@@ -76,6 +75,12 @@ public class UITheme : ScriptableObject
     public Color difficultyCustom = new Color32(0x8B, 0x7F, 0xD1, 0xFF);
     public Color onDifficultyText = Color.white;
 
+    [Header("랭크 빈 자리 (기획서 3-3 「랭크·FC 표시 (11/18 개정)」, 기록이 없는 채보의 기록 카드 랭크 칸)")]
+    [Tooltip("빈 자리 바탕 Img_RankEmpty (흰색 55%)")]
+    public Color rankEmptyFill = new Color(1f, 1f, 1f, 0.55f);
+    [Tooltip("빈 자리 점선 Img_RankEmpty/Img_RankEmptyDash (#2C2838 35%)")]
+    public Color rankEmptyDash = new Color(0x2C / 255f, 0x28 / 255f, 0x38 / 255f, 0.35f);
+
     [Header("인게임 왼쪽 패널 (유리 패널 위, 글자는 메뉴용 색)")]
     [Tooltip("유리 패널 1px 테두리 (흰색 70%). 패널 바탕은 panel")]
     public Color panelBorder = new Color(1f, 1f, 1f, 0.70f);
@@ -111,8 +116,6 @@ public class UITheme : ScriptableObject
     [Header("인게임 · 판정선 · 키 칸 · 라인 빛")]
     [Tooltip("판정선 (#3E9BE0)")]
     public Color judgeLine = new Color32(0x3E, 0x9B, 0xE0, 0xFF);
-    [Tooltip("판정선 빛 (하늘색, 알파 = 빛 세기)")]
-    public Color judgeLineGlow = new Color(0x7C / 255f, 0xC4 / 255f, 0xFA / 255f, 0.45f);
     [Tooltip("키 칸 평소 바탕 (rgba(44,40,56) 86%)")]
     public Color keyCell = new Color(44 / 255f, 40 / 255f, 56 / 255f, 0.86f);
     [Tooltip("키 칸 평소 테두리 (흰색 12%)")]
@@ -143,10 +146,6 @@ public class UITheme : ScriptableObject
     public Color inGameSlow = new Color32(0xFB, 0x92, 0x3C, 0xFF);
     [Tooltip("판정 글자 빛 세기 (판정 색 × 이 알파로 TMP Glow를 칠한다, 0이면 빛 없음)")]
     [Range(0f, 1f)] public float inGameJudgeGlowAlpha = 0.45f;
-
-    [Header("글꼴")]
-    [Tooltip("랭크 글자 글꼴 (비우면 그 글자의 원래 글꼴. 랭크 글꼴이 정해지면 이 칸만 바꾼다)")]
-    public TMP_FontAsset rankFont;
 
     private static UITheme current;
 
@@ -194,19 +193,6 @@ public class UITheme : ScriptableObject
             case GameConstants.Chart.DifficultyHard: return difficultyHard;
             default: return difficultyCustom;
         }
-    }
-
-    /// <summary>도장 색: FC는 포인트색, AP는 PERFECT 색</summary>
-    public Color GetStamp(RecordStamp stamp)
-    {
-        return stamp == RecordStamp.AllPerfect ? judgePerfect : accent;
-    }
-
-    /// <summary>랭크 글자색: S는 포인트색, 나머지는 기본 글자색 (기록 없음 "―"는 흐린 글자)</summary>
-    public Color GetRank(RecordTexts texts)
-    {
-        if (!texts.HasRecord) return textMuted;
-        return texts.IsRankS ? accent : textPrimary;
     }
 
     /// <summary>메뉴용(밝은 배경) 판정 이름 색 (인게임 왼쪽 판정 패널 라벨)</summary>

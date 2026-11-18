@@ -102,6 +102,7 @@ public class InGameJudgeTests
         Assert.AreEqual(noteCount, perfect.MaxCombo);
         Assert.IsTrue(perfect.IsAllPerfect);
         Assert.IsTrue(perfect.IsFullCombo);
+        Assert.AreEqual(PlayRank.AP, perfect.Rank, "전부 PERFECT면 AP");
         Assert.AreEqual(100.0, perfect.Accuracy, 1e-9);
 
         Assert.AreEqual(0, miss.Score);
@@ -110,7 +111,7 @@ public class InGameJudgeTests
         Assert.IsFalse(miss.IsFullCombo);
     }
 
-    /// <summary>판정이 섞이면 비율 합 ÷ 노트 수, 반올림은 마지막에 한 번 (7개 중 GREAT 1개 = 957,142.857… → 957,143)</summary>
+    /// <summary>판정이 섞이면 비율 합 ÷ 노트 수, 내림은 마지막에 한 번 (7개 중 GREAT 1개 = 957,142.857… → 957,142)</summary>
     [Test]
     public void Score_MixedJudgesAndCombo()
     {
@@ -118,7 +119,7 @@ public class InGameJudgeTests
         foreach (JudgeType judge in new[] { JudgeType.Perfect, JudgeType.Perfect, JudgeType.Great, JudgeType.Perfect, JudgeType.Perfect, JudgeType.Perfect, JudgeType.Perfect })
             score.Add(judge);
 
-        Assert.AreEqual(957143, score.Score);
+        Assert.AreEqual(957142, score.Score, "반올림이 아니라 내림");
         Assert.AreEqual(PlayRank.S, score.Rank);
         Assert.AreEqual(7, score.MaxCombo);
         Assert.IsTrue(score.IsFullCombo);
@@ -134,23 +135,5 @@ public class InGameJudgeTests
         Assert.IsFalse(combo.IsFullCombo);
         Assert.AreEqual((100 + 30 + 0 + 70 + 100) / 5.0, combo.Accuracy, 1e-9);
         Assert.AreEqual(600000, combo.Score);
-    }
-
-    /// <summary>3. 랭크 경계값</summary>
-    [TestCase(1000000, PlayRank.S)]
-    [TestCase(950000, PlayRank.S)]
-    [TestCase(949999, PlayRank.A)]
-    [TestCase(900000, PlayRank.A)]
-    [TestCase(899999, PlayRank.B)]
-    [TestCase(800000, PlayRank.B)]
-    [TestCase(799999, PlayRank.C)]
-    [TestCase(700000, PlayRank.C)]
-    [TestCase(699999, PlayRank.D)]
-    [TestCase(600000, PlayRank.D)]
-    [TestCase(599999, PlayRank.F)]
-    [TestCase(0, PlayRank.F)]
-    public void Rank_Boundaries(int score, PlayRank expected)
-    {
-        Assert.AreEqual(expected, ScoreCalculator.GetRank(score));
     }
 }

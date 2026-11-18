@@ -77,12 +77,14 @@ public class Canvas_SongSelect : UIBase
     [SerializeField] private TMP_Text myChartCountText;
     [SerializeField] private TMP_Text myChartEmptyText;
 
-    [Header("최고 기록 카드 (기록이 없으면 각 칸 \"—\")")]
+    [Header("최고 기록 카드 (기록이 없으면 점수·RATE·COMBO \"—\", 랭크는 점선 빈 자리)")]
     [SerializeField] private TMP_Text bestScoreText;
     [SerializeField] private TMP_Text rateText;
     [SerializeField] private TMP_Text comboText;
-    [SerializeField] private TMP_Text rankText;
-    [SerializeField] private Img_Stamp recordStamp;
+    [Tooltip("랭크 칸 (94×62, 세로 구분선 오른쪽). 기록이 없으면 Img_RankEmpty")]
+    [SerializeField] private Img_Rank recordRank;
+    [Tooltip("COMBO 글자 옆 FC 이미지 (폭 30)")]
+    [SerializeField] private Img_FullCombo recordFullCombo;
 
     [Header("배속")]
     [SerializeField] private TMP_Text speedText;
@@ -1044,9 +1046,13 @@ public class Canvas_SongSelect : UIBase
         UIThemePaint.Text(bestScoreText, valueLevel);
         UIThemePaint.Text(rateText, valueLevel);
         UIThemePaint.Text(comboText, valueLevel);
-        UIThemePaint.Rank(rankText, texts);
-        if (recordStamp != null) recordStamp.SetStamp(texts.Stamp);
+        recordRank.Show(texts.HasRecord, texts.Rank);
+        recordFullCombo.SetFullCombo(texts.HasRecord && texts.IsFullCombo);
     }
+
+    /// <summary>최고 기록 카드 랭크 칸 · FC (확인용)</summary>
+    public Img_Rank RecordRank => recordRank;
+    public Img_FullCombo RecordFullCombo => recordFullCombo;
 
     /// <summary>
     /// 지금 선택 상태를 로그로 남긴다 (확인용).

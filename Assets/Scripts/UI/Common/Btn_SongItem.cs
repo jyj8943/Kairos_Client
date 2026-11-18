@@ -12,7 +12,7 @@ using UnityEngine.UI;
 ///   (보통 = 패널 흰색 58% + 기본·보조 글자, 고름 = 포인트색 18% 바탕 + 왼쪽 막대).
 /// - 곡 선택 프리팹만 쓰는 칸 (비워 두면 쓰지 않는다, 기획서 3-3 ② 11/17):
 ///   왼쪽 하늘색 막대(selectBar), 고르면 크게(높이·앨범·제목 크기), 둘째 줄 아티스트(showArtist),
-///   오른쪽 난이도 칸(위 E · N · H 레벨, 아래 난이도별 최고 랭크 + FC/AP 도장, 없으면 —).
+///   오른쪽 난이도 칸(위 E · N · H 레벨, 아래 난이도별 최고 랭크 이미지만 높이 26, 기록이 없으면 —. FC는 목록에 띄우지 않는다, 11/18).
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_SongItem : MonoBehaviour, ISelectHandler
@@ -26,8 +26,8 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         public string difficulty;
         public Image levelTag;
         public TMP_Text levelText;
-        public TMP_Text rankText;
-        public Img_Stamp stamp;
+        [Tooltip("최고 랭크 이미지 (Img_Rank, 기록이 없으면 Txt_RankEmpty \"—\")")]
+        public Img_Rank rank;
     }
 
     [SerializeField] private Image background;
@@ -125,7 +125,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     }
 
     /// <summary>
-    /// 난이도 칸을 채운다 (곡 선택 화면). 채보 없는 난이도는 레벨·랭크 모두 "—".
+    /// 난이도 칸을 채운다 (곡 선택 화면). 채보 없는 난이도는 레벨·랭크 모두 "—", 기록이 없으면 랭크 "—".
     /// </summary>
     /// <param name="charts">이 곡의 공식 채보</param>
     /// <param name="findRecord">chartId → 기록 (없으면 null)</param>
@@ -164,8 +164,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
             }
 
             RecordTexts record = SongSelectRecordFormat.Build(chart != null ? findRecord?.Invoke(chart.chartId) : null);
-            UIThemePaint.Rank(column.rankText, record);
-            if (column.stamp != null) column.stamp.SetStamp(record.Stamp);
+            if (column.rank != null) column.rank.Show(record.HasRecord, record.Rank);
         }
     }
 

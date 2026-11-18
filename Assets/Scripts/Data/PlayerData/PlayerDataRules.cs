@@ -203,7 +203,7 @@ public static class PlayerDataRules
         return TryParseName(name, out ChartType type) ? type : ChartType.Custom;
     }
 
-    /// <summary>랭크 이름 → PlayRank. 모르는 값이면 F</summary>
+    /// <summary>랭크 이름 → PlayRank ("AP", "S" ~ "F"). 모르는 값이면 F</summary>
     public static PlayRank ParseRank(string name)
     {
         return TryParseName(name, out PlayRank rank) ? rank : PlayRank.F;
@@ -219,13 +219,17 @@ public static class PlayerDataRules
 
     /// <summary>
     /// 기록 하나의 값을 정리한다: 점수 0~1,000,000, 정확도 0~100, 콤보·횟수 0 이상, enum 문자열 정리.
+    /// AP 랭크가 생기기 전(11/18 이전) 기록은 ALL PERFECT로 1,000,000점을 냈어도 bestRank가 "S"다.
+    /// ALL PERFECT 기록이 있고 최고 점수가 1,000,000이면 그 최고 점수는 AP 판의 것이므로 bestRank를 "AP"로 바꾼다.
     /// </summary>
     public static void SanitizeRecord(ChartRecordData r)
     {
         if (r.songId == null) r.songId = string.Empty;
         r.chartType = ParseChartType(r.chartType).ToString();
         r.bestScore = Mathf.Clamp(r.bestScore, 0, GameConstants.Play.MaxScore);
-        r.bestRank = ParseRank(r.bestRank).ToString();
+        PlayRank rank = ParseRank(r.bestRank);
+        if (r.isAllPerfect && r.bestScore == GameConstants.Play.MaxScore) rank = PlayRank.AP;
+        r.bestRank = rank.ToString();
         r.bestAccuracy = double.IsNaN(r.bestAccuracy) ? 0 : Math.Max(0, Math.Min(100, r.bestAccuracy));
         r.maxCombo = Math.Max(0, r.maxCombo);
         r.playCount = Math.Max(0, r.playCount);

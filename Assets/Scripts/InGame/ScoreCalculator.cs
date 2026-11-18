@@ -1,7 +1,9 @@
 /// <summary>
 /// 점수·콤보·정확도·랭크 계산 (기획서 2-1). MonoBehaviour가 아닌 일반 클래스라 EditMode 테스트로 검사할 수 있다.
-/// - 점수 = 1,000,000 × (판정 비율 합) ÷ 전체 노트 수. 정수로 계산하고 반올림은 마지막에 한 번만 해서
-///   전부 PERFECT면 노트 수와 상관없이 정확히 1,000,000이 된다.
+/// - 점수 = 1,000,000 × (판정 비율 합) ÷ 전체 노트 수. 정수로 계산하고 마지막에 한 번만 내림한다 (기획서 2-1 5), 11/18).
+///   전부 PERFECT면 노트 수와 상관없이 정확히 1,000,000, PERFECT가 아닌 판정이 하나라도 있으면 999,999 이하가 된다
+///   (반올림하면 노트가 아주 많은 채보에서 999,999.6점이 1,000,000점으로 보여 AP처럼 보인다).
+/// - 랭크는 RankRules.GetRank (AP는 판정 수로, 나머지는 점수로).
 /// - 콤보: PERFECT·GREAT·GOOD이면 +1, MISS면 0. 최대 콤보를 기록한다.
 /// - 롱노트 (기획서 2-1 4, 롱노트 판정 세부 규칙 2)
 ///   - 판정 1개로 센다: 전체 판정 수 = 숏노트 + 롱노트. 점수·판정 개수에는 종합 판정(AddLongFinal)만 넣는다.
@@ -122,7 +124,7 @@ public class ScoreCalculator
         + (long)MissCount * GameConstants.Play.MissRatio;
 
     /// <summary>
-    /// 점수 (0 ~ 1,000,000). 1,000,000 × 비율 합 ÷ (전체 노트 수 × 100)을 마지막에 한 번 반올림한다 (0.5는 올림).
+    /// 점수 (0 ~ 1,000,000). 1,000,000 × 비율 합 ÷ (전체 노트 수 × 100)을 마지막에 한 번 내림한다 (999,999.6 → 999,999).
     /// </summary>
     public int Score
     {
@@ -132,7 +134,7 @@ public class ScoreCalculator
 
             long denominator = (long)TotalNotes * GameConstants.Play.RatioBase;
             long numerator = WeightedSum * GameConstants.Play.MaxScore;
-            return (int)((numerator * 2 + denominator) / (denominator * 2));
+            return (int)(numerator / denominator);
         }
     }
 
@@ -145,24 +147,12 @@ public class ScoreCalculator
     /// </summary>
     public double LiveAccuracy => JudgedCount == 0 ? 0.0 : (double)WeightedSum / JudgedCount;
 
-    public PlayRank Rank => GetRank(Score);
+    /// <summary>랭크 (RankRules.GetRank: 전부 PERFECT면 AP, 아니면 점수 기준)</summary>
+    public PlayRank Rank => RankRules.GetRank(PerfectCount, TotalNotes, Score);
 
-    /// <summary>MISS가 하나도 없으면 true (노트가 있을 때만, 틱은 판정이 아니라 보지 않는다)</summary>
+    /// <summary>MISS가 하나도 없고 모든 노트를 판정했으면 true (노트가 있을 때만, 틱은 판정이 아니라 보지 않는다). AP면 항상 true</summary>
     public bool IsFullCombo => TotalNotes > 0 && MissCount == 0 && JudgedCount == TotalNotes;
 
-    /// <summary>전부 PERFECT면 true (노트가 있을 때만)</summary>
-    public bool IsAllPerfect => TotalNotes > 0 && PerfectCount == TotalNotes;
-
-    /// <summary>
-    /// 점수의 랭크. S 950,000 · A 900,000 · B 800,000 · C 700,000 · D 600,000 이상, 그 미만 F.
-    /// </summary>
-    public static PlayRank GetRank(int score)
-    {
-        if (score >= GameConstants.Play.RankSScore) return PlayRank.S;
-        if (score >= GameConstants.Play.RankAScore) return PlayRank.A;
-        if (score >= GameConstants.Play.RankBScore) return PlayRank.B;
-        if (score >= GameConstants.Play.RankCScore) return PlayRank.C;
-        if (score >= GameConstants.Play.RankDScore) return PlayRank.D;
-        return PlayRank.F;
-    }
+    /// <summary>전부 PERFECT면 true (노트가 있을 때만, RankRules.IsAllPerfect)</summary>
+    public bool IsAllPerfect => RankRules.IsAllPerfect(PerfectCount, TotalNotes);
 }

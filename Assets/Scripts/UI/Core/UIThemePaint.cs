@@ -5,7 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// UITheme 색으로 자주 칠하는 것 모음 (메뉴 화면 공용 함수). 화면·항목 스크립트의 Init·선택 표시에서 부른다.
 /// - Text: 글자 단계 · Panel: 패널(흰색 58%) · SelectableRow: 목록 항목 선택 표시(포인트색 18% 바탕 + 왼쪽 막대)
-/// - Rank: 랭크 글자(S 포인트색, 랭크 글꼴) · Badge: 뱃지 바탕 + 흰 글자
+/// - Badge: 뱃지 바탕 + 흰 글자 (랭크·FC는 이미지라 여기서 칠하지 않는다: Img_Rank · Img_FullCombo)
 /// </summary>
 public static class UIThemePaint
 {
@@ -33,16 +33,6 @@ public static class UIThemePaint
             bar.color = theme.accent;
             bar.gameObject.SetActive(selected);
         }
-    }
-
-    /// <summary>랭크 글자: 글자·색(S 포인트색, 나머지 기본, 기록 없음 흐린 글자)·랭크 글꼴(테마에 있으면)</summary>
-    public static void Rank(TMP_Text text, RecordTexts record)
-    {
-        if (text == null) return;
-        UITheme theme = UITheme.Current;
-        text.text = record.Rank;
-        text.color = theme.GetRank(record);
-        if (theme.rankFont != null && text.font != theme.rankFont) text.font = theme.rankFont;
     }
 
     /// <summary>뱃지: 바탕 색 + 흰 글자</summary>

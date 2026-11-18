@@ -12,9 +12,10 @@ using UnityEngine.UI;
 /// - 배경: MenuBackground (곡 선택과 같은 처리, 처음은 페이드 없이). 색·글꼴은 모두 UITheme (고정 그래픽은 UIThemeColor, 바뀌는 색은 UIThemePaint).
 /// - 화면 이름 "RESULT" + 테스트 플레이 표시. 결과 패널(흰색 58%) 위에서 아래로:
 ///   ⑧ 곡 정보 (앨범 · 제목 · 아티스트 · 난이도 뱃지 · Lv · 배속. 나만의 채보는 CUSTOM 뱃지 + 채보 이름, 길면 채보 이름만 줄임표)
-///   → ② 점수 + 이전 최고와 차이 / ① 랭크(S 포인트색, 랭크 글꼴) + ⑦ FC·AP 도장 (곡 선택과 같은 규칙)
-///   → ④ 판정별 개수(메뉴용 판정 색) + FAST/SLOW 막대 / ⑥ RATE · ⑤ MAX COMBO (최대 / 전체).
-///   ③ NEW RECORD는 SCORE · RATE · MAX COMBO 각각 오른쪽에, 그 항목이 신기록일 때만 (테스트 플레이는 띄우지 않음).
+///   → ② 점수 + 이전 최고와 차이 / ① 랭크 이미지 (점수 오른쪽 240×160 칸, S~F 높이 150 정사각형, AP는 가로로 김. 기획서 3-3 「랭크·FC 표시 (11/18 개정)」)
+///   → ④ 판정별 개수(메뉴용 판정 색) + FAST/SLOW 막대 / ⑥ RATE · ⑤ MAX COMBO (왼쪽 최대 / 전체, 오른쪽 ⑦ FC 이미지 폭 78 → 그 아래 NEW RECORD).
+///   FC가 아니면 FC 이미지만 숨긴다 (NEW RECORD 자리는 그대로). AP면 FC도 함께 띄운다.
+///   ③ NEW RECORD는 SCORE · RATE 값 오른쪽, MAX COMBO는 FC 아래. 그 항목이 신기록일 때만 (테스트 플레이는 띄우지 않음).
 /// - 오른쪽 x 1300~1860은 카이로스 일러스트 자리로 비워 둔다 (KairosSlot).
 /// - 하단 바: 키 안내 "F5 다시 하기 · Enter ESC 곡 선택으로"(테스트 플레이면 "에디터로") + 오른쪽 끝 버튼 2개 (다시 하기 · 곡 선택으로/에디터로).
 /// - 키 (기획서 3-9): F5 다시 하기(Result/Retry), Enter 돌아가기(Result/Return), ESC 돌아가기(UIManager → ResultScene.OnBack). 팝업이 열려 있으면 무시.
@@ -48,13 +49,13 @@ public class Canvas_Result : UIBase
     [SerializeField] private TMP_Text levelText;
     [SerializeField] private TMP_Text speedText;
 
-    [Header("② 점수 · ① 랭크 · ⑦ 도장")]
+    [Header("② 점수 · ① 랭크")]
     [SerializeField] private TMP_Text scoreText;
     [SerializeField] private GameObject newScoreBadge;
     [Tooltip("이전 최고 + 차이 (BEST 933602 +12334). 이전 기록이 없거나 테스트 플레이면 숨긴다")]
     [SerializeField] private TMP_Text bestText;
-    [SerializeField] private TMP_Text rankText;
-    [SerializeField] private Img_Stamp stamp;
+    [Tooltip("랭크 이미지 (RankArea/Img_Rank, 높이 150 · 칸 폭 240)")]
+    [SerializeField] private Img_Rank rankImage;
 
     [Header("④ 판정별 개수 · FAST/SLOW")]
     [SerializeField] private JudgeRow perfectRow;
@@ -73,6 +74,8 @@ public class Canvas_Result : UIBase
     [SerializeField] private GameObject newRateBadge;
     [SerializeField] private TMP_Text maxComboText;
     [SerializeField] private TMP_Text comboTotalText;
+    [Tooltip("⑦ MAX COMBO 카드 오른쪽 FC 이미지 (폭 78)")]
+    [SerializeField] private Img_FullCombo fullComboImage;
     [SerializeField] private GameObject newComboBadge;
 
     [Header("버튼")]
@@ -159,7 +162,7 @@ public class Canvas_Result : UIBase
         speedText.text = string.Format(CultureInfo.InvariantCulture, GameConstants.Result.SpeedFormat, result.scrollMultiplier);
     }
 
-    /// <summary>② 점수 + NEW RECORD + 이전 최고와 차이 / ① 랭크 + ⑦ 도장</summary>
+    /// <summary>② 점수 + NEW RECORD + 이전 최고와 차이 / ① 랭크 이미지</summary>
     private void ShowScoreAndRank(ResultData result)
     {
         UITheme theme = UITheme.Current;
@@ -175,10 +178,7 @@ public class Canvas_Result : UIBase
                             $" <color=#{ColorUtility.ToHtmlStringRGB(diffColor)}><b>{diff}</b></color>";
         }
 
-        RecordStamp recordStamp = SongSelectRecordFormat.GetStamp(result.isFullCombo, result.isAllPerfect);
-        RecordTexts rank = new RecordTexts(true, string.Empty, string.Empty, string.Empty, result.rank.ToString(), result.rank == PlayRank.S, recordStamp);
-        UIThemePaint.Rank(rankText, rank);
-        stamp.SetStamp(recordStamp);
+        rankImage.SetRank(result.rank);
     }
 
     /// <summary>④ 판정별 개수 (이름은 메뉴용 판정 색, 숫자는 기본 글자색) + FAST/SLOW 막대</summary>
@@ -223,13 +223,14 @@ public class Canvas_Result : UIBase
         rect.offsetMax = Vector2.zero;
     }
 
-    /// <summary>⑥ RATE (소수 둘째 자리 %) · ⑤ MAX COMBO (최대 / 전체 = 노트 수 + 롱노트 유지 틱 수) + 각 NEW RECORD</summary>
+    /// <summary>⑥ RATE (소수 둘째 자리 %) · ⑤ MAX COMBO (최대 / 전체 = 노트 수 + 롱노트 유지 틱 수) + ⑦ FC (AP면 FC도) + 각 NEW RECORD</summary>
     private void ShowRateAndCombo(ResultData result)
     {
         rateText.text = SongSelectRecordFormat.FormatRate(result.accuracy);
         newRateBadge.SetActive(ResultFormat.ShowNewRecord(result.isNewBestAccuracy, result.isTestPlay));
         maxComboText.text = SongSelectRecordFormat.FormatCombo(result.maxCombo);
         comboTotalText.text = string.Format(GameConstants.Result.MaxComboTotalFormat, SongSelectRecordFormat.FormatCombo(result.maxPossibleCombo));
+        fullComboImage.SetFullCombo(result.isFullCombo || result.isAllPerfect);
         newComboBadge.SetActive(ResultFormat.ShowNewRecord(result.isNewMaxCombo, result.isTestPlay));
     }
 
@@ -283,6 +284,10 @@ public class Canvas_Result : UIBase
     public Color ChartBadgeColor => chartBadge != null ? chartBadge.color : Color.clear;
     public bool IsChartNameShown => chartNameText != null && chartNameText.gameObject.activeSelf;
     public string ChartNameLabel => chartNameText != null ? chartNameText.text : null;
+
+    /// <summary>랭크 이미지 · FC 이미지 (확인용)</summary>
+    public Img_Rank RankImage => rankImage;
+    public Img_FullCombo FullComboImage => fullComboImage;
 
     /// <summary>FAST 막대 비율 (빈 막대면 -1, 확인용)</summary>
     public float FastRatio { get; private set; }

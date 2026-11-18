@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 메뉴 화면 톤 (UITheme, 기획서 3장 「UI 톤 · 라벤더 안개 (11/17)」) EditMode 확인.
 /// 1. 기본값 = 기획서 표 (색 몇 개 + 덮는 색 불투명도 3개), 에셋(Resources/Data/UITheme)이 있음
-/// 2. 도장 규칙: AP+FC → AP, FC만 → FC, 둘 다 아님 → 없음 (Img_Stamp가 한 함수 SongSelectRecordFormat.GetStamp를 따른다)
+/// 2. 랭크 빈 자리 색: 바탕 흰색 55% · 점선 #2C2838 35% (기획서 3-3 「랭크·FC 표시 (11/18 개정)」)
 /// 3. 덮는 색 그라데이션: 왼쪽·가운데·오른쪽 알파 = 0.80 · 0.62 · 0.82 (함수와 MenuBackground가 만든 텍스처 둘 다)
 /// 4. 인게임 묶음 기본값 = 기획서 3-4 「인게임 톤 개편 (11/18)」 표 (기본값과 에셋 값 둘 다)
 /// 5. 롱노트 몸통 알파: 위 0.55 / 아래 0.85 (셰이더 Kairos/LongNoteBody와 같은 식)
@@ -72,28 +72,13 @@ public class UIThemeTests
     }
 
     [Test]
-    public void Stamp_ApWins_FcOnly_None()
+    public void RankEmpty_FillAndDashColors()
     {
-        root = new GameObject("Img_Stamp", typeof(RectTransform), typeof(Image));
-        GameObject label = new GameObject("Txt_Stamp", typeof(RectTransform), typeof(TextMeshProUGUI));
-        label.transform.SetParent(root.transform, false);
-        Img_Stamp stamp = root.AddComponent<Img_Stamp>();
-        SerializedObject so = new SerializedObject(stamp);
-        so.FindProperty("label").objectReferenceValue = label.GetComponent<TMP_Text>();
-        so.ApplyModifiedPropertiesWithoutUndo();
-
-        stamp.SetStamp(SongSelectRecordFormat.GetStamp(true, true));
-        Assert.AreEqual(RecordStamp.AllPerfect, stamp.Stamp, "AP+FC → AP만");
-        Assert.AreEqual("AP", label.GetComponent<TMP_Text>().text);
-        Assert.IsTrue(root.activeSelf);
-        AssertHex("B7861E", 1f, root.GetComponent<Image>().color, "AP = PERFECT 색");
-
-        stamp.SetStamp(SongSelectRecordFormat.GetStamp(true, false));
-        Assert.AreEqual("FC", label.GetComponent<TMP_Text>().text, "FC만 → FC");
-        AssertHex("3E9BE0", 1f, root.GetComponent<Image>().color, "FC = 포인트색");
-
-        stamp.SetStamp(SongSelectRecordFormat.GetStamp(false, false));
-        Assert.IsFalse(root.activeSelf, "둘 다 아님 → 도장 없음");
+        AssertHex("FFFFFF", 0.55f, theme.rankEmptyFill, "빈 자리 바탕");
+        AssertHex("2C2838", 0.35f, theme.rankEmptyDash, "빈 자리 점선");
+        UITheme asset = Resources.Load<UITheme>(UITheme.ResourcePath);
+        AssertHex("FFFFFF", 0.55f, asset.rankEmptyFill, "에셋 빈 자리 바탕");
+        AssertHex("2C2838", 0.35f, asset.rankEmptyDash, "에셋 빈 자리 점선");
     }
 
     [Test]

@@ -1,16 +1,9 @@
 using System;
 using System.Globalization;
 
-/// <summary>FC/AP 도장 종류 (ALL PERFECT면 AP만)</summary>
-public enum RecordStamp
-{
-    None,
-    FullCombo,
-    AllPerfect
-}
-
 /// <summary>
-/// 최고 기록 카드·목록 랭크 칸에 쓸 글자 묶음 (SongSelectRecordFormat.Build의 결과).
+/// 최고 기록 카드·목록 랭크 칸에 쓸 값 묶음 (SongSelectRecordFormat.Build의 결과).
+/// 랭크·FC는 이미지라 글자 대신 값으로 넘긴다 (Img_Rank · Img_FullCombo).
 /// </summary>
 public readonly struct RecordTexts
 {
@@ -18,22 +11,21 @@ public readonly struct RecordTexts
     public readonly string Score;
     public readonly string Rate;
     public readonly string Combo;
-    public readonly string Rank;
 
-    /// <summary>랭크가 S면 true (하늘색으로 칠한다)</summary>
-    public readonly bool IsRankS;
+    /// <summary>최고 랭크 (HasRecord일 때만 뜻이 있다)</summary>
+    public readonly PlayRank Rank;
 
-    public readonly RecordStamp Stamp;
+    /// <summary>FULL COMBO 기록이 있으면 true (AP 기록이면 항상 true)</summary>
+    public readonly bool IsFullCombo;
 
-    public RecordTexts(bool hasRecord, string score, string rate, string combo, string rank, bool isRankS, RecordStamp stamp)
+    public RecordTexts(bool hasRecord, string score, string rate, string combo, PlayRank rank, bool isFullCombo)
     {
         HasRecord = hasRecord;
         Score = score;
         Rate = rate;
         Combo = combo;
         Rank = rank;
-        IsRankS = isRankS;
-        Stamp = stamp;
+        IsFullCombo = isFullCombo;
     }
 }
 
@@ -41,8 +33,9 @@ public readonly struct RecordTexts
 /// 곡 선택 최고 기록 표시 형식 (기획서 3-3 ⑥, 순수 함수 · EditMode 테스트용).
 /// - 점수·콤보는 쉼표 없이 (1000000, 1104)
 /// - RATE는 최고 정확도(bestAccuracy, 점수와 상관없이 가장 높았던 값)를 소수 둘째 자리 %로. 반올림하면 99.996%가 100.00%로 보이므로 버린다
-/// - 랭크 S~F, S는 하늘색. 도장: FULL COMBO → FC, ALL PERFECT → AP (AP면 AP만)
-/// - 기록이 없으면 각 칸 "—" (GameConstants.SongSelect.EmptyValue), 도장 없음
+/// - 랭크 AP · S~F (bestRank, 모르는 이름은 F)와 FC 여부는 값으로 넘기고 이미지로 그린다 (기획서 3-3 「랭크·FC 표시 (11/18 개정)」).
+///   FC = FULL COMBO 기록이 있거나 ALL PERFECT 기록이 있으면 (AP면 FC도 보인다)
+/// - 기록이 없으면 점수·RATE·COMBO 칸 "—" (GameConstants.SongSelect.EmptyValue), 랭크는 빈 자리, FC 없음
 /// </summary>
 public static class SongSelectRecordFormat
 {
@@ -68,40 +61,20 @@ public static class SongSelectRecordFormat
         return string.Format(CultureInfo.InvariantCulture, GameConstants.SongSelect.RateFormat, truncated);
     }
 
-    /// <summary>도장 규칙: AP면 AP만, 아니면 FC, 둘 다 아니면 없음</summary>
-    public static RecordStamp GetStamp(bool isFullCombo, bool isAllPerfect)
-    {
-        if (isAllPerfect) return RecordStamp.AllPerfect;
-        return isFullCombo ? RecordStamp.FullCombo : RecordStamp.None;
-    }
-
-    /// <summary>도장 글자 (없으면 빈 문자열)</summary>
-    public static string GetStampText(RecordStamp stamp)
-    {
-        switch (stamp)
-        {
-            case RecordStamp.AllPerfect: return GameConstants.SongSelect.StampAllPerfect;
-            case RecordStamp.FullCombo: return GameConstants.SongSelect.StampFullCombo;
-            default: return string.Empty;
-        }
-    }
-
     /// <summary>
-    /// 기록 하나를 카드 글자로 바꾼다. null이면 모든 칸 "—", 도장 없음.
+    /// 기록 하나를 카드 값으로 바꾼다. null이면 점수·RATE·COMBO "—", 랭크 없음(빈 자리), FC 없음.
     /// </summary>
     public static RecordTexts Build(ChartRecordData record)
     {
         string empty = GameConstants.SongSelect.EmptyValue;
-        if (record == null) return new RecordTexts(false, empty, empty, empty, empty, false, RecordStamp.None);
+        if (record == null) return new RecordTexts(false, empty, empty, empty, PlayRank.F, false);
 
-        PlayRank rank = PlayerDataRules.ParseRank(record.bestRank);
         return new RecordTexts(
             true,
             FormatScore(record.bestScore),
             FormatRate(record.bestAccuracy),
             FormatCombo(record.maxCombo),
-            rank.ToString(),
-            rank == PlayRank.S,
-            GetStamp(record.isFullCombo, record.isAllPerfect));
+            PlayerDataRules.ParseRank(record.bestRank),
+            record.isFullCombo || record.isAllPerfect);
     }
 }

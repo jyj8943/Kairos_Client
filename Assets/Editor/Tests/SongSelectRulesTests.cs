@@ -5,7 +5,7 @@ using UnityEngine;
 
 /// <summary>
 /// 곡 선택 화면 개편 규칙 EditMode 확인 (기획서 3-3 곡 선택 화면 개편 · 나만의 채보 탭 11/17, 2-4 마지막 선택).
-/// 1. 최고 기록 카드 형식: 점수·콤보 쉼표 없음, RATE 소수 둘째 자리(버림), 기록 없음 —, FC/AP 도장 (AP면 AP만), S 하늘색
+/// 1. 최고 기록 카드 형식: 점수·콤보 쉼표 없음, RATE 소수 둘째 자리(버림), 기록 없음 —, 랭크(AP·S~F)·FC 값 (AP면 FC도, 11/18)
 /// 2. 마지막 선택: 저장 → 불러오기, 없는 채보 ID면 공식 첫 곡, 예전 JSON(필드 없음) 읽기, 곡·채보 한쪽만 있으면 비움
 /// 3. 나만의 채보 목록 이동: ↑↓가 곡 경계를 넘음, ←→가 이전·다음 곡 첫 채보, 양 끝에서 멈춤, 채보 0개
 /// </summary>
@@ -37,7 +37,7 @@ public class SongSelectRulesTests
     }
 
     [Test]
-    public void RecordFormat_NoRecord_AllDash_NoStamp()
+    public void RecordFormat_NoRecord_AllDash_NoFullCombo()
     {
         RecordTexts texts = SongSelectRecordFormat.Build(null);
         Assert.IsFalse(texts.HasRecord);
@@ -45,21 +45,7 @@ public class SongSelectRulesTests
         Assert.AreEqual(Empty, texts.Score);
         Assert.AreEqual(Empty, texts.Rate);
         Assert.AreEqual(Empty, texts.Combo);
-        Assert.AreEqual(Empty, texts.Rank);
-        Assert.IsFalse(texts.IsRankS);
-        Assert.AreEqual(RecordStamp.None, texts.Stamp);
-    }
-
-    [Test]
-    public void RecordFormat_Stamp_ApOnlyWhenAllPerfect()
-    {
-        Assert.AreEqual(RecordStamp.AllPerfect, SongSelectRecordFormat.GetStamp(true, true), "AP면 AP만");
-        Assert.AreEqual(RecordStamp.AllPerfect, SongSelectRecordFormat.GetStamp(false, true));
-        Assert.AreEqual(RecordStamp.FullCombo, SongSelectRecordFormat.GetStamp(true, false));
-        Assert.AreEqual(RecordStamp.None, SongSelectRecordFormat.GetStamp(false, false));
-        Assert.AreEqual("AP", SongSelectRecordFormat.GetStampText(RecordStamp.AllPerfect));
-        Assert.AreEqual("FC", SongSelectRecordFormat.GetStampText(RecordStamp.FullCombo));
-        Assert.AreEqual(string.Empty, SongSelectRecordFormat.GetStampText(RecordStamp.None));
+        Assert.IsFalse(texts.IsFullCombo);
     }
 
     [Test]
@@ -74,18 +60,21 @@ public class SongSelectRulesTests
         Assert.AreEqual("948210", texts.Score);
         Assert.AreEqual("95.34%", texts.Rate);
         Assert.AreEqual("1104", texts.Combo);
-        Assert.AreEqual("A", texts.Rank);
-        Assert.IsFalse(texts.IsRankS);
-        Assert.AreEqual(RecordStamp.FullCombo, texts.Stamp);
+        Assert.AreEqual(PlayRank.A, texts.Rank);
+        Assert.IsTrue(texts.IsFullCombo);
 
-        record.bestRank = "S";
+        record.bestRank = "AP";
+        record.isFullCombo = false;
         record.isAllPerfect = true;
         texts = SongSelectRecordFormat.Build(record);
-        Assert.IsTrue(texts.IsRankS, "S는 하늘색");
-        Assert.AreEqual(RecordStamp.AllPerfect, texts.Stamp);
+        Assert.AreEqual(PlayRank.AP, texts.Rank);
+        Assert.IsTrue(texts.IsFullCombo, "AP 기록이면 FC도 보인다");
+
+        record.isAllPerfect = false;
+        Assert.IsFalse(SongSelectRecordFormat.Build(record).IsFullCombo, "FC 아님");
 
         record.bestRank = "???";
-        Assert.AreEqual("F", SongSelectRecordFormat.Build(record).Rank, "모르는 랭크 이름은 F");
+        Assert.AreEqual(PlayRank.F, SongSelectRecordFormat.Build(record).Rank, "모르는 랭크 이름은 F");
     }
 
     [Test]

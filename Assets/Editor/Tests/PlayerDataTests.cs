@@ -62,7 +62,7 @@ public class PlayerDataTests
                 },
                 new ChartRecordData
                 {
-                    chartId = "my_20261110_143229_b5ra", songId = "d_minor_descent", chartType = "Custom", bestScore = 1000000, bestRank = "S",
+                    chartId = "my_20261110_143229_b5ra", songId = "d_minor_descent", chartType = "Custom", bestScore = 1000000, bestRank = "AP",
                     bestAccuracy = 100, maxCombo = 111, isFullCombo = true, isAllPerfect = true, playCount = 1,
                     firstPlayedAt = "2026-11-11T00:00:00Z", lastPlayedAt = "2026-11-11T00:00:00Z"
                 }
@@ -89,7 +89,7 @@ public class PlayerDataTests
         string json = File.ReadAllText(filePath);
         StringAssert.Contains("\"windowMode\": \"Windowed\"", json);
         StringAssert.Contains("\"chartType\": \"Custom\"", json);
-        StringAssert.Contains("\"bestRank\": \"S\"", json);
+        StringAssert.Contains("\"bestRank\": \"AP\"", json);
     }
 
     [Test]

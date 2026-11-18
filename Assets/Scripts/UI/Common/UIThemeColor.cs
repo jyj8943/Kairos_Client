@@ -20,13 +20,15 @@ public enum UIColorRole
     EmptyCover,
     PanelBorder,
     StatBox,
-    StatBoxBorder
+    StatBoxBorder,
+    RankEmptyFill,
+    RankEmptyDash
 }
 
 /// <summary>
 /// 바뀌지 않는 그래픽(패널·라벨·선·키 모양 등)에 붙여 역할만 정해 두면, 화면 Init에서 UITheme 색으로 칠한다 (메뉴 화면 공용 컴포넌트).
 /// - 씬·프리팹에는 색 대신 역할(enum)만 남긴다. 화면 스크립트가 Init에서 UIThemeColor.ApplyAll(루트)을 부른다.
-/// - 선택에 따라 바뀌는 색(탭·목록 항목·난이도 카드·랭크)은 각 스크립트가 UIThemePaint로 칠한다.
+/// - 선택에 따라 바뀌는 색(탭·목록 항목·난이도 카드)은 각 스크립트가 UIThemePaint로 칠한다. 랭크·FC는 이미지라 색을 칠하지 않는다.
 /// </summary>
 [RequireComponent(typeof(Graphic))]
 public class UIThemeColor : MonoBehaviour
@@ -84,6 +86,8 @@ public class UIThemeColor : MonoBehaviour
             case UIColorRole.PanelBorder: return theme.panelBorder;
             case UIColorRole.StatBox: return theme.statBox;
             case UIColorRole.StatBoxBorder: return theme.statBoxBorder;
+            case UIColorRole.RankEmptyFill: return theme.rankEmptyFill;
+            case UIColorRole.RankEmptyDash: return theme.rankEmptyDash;
             default: return Color.magenta;
         }
     }

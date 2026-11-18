@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 내 채보 항목 하나. 에디터 곡 고르기(Prefabs/Common/Btn_MyChartItem)와 곡 선택 화면 나만의 채보 탭(Prefabs/SongSelect/Btn_MyChartItem)이 같이 쓴다.
 /// - 에디터: 채보 이름과 "Lv.N · 노트 N"을 표시하고, 선택만으로는 열지 않고 클릭·Enter 때 onChosen을 부른다.
-/// - 곡 선택(기획서 3-3 나만의 채보 탭 11/17): CUSTOM 뱃지 · 채보 이름 · Lv · 최고 랭크 + FC/AP 도장.
+/// - 곡 선택(기획서 3-3 나만의 채보 탭 11/17): CUSTOM 뱃지 · 채보 이름 · Lv · 최고 랭크 이미지 (높이 26, FC는 띄우지 않음, 11/18).
 ///   키보드·마우스로 선택되면 곧바로 그 채보를 고른다 (SetSelectCallback). 고른 채보는 왼쪽 하늘색 막대(selectBar)와 밝은 배경.
 /// - 강조: 선택(또는 고른 채보)이면 배경·글자색을 바꾼다. 에디터 프리팹은 프리팹 색, 곡 선택 프리팹(useMenuTheme)은 UITheme 색
 ///   (보통 = 패널 흰색 58%, 고름 = 포인트색 18% 바탕 + 왼쪽 막대, 글자 = 기본).
@@ -30,9 +30,8 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
     [SerializeField] private bool showLevelOnly;
     [Tooltip("고른 채보 왼쪽 하늘색 막대 (Img_SelectBar)")]
     [SerializeField] private Image selectBar;
-    [Tooltip("최고 랭크 (기록이 없으면 —)")]
-    [SerializeField] private TMP_Text rankText;
-    [SerializeField] private Img_Stamp stamp;
+    [Tooltip("최고 랭크 이미지 (Img_Rank, 기록이 없으면 Txt_RankEmpty \"—\")")]
+    [SerializeField] private Img_Rank rank;
 
     private Button button;
     private Color normalBackgroundColor;
@@ -99,14 +98,16 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IDeselectHandler
     }
 
     /// <summary>
-    /// 최고 랭크와 FC/AP 도장을 채운다 (곡 선택 화면). 기록이 없으면 "—", 도장 없음.
+    /// 최고 랭크 이미지를 채운다 (곡 선택 화면). 기록이 없으면 "—".
     /// </summary>
     public void SetRecord(ChartRecordData record)
     {
         RecordTexts texts = SongSelectRecordFormat.Build(record);
-        UIThemePaint.Rank(rankText, texts);
-        if (stamp != null) stamp.SetStamp(texts.Stamp);
+        if (rank != null) rank.Show(texts.HasRecord, texts.Rank);
     }
+
+    /// <summary>최고 랭크 이미지 (확인용)</summary>
+    public Img_Rank RankImage => rank;
 
     /// <summary>
     /// 고른 채보 표시를 켜거나 끈다 (곡 선택 화면용). 켜 두면 EventSystem 선택이 풀려도 강조가 남는다.
