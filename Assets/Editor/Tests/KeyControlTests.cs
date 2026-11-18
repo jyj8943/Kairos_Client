@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 조작 키 정리 (기획서 3-9) EditMode 테스트: 입력 에셋 바인딩, KeyGuideBar 키 이름, 인게임 F5 허용 규칙.
+/// 조작 키 정리 (기획서 3-8) EditMode 테스트: 입력 에셋 바인딩, KeyGuideBar 키 이름, 인게임 F5 허용 규칙.
 /// 화면 흐름(키를 실제로 눌러 씬이 넘어가는지)은 KeyControlPlayTests가 본다.
 /// </summary>
 public class KeyControlTests

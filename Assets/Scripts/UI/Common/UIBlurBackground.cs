@@ -13,6 +13,8 @@ using Debug = UnityEngine.Debug;
 /// - RenderTexture는 처음 한 번 만들어(결과 2장 + 중간 1장) 계속 다시 쓰고, OnDestroy에서 해제한다.
 /// - 입력이 바뀌면 결과 2장을 번갈아 쓰고 앞·뒤 RawImage 알파로 섞는다 (BackgroundFadeSeconds, 실제 시간). 처음과 instant는 페이드 없이 바로.
 /// - 머티리얼(UIBlur.mat)은 직렬화 필드로 연결해 빌드에서 셰이더가 빠지지 않게 한다.
+/// - 블러 세기: 기본은 머티리얼 _Radius와 GameConstants.SongSelect.BlurIterations. SetBlurRadiusPx로 화면마다 바꿀 수 있다 (팝업 뒤 화면 블러 6px).
+/// - 화면 캡처처럼 같은 RenderTexture에 새 내용이 들어오는 입력은 ProcessNow로 매번 다시 처리한다 (위아래 뒤집기 선택, 페이드 없음).
 /// - keepResultAcrossScenes를 켜면(인게임) 처리 결과 한 장을 씬을 넘어 남겨 두고, 다음 씬에서 같은 입력·같은 색 보정이면 다시 처리하지 않고 그대로 쓴다
 ///   (인게임 재시작은 씬을 다시 불러오지만 같은 곡이라 블러를 다시 하지 않는다). 다른 입력이 오면 남겨 둔 결과를 해제하고 새로 처리한다.
 /// </summary>
@@ -32,6 +34,13 @@ public class UIBlurBackground : MonoBehaviour
 
     private static readonly int SaturationId = Shader.PropertyToID("_Saturation");
     private static readonly int BrightnessId = Shader.PropertyToID("_Brightness");
+    private static readonly int RadiusId = Shader.PropertyToID("_Radius");
+
+    /// <summary>
+    /// 셰이더 9탭 커널(가중치 0.227 · 0.316@1.385 · 0.070@3.231)의 표준편차 (텍셀, _Radius 1 기준).
+    /// 분산 = 2 × (0.3162 × 1.3846² + 0.0703 × 3.2308²) ≈ 2.68
+    /// </summary>
+    public const float KernelSigmaTexels = 1.637f;
 
     [Tooltip("블러 머티리얼 (Assets/Materials/UIBlur.mat, 셰이더 Kairos/UIBlur)")]
     [SerializeField] private Material blurMaterial;
@@ -56,6 +65,15 @@ public class UIBlurBackground : MonoBehaviour
     private Material runtimeMaterial;
     private float saturation = 1f;
     private float brightness = 1f;
+
+    /// <summary>셰이더 _Radius 덮어쓰기 (음수면 머티리얼 값 그대로)</summary>
+    private float radiusOverride = -1f;
+
+    /// <summary>반복 횟수 덮어쓰기 (0 이하면 GameConstants.SongSelect.BlurIterations)</summary>
+    private int iterationsOverride;
+
+    /// <summary>다음 처리에서 입력을 위아래로 뒤집는다 (화면 캡처가 뒤집혀 오는 그래픽 API용)</summary>
+    private bool flipSourceY;
     private readonly RenderTexture[] results = new RenderTexture[2];
     private RenderTexture temp;
     private int frontIndex = -1;
@@ -106,6 +124,67 @@ public class UIBlurBackground : MonoBehaviour
 
     /// <summary>지금 색 보정 값 (확인용)</summary>
     public Vector2 ColorGrade => new Vector2(saturation, brightness);
+
+    /// <summary>
+    /// 블러 세기를 기준 해상도(1920×1080) px 표준편차로 정한다. 다음 처리부터 쓴다.
+    /// </summary>
+    /// <param name="sigmaPx">흐림 정도 (px, 가우시안 표준편차)</param>
+    /// <param name="iterations">가로·세로 반복 횟수 (1 이상)</param>
+    public void SetBlurRadiusPx(float sigmaPx, int iterations)
+    {
+        iterationsOverride = Mathf.Max(1, iterations);
+        radiusOverride = ShaderRadiusFor(sigmaPx, Downsample, iterationsOverride);
+    }
+
+    /// <summary>지금 셰이더 _Radius (덮어쓰지 않았으면 -1, 확인용)</summary>
+    public float RadiusOverride => radiusOverride;
+
+    /// <summary>지금 반복 횟수 (확인용)</summary>
+    public int Iterations => iterationsOverride > 0 ? iterationsOverride : Mathf.Max(1, GameConstants.SongSelect.BlurIterations);
+
+    /// <summary>
+    /// 기준 해상도 px 표준편차 → 셰이더 _Radius (순수 함수).
+    /// 줄인 텍스처 1텍셀 = downsample px, 반복 n번이면 표준편차가 √n배가 된다: sigmaPx = KernelSigmaTexels × radius × downsample × √n
+    /// </summary>
+    public static float ShaderRadiusFor(float sigmaPx, int downsample, int iterations)
+    {
+        float divisor = KernelSigmaTexels * Mathf.Max(1, downsample) * Mathf.Sqrt(Mathf.Max(1, iterations));
+        return Mathf.Max(0f, sigmaPx) / divisor;
+    }
+
+    /// <summary>
+    /// 같은 텍스처라도 지금 내용으로 다시 처리해 바로 보인다 (화면 캡처용, 페이드·씬 넘김 결과 없음).
+    /// </summary>
+    /// <param name="flipY">입력을 위아래로 뒤집어 읽는다 (ScreenCapture 결과가 뒤집혀 오는 그래픽 API)</param>
+    public void ProcessNow(Texture texture, bool flipY)
+    {
+        source = texture;
+        if (texture == null)
+        {
+            RawImage empty = GetFrontImage();
+            empty.texture = null;
+            empty.color = Color.clear;
+            HideBack();
+            isFading = false;
+            return;
+        }
+
+        flipSourceY = flipY;
+        Process(texture, 0);
+        flipSourceY = false;
+        ShowFront(0, 1f);
+        HideBack();
+        isFading = false;
+    }
+
+    /// <summary>결과를 숨긴다 (텍스처는 남겨 두고 다음 ProcessNow에서 다시 쓴다)</summary>
+    public void HideResult()
+    {
+        RawImage front = GetFrontImage();
+        front.color = Color.clear;
+        HideBack();
+        isFading = false;
+    }
 
     /// <summary>Sprite 입력 (sprite.texture를 쓴다. Sprite Mode Single 기준)</summary>
     public void SetSource(Sprite sprite, bool instant)
@@ -233,6 +312,7 @@ public class UIBlurBackground : MonoBehaviour
         RenderTexture target = results[index];
         float sourceAspect = texture.height > 0 ? (float)texture.width / texture.height : GameConstants.SongSelect.BlurAspect;
         GetCrop(sourceAspect, GameConstants.SongSelect.BlurAspect, out Vector2 scale, out Vector2 offset);
+        if (flipSourceY) FlipY(ref scale, ref offset);
         Graphics.Blit(texture, target, scale, offset);
 
         Material material = GetRuntimeMaterial();
@@ -240,7 +320,8 @@ public class UIBlurBackground : MonoBehaviour
         {
             material.SetFloat(SaturationId, saturation);
             material.SetFloat(BrightnessId, brightness);
-            int iterations = Mathf.Max(1, GameConstants.SongSelect.BlurIterations);
+            material.SetFloat(RadiusId, radiusOverride >= 0f ? radiusOverride : blurMaterial.GetFloat(RadiusId));
+            int iterations = Iterations;
             for (int i = 0; i < iterations; i++)
             {
                 bool last = i == iterations - 1;
@@ -285,6 +366,13 @@ public class UIBlurBackground : MonoBehaviour
             scale.y = sourceAspect / targetAspect;
             offset.y = (1f - scale.y) * 0.5f;
         }
+    }
+
+    /// <summary>UV 배율·시작점을 위아래로 뒤집는다 (순수 함수): v → 1 - v</summary>
+    public static void FlipY(ref Vector2 scale, ref Vector2 offset)
+    {
+        offset.y += scale.y;
+        scale.y = -scale.y;
     }
 
     /// <summary>결과 2장 + 중간 1장을 처음 한 번만 만든다</summary>

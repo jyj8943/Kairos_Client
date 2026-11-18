@@ -15,6 +15,7 @@ public enum UITextLevel
 /// - 필드 기본값 = 기획서 표 값. 톤을 바꿀 때는 에셋 값만 고친다.
 /// - 메뉴 묶음: 곡 선택·결과·인게임 왼쪽 패널(유리 패널 위 글자·판정 이름·난이도 뱃지)이 본다.
 /// - 인게임 묶음: 기어·노트·판정선·키 칸·라인 빛·기어 위 판정 글자·콤보 (어두운 기어 위라 밝은 색).
+/// - 팝업 묶음: 설정 창·확인 팝업·일시정지의 덮개·패널·그림자·기본 버튼·위험 빨강 (포인트색·글자·선택 바탕은 메뉴 묶음 값을 같이 쓴다).
 /// - 씬·프리팹의 스크립트에 색을 직렬화하지 않고, 화면 Init에서 이 값을 읽어 칠한다 (UIThemeColor · UIThemePaint).
 /// </summary>
 [CreateAssetMenu(menuName = "Kairos/UI Theme", fileName = "UITheme")]
@@ -80,6 +81,32 @@ public class UITheme : ScriptableObject
     public Color rankEmptyFill = new Color(1f, 1f, 1f, 0.55f);
     [Tooltip("빈 자리 점선 Img_RankEmpty/Img_RankEmptyDash (#2C2838 35%)")]
     public Color rankEmptyDash = new Color(0x2C / 255f, 0x28 / 255f, 0x38 / 255f, 0.35f);
+
+    [Header("팝업 (기획서 3-7 「팝업 공통 톤 (11/18)」: 설정 창 · 확인 팝업 · 일시정지)")]
+    [Tooltip("뒤 화면 블러 위 덮개 (rgba(36,32,46) 42%)")]
+    public Color popupDim = new Color(36 / 255f, 32 / 255f, 46 / 255f, 0.42f);
+    [Tooltip("일시정지 재개 카운트다운 덮개 (같은 색 28%, 블러 없음)")]
+    public Color popupCountdownDim = new Color(36 / 255f, 32 / 255f, 46 / 255f, 0.28f);
+    [Tooltip("팝업 패널 (rgba(250,248,253) 86% 유리)")]
+    public Color popupPanel = new Color(250 / 255f, 248 / 255f, 253 / 255f, 0.86f);
+    [Tooltip("팝업 패널 테두리 (흰색)")]
+    public Color popupPanelBorder = Color.white;
+    [Tooltip("팝업 패널 그림자 (rgba(36,32,46) 28%, 가장자리가 부드러운 스프라이트에 곱한다)")]
+    public Color popupShadow = new Color(36 / 255f, 32 / 255f, 46 / 255f, 0.28f);
+    [Tooltip("위험 빨강 #C9504A (나가기·삭제 버튼 · 링 · \"!\" 원 · 나가기 막대·글자)")]
+    public Color danger = new Color32(0xC9, 0x50, 0x4A, 0xFF);
+    [Tooltip("위험 선택 바탕 = 위험 빨강 × 이 불투명도 (16%)")]
+    [Range(0f, 1f)] public float dangerSelectedAlpha = 0.16f;
+    [Tooltip("기본 버튼·항목 줄 바탕 (흰색 75%). 테두리는 구분선 색(divider)")]
+    public Color popupButton = new Color(1f, 1f, 1f, 0.75f);
+    [Tooltip("일시정지 지금 곡 카드 바탕 (#2C2838 6%, 패널보다 살짝 어둡게)")]
+    public Color popupCard = new Color(0x2C / 255f, 0x28 / 255f, 0x38 / 255f, 0.06f);
+    [Tooltip("버튼 선택 링 안쪽 (흰색). 바깥쪽은 포인트색 (위험 버튼은 위험 빨강)")]
+    public Color popupRingInner = Color.white;
+    [Tooltip("일시정지 재개 카운트다운 숫자 (흰색)")]
+    public Color countdownNumber = Color.white;
+    [Tooltip("카운트다운 숫자 빛 (하늘색, 알파 = 빛 세기, TMP Underlay)")]
+    public Color countdownGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.6f);
 
     [Header("인게임 왼쪽 패널 (유리 패널 위, 글자는 메뉴용 색)")]
     [Tooltip("유리 패널 1px 테두리 (흰색 70%). 패널 바탕은 panel")]
@@ -167,6 +194,12 @@ public class UITheme : ScriptableObject
 
     /// <summary>선택 항목 바탕 (포인트색 × selectedAlpha)</summary>
     public Color SelectedBackground => WithAlpha(accent, selectedAlpha);
+
+    /// <summary>위험 항목 선택 바탕 (위험 빨강 × dangerSelectedAlpha)</summary>
+    public Color DangerSelectedBackground => WithAlpha(danger, dangerSelectedAlpha);
+
+    /// <summary>포인트색 또는 위험 빨강 (위험 표시면 빨강)</summary>
+    public Color AccentOrDanger(bool isDanger) => isDanger ? danger : accent;
 
     /// <summary>글자 단계 색</summary>
     public Color GetText(UITextLevel level)

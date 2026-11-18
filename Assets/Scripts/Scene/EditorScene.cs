@@ -345,7 +345,8 @@ public class EditorScene : SceneBase
         playback.Stop(false);
         string message = string.Format(GameConstants.Confirm.BpmSectionRemoveMessageFormat, notesAfter);
         if (BpmSectionRules.GetMergedNextTick(session.BpmSections, tick) >= 0) message += GameConstants.Confirm.BpmSectionRemoveMergedLine;
-        GameManager.UI.Confirm(message, GameConstants.Confirm.BpmSectionRemoveLabel, () => RemoveBpmSection(tick));
+        GameManager.UI.Confirm(message, GameConstants.Confirm.BpmSectionRemoveLabel, () => RemoveBpmSection(tick), null,
+            GameConstants.Confirm.BpmSectionRemoveIsDanger);
     }
 
     private void RemoveBpmSection(int tick)
@@ -387,7 +388,7 @@ public class EditorScene : SceneBase
             if (!session.ResetBpmToSongDefault()) return;
             ShowTimedStatus(GameConstants.Editor.BpmResetDoneMessage);
             Debug.Log($"[EditorScene] 곡 기본 BPM으로 되돌림: {SongData.FormatBpm(session.SongDefaultBpm)}", this);
-        });
+        }, null, GameConstants.Confirm.BpmResetIsDanger);
     }
 
     private void StopPlaybackWithSnap()
@@ -470,7 +471,8 @@ public class EditorScene : SceneBase
         if (session.IsDirty)
         {
             playback.Stop(false);
-            GameManager.UI.Confirm(GameConstants.Confirm.EditorExitMessage, GameConstants.Confirm.EditorExitLabel, ExitToSongSelect);
+            GameManager.UI.Confirm(GameConstants.Confirm.EditorExitMessage, GameConstants.Confirm.EditorExitLabel, ExitToSongSelect, null,
+                GameConstants.Confirm.EditorExitIsDanger);
             return;
         }
 

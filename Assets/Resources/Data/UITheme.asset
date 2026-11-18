@@ -43,6 +43,18 @@ MonoBehaviour:
   onDifficultyText: {r: 1, g: 1, b: 1, a: 1}
   rankEmptyFill: {r: 1, g: 1, b: 1, a: 0.55}
   rankEmptyDash: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.35}
+  popupDim: {r: 0.14117648, g: 0.1254902, b: 0.18039216, a: 0.42}
+  popupCountdownDim: {r: 0.14117648, g: 0.1254902, b: 0.18039216, a: 0.28}
+  popupPanel: {r: 0.98039216, g: 0.972549, b: 0.99215686, a: 0.86}
+  popupPanelBorder: {r: 1, g: 1, b: 1, a: 1}
+  popupShadow: {r: 0.14117648, g: 0.1254902, b: 0.18039216, a: 0.28}
+  danger: {r: 0.7882353, g: 0.3137255, b: 0.2901961, a: 1}
+  dangerSelectedAlpha: 0.16
+  popupButton: {r: 1, g: 1, b: 1, a: 0.75}
+  popupCard: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.06}
+  popupRingInner: {r: 1, g: 1, b: 1, a: 1}
+  countdownNumber: {r: 1, g: 1, b: 1, a: 1}
+  countdownGlow: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 0.6}
   panelBorder: {r: 1, g: 1, b: 1, a: 0.7}
   statBox: {r: 1, g: 1, b: 1, a: 0.62}
   statBoxBorder: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.2}

@@ -280,6 +280,8 @@ public class InGameScene : SceneBase
             KeyGuideBar.GetKeyText(speedDownAction != null ? speedDownAction.action : null, GameConstants.Play.SpeedDownKeyFallback),
             KeyGuideBar.GetKeyText(speedUpAction != null ? speedUpAction.action : null, GameConstants.Play.SpeedUpKeyFallback),
             score);
+        pausePopup.SetSong(song.Title, song.Cover,
+            InGameHudRules.BuildSongInfo(chartType, chart.difficulty, chart.chartName, chart.level, IsTestPlay, isAutoPlay), IsTestPlay);
         entry.scrollMultiplier = noteLayer.ScrollMultiplier;
 
         Debug.Log($"[InGameScene] 시작{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}: songId={song.SongId}, chartId={chart.chartId ?? "(저장 안 한 새 채보)"}, " +
@@ -384,7 +386,7 @@ public class InGameScene : SceneBase
 
         Debug.Log($"[InGameScene] 일시정지 중 판정 오프셋 변경: 이번 판 {appliedOffsetMs:+0;-0;0}ms → 설정 {current:+0;-0;0}ms, 재시작 확인", this);
         GameManager.UI.Confirm(GameConstants.Confirm.OffsetRestart, GameConstants.Confirm.OffsetRestartLabel,
-            Restart, OnOffsetRestartCanceled);
+            Restart, OnOffsetRestartCanceled, GameConstants.Confirm.OffsetRestartIsDanger);
     }
 
     /// <summary>오프셋 재시작 확인 취소: 일시정지 메뉴로 돌아간다 (확인 팝업이 이전 선택을 되돌린다).</summary>
@@ -834,6 +836,8 @@ public class InGameScene : SceneBase
             GameManager.Sound.CancelScheduledSfx();
         }
 
+        // 지금 곡 카드의 진행 시간은 열 때의 곡 시간으로 채운다
+        pausePopup.SetTime(GameManager.Sound.SongTime, song.Length);
         pausePopup.Open();
         Debug.Log($"[InGameScene] 일시정지 ({reason}{(wasCountingDown ? ", 카운트다운 중단" : "")}): 곡 시간 {GameManager.Sound.SongTime:0.###}초, " +
                   $"노래 정지 {GameManager.Sound.IsMusicPaused}, 남은 노트 {judge.TotalCount - judge.JudgedCount}개", this);
@@ -896,7 +900,8 @@ public class InGameScene : SceneBase
     {
         if (isFinished) return;
 
-        GameManager.UI.Confirm(GameConstants.Confirm.RestartMessage, GameConstants.Confirm.RestartLabel, Restart);
+        GameManager.UI.Confirm(GameConstants.Confirm.RestartMessage, GameConstants.Confirm.RestartLabel, Restart, null,
+            GameConstants.Confirm.RestartIsDanger);
     }
 
     private void Restart()
@@ -982,7 +987,8 @@ public class InGameScene : SceneBase
         if (IsTestPlay)
             ExitToReturnTarget();
         else
-            GameManager.UI.Confirm(GameConstants.Confirm.InGameExitMessage, GameConstants.Confirm.InGameExitLabel, ExitToReturnTarget);
+            GameManager.UI.Confirm(GameConstants.Confirm.InGameExitMessage, GameConstants.Confirm.InGameExitLabel, ExitToReturnTarget, null,
+                GameConstants.Confirm.InGameExitIsDanger);
     }
 
     /// <summary>

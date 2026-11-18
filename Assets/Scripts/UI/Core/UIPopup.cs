@@ -5,7 +5,8 @@ using UnityEngine.UI;
 /// <summary>
 /// 팝업(Popup_)의 기반 클래스. UIBase를 상속한다.
 /// - 열면 UIManager 팝업 스택 맨 위에 올라가고, 같은 Canvas 안에서 맨 앞에 그린다 (SetAsLastSibling).
-/// - 뒤 화면을 덮는 어두운 배경(클릭을 막는 Image)은 팝업 프리팹 안에 둔다 (dimBackground).
+/// - 뒤 화면을 덮는 배경은 팝업 맨 아래 PopupBackdrop에 둔다 (기획서 3-7 팝업 공통 톤): 열 때 지금 화면을 캡처해 흐리고 그 위에 덮개(Img_Dim, 클릭을 막음 = dimBackground).
+/// - 공통 톤 색(덮개·패널·그림자·제목 등 UIThemeColor 역할)은 각 팝업 Init에서 InitPopupTone()으로 칠한다.
 /// - 키보드 선택: 열 때 EventSystem의 지금 선택을 기억하고 firstSelected로 옮긴다. 닫으면 기억한 선택으로 되돌린다
 ///   (그 오브젝트가 사라졌거나 꺼졌으면 그대로 둔다).
 /// - ESC는 UIManager가 받아 맨 위 팝업의 OnCancelRequested()를 부른다. 기본은 Close()이고 팝업마다 바꿀 수 있다.
@@ -19,12 +20,26 @@ public abstract class UIPopup : UIBase, IPointerClickHandler
     [SerializeField] private bool closeOnOutsideClick;
     [Tooltip("열 때 처음 선택할 Selectable")]
     [SerializeField] private Selectable firstSelected;
-    [Tooltip("뒤 화면을 덮는 어두운 배경 (Img_Dim). 바깥 클릭 판정에 쓴다")]
+    [Tooltip("뒤 화면을 덮는 덮개 (PopupBackdrop/Img_Dim). 바깥 클릭 판정에 쓴다")]
     [SerializeField] private GameObject dimBackground;
+    [Tooltip("뒤 화면 블러 + 덮개 (PopupBackdrop, 팝업 맨 아래). 열 때 화면을 캡처해 흐린다")]
+    [SerializeField] private PopupBackdrop backdrop;
 
     private GameObject previousSelected;
 
     public override UILayer Layer => UILayer.Popup;
+
+    /// <summary>뒤 화면 블러 + 덮개 (확인용)</summary>
+    public PopupBackdrop Backdrop => backdrop;
+
+    /// <summary>
+    /// 팝업 공통 톤 색을 칠한다: 팝업 아래 모든 UIThemeColor(덮개·패널·그림자·제목·구분선 등)와 뒤 화면 블러 설정. 각 팝업 Init 처음에 부른다.
+    /// </summary>
+    protected void InitPopupTone()
+    {
+        UIThemeColor.ApplyAll(gameObject);
+        if (backdrop != null) backdrop.Init();
+    }
 
     /// <summary>
     /// 열고 팝업 스택에 올린다. 지금 선택을 기억하고 firstSelected를 선택한다.
@@ -39,6 +54,8 @@ public abstract class UIPopup : UIBase, IPointerClickHandler
         transform.SetAsLastSibling();
         base.Open();
         GameManager.UI.PushPopup(this);
+        // 이 프레임 끝(팝업은 아직 페이드 0)에 지금 화면을 캡처해 흐린다
+        if (backdrop != null) backdrop.Capture();
 
         if (eventSystem != null && firstSelected != null)
             eventSystem.SetSelectedGameObject(firstSelected.gameObject);

@@ -199,7 +199,8 @@ public class Canvas_SongTuning : MonoBehaviour
             string message = string.Format(GameConstants.Confirm.OfficialOverwriteMessageFormat, song.Title, difficulty);
             GameManager.UI.Confirm(message, GameConstants.Confirm.OfficialOverwriteLabel,
                 () => SaveOfficialChart(difficulty),
-                () => officialStatusText.text = $"{song.Title} {difficulty}: 덮어쓰지 않았습니다.");
+                () => officialStatusText.text = $"{song.Title} {difficulty}: 덮어쓰지 않았습니다.",
+                GameConstants.Confirm.OfficialOverwriteIsDanger);
             return;
         }
 

@@ -7,8 +7,12 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// 어디서든 여는 공용 설정 창 (기획서 3-7). UIManager 오버레이 Canvas 아래에 두고, UIManager가 Init()을 호출한다. 여는 쪽은 GameManager.UI.OpenSettings().
+/// 어디서든 여는 공용 설정 창 (기획서 3-7 ①). UIManager 오버레이 Canvas 아래에 두고, UIManager가 Init()을 호출한다. 여는 쪽은 GameManager.UI.OpenSettings().
+/// - 모양 (11/18 팝업 공통 톤): 화면 가운데 960×540 (탭을 바꿔도 그대로). 위쪽 제목 "설정 SETTINGS" + 짧은 선 → 알약 탭 3개 + Tab 키 표시 → 오른쪽 끝 닫기 ×(44).
+///   항목 줄은 높이 84 · 간격 10, 선택하면 왼쪽 포인트색 막대 + 18% 바탕 (UIPopupSelect Row). 아래는 키 안내 줄(KeyGuideBar, 문구는 GameConstants.Settings.HintText와 같다).
+///   바뀌지 않는 색(패널·줄 바탕·버튼·글자)은 UIThemeColor 역할로 칠하고, 탭처럼 고를 때 바뀌는 색은 여기서 UIThemePaint로 칠한다.
 /// - 사운드 탭: 슬라이더(0~100)를 바꾸는 즉시 SoundManager의 MasterVolume·MusicVolume·SfxVolume(0~1)에 넣는다. 열 때 SoundManager의 지금 값으로 맞춘다.
+///   슬라이더 오른쪽 ◀ 값 ▶ 버튼은 마우스 전용으로 VolumeStep(5)씩 바꾼다 (키보드 ←→는 슬라이더 기본 1씩).
 /// - 화면 탭: 창 모드·해상도 드롭다운을 바꾸는 즉시 ApplyScreen()으로 Screen.SetResolution을 부른다. 열 때 지금 화면(Screen.width·height·fullScreenMode)으로 맞춘다.
 ///   창 모드에서는 모니터보다 큰 해상도를 목록에서 뺀다. 에디터 Game 뷰에서는 SetResolution이 적용되지 않아 로그만 남는다 (실제 확인은 빌드).
 /// - 게임 탭: 판정 오프셋 줄은 GameManager.Settings.OffsetMs를 읽고 쓴다 (열 때 그 값으로 다시 맞춘다). 인게임은 판이 시작될 때 한 번 읽는다.
@@ -17,7 +21,7 @@ using UnityEngine.UI;
 /// - 저장: 닫을 때(닫기 버튼·ESC) GameManager.PlayerData.Save()가 지금 음량·오프셋·화면을 PlayerData.json에 쓴다 (안내 문구의 "자동 저장").
 ///   불러오기는 PlayerDataManager.Init이 게임 시작 때 SoundManager·SettingsManager·Screen에 적용하고, 이 창은 열 때 그 값을 읽는다.
 /// - 닫힐 때 Closed를 알린다 (인게임은 이것을 구독해 오프셋이 바뀌었으면 재시작을 묻는다). 이 창은 누가 열었는지 알지 않는다.
-/// - 탭 3개(사운드·게임·화면): 고른 탭은 검정 채움·흰 글자, 나머지는 흰 채움·테두리·검정 글자. 고른 탭의 내용만 보인다. 마지막 탭은 이 실행 동안 기억한다.
+/// - 탭 3개(사운드·게임·화면, 알약 모양): 고른 탭은 포인트색 채움·흰 글자, 나머지는 기본 버튼 톤(흰색 75% + 테두리). 고른 탭의 내용만 보인다. 마지막 탭은 이 실행 동안 기억한다.
 /// - 키보드는 EventSystem(UI 맵)의 Navigate·Submit을 그대로 쓴다.
 ///   ↑↓: 탭 줄 → 탭 안 항목 → (마지막에서 ↓) 탭 줄. 탭 줄에서 ↑는 닫기 버튼. Selectable Navigation을 Explicit으로 연결한다.
 ///   ←→: 탭 줄은 탭 사이 이동, 슬라이더는 기본 동작(값), 오프셋 줄은 UINavigateStepper로 ◀▶와 같게 값을 바꾼다.
@@ -30,35 +34,48 @@ public class Popup_Settings : UIPopup
 {
     [Header("위")]
     [SerializeField] private TMP_Text titleText;
+    [Tooltip("영문 제목 (Txt_TitleEn, SETTINGS)")]
+    [SerializeField] private TMP_Text titleEnText;
     [SerializeField] private Button closeButton;
     [SerializeField] private TMP_Text closeText;
+    [Tooltip("탭 옆 Tab 키 표시 (Img_TabKey/Txt_TabKey, 입력 에셋 바인딩)")]
+    [SerializeField] private TMP_Text tabKeyText;
 
     [Header("탭")]
     [SerializeField] private Button soundTabButton;
     [SerializeField] private TMP_Text soundTabText;
+    [SerializeField] private TMP_Text soundTabEnText;
+    [Tooltip("탭 테두리 (Btn_TabSound/Img_Border). 고르지 않은 탭만 보인다")]
+    [SerializeField] private Image soundTabBorder;
     [SerializeField] private Button gameTabButton;
     [SerializeField] private TMP_Text gameTabText;
+    [SerializeField] private TMP_Text gameTabEnText;
+    [SerializeField] private Image gameTabBorder;
     [SerializeField] private Button screenTabButton;
     [SerializeField] private TMP_Text screenTabText;
+    [SerializeField] private TMP_Text screenTabEnText;
+    [SerializeField] private Image screenTabBorder;
     [Tooltip("탭 내용 (SoundTab · GameTab · ScreenTab, 정렬용 빈 오브젝트)")]
     [SerializeField] private GameObject soundTab;
     [SerializeField] private GameObject gameTab;
     [SerializeField] private GameObject screenTab;
-    [SerializeField] private Color tabSelectedColor = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
-    [SerializeField] private Color tabSelectedTextColor = Color.white;
-    [SerializeField] private Color tabNormalColor = Color.white;
-    [SerializeField] private Color tabNormalTextColor = new Color32(0x1A, 0x1A, 0x1A, 0xFF);
 
     [Header("사운드 탭")]
     [SerializeField] private TMP_Text masterVolumeLabel;
     [SerializeField] private Slider masterVolumeSlider;
     [SerializeField] private TMP_Text masterVolumeValueText;
+    [SerializeField] private Button masterVolumeDownButton;
+    [SerializeField] private Button masterVolumeUpButton;
     [SerializeField] private TMP_Text musicVolumeLabel;
     [SerializeField] private Slider musicVolumeSlider;
     [SerializeField] private TMP_Text musicVolumeValueText;
+    [SerializeField] private Button musicVolumeDownButton;
+    [SerializeField] private Button musicVolumeUpButton;
     [SerializeField] private TMP_Text sfxVolumeLabel;
     [SerializeField] private Slider sfxVolumeSlider;
     [SerializeField] private TMP_Text sfxVolumeValueText;
+    [SerializeField] private Button sfxVolumeDownButton;
+    [SerializeField] private Button sfxVolumeUpButton;
 
     [Header("게임 탭")]
     [SerializeField] private TMP_Text offsetLabel;
@@ -70,6 +87,9 @@ public class Popup_Settings : UIPopup
     [SerializeField] private TMP_Text offsetRangeText;
     [SerializeField] private Button measureOffsetButton;
     [SerializeField] private TMP_Text measureOffsetText;
+    [Tooltip("오프셋 측정 줄 이름 · 설명 (Img_RowMeasure/Txt_MeasureTitle · Txt_MeasureDescription)")]
+    [SerializeField] private TMP_Text measureTitleText;
+    [SerializeField] private TMP_Text measureDescriptionText;
 
     [Header("화면 탭")]
     [SerializeField] private TMP_Text resolutionLabel;
@@ -78,7 +98,10 @@ public class Popup_Settings : UIPopup
     [SerializeField] private TMP_Dropdown windowModeDropdown;
 
     [Header("아래")]
-    [SerializeField] private TMP_Text hintText;
+    [Tooltip("키 안내 줄 (↑↓ 항목 · ←→ 값 조절 · Tab 탭 전환 · ESC 닫기 (자동 저장))")]
+    [SerializeField] private KeyGuideBar keyGuideBar;
+    [Tooltip("탭에 따라 크기가 바뀌지 않는지 확인할 패널 (Img_Panel)")]
+    [SerializeField] private RectTransform panelRect;
 
     [Header("입력")]
     [Tooltip("입력 에셋의 Settings/NextTab (Tab 키)")]
@@ -123,12 +146,30 @@ public class Popup_Settings : UIPopup
     /// <summary>창 모드 드롭다운 (확인용)</summary>
     public TMP_Dropdown WindowModeDropdown => windowModeDropdown;
 
+    /// <summary>패널 (확인용)</summary>
+    public RectTransform Panel => panelRect;
+
+    /// <summary>키 안내 줄 (확인용)</summary>
+    public KeyGuideBar KeyGuide => keyGuideBar;
+
     /// <summary>
     /// 문구, 버튼·슬라이더·드롭다운 리스너, 처음 값을 채우고 닫힌 상태로 둔다.
     /// </summary>
     public void Init()
     {
+        InitPopupTone();
         titleText.text = GameConstants.Settings.Title;
+        if (titleEnText != null) titleEnText.text = GameConstants.Settings.TitleEn;
+        if (soundTabEnText != null) soundTabEnText.text = GameConstants.Settings.TabSoundEn;
+        if (gameTabEnText != null) gameTabEnText.text = GameConstants.Settings.TabGameEn;
+        if (screenTabEnText != null) screenTabEnText.text = GameConstants.Settings.TabScreenEn;
+        if (tabKeyText != null)
+            tabKeyText.text = KeyGuideBar.GetKeyText(nextTabAction != null ? nextTabAction.action : null, GameConstants.KeyGuide.TabKeyFallback);
+        if (measureTitleText != null) measureTitleText.text = GameConstants.Settings.MeasureOffsetRowLabel;
+        if (measureDescriptionText != null) measureDescriptionText.text = GameConstants.Settings.MeasureOffsetDescription;
+        InitKeyGuide();
+        ApplyDropdownTone(resolutionDropdown);
+        ApplyDropdownTone(windowModeDropdown);
         closeText.text = GameConstants.Settings.CloseLabel;
         soundTabText.text = GameConstants.Settings.TabSound;
         gameTabText.text = GameConstants.Settings.TabGame;
@@ -141,7 +182,6 @@ public class Popup_Settings : UIPopup
         measureOffsetText.text = GameConstants.Settings.MeasureOffsetLabel;
         resolutionLabel.text = GameConstants.Settings.ResolutionLabel;
         windowModeLabel.text = GameConstants.Settings.WindowModeLabel;
-        hintText.text = GameConstants.Settings.HintText;
 
         RemoveListeners();
         closeButton.onClick.AddListener(Close);
@@ -162,6 +202,7 @@ public class Popup_Settings : UIPopup
         offsetDownButton.onClick.AddListener(OnClickOffsetDown);
         offsetUpButton.onClick.AddListener(OnClickOffsetUp);
         measureOffsetButton.onClick.AddListener(OnClickMeasureOffset);
+        AddVolumeStepListeners();
 
         if (offsetStepper == null) offsetStepper = offsetRow.GetComponent<UINavigateStepper>();
         if (offsetStepper != null) offsetStepper.Stepped += StepOffset;
@@ -175,9 +216,15 @@ public class Popup_Settings : UIPopup
         SyncFromCurrent();
         RefreshAll();
 
-        // 오프셋 줄 안의 ◀▶는 마우스 전용 (키보드는 줄에서 ←→)
-        foreach (Button button in new[] { offsetDownButton, offsetUpButton })
-            button.navigation = new Navigation { mode = Navigation.Mode.None };
+        // 오프셋 줄·음량 줄 안의 ◀▶는 마우스 전용 (키보드는 줄에서 ←→)
+        foreach (Button button in new[] { offsetDownButton, offsetUpButton, masterVolumeDownButton, masterVolumeUpButton,
+                     musicVolumeDownButton, musicVolumeUpButton, sfxVolumeDownButton, sfxVolumeUpButton })
+        {
+            if (button != null) button.navigation = new Navigation { mode = Navigation.Mode.None };
+        }
+
+        // 항목 줄 선택 표시를 지금 선택에 맞춘다 (닫힌 상태라 모두 꺼진다)
+        foreach (UIPopupSelect select in GetComponentsInChildren<UIPopupSelect>(true)) select.Sync();
 
         HideImmediate();
     }
@@ -263,20 +310,105 @@ public class Popup_Settings : UIPopup
         gameTab.SetActive(tab == SettingsTab.Game);
         screenTab.SetActive(tab == SettingsTab.Screen);
 
-        ApplyTabStyle(soundTabButton, soundTabText, tab == SettingsTab.Sound);
-        ApplyTabStyle(gameTabButton, gameTabText, tab == SettingsTab.Game);
-        ApplyTabStyle(screenTabButton, screenTabText, tab == SettingsTab.Screen);
+        ApplyTabStyle(soundTabButton, soundTabBorder, soundTabText, soundTabEnText, tab == SettingsTab.Sound);
+        ApplyTabStyle(gameTabButton, gameTabBorder, gameTabText, gameTabEnText, tab == SettingsTab.Game);
+        ApplyTabStyle(screenTabButton, screenTabBorder, screenTabText, screenTabEnText, tab == SettingsTab.Screen);
         LinkNavigation();
 
         if (selectTabButton) SelectTabButton();
     }
 
-    private void ApplyTabStyle(Button button, TMP_Text text, bool selected)
+    /// <summary>탭 모양: 고른 탭 = 포인트색 채움 + 흰 글자, 나머지 = 기본 버튼 톤 (흰색 75% + 테두리 + 기본 글자, 영문은 흐린 글자)</summary>
+    private static void ApplyTabStyle(Button button, Image border, TMP_Text text, TMP_Text enText, bool selected)
     {
-        button.image.color = selected ? tabSelectedColor : tabNormalColor;
-        text.color = selected ? tabSelectedTextColor : tabNormalTextColor;
-        Outline outline = button.GetComponent<Outline>();
-        if (outline != null) outline.enabled = !selected;
+        UIThemePaint.PopupButton(button.image, border, text, selected ? PopupButtonStyle.Accent : PopupButtonStyle.Normal);
+        if (enText != null)
+        {
+            UITheme theme = UITheme.Current;
+            enText.color = selected ? UITheme.WithAlpha(theme.onAccentText, 0.8f) : theme.textMuted;
+        }
+    }
+
+    /// <summary>키 안내 줄: ↑↓ 항목 · ←→ 값 조절 · Tab 탭 전환 · ESC 닫기 (자동 저장). Tab 키 이름은 바인딩에서 읽는다</summary>
+    private void InitKeyGuide()
+    {
+        if (keyGuideBar == null)
+        {
+            Debug.LogWarning("[Popup_Settings] keyGuideBar가 연결되지 않았습니다.", this);
+            return;
+        }
+
+        keyGuideBar.Init(new List<KeyGuideEntry>
+        {
+            new KeyGuideEntry(GameConstants.KeyGuide.SettingsItem, KeyGuideKey.Fixed(GameConstants.KeyGuide.UpDownKeys)),
+            new KeyGuideEntry(GameConstants.KeyGuide.SettingsValue, KeyGuideKey.Fixed(GameConstants.KeyGuide.LeftRightKeys)),
+            new KeyGuideEntry(GameConstants.KeyGuide.SettingsTab, nextTabAction != null
+                ? KeyGuideKey.FromAction(nextTabAction)
+                : KeyGuideKey.Fixed(GameConstants.KeyGuide.TabKeyFallback)),
+            new KeyGuideEntry(GameConstants.KeyGuide.SettingsClose, KeyGuideKey.Fixed(GameConstants.KeyGuide.EscKey))
+        });
+    }
+
+    /// <summary>
+    /// 드롭다운 펼친 목록의 항목 색 (팝업 톤): 보통 투명, 마우스·선택 = 포인트색 18% 바탕. 바탕·글자·체크 표시는 UIThemeColor 역할로 칠한다.
+    /// </summary>
+    private static void ApplyDropdownTone(TMP_Dropdown dropdown)
+    {
+        if (dropdown == null || dropdown.template == null) return;
+        Toggle item = dropdown.template.GetComponentInChildren<Toggle>(true);
+        if (item == null) return;
+
+        UITheme theme = UITheme.Current;
+        ColorBlock colors = item.colors;
+        colors.normalColor = UITheme.WithAlpha(theme.accent, 0f);
+        colors.highlightedColor = theme.SelectedBackground;
+        colors.selectedColor = theme.SelectedBackground;
+        colors.pressedColor = UITheme.WithAlpha(theme.accent, Mathf.Min(1f, theme.selectedAlpha * 2f));
+        colors.colorMultiplier = 1f;
+        item.colors = colors;
+        if (item.targetGraphic != null) item.targetGraphic.color = Color.white;
+    }
+
+    // ───── 음량 ◀▶ ─────
+
+    private void AddVolumeStepListeners()
+    {
+        if (masterVolumeDownButton != null) masterVolumeDownButton.onClick.AddListener(OnClickMasterDown);
+        if (masterVolumeUpButton != null) masterVolumeUpButton.onClick.AddListener(OnClickMasterUp);
+        if (musicVolumeDownButton != null) musicVolumeDownButton.onClick.AddListener(OnClickMusicDown);
+        if (musicVolumeUpButton != null) musicVolumeUpButton.onClick.AddListener(OnClickMusicUp);
+        if (sfxVolumeDownButton != null) sfxVolumeDownButton.onClick.AddListener(OnClickSfxDown);
+        if (sfxVolumeUpButton != null) sfxVolumeUpButton.onClick.AddListener(OnClickSfxUp);
+    }
+
+    private void RemoveVolumeStepListeners()
+    {
+        if (masterVolumeDownButton != null) masterVolumeDownButton.onClick.RemoveListener(OnClickMasterDown);
+        if (masterVolumeUpButton != null) masterVolumeUpButton.onClick.RemoveListener(OnClickMasterUp);
+        if (musicVolumeDownButton != null) musicVolumeDownButton.onClick.RemoveListener(OnClickMusicDown);
+        if (musicVolumeUpButton != null) musicVolumeUpButton.onClick.RemoveListener(OnClickMusicUp);
+        if (sfxVolumeDownButton != null) sfxVolumeDownButton.onClick.RemoveListener(OnClickSfxDown);
+        if (sfxVolumeUpButton != null) sfxVolumeUpButton.onClick.RemoveListener(OnClickSfxUp);
+    }
+
+    private void OnClickMasterDown() => StepVolume(masterVolumeSlider, -1);
+    private void OnClickMasterUp() => StepVolume(masterVolumeSlider, 1);
+    private void OnClickMusicDown() => StepVolume(musicVolumeSlider, -1);
+    private void OnClickMusicUp() => StepVolume(musicVolumeSlider, 1);
+    private void OnClickSfxDown() => StepVolume(sfxVolumeSlider, -1);
+    private void OnClickSfxUp() => StepVolume(sfxVolumeSlider, 1);
+
+    /// <summary>음량을 VolumeStep씩 바꾼다 (슬라이더 값을 바꾸면 onValueChanged가 SoundManager에 넣는다)</summary>
+    private static void StepVolume(Slider slider, int direction)
+    {
+        if (slider == null) return;
+        slider.value = StepVolumeValue(Mathf.RoundToInt(slider.value), direction);
+    }
+
+    /// <summary>음량 ◀▶ 한 번 (순수 함수): VolumeStep씩, 0~100으로 자른다</summary>
+    public static int StepVolumeValue(int current, int direction)
+    {
+        return Mathf.Clamp(current + direction * GameConstants.Settings.VolumeStep, GameConstants.Settings.MinVolume, GameConstants.Settings.MaxVolume);
     }
 
     private Button CurrentTabButton =>
@@ -603,5 +735,6 @@ public class Popup_Settings : UIPopup
         if (resolutionDropdown != null) resolutionDropdown.onValueChanged.RemoveListener(OnResolutionChanged);
         if (windowModeDropdown != null) windowModeDropdown.onValueChanged.RemoveListener(OnWindowModeChanged);
         if (offsetStepper != null) offsetStepper.Stepped -= StepOffset;
+        RemoveVolumeStepListeners();
     }
 }

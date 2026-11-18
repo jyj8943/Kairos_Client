@@ -166,7 +166,7 @@ public class Canvas_Title : UIBase
     /// </summary>
     private void OnClickQuit()
     {
-        GameManager.UI.Confirm(GameConstants.Confirm.QuitMessage, GameConstants.Confirm.QuitLabel, Quit);
+        GameManager.UI.Confirm(GameConstants.Confirm.QuitMessage, GameConstants.Confirm.QuitLabel, Quit, null, GameConstants.Confirm.QuitIsDanger);
     }
 
     /// <summary>

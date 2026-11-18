@@ -266,11 +266,76 @@ public static class GameConstants
         public const int OverlaySortOrder = 100;
     }
 
-    /// <summary>확인 팝업 문구 (기획서 3-8 사용처 표). 화면 스크립트에 문구를 직접 쓰지 않고 여기 모은다</summary>
+    /// <summary>
+    /// 팝업 공통 톤 크기 (기획서 3-7 「팝업 공통 톤 (11/18)」). 색은 UITheme 팝업 묶음에 둔다.
+    /// 크기는 1920×1080 기준 px.
+    /// </summary>
+    public static class Popup
+    {
+        /// <summary>뒤 화면 블러 세기 (기준 해상도 px, 가우시안 표준편차). 채도·밝기 보정은 하지 않는다 (100%)</summary>
+        public const float BlurRadiusPx = 6f;
+
+        /// <summary>블러 반복 횟수 (가로·세로 한 쌍). 곡 선택 배경(BlurIterations 2)보다 약하게 한 번</summary>
+        public const int BlurIterations = 1;
+
+        /// <summary>패널 모서리 · 테두리 두께</summary>
+        public const float PanelRadius = 20f;
+        public const float PanelBorder = 1f;
+
+        /// <summary>패널 그림자: 아래로 24 · 퍼짐 64 (부드러운 가장자리 스프라이트 PopupShadow를 패널 뒤에 둔다)</summary>
+        public const float ShadowOffsetY = 24f;
+        public const float ShadowSpread = 64f;
+
+        /// <summary>제목: 한글 30 (NEXON Lv2 Gothic Bold) + 영문 13 (포인트색) + 짧은 선 56×3 (포인트색)</summary>
+        public const float TitleFontSize = 30f;
+        public const float TitleEnFontSize = 13f;
+        public const float TitleEnCharacterSpacing = 15f;
+        public const float TitleLineWidth = 56f;
+        public const float TitleLineHeight = 3f;
+
+        /// <summary>버튼 높이 · 모서리 · 글자</summary>
+        public const float ButtonHeight = 56f;
+        public const float ButtonRadius = 12f;
+        public const float ButtonFontSize = 20f;
+
+        /// <summary>버튼 선택 링: 안쪽 흰 링 3 + 바깥 포인트색 링 3 (버튼 바깥에 그린다)</summary>
+        public const float RingWidth = 3f;
+
+        /// <summary>메뉴·항목 선택: 왼쪽 막대 폭</summary>
+        public const float SelectBarWidth = 4f;
+    }
+
+    /// <summary>
+    /// 확인 팝업 문구 (기획서 3-7 ② 사용처 표). 화면 스크립트에 문구를 직접 쓰지 않고 여기 모은다.
+    /// - 사용처마다 위험 표시(…IsDanger)를 둔다: true면 확인 버튼·선택 링·"!" 원이 위험 빨강 (나가기·삭제). 호출하는 쪽은 이 값을 Confirm의 isDanger로 넘긴다.
+    /// - 문구에 보조 문구가 필요하면 본문과 SubSeparator로 나눠 쓴다 (Popup_Confirm이 나눈다). 지금 문구는 모두 본문만.
+    /// </summary>
     public static class Confirm
     {
         /// <summary>취소 버튼 기본 이름</summary>
         public const string CancelLabel = "취소";
+
+        /// <summary>본문과 보조 문구를 나누는 글자 (이 글자 뒤는 보조 문구: 15, 흐린 글자). 없으면 본문만</summary>
+        public const char SubSeparator = '|';
+
+        /// <summary>문구 크기: 본문 21 굵게 (1~3줄) · 보조 15</summary>
+        public const float MessageFontSize = 21f;
+        public const float SubMessageFontSize = 15f;
+
+        /// <summary>팝업 폭 · "!" 원 지름</summary>
+        public const float Width = 560f;
+        public const float IconSize = 44f;
+        public const string IconText = "!";
+
+        /// <summary>위험 표시 (사용처 표: 확인 버튼 이름이 "나가기"·"삭제"인 곳만 true)</summary>
+        public const bool QuitIsDanger = false;
+        public const bool OfficialOverwriteIsDanger = false;
+        public const bool EditorExitIsDanger = true;
+        public const bool RestartIsDanger = false;
+        public const bool InGameExitIsDanger = true;
+        public const bool OffsetRestartIsDanger = false;
+        public const bool BpmSectionRemoveIsDanger = true;
+        public const bool BpmResetIsDanger = false;
 
         /// <summary>타이틀 게임 종료</summary>
         public const string QuitMessage = "게임을 종료하시겠습니까?";
@@ -308,24 +373,53 @@ public static class GameConstants
         public const string BpmResetLabel = "되돌리기";
     }
 
-    /// <summary>인게임 일시정지 메뉴 (기획서 3-4, 2-1 재개 3초 카운트다운)</summary>
+    /// <summary>인게임 일시정지 메뉴 (기획서 3-7 ③, 2-1 재개 3초 카운트다운)</summary>
     public static class Pause
     {
-        /// <summary>팝업 제목</summary>
+        /// <summary>팝업 제목 (한글 + 영문)</summary>
         public const string Title = "일시정지";
+        public const string TitleEn = "PAUSE";
 
-        /// <summary>버튼 이름 (위에서부터 계속 · 재시작 · 설정 · 나가기)</summary>
-        public const string ResumeLabel = "계속 (3초 후 재개)";
+        /// <summary>테스트 플레이 뱃지 (제목 오른쪽, 포인트색)</summary>
+        public const string TestPlayBadge = "테스트 플레이";
+
+        /// <summary>메뉴 이름 (위에서부터 계속 · 재시작 · 설정 · 나가기): 한글 22 + 영문 12</summary>
+        public const string ResumeLabel = "계속";
         public const string RestartLabel = "재시작";
         public const string SettingsLabel = "설정";
         public const string ExitLabel = "나가기";
+        public const string ResumeLabelEn = "RESUME";
+        public const string RestartLabelEn = "RESTART";
+        public const string SettingsLabelEn = "SETTINGS";
+        public const string ExitLabelEn = "EXIT";
+
+        /// <summary>메뉴 오른쪽 안내: 계속 "3초 후 재개", 나가기는 가는 곳</summary>
+        public const string ResumeHint = "3초 후 재개";
+        public const string ExitHintSongSelect = "곡 선택으로";
+        public const string ExitHintEditor = "에디터로";
+
+        /// <summary>진행 시간 "1:04 / 2:31" ({0} 지금, {1} 곡 길이, 둘 다 m:ss)</summary>
+        public const string ProgressFormat = "{0} / {1}";
+
+        /// <summary>팝업 폭 · 위치 (기어 위 가운데, 패널 왼쪽 위 x 720 · y 176, 1920×1080 기준)</summary>
+        public const float Width = 480f;
+        public const float PanelX = 720f;
+        public const float PanelY = 176f;
+
+        /// <summary>메뉴 줄 높이 · 간격</summary>
+        public const float MenuHeight = 60f;
+        public const float MenuSpacing = 14f;
+
+        /// <summary>카운트다운 숫자 크기와 아래 문구</summary>
+        public const float CountdownFontSize = 180f;
+        public const string CountdownCaption = "곧 다시 시작해요";
 
         /// <summary>재개 카운트다운 (초, unscaled). 1초마다 숫자 하나씩 3 → 2 → 1</summary>
         public const int CountdownSeconds = 3;
     }
 
     /// <summary>
-    /// 화면 아래쪽 키 안내 줄(KeyGuideBar) 문구 (기획서 3-9 조작 키 표). 키 이름은 바인딩에서 읽고 여기에는 짧은 이름만 둔다.
+    /// 화면 아래쪽 키 안내 줄(KeyGuideBar) 문구 (기획서 3-8 조작 키 표). 키 이름은 바인딩에서 읽고 여기에는 짧은 이름만 둔다.
     /// 고정 글자는 바인딩 하나로 이름을 읽기 어려운 키(방향키 묶음, UI 맵의 Submit·Cancel)에만 쓴다.
     /// </summary>
     public static class KeyGuide
@@ -358,6 +452,18 @@ public static class GameConstants
         public const string PrevNextSong = "이전 · 다음 곡";
         public const string TabSwitch = "공식 ↔ 나만의 채보";
 
+        /// <summary>확인 팝업 키 안내 (←→ 선택 · Enter 결정 · ESC 취소)</summary>
+        public const string ConfirmSelect = "선택";
+        public const string ConfirmDecide = "결정";
+        public const string ConfirmCancel = "취소";
+
+        /// <summary>설정 창 키 안내 (↑↓ 항목 · ←→ 값 조절 · Tab 탭 전환 · ESC 닫기 (자동 저장))</summary>
+        public const string SettingsItem = "항목";
+        public const string SettingsValue = "값 조절";
+        public const string SettingsTab = "탭 전환";
+        public const string SettingsClose = "닫기 (자동 저장)";
+        public const string TabKeyFallback = "Tab";
+
         /// <summary>이름을 바꾸는 항목의 ID (KeyGuideBar.SetLabel)</summary>
         public const string ChartMoveId = "chartMove";
         public const string VerticalMoveId = "verticalMove";
@@ -369,10 +475,25 @@ public static class GameConstants
     public static class Settings
     {
         public const string Title = "설정";
+        public const string TitleEn = "SETTINGS";
         public const string CloseLabel = "×";
         public const string TabSound = "사운드";
         public const string TabGame = "게임";
         public const string TabScreen = "화면";
+        public const string TabSoundEn = "SOUND";
+        public const string TabGameEn = "GAME";
+        public const string TabScreenEn = "SCREEN";
+
+        /// <summary>창 크기 (화면 가운데, 탭을 바꿔도 그대로) · 항목 줄 높이 · 간격 · 드롭다운 폭 · 닫기 버튼 (1920×1080 기준 px)</summary>
+        public const float Width = 960f;
+        public const float Height = 540f;
+        public const float RowHeight = 84f;
+        public const float RowSpacing = 10f;
+        public const float DropdownWidth = 300f;
+        public const float CloseButtonSize = 44f;
+
+        /// <summary>음량 ◀▶ 버튼 한 번에 바뀌는 값 (마우스 전용, 키보드 ←→는 슬라이더 기본 1씩)</summary>
+        public const int VolumeStep = 5;
 
         public const string MasterVolumeLabel = "메인 음량";
         public const string MusicVolumeLabel = "음악 음량";
@@ -381,6 +502,8 @@ public static class GameConstants
         public const string OffsetLabel = "판정 오프셋";
         public const string OffsetRangeHint = "-200 ~ +200ms, 5ms 단위";
         public const string MeasureOffsetLabel = "오프셋 측정하기";
+        public const string MeasureOffsetRowLabel = "오프셋 측정";
+        public const string MeasureOffsetDescription = "박자에 맞춰 키를 눌러 평균 오차 표시";
 
         public const string ResolutionLabel = "해상도";
         public const string WindowModeLabel = "창 모드";
@@ -389,6 +512,10 @@ public static class GameConstants
         public const string StepDownLabel = "◀";
         public const string StepUpLabel = "▶";
 
+        /// <summary>
+        /// 아래 키 안내 줄 전체 문구 (KeyGuideBar 항목을 " · "로 이은 것과 같다: 키 모양 + 짧은 이름 KeyGuide.SettingsItem 등).
+        /// Tab 키 이름은 입력 에셋 바인딩(Settings/NextTab)에서 읽는다.
+        /// </summary>
         public const string HintText = "↑↓ 항목 · ←→ 값 조절 · Tab 탭 전환 · ESC 닫기 (자동 저장)";
 
         /// <summary>음량 범위 (정수)와 처음 값</summary>

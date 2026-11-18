@@ -22,7 +22,15 @@ public enum UIColorRole
     StatBox,
     StatBoxBorder,
     RankEmptyFill,
-    RankEmptyDash
+    RankEmptyDash,
+    PopupDim,
+    PopupCountdownDim,
+    PopupPanel,
+    PopupPanelBorder,
+    PopupShadow,
+    PopupButton,
+    PopupCard,
+    Danger
 }
 
 /// <summary>
@@ -88,6 +96,14 @@ public class UIThemeColor : MonoBehaviour
             case UIColorRole.StatBoxBorder: return theme.statBoxBorder;
             case UIColorRole.RankEmptyFill: return theme.rankEmptyFill;
             case UIColorRole.RankEmptyDash: return theme.rankEmptyDash;
+            case UIColorRole.PopupDim: return theme.popupDim;
+            case UIColorRole.PopupCountdownDim: return theme.popupCountdownDim;
+            case UIColorRole.PopupPanel: return theme.popupPanel;
+            case UIColorRole.PopupPanelBorder: return theme.popupPanelBorder;
+            case UIColorRole.PopupShadow: return theme.popupShadow;
+            case UIColorRole.PopupButton: return theme.popupButton;
+            case UIColorRole.PopupCard: return theme.popupCard;
+            case UIColorRole.Danger: return theme.danger;
             default: return Color.magenta;
         }
     }

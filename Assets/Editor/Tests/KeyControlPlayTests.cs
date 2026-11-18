@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 /// <summary>
-/// 조작 키 흐름 (기획서 3-9): 실제 키보드 상태 이벤트로 키를 눌러 화면이 넘어가는지 본다 (EnterPlayMode 방식, 기존 PlayTests와 같음).
+/// 조작 키 흐름 (기획서 3-8): 실제 키보드 상태 이벤트로 키를 눌러 화면이 넘어가는지 본다 (EnterPlayMode 방식, 기존 PlayTests와 같음).
 /// - K1 곡 선택 2 꾹 누르기 → 지연 뒤 계속 오름, 떼면 멈춤
 /// - K2 결과 Enter → 곡 선택 (Enter 한 번에 돌아가기 1번, 다시 하기 0번. 버튼이 선택돼 있어도 같음)
 /// - K3 결과 F5 → 인게임, K4 결과 ESC → 곡 선택

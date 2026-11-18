@@ -18,7 +18,7 @@ using UnityEngine.UI;
 ///   ③ NEW RECORD는 SCORE · RATE 값 오른쪽, MAX COMBO는 FC 아래. 그 항목이 신기록일 때만 (테스트 플레이는 띄우지 않음).
 /// - 오른쪽 x 1300~1860은 카이로스 일러스트 자리로 비워 둔다 (KairosSlot).
 /// - 하단 바: 키 안내 "F5 다시 하기 · Enter ESC 곡 선택으로"(테스트 플레이면 "에디터로") + 오른쪽 끝 버튼 2개 (다시 하기 · 곡 선택으로/에디터로).
-/// - 키 (기획서 3-9): F5 다시 하기(Result/Retry), Enter 돌아가기(Result/Return), ESC 돌아가기(UIManager → ResultScene.OnBack). 팝업이 열려 있으면 무시.
+/// - 키 (기획서 3-8): F5 다시 하기(Result/Retry), Enter 돌아가기(Result/Return), ESC 돌아가기(UIManager → ResultScene.OnBack). 팝업이 열려 있으면 무시.
 ///   Enter가 선택된 버튼에 따라 바뀌지 않게 버튼은 키보드 선택을 받지 않는다 (Navigation None, 처음 선택 없음).
 /// </summary>
 public class Canvas_Result : UIBase

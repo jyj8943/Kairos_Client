@@ -17,7 +17,7 @@ using UnityEngine.UI;
 /// - 나만의 채보 탭(MyChartPanel): 고른 채보 카드 + 오른쪽 곡별로 묶은 채보 목록(SongGroupHeader + Btn_MyChartItem).
 ///   ↑↓ 채보 하나씩(곡이 달라도 바로 다음 채보, EventSystem 내비게이션), ←→ 이전·다음 곡 묶음의 첫 채보 (MyChartListNavigator). 왼쪽과 배경은 고른 채보의 곡을 따른다.
 /// - 들어오면 마지막으로 플레이한 탭·곡·채보로 시작한다 (진입 데이터가 있으면 그것, 없으면 PlayerData lastSelection, 없거나 지워졌으면 공식 첫 곡).
-/// - 조작 (기획서 3-9): Tab 탭 전환, 1 / 2 배속(꾹 누르면 KeyRepeat로 계속), Enter 시작, ESC 타이틀(UIManager → SongSelectScene.OnBack).
+/// - 조작 (기획서 3-8): Tab 탭 전환, 1 / 2 배속(꾹 누르면 KeyRepeat로 계속), Enter 시작, ESC 타이틀(UIManager → SongSelectScene.OnBack).
 ///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로 곡·난이도·채보 클릭, 시작 버튼, 휠 스크롤.
 /// - 키보드 선택(EventSystem)은 항상 지금 탭의 고른 항목(곡 / 채보)에 둔다. 마우스로 다른 것을 누르면 다음 프레임에 되돌린다.
 /// </summary>

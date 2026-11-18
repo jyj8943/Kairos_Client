@@ -223,8 +223,9 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
     /// <summary>
     /// 공용 확인 팝업을 연다. 취소 버튼 이름은 "취소".
     /// </summary>
+    /// <param name="isDanger">true면 확인 버튼·선택 링·"!" 원이 위험 빨강 (나가기·삭제, 사용처별 값은 GameConstants.Confirm.…IsDanger)</param>
     /// <returns>열었으면 true. 이미 열려 있으면 false (새 요청은 무시)</returns>
-    public bool Confirm(string message, string confirmText, Action onConfirm, Action onCancel = null)
+    public bool Confirm(string message, string confirmText, Action onConfirm, Action onCancel = null, bool isDanger = false)
     {
         Popup_Confirm popup = Get<Popup_Confirm>();
         if (popup == null)
@@ -233,7 +234,7 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
             return false;
         }
 
-        return popup.Show(message, confirmText, GameConstants.Confirm.CancelLabel, onConfirm, onCancel);
+        return popup.Show(message, confirmText, GameConstants.Confirm.CancelLabel, onConfirm, onCancel, isDanger);
     }
 
     // ───── 설정 창 ─────

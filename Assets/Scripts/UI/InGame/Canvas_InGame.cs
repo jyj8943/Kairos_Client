@@ -9,6 +9,8 @@ using UnityEngine.UI;
 ///   아랫줄 카드 폭 전체 곡 진행 바(Img_Progress/Img_ProgressFill). 무엇을 보일지는 InGameHudRules.BuildSongInfo가 정한다.
 /// - 왼쪽 ⑥ 판정 패널(Img_JudgePanel): 판정 개수·FAST/SLOW 개수·RATE 박스(Img_JudgePanel 스크립트) + SCORE 박스(이 스크립트).
 /// - 기어 위쪽 콤보(Txt_Combo: 오름·쉬면 숨기기 애니메이션), 판정선 위 판정 글자(빛)와 그 위 FAST/SLOW(Txt_FastSlow), 안내 문구, 재개 카운트다운.
+/// - 재개 카운트다운 (기획서 3-7 ③): 일시정지 메뉴가 닫힌 뒤 블러 없이 덮개(Img_CountdownDim, rgba(36,32,46) 28%)만 깔고
+///   기어 가운데에 흰 숫자(180, 하늘색 빛 = TMP Underlay) 3 → 2 → 1 + 아래 "곧 다시 시작해요". 끝나면 덮개도 숨긴다.
 ///   FAST/SLOW를 띄울지는 InGameScene이 FastSlowRules로 정해 넘긴다 (이 스크립트는 규칙을 판단하지 않는다).
 ///   콤보·판정 글자·FAST/SLOW 애니메이션은 TickAnimations로만 흐른다 (일시정지·카운트다운 중에는 InGameScene이 부르지 않아 멈춤).
 /// - 색은 모두 UITheme에서 Init 때 읽는다 (씬에 색을 직렬화하지 않는다):
@@ -72,6 +74,10 @@ public class Canvas_InGame : UIBase
     [SerializeField] private TMP_Text messageText;
     [Tooltip("일시정지 후 재개 카운트다운 숫자 (Txt_Countdown, 화면 가운데)")]
     [SerializeField] private TMP_Text countdownText;
+    [Tooltip("카운트다운 덮개 (Img_CountdownDim, 화면 전체, UIThemeColor 역할 PopupCountdownDim)")]
+    [SerializeField] private GameObject countdownDim;
+    [Tooltip("카운트다운 숫자 아래 문구 (Txt_CountdownCaption, \"곧 다시 시작해요\")")]
+    [SerializeField] private TMP_Text countdownCaptionText;
     [Tooltip("배속을 바꿀 때 기어 옆에 잠깐 보여주는 배속 (Txt_SpeedChange)")]
     [SerializeField] private TMP_Text speedChangeText;
 
@@ -86,6 +92,22 @@ public class Canvas_InGame : UIBase
 
     /// <summary>진행 바에 마지막으로 쓴 비율 (같은 값이면 다시 쓰지 않는다)</summary>
     private float shownProgress = -1f;
+
+    /// <summary>카운트다운 숫자 빛 (Underlay를 켠 머티리얼 사본, 처음 한 번 만든다)</summary>
+    private Material countdownGlowMaterial;
+
+    /// <summary>카운트다운 빛 퍼짐 · 부드러움 (TMP Underlay)</summary>
+    private const float CountdownGlowDilate = 0.4f;
+    private const float CountdownGlowSoftness = 0.7f;
+
+    /// <summary>카운트다운이 보이는 중이면 true (확인용)</summary>
+    public bool IsCountdownShown => countdownText != null && countdownText.gameObject.activeSelf;
+
+    /// <summary>카운트다운 덮개 (확인용)</summary>
+    public GameObject CountdownDim => countdownDim;
+
+    /// <summary>카운트다운 숫자 (확인용)</summary>
+    public TMP_Text CountdownText => countdownText;
 
     /// <summary>
     /// 테마 색을 칠하고, 곡 정보 카드·테스트 플레이 뱃지를 채우고, 점수·콤보·진행 바를 비운다.
@@ -145,7 +167,34 @@ public class Canvas_InGame : UIBase
         shownScore = -1;
         SetScore(0);
         messageText.text = string.Empty;
+        InitCountdown(theme);
         HideCountdown();
+    }
+
+    /// <summary>카운트다운 숫자 색·크기·빛과 아래 문구</summary>
+    private void InitCountdown(UITheme theme)
+    {
+        if (countdownText != null)
+        {
+            countdownText.color = theme.countdownNumber;
+            countdownText.fontSize = GameConstants.Pause.CountdownFontSize;
+            if (countdownGlowMaterial == null)
+            {
+                countdownGlowMaterial = countdownText.fontMaterial;
+                countdownGlowMaterial.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+                countdownGlowMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0f);
+                countdownGlowMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, 0f);
+                countdownGlowMaterial.SetFloat(ShaderUtilities.ID_UnderlayDilate, CountdownGlowDilate);
+                countdownGlowMaterial.SetFloat(ShaderUtilities.ID_UnderlaySoftness, CountdownGlowSoftness);
+                countdownText.UpdateMeshPadding();
+            }
+            countdownGlowMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, theme.countdownGlow);
+        }
+        if (countdownCaptionText != null)
+        {
+            countdownCaptionText.text = GameConstants.Pause.CountdownCaption;
+            countdownCaptionText.color = theme.countdownNumber;
+        }
     }
 
     /// <summary>뱃지 색 (메뉴용 UITheme): 나만의 채보(테스트 플레이 포함)는 CUSTOM, 공식은 난이도 이름의 색 (모르는 이름도 CUSTOM). 글자는 흰색</summary>
@@ -249,6 +298,8 @@ public class Canvas_InGame : UIBase
     {
         countdownText.SetText("{0}", count);
         countdownText.gameObject.SetActive(true);
+        if (countdownDim != null) countdownDim.SetActive(true);
+        if (countdownCaptionText != null) countdownCaptionText.gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -257,6 +308,8 @@ public class Canvas_InGame : UIBase
     public void HideCountdown()
     {
         if (countdownText != null) countdownText.gameObject.SetActive(false);
+        if (countdownDim != null) countdownDim.SetActive(false);
+        if (countdownCaptionText != null) countdownCaptionText.gameObject.SetActive(false);
     }
 
     /// <summary>

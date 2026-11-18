@@ -2,13 +2,65 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>팝업 버튼 종류 (기획서 3-7 「팝업 공통 톤」 버튼)</summary>
+public enum PopupButtonStyle
+{
+    /// <summary>기본: 흰색 75% + 테두리(구분선 색) + 기본 글자</summary>
+    Normal,
+
+    /// <summary>강조: 포인트색 #3E9BE0 채움 + 흰 글자 (테두리 없음)</summary>
+    Accent,
+
+    /// <summary>위험(나가기·삭제): 위험 빨강 #C9504A 채움 + 흰 글자 (테두리 없음)</summary>
+    Danger
+}
+
 /// <summary>
 /// UITheme 색으로 자주 칠하는 것 모음 (메뉴 화면 공용 함수). 화면·항목 스크립트의 Init·선택 표시에서 부른다.
 /// - Text: 글자 단계 · Panel: 패널(흰색 58%) · SelectableRow: 목록 항목 선택 표시(포인트색 18% 바탕 + 왼쪽 막대)
 /// - Badge: 뱃지 바탕 + 흰 글자 (랭크·FC는 이미지라 여기서 칠하지 않는다: Img_Rank · Img_FullCombo)
+/// - PopupButton: 팝업 버튼 (기본 · 강조 · 위험)
 /// </summary>
 public static class UIThemePaint
 {
+    /// <summary>
+    /// 팝업 버튼 바탕·테두리·글자 색 (순수 함수). 테두리는 기본 버튼만 보인다 (나머지는 알파 0).
+    /// </summary>
+    public static void GetPopupButtonColors(UITheme theme, PopupButtonStyle style, out Color fill, out Color border, out Color label)
+    {
+        switch (style)
+        {
+            case PopupButtonStyle.Accent:
+                fill = theme.accent;
+                border = UITheme.WithAlpha(theme.accent, 0f);
+                label = theme.onAccentText;
+                break;
+            case PopupButtonStyle.Danger:
+                fill = theme.danger;
+                border = UITheme.WithAlpha(theme.danger, 0f);
+                label = theme.onAccentText;
+                break;
+            default:
+                fill = theme.popupButton;
+                border = theme.divider;
+                label = theme.textPrimary;
+                break;
+        }
+    }
+
+    /// <summary>팝업 버튼을 칠한다 (border·label은 없으면 건너뛴다)</summary>
+    public static void PopupButton(Graphic fill, Graphic border, TMP_Text label, PopupButtonStyle style)
+    {
+        GetPopupButtonColors(UITheme.Current, style, out Color fillColor, out Color borderColor, out Color labelColor);
+        if (fill != null) fill.color = fillColor;
+        if (border != null)
+        {
+            border.color = borderColor;
+            border.enabled = borderColor.a > 0f;
+        }
+        if (label != null) label.color = labelColor;
+    }
+
     /// <summary>글자를 단계 색으로</summary>
     public static void Text(TMP_Text text, UITextLevel level)
     {
