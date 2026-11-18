@@ -17,6 +17,7 @@ using UnityEngine.UI;
 ///     F5 재시작 뒤에는 같은 곡이라 배경을 다시 흐리게 처리하지 않는다 (남겨 둔 결과를 다시 씀).
 ///     재시작은 테스트 플레이로 확인한다 (일반 플레이 재시작은 PlayerData에 마지막 배속을 저장하므로)
 /// T3. 라인 키(A)를 누르면 키 칸이 #3E9BE0, 떼면 평소 색 (입력 에셋 → InGameInput → GearView 실제 경로)
+/// T4. 판정선 이미지 (11/18): 스프라이트 JudgeLine, 색 흰색(덧칠 없음), Sliced, 폭 = 기어 폭, 두께 = JudgeLineThicknessPx, 세로 중심 = y 900 (이전 JudgeLineY 그대로)
 /// </summary>
 public class InGameTonePlayTests
 {
@@ -207,5 +208,36 @@ public class InGameTonePlayTests
         Assert.AreEqual(normal, gear.GetKeyCellColor(0), "떼면 평소 색");
 
         Debug.Log($"[InGameToneTest] T3: 평소 #{ColorUtility.ToHtmlStringRGBA(normal)} → 누름 #{ColorUtility.ToHtmlStringRGBA(pressed)} → 뗌 #{ColorUtility.ToHtmlStringRGBA(gear.GetKeyCellColor(0))}");
+    }
+
+    /// <summary>T4: 판정선 = JudgeLine 이미지 그대로 (흰색, Sliced), 폭 = 기어 폭, 두께 24px, 세로 중심 y 900</summary>
+    [UnityTest]
+    public IEnumerator T4_JudgeLineImage_WhiteSlicedGearWidth_CenterUnchanged()
+    {
+        InGameScene scene = null;
+        yield return Load(TestPlayEntry("판정선 확인", false), s => scene = s);
+        GearView gear = Get<GearView>(scene, "gear");
+        SpriteRenderer line = gear.JudgeLineRenderer;
+        Assert.IsNotNull(line, "판정선 SpriteRenderer");
+
+        Assert.IsNotNull(line.sprite);
+        Assert.AreEqual("JudgeLine", line.sprite.name, "판정선 이미지");
+        Assert.AreEqual(Color.white, line.color, "색 덧칠 없음 (흰색)");
+        Assert.AreEqual(SpriteDrawMode.Sliced, line.drawMode);
+        Assert.AreEqual(Vector3.one, line.transform.localScale, "크기는 scale이 아니라 size");
+        float px = gear.UnitsPerReferencePx;
+        Assert.AreEqual(gear.LaneWidth * GameConstants.Editor.LaneCount, line.size.x, 1e-4f, "폭 = 기어 폭");
+        Assert.AreEqual(GameConstants.Play.JudgeLineThicknessPx * px, line.size.y, 1e-4f, "두께 = JudgeLineThicknessPx");
+        Assert.AreEqual(5, line.sortingOrder, "그리는 순서 그대로 (노트 3 위, 키 칸 6 아래)");
+
+        // 세로 중심 = 화면 위에서 900px (이전 JudgeLineY 그대로), 렌더러 중심도 같은 높이
+        float expectedY = gear.ScreenTopY - 900f * px;
+        Assert.AreEqual(expectedY, gear.JudgeLineY, 1e-3f, "JudgeLineY = y 900");
+        Assert.AreEqual(gear.transform.position.y + gear.JudgeLineY, line.bounds.center.y, 1e-3f, "그림 세로 중심 = JudgeLineY");
+
+        float topPx = (gear.ScreenTopY - (line.bounds.max.y - gear.transform.position.y)) / px;
+        float bottomPx = (gear.ScreenTopY - (line.bounds.min.y - gear.transform.position.y)) / px;
+        float keyTopPx = (gear.ScreenTopY - gear.KeyCellTopY) / px;
+        Debug.Log($"[InGameToneTest] T4: 판정선 y {topPx:0.0}~{bottomPx:0.0}px (두께 {line.size.y / px:0.0}px = {line.size.y:0.####}유닛), 폭 {line.size.x:0.###}유닛, 키 칸 위 끝 {keyTopPx:0.0}px");
     }
 }

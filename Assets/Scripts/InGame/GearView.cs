@@ -8,12 +8,14 @@ using UnityEngine;
 /// - 키 칸(KeyCells)은 화면 아래 끝에 붙인다. 크기·위치는 Init에서 카메라 높이로 계산한다 (1080 화면 기준 px → 월드, 해상도가 바뀌어도 같은 비율).
 ///   노트보다 위에 그려(sortingOrder) 놓친 노트가 판정선 아래를 지나 키 칸 뒤로 사라진다.
 /// - 색은 모두 UITheme 인게임 묶음에서 Init 때 읽어 칠한다 (기획서 3-4 「인게임 톤 개편 (11/18)」, 어두운 기어). 씬에 색을 직렬화하지 않는다.
+/// - 판정선은 이미지(Resources/Images/InGame/JudgeLine, 분홍 → 보라)를 그대로 보여 준다: 색은 흰색(덧칠 없음), Draw Mode Sliced(좌우 9-slice),
+///   크기 = 기어 폭 × 두께(GameConstants.Play.JudgeLineThicknessPx). 세로 중심(JudgeLineY)은 씬 위치 그대로라 노트가 닿는 높이는 바뀌지 않는다.
 /// </summary>
 public class GearView : MonoBehaviour
 {
     [Tooltip("라인 한 칸의 폭 (월드 단위)")]
     [Min(0.1f)] [SerializeField] private float laneWidth = 1f;
-    [Tooltip("판정선 (Gear 아래 자식, SpriteRenderer). 노트가 이 높이에 닿는 순간이 노트 시간이다")]
+    [Tooltip("판정선 (Gear 아래 자식, SpriteRenderer Sliced, JudgeLine 이미지). 세로 중심에 노트가 닿는 순간이 노트 시간이다")]
     [SerializeField] private Transform judgeLine;
     [Tooltip("라인별 빛남 (A · S · ; · ' 순서). 키를 누르는 동안 켠다. 스프라이트는 아래가 진하고 위로 갈수록 투명한 LaneGlowGradient")]
     [SerializeField] private SpriteRenderer[] laneGlows;
@@ -53,6 +55,9 @@ public class GearView : MonoBehaviour
     /// <summary>1080 화면 기준 1px의 월드 길이 (카메라 높이 ÷ 1080)</summary>
     public float UnitsPerReferencePx { get; private set; }
 
+    /// <summary>판정선 그림 (확인용)</summary>
+    public SpriteRenderer JudgeLineRenderer => judgeLine != null ? judgeLine.GetComponent<SpriteRenderer>() : null;
+
     /// <summary>라인 키 칸의 지금 채움 색 (확인용, 없으면 투명)</summary>
     public Color GetKeyCellColor(int lane) => keyCells != null && lane >= 0 && lane < keyCells.Length && keyCells[lane] != null ? keyCells[lane].color : Color.clear;
 
@@ -62,7 +67,7 @@ public class GearView : MonoBehaviour
     private bool[] keyPressed;
 
     /// <summary>
-    /// 화면 끝을 계산하고, 기어·판정선·라인 빛에 UITheme 색을 입힌 뒤 라인 빛과 키 칸 눌림을 끈다.
+    /// 화면 끝을 계산하고 키 칸·판정선 크기를 맞춘 뒤, 기어·라인 빛에 UITheme 색을 입히고 라인 빛과 키 칸 눌림을 끈다.
     /// </summary>
     public void Init()
     {
@@ -73,6 +78,7 @@ public class GearView : MonoBehaviour
         ScreenTopY = cameraY + halfHeight - transform.position.y;
         ScreenBottomY = cameraY - halfHeight - transform.position.y;
         LayoutKeyCells(halfHeight * 2f);
+        LayoutJudgeLine();
 
         ApplyTheme(UITheme.Current);
 
@@ -80,15 +86,28 @@ public class GearView : MonoBehaviour
             SetPressed(lane, false);
     }
 
-    /// <summary>기어 바탕·테두리·구분선·판정선·라인 빛 색을 테마로 칠한다 (키 칸은 SetPressed가 칠한다)</summary>
+    /// <summary>기어 바탕·테두리·구분선·라인 빛 색을 테마로 칠한다 (키 칸은 SetPressed가, 판정선은 이미지 그대로라 칠하지 않는다)</summary>
     private void ApplyTheme(UITheme theme)
     {
         if (laneBackground != null) laneBackground.color = theme.gearBackground;
         Paint(borders, theme.gearBorder);
         Paint(laneDividers, theme.laneDivider);
         Paint(laneGlows, theme.laneGlow);
-        SpriteRenderer line = judgeLine != null ? judgeLine.GetComponent<SpriteRenderer>() : null;
-        if (line != null) line.color = theme.judgeLine;
+    }
+
+    /// <summary>
+    /// 판정선을 기어 폭 × 두께(JudgeLineThicknessPx, 1080 기준 px)로 맞춘다. 위치(세로 중심)는 그대로 둔다.
+    /// 이미지를 그대로 보여 주므로 색은 흰색, 크기는 scale이 아니라 Sliced size로 정한다 (좌우 끝 모양 유지).
+    /// </summary>
+    private void LayoutJudgeLine()
+    {
+        SpriteRenderer line = JudgeLineRenderer;
+        if (line == null) return;
+
+        line.transform.localScale = Vector3.one;
+        line.drawMode = SpriteDrawMode.Sliced;
+        line.color = Color.white;
+        line.size = new Vector2(laneWidth * GameConstants.Editor.LaneCount, GameConstants.Play.JudgeLineThicknessPx * UnitsPerReferencePx);
     }
 
     private static void Paint(SpriteRenderer[] renderers, Color color)

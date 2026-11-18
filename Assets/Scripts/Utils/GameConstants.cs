@@ -154,6 +154,13 @@ public static class GameConstants
         public const float KeyCellSidePaddingPx = 4f;
         public const float KeyCellReferenceHeightPx = 1080f;
 
+        /// <summary>
+        /// 판정선 두께 (1080 화면 기준 px, 기획서 3-4 「인게임 톤 개편 (11/18)」 판정선 이미지). 세로 중심은 씬의 JudgeLine 위치(y 900) 그대로이고,
+        /// 폭은 기어 폭(라인 폭 × 라인 수). GearView가 Init에서 SpriteRenderer.size를 맞춘다.
+        /// JudgeLine.png(542×69)의 Pixels Per Unit 310.5는 이 값 24px에 이미지 세로 69px가 맞게 정한 값이다 (좌우 9-slice 테두리가 위아래 테두리와 같은 굵기로 보이게).
+        /// </summary>
+        public const float JudgeLineThicknessPx = 24f;
+
         /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
         public const double TestPlayLeadInSeconds = 2.0;
 

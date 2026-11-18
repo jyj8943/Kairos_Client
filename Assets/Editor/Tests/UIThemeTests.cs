@@ -119,7 +119,6 @@ public class UIThemeTests
             AssertHex("FFFFFF", 0.08f, target.laneDivider, who + " 라인 구분선");
             AssertHex("FFFFFF", 0.35f, target.measureLine, who + " 마디선");
             AssertHex("F7F5FA", 1f, target.shortNote, who + " 숏노트");
-            AssertHex("3E9BE0", 1f, target.judgeLine, who + " 판정선");
             AssertRgb(44, 40, 56, 0.86f, target.keyCell, who + " 키 칸 평소");
             AssertHex("FFFFFF", 0.12f, target.keyCellFrame, who + " 키 칸 테두리");
             AssertHex("D9D5E2", 1f, target.keyLabel, who + " 키 칸 글자");

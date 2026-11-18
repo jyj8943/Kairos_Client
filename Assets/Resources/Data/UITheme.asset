@@ -56,7 +56,6 @@ MonoBehaviour:
   longNoteTopAlpha: 0.55
   longNoteBottomAlpha: 0.85
   longNoteMissed: {r: 0.3529412, g: 0.3529412, b: 0.36862746, a: 1}
-  judgeLine: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 1}
   keyCell: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.86}
   keyCellFrame: {r: 1, g: 1, b: 1, a: 0.12}
   keyLabel: {r: 0.8509804, g: 0.8352941, b: 0.8862745, a: 1}

@@ -113,9 +113,7 @@ public class UITheme : ScriptableObject
     [Tooltip("시작 MISS 롱노트 색 (끝까지 이 색, 알파는 같은 그라데이션)")]
     public Color longNoteMissed = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
 
-    [Header("인게임 · 판정선 · 키 칸 · 라인 빛")]
-    [Tooltip("판정선 (#3E9BE0)")]
-    public Color judgeLine = new Color32(0x3E, 0x9B, 0xE0, 0xFF);
+    [Header("인게임 · 키 칸 · 라인 빛 (판정선은 이미지 그대로라 색이 없다)")]
     [Tooltip("키 칸 평소 바탕 (rgba(44,40,56) 86%)")]
     public Color keyCell = new Color(44 / 255f, 40 / 255f, 56 / 255f, 0.86f);
     [Tooltip("키 칸 평소 테두리 (흰색 12%)")]
