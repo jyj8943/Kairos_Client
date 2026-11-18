@@ -327,8 +327,8 @@ public static class GameConstants
         public const float IconSize = 44f;
         public const string IconText = "!";
 
-        /// <summary>위험 표시 (사용처 표: 확인 버튼 이름이 "나가기"·"삭제"인 곳만 true)</summary>
-        public const bool QuitIsDanger = false;
+        /// <summary>위험 표시 (게임 종료 · 나가기 · 삭제만 true)</summary>
+        public const bool QuitIsDanger = true;
         public const bool OfficialOverwriteIsDanger = false;
         public const bool EditorExitIsDanger = true;
         public const bool RestartIsDanger = false;
@@ -401,18 +401,24 @@ public static class GameConstants
         /// <summary>진행 시간 "1:04 / 2:31" ({0} 지금, {1} 곡 길이, 둘 다 m:ss)</summary>
         public const string ProgressFormat = "{0} / {1}";
 
-        /// <summary>팝업 폭 · 위치 (기어 위 가운데, 패널 왼쪽 위 x 720 · y 176, 1920×1080 기준)</summary>
-        public const float Width = 480f;
-        public const float PanelX = 720f;
+        /// <summary>
+        /// 팝업 폭 · 위치 (기어 위 가운데, 패널 왼쪽 위 x 660 · y 176, 1920×1080 기준). 가운데 x 960 = 기어 가운데.
+        /// 폭 600: 아래 키 안내 줄(↑↓ 이동 · Enter 선택 · F5 다시 하기 · ESC 계속)이 안쪽 여백(좌우 32) 안에 들어가는 폭.
+        /// 곡 카드·메뉴는 패널 안쪽 폭을 따라 늘어난다 (씬에서 좌우 늘이기 앵커).
+        /// </summary>
+        public const float Width = 600f;
+        public const float PanelX = 660f;
         public const float PanelY = 176f;
 
         /// <summary>메뉴 줄 높이 · 간격</summary>
         public const float MenuHeight = 60f;
         public const float MenuSpacing = 14f;
 
-        /// <summary>카운트다운 숫자 크기와 아래 문구</summary>
+        /// <summary>카운트다운 숫자 크기</summary>
         public const float CountdownFontSize = 180f;
-        public const string CountdownCaption = "곧 다시 시작해요";
+
+        /// <summary>패널 안쪽 좌우 여백 (곡 카드·메뉴·키 안내 줄이 이 안에 들어간다)</summary>
+        public const float PanelPadding = 32f;
 
         /// <summary>재개 카운트다운 (초, unscaled). 1초마다 숫자 하나씩 3 → 2 → 1</summary>
         public const int CountdownSeconds = 3;

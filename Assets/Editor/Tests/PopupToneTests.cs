@@ -6,7 +6,7 @@ using UnityEngine;
 /// <summary>
 /// 팝업 3종 라벤더 톤 EditMode 확인 (기획서 3-7 「팝업 공통 톤 (11/18)」 · ② 사용처 표 · ③ 일시정지).
 /// 1. UITheme 팝업 묶음 기본값·에셋 값: 덮개 42% · 카운트다운 덮개 28% · 패널 rgba(250,248,253) 86% · 위험 #C9504A · 위험 선택 16% · 기본 버튼 흰색 75%
-/// 2. 위험 사용처: GameConstants.Confirm의 …IsDanger 8개 중 InGameExit · EditorExit · BpmSectionRemove만 true
+/// 2. 위험 사용처: GameConstants.Confirm의 …IsDanger 8개 중 Quit · InGameExit · EditorExit · BpmSectionRemove 네 곳만 true
 /// 3. 순수 함수: 버튼 색(기본 · 강조 · 위험), 줄 선택 모양(포인트색 / 위험), 확인 문구 나누기, 진행 시간 글자, 음량 ◀▶, 블러 세기(px → 셰이더 반경), 캡처 위아래 뒤집기
 /// </summary>
 public class PopupToneTests
@@ -52,7 +52,7 @@ public class PopupToneTests
     // ───── 2. 위험 사용처 ─────
 
     [Test]
-    public void Confirm_DangerOnlyForExitAndDelete()
+    public void Confirm_DangerOnlyForQuitExitAndDelete()
     {
         Dictionary<string, bool> flags = new Dictionary<string, bool>();
         foreach (FieldInfo field in typeof(GameConstants.Confirm).GetFields(BindingFlags.Public | BindingFlags.Static))
@@ -61,7 +61,7 @@ public class PopupToneTests
         }
 
         Assert.AreEqual(8, flags.Count, "확인 팝업 사용처 8곳");
-        HashSet<string> danger = new HashSet<string> { "InGameExitIsDanger", "EditorExitIsDanger", "BpmSectionRemoveIsDanger" };
+        HashSet<string> danger = new HashSet<string> { "QuitIsDanger", "InGameExitIsDanger", "EditorExitIsDanger", "BpmSectionRemoveIsDanger" };
         foreach (KeyValuePair<string, bool> pair in flags)
             Assert.AreEqual(danger.Contains(pair.Key), pair.Value, pair.Key);
     }

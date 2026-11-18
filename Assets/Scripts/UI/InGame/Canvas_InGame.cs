@@ -10,7 +10,9 @@ using UnityEngine.UI;
 /// - 왼쪽 ⑥ 판정 패널(Img_JudgePanel): 판정 개수·FAST/SLOW 개수·RATE 박스(Img_JudgePanel 스크립트) + SCORE 박스(이 스크립트).
 /// - 기어 위쪽 콤보(Txt_Combo: 오름·쉬면 숨기기 애니메이션), 판정선 위 판정 글자(빛)와 그 위 FAST/SLOW(Txt_FastSlow), 안내 문구, 재개 카운트다운.
 /// - 재개 카운트다운 (기획서 3-7 ③): 일시정지 메뉴가 닫힌 뒤 블러 없이 덮개(Img_CountdownDim, rgba(36,32,46) 28%)만 깔고
-///   기어 가운데에 흰 숫자(180, 하늘색 빛 = TMP Underlay) 3 → 2 → 1 + 아래 "곧 다시 시작해요". 끝나면 덮개도 숨긴다.
+///   기어 가운데에 흰 숫자(180, 하늘색 빛 = TMP Underlay) 3 → 2 → 1. 끝나면 덮개도 숨긴다.
+///   보일 때마다 덮개·숫자를 맨 앞(마지막 형제)으로 옮긴다: 일시정지 팝업은 열 때마다 맨 앞으로 가므로(UIPopup.Open),
+///   그대로 두면 닫히는 일시정지 팝업(뒤 화면 캡처 블러 + 패널)이 페이드 동안 숫자를 덮는다.
 ///   FAST/SLOW를 띄울지는 InGameScene이 FastSlowRules로 정해 넘긴다 (이 스크립트는 규칙을 판단하지 않는다).
 ///   콤보·판정 글자·FAST/SLOW 애니메이션은 TickAnimations로만 흐른다 (일시정지·카운트다운 중에는 InGameScene이 부르지 않아 멈춤).
 /// - 색은 모두 UITheme에서 Init 때 읽는다 (씬에 색을 직렬화하지 않는다):
@@ -76,8 +78,6 @@ public class Canvas_InGame : UIBase
     [SerializeField] private TMP_Text countdownText;
     [Tooltip("카운트다운 덮개 (Img_CountdownDim, 화면 전체, UIThemeColor 역할 PopupCountdownDim)")]
     [SerializeField] private GameObject countdownDim;
-    [Tooltip("카운트다운 숫자 아래 문구 (Txt_CountdownCaption, \"곧 다시 시작해요\")")]
-    [SerializeField] private TMP_Text countdownCaptionText;
     [Tooltip("배속을 바꿀 때 기어 옆에 잠깐 보여주는 배속 (Txt_SpeedChange)")]
     [SerializeField] private TMP_Text speedChangeText;
 
@@ -190,11 +190,6 @@ public class Canvas_InGame : UIBase
             }
             countdownGlowMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, theme.countdownGlow);
         }
-        if (countdownCaptionText != null)
-        {
-            countdownCaptionText.text = GameConstants.Pause.CountdownCaption;
-            countdownCaptionText.color = theme.countdownNumber;
-        }
     }
 
     /// <summary>뱃지 색 (메뉴용 UITheme): 나만의 채보(테스트 플레이 포함)는 CUSTOM, 공식은 난이도 이름의 색 (모르는 이름도 CUSTOM). 글자는 흰색</summary>
@@ -297,9 +292,13 @@ public class Canvas_InGame : UIBase
     public void ShowCountdown(int count)
     {
         countdownText.SetText("{0}", count);
+        if (countdownDim != null)
+        {
+            countdownDim.SetActive(true);
+            countdownDim.transform.SetAsLastSibling();
+        }
         countdownText.gameObject.SetActive(true);
-        if (countdownDim != null) countdownDim.SetActive(true);
-        if (countdownCaptionText != null) countdownCaptionText.gameObject.SetActive(true);
+        countdownText.transform.SetAsLastSibling();
     }
 
     /// <summary>
@@ -309,7 +308,6 @@ public class Canvas_InGame : UIBase
     {
         if (countdownText != null) countdownText.gameObject.SetActive(false);
         if (countdownDim != null) countdownDim.SetActive(false);
-        if (countdownCaptionText != null) countdownCaptionText.gameObject.SetActive(false);
     }
 
     /// <summary>

@@ -11,8 +11,8 @@ using UnityEngine.UI;
 /// <summary>
 /// 팝업 3종 라벤더 톤 PlayMode 확인 (기획서 3-7, EnterPlayMode 방식). 짧게: 타이틀 또는 노트 하나짜리 테스트 플레이 채보.
 /// - P1 확인 팝업: 위험 표시면 확인 버튼·"!" 원·선택 링 빨강, 아니면 하늘색. 처음 선택은 취소. 3줄 문구면 패널이 늘어난다
-/// - P2 일시정지: 열면 뒤 화면 블러 텍스처, 테스트 플레이 뱃지(테스트 플레이일 때만), 나가기 선택은 빨강 막대.
-///   설정 창을 위에 열면 다시 캡처. 계속 → 팝업 닫힘 + 덮개 28% + 카운트다운 3
+/// - P2 일시정지: 열면 뒤 화면 블러 텍스처, 패널 폭 600 · 키 안내 줄이 패널 안쪽, 테스트 플레이 뱃지(테스트 플레이일 때만), 나가기 선택은 빨강 막대.
+///   설정 창을 위에 열면 다시 캡처. 계속 → 팝업 닫힘 + 덮개 28% + 카운트다운 3 (숫자가 팝업·덮개보다 위, 아래 문구 없음)
 /// - P3 설정 창: 탭을 바꿔도 패널 960×540 그대로, 뒤 화면 블러, 키 안내 줄 = HintText
 /// 인게임은 테스트 플레이 데이터로 들어가 기록(PlayerData.json)을 남기지 않는다.
 /// </summary>
@@ -94,6 +94,8 @@ public class PopupTonePlayTests
         Assert.AreEqual(Vector2.one, pause.Backdrop.Blur.ColorGrade, "채도·밝기 보정 없음");
         AssertColor(theme.popupDim, pause.Backdrop.Dim.color, "덮개 42%");
         Assert.IsTrue(pause.TestPlayBadge.activeSelf, "테스트 플레이 뱃지");
+        yield return WaitRealtime(GameConstants.UI.TransitionSeconds + 0.1f);
+        AssertPausePanelFits(pause);
         StringAssert.IsMatch(@"^\d+:\d\d / \d+:\d\d$", pause.TimeText.text, "진행 시간");
         Debug.Log($"[PopupTonePlayTests] 일시정지 캡처+블러 {pause.Backdrop.LastCaptureMilliseconds:0.###}ms, 시간 {pause.TimeText.text}");
 
@@ -131,6 +133,13 @@ public class PopupTonePlayTests
         Assert.IsFalse(pause.IsOpen);
         Assert.IsTrue(canvas.IsCountdownShown, "카운트다운");
         Assert.AreEqual("3", canvas.CountdownText.text);
+        Assert.Greater(canvas.CountdownText.transform.GetSiblingIndex(), pause.transform.GetSiblingIndex(),
+            "숫자는 닫히는 일시정지 팝업(블러)보다 위에 그린다");
+        Assert.Greater(canvas.CountdownText.transform.GetSiblingIndex(), canvas.CountdownDim.transform.GetSiblingIndex(), "숫자는 덮개 위");
+        Assert.IsNull(canvas.transform.Find("Txt_CountdownCaption"), "카운트다운 아래 문구 없음");
+        canvas.CountdownText.ForceMeshUpdate();
+        Assert.AreEqual(1, canvas.CountdownText.textInfo.characterCount, "숫자 글자가 들어감");
+        Assert.IsTrue(canvas.CountdownText.isActiveAndEnabled);
         Assert.IsTrue(canvas.CountdownDim.activeSelf, "카운트다운 덮개");
         AssertColor(theme.popupCountdownDim, canvas.CountdownDim.GetComponent<Image>().color, "덮개 28%");
         yield return WaitRealtime(GameConstants.UI.TransitionSeconds + 0.1f);
@@ -176,6 +185,36 @@ public class PopupTonePlayTests
     }
 
     // ───── 도우미 ─────
+
+    /// <summary>패널 폭 600, 기어 가운데(화면 가운데), 키 안내 줄 모든 항목이 패널 안쪽 여백(좌우 32) 안</summary>
+    private static void AssertPausePanelFits(Popup_Pause pause)
+    {
+        RectTransform panel = (RectTransform)pause.KeyGuide.transform.parent;
+        Assert.AreEqual(GameConstants.Pause.Width, panel.rect.width, 0.01f, "일시정지 패널 폭");
+        Canvas root = panel.GetComponentInParent<Canvas>().rootCanvas;
+        RectTransform canvasRect = (RectTransform)root.transform;
+        Vector3[] pc = new Vector3[4];
+        panel.GetWorldCorners(pc);
+        float scale = root.transform.lossyScale.x;
+        Assert.AreEqual(canvasRect.position.x, (pc[0].x + pc[2].x) * 0.5f, 0.5f * scale, "패널 가운데 = 화면(기어) 가운데");
+        float innerMin = pc[0].x + GameConstants.Pause.PanelPadding * scale;
+        float innerMax = pc[2].x - GameConstants.Pause.PanelPadding * scale;
+        int items = 0;
+        foreach (Transform item in pause.KeyGuide.transform)
+        {
+            if (!item.gameObject.activeSelf) continue;
+            items++;
+            Vector3[] c = new Vector3[4];
+            ((RectTransform)item).GetWorldCorners(c);
+            Assert.GreaterOrEqual(c[0].x, innerMin - 0.01f, $"키 안내 {item.GetSiblingIndex()}번 왼쪽");
+            Assert.LessOrEqual(c[2].x, innerMax + 0.01f, $"키 안내 {item.GetSiblingIndex()}번 오른쪽");
+            Assert.GreaterOrEqual(c[0].y, pc[0].y - 0.01f, "키 안내 아래");
+        }
+        Assert.AreEqual(4, items, "키 안내 항목 4개");
+        Vector3[] g = new Vector3[4];
+        ((RectTransform)pause.KeyGuide.transform).GetWorldCorners(g);
+        Debug.Log($"[PopupTonePlayTests] 일시정지 패널 {panel.rect.width:0}, 키 안내 줄 폭 {(g[2].x - g[0].x) / scale:0} (안쪽 {GameConstants.Pause.Width - 2f * GameConstants.Pause.PanelPadding:0})");
+    }
 
     private static void AssertColor(Color expected, Color actual, string message)
     {
