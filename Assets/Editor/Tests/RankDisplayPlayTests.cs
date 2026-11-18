@@ -53,7 +53,7 @@ public class RankDisplayPlayTests
         int savedIndex = records.FindIndex(r => r.chartId == TestCharts.OfficialChartId);
         ChartRecordData savedRecord = book.Find(TestCharts.OfficialChartId);
         LastSelectionSaveData last = GameManager.PlayerData.LastSelection;
-        LastSelectionSaveData savedLast = new LastSelectionSaveData { scrollMultiplier = last.scrollMultiplier, songId = last.songId, chartId = last.chartId, chartType = last.chartType };
+        LastSelectionSaveData savedLast = last.Clone();
         ChartRecordData apRecord = new ChartRecordData
         {
             chartId = TestCharts.OfficialChartId, songId = TestCharts.OfficialSongId, chartType = ChartType.Official.ToString(),
@@ -63,9 +63,8 @@ public class RankDisplayPlayTests
 
         try
         {
-            last.songId = TestCharts.OfficialSongId;
-            last.chartId = TestCharts.OfficialChartId;
-            last.chartType = ChartType.Official.ToString();
+            last.official.songId = TestCharts.OfficialSongId;
+            last.official.chartId = TestCharts.OfficialChartId;
 
             // 기록 없음
             book.Remove(TestCharts.OfficialChartId);
@@ -106,10 +105,7 @@ public class RankDisplayPlayTests
         {
             book.Remove(TestCharts.OfficialChartId);
             if (savedRecord != null) PutRecord(book, savedRecord, Mathf.Min(savedIndex, records.Count));
-            last.scrollMultiplier = savedLast.scrollMultiplier;
-            last.songId = savedLast.songId;
-            last.chartId = savedLast.chartId;
-            last.chartType = savedLast.chartType;
+            last.CopyFrom(savedLast);
             if (savedFile != null && File.Exists(filePath) && !SameBytes(savedFile, File.ReadAllBytes(filePath)))
             {
                 File.WriteAllBytes(filePath, savedFile);

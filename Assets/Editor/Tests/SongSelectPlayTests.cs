@@ -144,7 +144,7 @@ public class SongSelectPlayTests
             yield return Tap(Key.Enter);
             yield return WaitScene(GameConstants.Scenes.InGame);
             Assert.IsNotNull(Object.FindFirstObjectByType<InGameScene>(), "인게임으로 넘어감");
-            Assert.AreEqual(TestCharts.OfficialChartId, GameManager.PlayerData.LastSelection.chartId, "일반 플레이로 들어가면 마지막 선택 저장");
+            Assert.AreEqual(TestCharts.OfficialChartId, GameManager.PlayerData.LastSelection.official.chartId, "일반 플레이로 들어가면 공식 칸에 마지막 선택 저장");
         }
         finally
         {
@@ -160,10 +160,9 @@ public class SongSelectPlayTests
     private void SetLastSelection(string songId, string chartId, ChartType type)
     {
         LastSelectionSaveData last = GameManager.PlayerData.LastSelection;
-        savedSelection = new LastSelectionSaveData { scrollMultiplier = last.scrollMultiplier, songId = last.songId, chartId = last.chartId, chartType = last.chartType };
-        last.songId = songId;
-        last.chartId = chartId;
-        last.chartType = type.ToString();
+        savedSelection = last.Clone();
+        last.Get(type).songId = songId;
+        last.Get(type).chartId = chartId;
     }
 
     /// <param name="save">true면 되돌린 값을 파일에 다시 저장한다 (테스트 중에 저장됐을 때)</param>
@@ -171,10 +170,7 @@ public class SongSelectPlayTests
     {
         if (savedSelection == null || !PlayerDataManager.HasInstance) return;
         LastSelectionSaveData last = GameManager.PlayerData.LastSelection;
-        last.scrollMultiplier = savedSelection.scrollMultiplier;
-        last.songId = savedSelection.songId;
-        last.chartId = savedSelection.chartId;
-        last.chartType = savedSelection.chartType;
+        last.CopyFrom(savedSelection);
         if (save) GameManager.PlayerData.Save();
         savedSelection = null;
     }

@@ -168,11 +168,11 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
         return Save();
     }
 
-    /// <summary>저장된 마지막 선택 (배속·마지막으로 플레이한 곡·채보·탭). Init 전이면 null. 고치지 않는다</summary>
+    /// <summary>저장된 마지막 선택 (배속 · 탭마다 마지막 곡·채보, 기획서 2-4 11/18). Init 전이면 null. 고치지 않는다</summary>
     public LastSelectionSaveData LastSelection => data != null ? data.lastSelection : null;
 
     /// <summary>
-    /// 일반 플레이로 인게임에 들어갈 때 마지막 배속과 마지막으로 플레이한 곡·채보·탭을 바꾸고, 바뀐 것이 있으면 한 번 저장한다.
+    /// 일반 플레이로 인게임에 들어갈 때 마지막 배속과 플레이한 탭의 칸(공식 / 나만의 채보)을 바꾸고, 바뀐 것이 있으면 한 번 저장한다. 다른 탭 칸은 그대로.
     /// 테스트 플레이는 부르지 않는다 (곡 선택에서 시작하는 것은 항상 일반 플레이).
     /// </summary>
     /// <returns>저장했으면 true</returns>
@@ -185,8 +185,23 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
         bool playedChanged = PlayerDataRules.TrySetLastPlayed(data.lastSelection, songId, chartId, chartType);
         if (!speedChanged && !playedChanged) return false;
 
-        Debug.Log($"{LogPrefix} 마지막 선택 저장: 배속 x{data.lastSelection.scrollMultiplier:0.0}, " +
-                  $"곡 {data.lastSelection.songId}, 채보 {data.lastSelection.chartId}, 탭 {data.lastSelection.chartType}", this);
+        TabSelectionSaveData tab = data.lastSelection.Get(chartType);
+        Debug.Log($"{LogPrefix} 마지막 선택 저장: 배속 x{data.lastSelection.scrollMultiplier:0.0}, {chartType} 칸 곡 {tab.songId}, 채보 {tab.chartId}", this);
+        return Save();
+    }
+
+    /// <summary>
+    /// 나만의 채보 칸만 바꾸고 바뀌었으면 저장한다 (배속·공식 칸은 그대로): 에디터로 들어갈 때(E 편집 { songId, chartId } · 새 채보 { songId, 빈 chartId }),
+    /// 에디터에서 새 채보를 처음 저장해 chartId가 생겼을 때.
+    /// </summary>
+    /// <returns>저장했으면 true</returns>
+    public bool SetLastCustom(string songId, string chartId)
+    {
+        if (data == null) return false;
+        if (data.lastSelection == null) data.lastSelection = new LastSelectionSaveData();
+        if (!PlayerDataRules.TrySetTab(data.lastSelection, ChartType.Custom, songId, chartId)) return false;
+
+        Debug.Log($"{LogPrefix} 마지막 선택 저장: Custom 칸 곡 {songId}, 채보 {(string.IsNullOrEmpty(chartId) ? "(+ 줄)" : chartId)}", this);
         return Save();
     }
 

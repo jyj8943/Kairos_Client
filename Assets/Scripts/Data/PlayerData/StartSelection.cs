@@ -1,5 +1,5 @@
 /// <summary>
-/// 곡 선택에 들어올 때 처음 고를 곡·채보·탭 (PlayerDataRules.ResolveStartSelection의 결과, 값 묶음).
+/// 곡 선택에 들어올 때 처음 고를 곡·채보·탭 (공식 탭: PlayerDataRules.ResolveOfficialStart의 결과, 값 묶음).
 /// </summary>
 public readonly struct StartSelection
 {

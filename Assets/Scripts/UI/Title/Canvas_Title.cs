@@ -136,11 +136,11 @@ public class Canvas_Title : UIBase
     }
 
     /// <summary>
-    /// 곡 선택 씬으로 이동한다. 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
+    /// 곡 선택을 공식 채보 탭으로 연다 (마지막 선택의 공식 칸: 마지막으로 플레이한 공식 곡·난이도, 기획서 2-4 11/18). 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
     /// </summary>
     private void OnClickPlay()
     {
-        if (GameManager.Scene.Load(GameConstants.Scenes.SongSelect))
+        if (GameManager.Scene.Load(GameConstants.Scenes.SongSelect, new SongSelectEntryData { chartType = ChartType.Official }))
             SetMenuInteractable(false);
     }
 
@@ -153,7 +153,7 @@ public class Canvas_Title : UIBase
     }
 
     /// <summary>
-    /// 곡 선택을 나만의 채보 탭으로 연다 (첫 줄이 골라진 채로). 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
+    /// 곡 선택을 나만의 채보 탭으로 연다 (마지막 선택의 나만의 채보 칸: 채보 · 없으면 그 곡의 + 줄 · 칸이 비었으면 첫 줄, 기획서 2-4 11/18). 로드를 시작했으면 메뉴 버튼을 막아 중복 실행을 막는다.
     /// </summary>
     private void OnClickEditor()
     {

@@ -19,7 +19,9 @@ using UnityEngine.UI;
 ///   ↑↓ 정지점 한 칸씩 (EventSystem 이동 이벤트를 줄이 넘겨 준다), ←→ 이전·다음 곡 묶음의 첫 정지점. 왼쪽과 배경은 고른 정지점의 곡을 따른다.
 ///   + 줄을 고르면 왼쪽 고른 채보 카드 자리에 점선 카드(새 채보), 최고 기록 카드는 비우고 흐리게(0.35), 시작 버튼은 "새 채보 / NEW".
 ///   Enter·시작 버튼·+ 줄 클릭 → 새 채보 팝업(Popup_NewChart) → 만들기 → 에디터. 채보 줄에서 E → 그 채보를 에디터로. 에디터 진입은 InGameLauncher.StartEditor (인게임과 같은 진입 함수).
-/// - 들어오면: 진입 데이터가 있으면 그것 (나만의 채보 탭은 chartId → 그 채보, 없으면 그 곡의 + 줄, songId도 없으면 첫 정지점), 없으면 PlayerData lastSelection, 없거나 지워졌으면 공식 첫 곡.
+/// - 들어오면 (기획서 2-4 「마지막 선택」 11/18, 탭마다 한 칸): 진입 데이터의 탭으로 시작한다 (없으면 공식). 진입 데이터에 곡이 있으면 그 탭은 그것
+///   (나만의 채보 탭은 chartId → 그 채보, 없으면 그 곡의 + 줄), 곡이 없으면(타이틀 플레이 · 에디터) 그 탭의 마지막 선택 칸. 보이지 않는 탭도 자기 칸으로 맞춰 두어
+///   Tab으로 바꾸면 그 탭의 마지막 선택이 보인다. 칸이 비었거나 곡·채보가 없으면 공식은 첫 곡, 나만의 채보는 첫 정지점.
 ///   배속은 진입 데이터에 값이 있을 때만 그 값, 없으면 저장된 마지막 배속 (ResolveStartSpeed).
 /// - 조작 (기획서 3-8): Tab 탭 전환, 1 / 2 배속(꾹 누르면 KeyRepeat로 계속), Enter 시작(+ 줄이면 새 채보 팝업), E 편집(나만의 채보 탭 채보 줄), ESC 타이틀(UIManager → SongSelectScene.OnBack).
 ///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로 곡·난이도·채보 클릭, 시작 버튼, 휠 스크롤.
@@ -264,36 +266,29 @@ public class Canvas_SongSelect : UIBase
         speedSteps = ScrollSpeedRules.ToSteps(ResolveStartSpeed(entry, savedSpeed));
         SetSpeedText(ScrollMultiplier);
 
-        string reason;
-        if (entry != null && entry.chartType == ChartType.Custom)
-        {
-            // 나만의 채보 탭으로 들어옴 (타이틀 에디터 메뉴 · 에디터 나가기): 진입 데이터가 lastSelection보다 우선
-            currentTab = ChartType.Custom;
-            Btn_SongItem item = songItems.Find(view => view.Song.SongId == entry.songId) ?? (songItems.Count > 0 ? songItems[0] : null);
-            if (item != null) ChooseSongItem(item, null);
-            SetChosenStop(myChartNavigator.ResolveEntryStop(groupSongIds, groupChartIds, entry.songId, entry.chartId), false);
-            reason = "시작 (나만의 채보 진입)";
-        }
-        else
-        {
-            StartSelection start = ResolveStart(entry);
-            currentTab = start.ChartType;
+        // 탭마다 처음 고를 줄 (기획서 2-4 「마지막 선택」 11/18): 진입 데이터에 곡이 있으면 그 탭은 그것, 아니면 그 탭의 마지막 선택 칸.
+        // 보이지 않는 탭도 자기 칸으로 맞춰 두어, Tab으로 바꾸면 그 탭의 마지막 선택이 보인다 (같은 화면 안에서 옮긴 위치는 그대로 남는다)
+        currentTab = entry != null ? entry.chartType : ChartType.Official;
+        bool entryHasSong = entry != null && !string.IsNullOrEmpty(entry.songId);
+        LastSelectionSaveData last = PlayerDataManager.HasInstance ? GameManager.PlayerData.LastSelection : null;
+        List<string> songIds = new List<string>();
+        foreach (Btn_SongItem item in songItems) songIds.Add(item.Song.SongId);
 
-            // 공식 탭 곡: 시작 곡 (나만의 채보로 시작해도 같은 곡을 골라 둔다). 없으면 첫 곡
-            Btn_SongItem firstItem = songItems.Find(item => item.Song.SongId == start.SongId) ?? (songItems.Count > 0 ? songItems[0] : null);
-            if (firstItem != null) ChooseSongItem(firstItem, start.ChartType == ChartType.Official ? start.ChartId : null);
+        // 공식 탭: 곡 · 난이도 (없으면 첫 곡의 가장 낮은 난이도)
+        StartSelection official = entryHasSong && entry.chartType == ChartType.Official
+            ? new StartSelection(entry.songId, entry.chartId, ChartType.Official, false)
+            : PlayerDataRules.ResolveOfficialStart(last, songIds, ChartExists);
+        Btn_SongItem firstItem = songItems.Find(item => item.Song.SongId == official.SongId) ?? (songItems.Count > 0 ? songItems[0] : null);
+        if (firstItem != null) ChooseSongItem(firstItem, official.ChartId);
 
-            // 나만의 채보 탭: 시작 채보가 있으면 그 채보, 없으면 첫 채보 줄 (채보가 하나도 없으면 첫 정지점)
-            int stop = start.ChartType == ChartType.Custom
-                ? myChartNavigator.ResolveEntryStop(groupSongIds, groupChartIds, start.SongId, start.ChartId)
-                : -1;
-            if (stop < 0) stop = myChartNavigator.ChartCount > 0 ? myChartNavigator.StopOfChart(0) : (myChartNavigator.Count > 0 ? 0 : -1);
-            SetChosenStop(stop, false);
-            reason = start.FromLastSelection ? "시작 (마지막 선택)" : "시작";
-        }
+        // 나만의 채보 탭: 채보 줄 · 그 곡의 + 줄(채보 ID 없음) · 첫 정지점(칸이 비었거나 없는 곡·채보)
+        TabSelectionSaveData custom = entryHasSong && entry.chartType == ChartType.Custom
+            ? new TabSelectionSaveData { songId = entry.songId, chartId = entry.chartId ?? string.Empty }
+            : PlayerDataRules.ResolveTab(last != null ? last.Get(ChartType.Custom) : null, ChartType.Custom, songIds, ChartExists);
+        SetChosenStop(myChartNavigator.ResolveEntryStop(groupSongIds, groupChartIds, custom.songId, custom.chartId), false);
 
         ShowTab(currentTab, true);
-        LogState(reason);
+        LogState(entryHasSong ? "시작 (진입 데이터)" : "시작 (탭 마지막 선택)");
     }
 
     /// <summary>
@@ -302,29 +297,6 @@ public class Canvas_SongSelect : UIBase
     public static float ResolveStartSpeed(SongSelectEntryData entry, float savedSpeed)
     {
         return entry != null && entry.scrollMultiplier > SongSelectEntryData.NoScrollMultiplier ? entry.scrollMultiplier : savedSpeed;
-    }
-
-    /// <summary>
-    /// 처음 고를 탭·곡·채보: 진입 데이터가 있으면 그것, 없으면 PlayerData의 마지막 선택. 곡·채보가 없으면 공식 첫 곡·첫 채보.
-    /// </summary>
-    private StartSelection ResolveStart(SongSelectEntryData entry)
-    {
-        LastSelectionSaveData last;
-        if (entry != null)
-        {
-            last = new LastSelectionSaveData { songId = entry.songId ?? string.Empty, chartId = entry.chartId ?? string.Empty, chartType = entry.chartType.ToString() };
-            // 진입 데이터에 채보가 없으면(곡만) 그 곡의 첫 채보로 시작한다
-            if (string.IsNullOrEmpty(last.chartId) && FindSong(entry.songId) != null)
-                return new StartSelection(entry.songId, null, entry.chartType, false);
-        }
-        else
-        {
-            last = PlayerDataManager.HasInstance ? GameManager.PlayerData.LastSelection : null;
-        }
-
-        List<string> songIds = new List<string>();
-        foreach (Btn_SongItem item in songItems) songIds.Add(item.Song.SongId);
-        return PlayerDataRules.ResolveStartSelection(last, songIds, ChartExists);
     }
 
     /// <summary>시작 선택 확인용: 그 곡의 채보가 지금 있는지 (공식: Resources, 나만의 채보: 목록에 읽힌 파일)</summary>

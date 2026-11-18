@@ -11,10 +11,12 @@ using UnityEngine.TestTools;
 
 /// <summary>
 /// 에디터 진입을 곡 선택 나만의 채보 탭으로 합침 (기획서 3-3 · 3-7 ④ · 3-1, 11/18) PlayMode 확인 (EnterPlayMode 방식, 짧게).
-/// - M1 타이틀 에디터 메뉴 → 곡 선택 나만의 채보 탭 (첫 정지점), 배속은 저장된 마지막 배속
+/// - M1 타이틀 에디터 메뉴 → 곡 선택 나만의 채보 탭 (나만의 채보 칸이 비었으면 첫 정지점), 배속은 저장된 마지막 배속
 /// - M2 채보 줄에서 E → 에디터 (그 채보) → 나가기 → 같은 채보가 골라진 곡 선택
 /// - M3 + 줄 Enter → 새 채보 팝업 (빈 이름 오류 → 이름 고치면 사라짐) → 만들기 → 에디터 → 저장하지 않고 나가기 → 그 곡의 + 줄이 골라짐
 /// - M4 팝업이 열려 있으면 E · Tab · 1 · 2가 동작하지 않음
+/// - M6 (기획서 2-4 마지막 선택 11/18) 공식 A 플레이 · 나만의 채보 B 편집 → 타이틀 "플레이" = 공식 탭 A, "에디터" = 나만의 채보 탭 B
+/// - M7 곡 선택에서 Tab → 반대 탭의 마지막 선택 칸 (같은 화면 안에서 옮긴 위치는 다시 Tab해도 그대로)
 /// - M5 (실제 키 상태) + 줄에서 Enter 누름 → 팝업, 같은 Enter의 결정은 무시(에디터로 안 감) → 뗌 → 이름을 지우고 Enter → 오류 → 이름 넣고 Enter → 에디터
 ///   TMP 입력칸은 Enter를 IMGUI 키 이벤트로 받아 키 상태 시뮬레이션으로는 onSubmit이 생기지 않으므로, TMP가 부르는 onSubmit을 직접 불러 대신한다.
 /// 테스트용 나만의 채보는 공식 곡(Critical Velocity)에 my_test_mytab_* 이름으로 만들고 끝나면 지운다. 기록(PlayerData.json)은 남기지 않는다.
@@ -45,10 +47,14 @@ public class MyChartTabPlayTests
         Application.runInBackground = true;
         yield return LoadAndWait(GameConstants.Scenes.Title, null);
         float saved = GameManager.PlayerData.LastScrollMultiplier;
+        // 나만의 채보 칸이 비어 있으면 첫 정지점 (메모리에서만 비우고 끝나면 되돌린다)
+        LastSelectionSaveData savedLast = GameManager.PlayerData.LastSelection.Clone();
+        GameManager.PlayerData.LastSelection.custom = new TabSelectionSaveData();
 
         Canvas_Title title = Object.FindFirstObjectByType<Canvas_Title>();
         typeof(Canvas_Title).GetMethod("OnClickEditor", Private).Invoke(title, null);
         yield return WaitScene(GameConstants.Scenes.SongSelect);
+        GameManager.PlayerData.LastSelection.CopyFrom(savedLast);
 
         Canvas_SongSelect songSelect = Object.FindFirstObjectByType<Canvas_SongSelect>();
         Assert.AreEqual(ChartType.Custom, songSelect.CurrentTab, "에디터 메뉴 → 나만의 채보 탭");
@@ -238,6 +244,91 @@ public class MyChartTabPlayTests
             ReleaseAll();
             InputSystem.settings.editorInputBehaviorInPlayMode = savedEditor;
             InputSystem.settings.backgroundBehavior = savedBackground;
+        }
+        yield return new ExitPlayMode();
+    }
+
+    [UnityTest]
+    public IEnumerator M6_TitlePlayAndEditor_OpenEachTabsLastSelection()
+    {
+        yield return new EnterPlayMode();
+        Application.runInBackground = true;
+        yield return WaitManagers();
+        SaveTestChart();
+        LastSelectionSaveData saved = GameManager.PlayerData.LastSelection.Clone();
+        try
+        {
+            // 공식 A 플레이 (일반 플레이로 들어갈 때 저장) · 나만의 채보 B 편집 (에디터로 들어갈 때 저장)
+            GameManager.PlayerData.SetLastPlayed(GameManager.PlayerData.LastScrollMultiplier, TestCharts.OfficialSongId, TestCharts.OfficialChartId, ChartType.Official);
+            GameManager.PlayerData.SetLastCustom(TestCharts.OfficialSongId, TestChartId);
+            Assert.AreEqual(TestCharts.OfficialChartId, GameManager.PlayerData.LastSelection.official.chartId);
+            Assert.AreEqual(TestChartId, GameManager.PlayerData.LastSelection.custom.chartId, "탭마다 따로");
+
+            yield return LoadAndWait(GameConstants.Scenes.Title, null);
+            typeof(Canvas_Title).GetMethod("OnClickPlay", Private).Invoke(Object.FindFirstObjectByType<Canvas_Title>(), null);
+            yield return WaitScene(GameConstants.Scenes.SongSelect);
+            Canvas_SongSelect songSelect = Object.FindFirstObjectByType<Canvas_SongSelect>();
+            Assert.AreEqual(ChartType.Official, songSelect.CurrentTab, "플레이 → 공식 탭");
+            Assert.AreEqual(TestCharts.OfficialChartId, songSelect.ChosenChart.chartId, "공식 칸의 곡·난이도");
+
+            songSelect.ExitToTitle();
+            yield return WaitScene(GameConstants.Scenes.Title);
+            typeof(Canvas_Title).GetMethod("OnClickEditor", Private).Invoke(Object.FindFirstObjectByType<Canvas_Title>(), null);
+            yield return WaitScene(GameConstants.Scenes.SongSelect);
+            songSelect = Object.FindFirstObjectByType<Canvas_SongSelect>();
+            Assert.AreEqual(ChartType.Custom, songSelect.CurrentTab, "에디터 → 나만의 채보 탭");
+            Assert.AreEqual(TestChartId, songSelect.ChosenChart != null ? songSelect.ChosenChart.chartId : null, "나만의 채보 칸의 채보");
+        }
+        finally
+        {
+            GameManager.PlayerData.LastSelection.CopyFrom(saved);
+            GameManager.PlayerData.Save();
+        }
+        yield return new ExitPlayMode();
+    }
+
+    [UnityTest]
+    public IEnumerator M7_TabSwitch_GoesToOtherTabsLastSelection()
+    {
+        yield return new EnterPlayMode();
+        Application.runInBackground = true;
+        yield return WaitManagers();
+        SaveTestChart();
+        LastSelectionSaveData saved = GameManager.PlayerData.LastSelection.Clone();
+        try
+        {
+            // 메모리에서만 바꾼다 (파일 저장 없음)
+            LastSelectionSaveData last = GameManager.PlayerData.LastSelection;
+            last.official.songId = TestCharts.OfficialSongId;
+            last.official.chartId = TestCharts.OfficialChartId;
+            last.custom.songId = TestCharts.OfficialSongId;
+            last.custom.chartId = TestChartId;
+
+            yield return LoadAndWait(GameConstants.Scenes.SongSelect, new SongSelectEntryData { chartType = ChartType.Custom });
+            Canvas_SongSelect songSelect = Object.FindFirstObjectByType<Canvas_SongSelect>();
+            Assert.AreEqual(TestChartId, songSelect.ChosenChart.chartId, "나만의 채보 칸");
+
+            object context = default(InputAction.CallbackContext);
+            typeof(Canvas_SongSelect).GetMethod("OnSwitchTab", Private).Invoke(songSelect, new[] { context });
+            yield return null;
+            Assert.AreEqual(ChartType.Official, songSelect.CurrentTab);
+            Assert.AreEqual(TestCharts.OfficialChartId, songSelect.ChosenChart.chartId, "Tab → 공식 칸의 곡·난이도");
+
+            // 나만의 채보 탭에서 + 줄로 옮겨 두면, 다시 Tab해 돌아와도 그 위치 (같은 화면 안에서 옮긴 위치가 우선)
+            typeof(Canvas_SongSelect).GetMethod("OnSwitchTab", Private).Invoke(songSelect, new[] { context });
+            yield return null;
+            Assert.AreEqual(TestChartId, songSelect.ChosenChart.chartId, "Tab → 나만의 채보 칸");
+            int addRow = songSelect.MyChartNavigator.AddRowOfGroup(songSelect.ChosenStop.Group);
+            typeof(Canvas_SongSelect).GetMethod("ChooseStop", Private).Invoke(songSelect, new object[] { addRow, "테스트" });
+            typeof(Canvas_SongSelect).GetMethod("OnSwitchTab", Private).Invoke(songSelect, new[] { context });
+            yield return null;
+            typeof(Canvas_SongSelect).GetMethod("OnSwitchTab", Private).Invoke(songSelect, new[] { context });
+            yield return null;
+            Assert.IsTrue(songSelect.IsNewChartRowChosen, "같은 화면 안에서 옮긴 위치는 그대로");
+        }
+        finally
+        {
+            GameManager.PlayerData.LastSelection.CopyFrom(saved);
         }
         yield return new ExitPlayMode();
     }

@@ -1,7 +1,8 @@
 /// <summary>
 /// 곡 선택·결과에서 채보를 들고 들어가는 한 경로 (기획서 3-1 · 3-9): 인게임(곡 선택 시작 · 결과 다시 하기)과 에디터(곡 선택 나만의 채보 탭의 편집 · 새 채보)가 같이 쓴다.
 /// - 모든 진입이 LoadWithSongLoading 한 곳을 지난다. 곡 로딩 화면(3-9)을 넣을 때는 이 함수만 곡 로딩을 거치게 바꾸면 곡 선택·결과·편집·새 채보가 함께 따라간다.
-/// - 일반 플레이로 인게임에 들어가면 마지막 배속과 마지막으로 플레이한 곡·채보·탭을 저장한다 (2-4 lastSelection). 테스트 플레이·자동 플레이·에디터는 저장하지 않는다.
+/// - 마지막 선택 (2-4 lastSelection, 11/18 탭마다 한 칸): 일반 플레이로 인게임에 들어가면 마지막 배속과 플레이한 탭의 칸을, 에디터로 들어가면 나만의 채보 칸
+///   ({ songId, chartId }, 새 채보면 chartId 없음)을 저장한다. 테스트 플레이·자동 플레이는 저장하지 않는다.
 /// - 인게임 안의 재시작(일시정지 메뉴)·F5 즉시 다시 하기는 이 경로를 쓰지 않는다 (같은 씬 안에서 바로 다시 시작, 곡 로딩 없음).
 /// </summary>
 public static class InGameLauncher
@@ -31,13 +32,19 @@ public static class InGameLauncher
 
         LastStartedEntry = entry;
         StartCount++;
-        if (entry.mode == InGameMode.Normal && entry.testPlay == null && PlayerDataManager.HasInstance)
+        if (ShouldSaveLastPlayed(entry) && PlayerDataManager.HasInstance)
             GameManager.PlayerData.SetLastPlayed(entry.scrollMultiplier, entry.songId, entry.chartId, entry.chartType);
         return true;
     }
 
+    /// <summary>인게임에 들어갈 때 마지막 선택(플레이한 탭 칸 · 배속)을 저장할지 (순수 함수): 일반 플레이만, 테스트 플레이는 저장하지 않는다</summary>
+    public static bool ShouldSaveLastPlayed(InGameEntryData entry)
+    {
+        return entry != null && entry.mode == InGameMode.Normal && entry.testPlay == null;
+    }
+
     /// <summary>
-    /// 에디터 씬을 불러온다 (곡 선택 나만의 채보 탭: 채보 줄 E 편집 · 새 채보 팝업 만들기). lastSelection은 저장하지 않는다.
+    /// 에디터 씬을 불러온다 (곡 선택 나만의 채보 탭: 채보 줄 E 편집 · 새 채보 팝업 만들기). 마지막 선택의 나만의 채보 칸을 { songId, chartId }로 저장한다 (새 채보는 chartId 없음 = 그 곡의 + 줄).
     /// </summary>
     /// <returns>불러오기를 시작했으면 true (이미 씬 이동 중이면 false)</returns>
     public static bool StartEditor(EditorEntryData entry)
@@ -47,6 +54,7 @@ public static class InGameLauncher
 
         LastEditorEntry = entry;
         EditorStartCount++;
+        if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastCustom(entry.songId, entry.chartId);
         return true;
     }
 

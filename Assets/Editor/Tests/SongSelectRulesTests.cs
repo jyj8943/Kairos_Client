@@ -6,7 +6,7 @@ using UnityEngine;
 /// <summary>
 /// 곡 선택 화면 개편 규칙 EditMode 확인 (기획서 3-3 곡 선택 화면 개편 · 나만의 채보 탭 11/17, 2-4 마지막 선택).
 /// 1. 최고 기록 카드 형식: 점수·콤보 쉼표 없음, RATE 소수 둘째 자리(버림), 기록 없음 —, 랭크(AP·S~F)·FC 값 (AP면 FC도, 11/18)
-/// 2. 마지막 선택: 저장 → 불러오기, 없는 채보 ID면 공식 첫 곡, 예전 JSON(필드 없음) 읽기, 곡·채보 한쪽만 있으면 비움
+/// 2. 마지막 선택 (11/18 탭마다 한 칸): 플레이한 탭 칸만 바뀜(테스트 플레이 제외), 에디터 E · 새 채보 · 저장 → 나만의 채보 칸, 예전 JSON(한 벌) → 맞는 칸, 없는 ID → 빈 값
 /// 3. 나만의 채보 목록 이동 (11/18): 정지점 = 채보 줄 + 곡마다 + 줄, ↓ 채보 → + 줄 → 다음 곡, ↑로 이전 곡 + 줄, ←→ 묶음 첫 정지점, 양 끝 멈춤, 곡 0개
 /// 4. 곡 선택 진입: chartId → 그 채보 / 없으면 그 곡 + 줄 / songId 없음 → 첫 정지점, 진입 데이터가 배속을 덮어쓰지 않음, 위쪽 숫자·NO CHART
 /// 5. 새 채보 검사: 빈 이름·공백만 → 오류, 레벨 범위 밖 → 범위 안
@@ -109,84 +109,107 @@ public class SongSelectRulesTests
     }
 
     [Test]
-    public void LastSelection_SaveThenLoad_StartsThere()
+    public void LastSelection_PlayPerTab_OnlyThatSlotChanges()
     {
         PlayerData data = new PlayerData();
+        // 공식 플레이 → 공식 칸만
         Assert.IsTrue(PlayerDataRules.TrySetLastPlayed(data.lastSelection, "song_b", "song_b_normal", ChartType.Official));
         Assert.IsFalse(PlayerDataRules.TrySetLastPlayed(data.lastSelection, "song_b", "song_b_normal", ChartType.Official), "같은 값이면 저장할 것 없음");
+        Assert.AreEqual("song_b_normal", data.lastSelection.official.chartId);
+        Assert.IsTrue(data.lastSelection.custom.IsEmpty, "나만의 채보 칸은 그대로");
+
+        // 나만의 채보 플레이 → 나만의 채보 칸만
+        Assert.IsTrue(PlayerDataRules.TrySetLastPlayed(data.lastSelection, "song_a", "my_1", ChartType.Custom));
+        Assert.AreEqual("my_1", data.lastSelection.custom.chartId);
+        Assert.AreEqual("song_b_normal", data.lastSelection.official.chartId, "공식 칸은 그대로");
+        Assert.IsFalse(PlayerDataRules.TrySetLastPlayed(data.lastSelection, "", "c", ChartType.Official), "빈 ID는 저장하지 않음");
+
+        // 테스트 플레이는 저장하지 않는다 (InGameLauncher.Start가 이 규칙으로 SetLastPlayed를 부른다)
+        Assert.IsTrue(InGameLauncher.ShouldSaveLastPlayed(InGameLauncher.CreateNormalEntry("song_a", "my_1", ChartType.Custom, 2f)), "일반 플레이 (나만의 채보 포함)");
+        Assert.IsFalse(InGameLauncher.ShouldSaveLastPlayed(new InGameEntryData { mode = InGameMode.TestPlay, testPlay = new TestPlayData() }), "테스트 플레이");
+        Assert.IsFalse(InGameLauncher.ShouldSaveLastPlayed(null));
+
+        // 저장 → 불러오기 → 탭마다 시작
         Assert.IsTrue(PlayerDataRules.TrySetLastScrollMultiplier(data.lastSelection, 5.5f));
-
-        PlayerData loaded = PlayerDataRules.Sanitize(JsonUtility.FromJson<PlayerData>(JsonUtility.ToJson(data)));
-        Assert.AreEqual("song_b", loaded.lastSelection.songId);
-        Assert.AreEqual("song_b_normal", loaded.lastSelection.chartId);
-        Assert.AreEqual("Official", loaded.lastSelection.chartType);
-        Assert.AreEqual(5.5f, loaded.lastSelection.scrollMultiplier, 1e-4f);
-
-        StartSelection start = PlayerDataRules.ResolveStartSelection(loaded.lastSelection, SongIds, ChartExists);
-        Assert.IsTrue(start.FromLastSelection);
-        Assert.AreEqual("song_b", start.SongId);
-        Assert.AreEqual("song_b_normal", start.ChartId);
-        Assert.AreEqual(ChartType.Official, start.ChartType);
-
-        // 나만의 채보 → 탭도 그쪽으로
-        PlayerDataRules.TrySetLastPlayed(loaded.lastSelection, "song_a", "my_1", ChartType.Custom);
-        start = PlayerDataRules.ResolveStartSelection(loaded.lastSelection, SongIds, ChartExists);
-        Assert.AreEqual(ChartType.Custom, start.ChartType);
-        Assert.AreEqual("my_1", start.ChartId);
+        PlayerData loaded = PlayerDataRules.Sanitize(PlayerDataStore.Parse(JsonUtility.ToJson(data)));
+        Assert.AreEqual(5.5f, loaded.lastSelection.scrollMultiplier, 1e-4f, "배속은 하나");
+        StartSelection official = PlayerDataRules.ResolveOfficialStart(loaded.lastSelection, SongIds, ChartExists);
+        Assert.IsTrue(official.FromLastSelection);
+        Assert.AreEqual("song_b", official.SongId);
+        Assert.AreEqual("song_b_normal", official.ChartId);
+        TabSelectionSaveData custom = PlayerDataRules.ResolveTab(loaded.lastSelection.custom, ChartType.Custom, SongIds, ChartExists);
+        Assert.AreEqual("song_a", custom.songId);
+        Assert.AreEqual("my_1", custom.chartId);
     }
 
     [Test]
-    public void LastSelection_MissingChart_FallsBackToFirstOfficialSong()
+    public void LastSelection_Editor_CustomSlot_EditNewSave()
     {
-        LastSelectionSaveData deleted = new LastSelectionSaveData { songId = "song_a", chartId = "my_deleted", chartType = "Custom" };
-        StartSelection start = PlayerDataRules.ResolveStartSelection(deleted, SongIds, ChartExists);
-        Assert.IsFalse(start.FromLastSelection);
-        Assert.AreEqual("song_a", start.SongId, "공식 탭 첫 곡");
-        Assert.IsNull(start.ChartId, "첫 채보 (가장 낮은 난이도)");
-        Assert.AreEqual(ChartType.Official, start.ChartType);
+        LastSelectionSaveData s = new LastSelectionSaveData();
+        PlayerDataRules.TrySetLastPlayed(s, "song_b", "song_b_normal", ChartType.Official);
 
-        LastSelectionSaveData unknownSong = new LastSelectionSaveData { songId = "song_x", chartId = "song_b_normal", chartType = "Official" };
-        Assert.IsFalse(PlayerDataRules.ResolveStartSelection(unknownSong, SongIds, ChartExists).FromLastSelection, "목록에 없는 곡");
+        // E로 에디터 → { songId, chartId }
+        Assert.IsTrue(PlayerDataRules.TrySetTab(s, ChartType.Custom, "song_a", "my_1"));
+        Assert.AreEqual("my_1", s.custom.chartId);
 
-        Assert.IsFalse(PlayerDataRules.ResolveStartSelection(new LastSelectionSaveData(), SongIds, ChartExists).FromLastSelection, "빈 값");
-        Assert.IsNull(PlayerDataRules.ResolveStartSelection(null, new string[0], ChartExists).SongId, "곡이 없으면 null");
+        // 새 채보로 에디터 → { songId, 빈 chartId } (그 곡의 + 줄)
+        Assert.IsTrue(PlayerDataRules.TrySetTab(s, ChartType.Custom, "song_b", null));
+        Assert.AreEqual("song_b", s.custom.songId);
+        Assert.AreEqual(string.Empty, s.custom.chartId);
+        TabSelectionSaveData addRow = PlayerDataRules.ResolveTab(s.custom, ChartType.Custom, SongIds, ChartExists);
+        Assert.AreEqual("song_b", addRow.songId, "곡만 있음 = + 줄 (곡만 확인)");
+        Assert.AreEqual(string.Empty, addRow.chartId);
+
+        // 새 채보 저장 → chartId 갱신
+        Assert.IsTrue(PlayerDataRules.TrySetTab(s, ChartType.Custom, "song_b", "my_new"));
+        Assert.AreEqual("my_new", s.custom.chartId);
+        Assert.AreEqual("song_b_normal", s.official.chartId, "공식 칸은 그대로");
+        Assert.IsFalse(PlayerDataRules.TrySetTab(s, ChartType.Official, "song_b", null), "공식 칸은 채보 ID가 있어야 한다");
+
+        // 정리: 나만의 채보 칸 곡만 있음(+ 줄)은 그대로, 곡 없이 채보만 있으면 비움
+        s.custom = new TabSelectionSaveData { songId = "song_a", chartId = null };
+        s.official = new TabSelectionSaveData { songId = null, chartId = "orphan" };
+        PlayerDataRules.SanitizeLastSelection(s);
+        Assert.AreEqual("song_a", s.custom.songId);
+        Assert.AreEqual(string.Empty, s.custom.chartId);
+        Assert.AreEqual(string.Empty, s.official.chartId);
     }
 
     [Test]
-    public void LastSelection_OldJsonWithoutNewFields_LoadsDefaults()
+    public void LastSelection_OldJson_MovesToTabSlot_MissingIdsEmpty()
     {
-        // 11/17 이전 형식: lastSelection에 배속만 있다
-        const string oldJson = "{\"version\":1,\"savedAt\":\"\",\"settings\":{},\"lastSelection\":{\"scrollMultiplier\":3.5},\"records\":[]}";
-        List<string> log = new List<string>();
-        PlayerData data = PlayerDataRules.Sanitize(JsonUtility.FromJson<PlayerData>(oldJson), log);
+        // 11/18 이전 형식 (곡·채보·탭 한 벌) → chartType에 맞는 칸, 다른 칸은 빈 값
+        const string oldCustom = "{\"version\":1,\"lastSelection\":{\"scrollMultiplier\":4.0,\"songId\":\"song_a\",\"chartId\":\"my_1\",\"chartType\":\"Custom\"},\"records\":[]}";
+        PlayerData custom = PlayerDataRules.Sanitize(PlayerDataStore.Parse(oldCustom));
+        Assert.AreEqual("song_a", custom.lastSelection.custom.songId);
+        Assert.AreEqual("my_1", custom.lastSelection.custom.chartId);
+        Assert.IsTrue(custom.lastSelection.official.IsEmpty, "다른 칸은 빈 값");
+        Assert.AreEqual(4f, custom.lastSelection.scrollMultiplier, 1e-4f);
 
-        Assert.AreEqual(3.5f, data.lastSelection.scrollMultiplier, 1e-4f, "배속은 그대로");
-        Assert.AreEqual(string.Empty, data.lastSelection.songId);
-        Assert.AreEqual(string.Empty, data.lastSelection.chartId);
-        Assert.AreEqual("Official", data.lastSelection.chartType);
-        Assert.IsFalse(PlayerDataRules.ResolveStartSelection(data.lastSelection, SongIds, ChartExists).FromLastSelection);
+        const string oldOfficial = "{\"version\":1,\"lastSelection\":{\"scrollMultiplier\":2.0,\"songId\":\"song_b\",\"chartId\":\"song_b_normal\",\"chartType\":\"Official\"}}";
+        PlayerData official = PlayerDataRules.Sanitize(PlayerDataStore.Parse(oldOfficial));
+        Assert.AreEqual("song_b_normal", official.lastSelection.official.chartId);
+        Assert.IsTrue(official.lastSelection.custom.IsEmpty);
 
-        // lastSelection 칸 자체가 없는 더 예전 형식
-        PlayerData older = PlayerDataRules.Sanitize(JsonUtility.FromJson<PlayerData>("{\"version\":1,\"records\":[]}"));
-        Assert.IsNotNull(older.lastSelection);
-        Assert.AreEqual(string.Empty, older.lastSelection.songId);
-    }
+        // 새 형식 JSON에는 예전 칸(chartType)을 쓰지 않는다
+        string json = JsonUtility.ToJson(official);
+        StringAssert.Contains("\"official\"", json);
+        StringAssert.DoesNotContain("chartType", json);
 
-    [Test]
-    public void LastSelection_Sanitize_HalfEmptyOrUnknownType()
-    {
-        LastSelectionSaveData onlySong = new LastSelectionSaveData { songId = "song_a", chartId = null, chartType = null };
-        PlayerDataRules.SanitizeLastSelection(onlySong);
-        Assert.AreEqual(string.Empty, onlySong.songId, "곡만 있고 채보가 없으면 둘 다 비움");
-        Assert.AreEqual(string.Empty, onlySong.chartId);
-        Assert.AreEqual("Official", onlySong.chartType, "모르는 탭 이름은 Official");
+        // 더 예전 형식 (배속만 / lastSelection 없음)
+        PlayerData speedOnly = PlayerDataRules.Sanitize(PlayerDataStore.Parse("{\"version\":1,\"lastSelection\":{\"scrollMultiplier\":3.5}}"));
+        Assert.AreEqual(3.5f, speedOnly.lastSelection.scrollMultiplier, 1e-4f);
+        Assert.IsTrue(speedOnly.lastSelection.official.IsEmpty && speedOnly.lastSelection.custom.IsEmpty);
+        Assert.IsNotNull(PlayerDataRules.Sanitize(PlayerDataStore.Parse("{\"version\":1,\"records\":[]}")).lastSelection);
 
-        LastSelectionSaveData badType = new LastSelectionSaveData { songId = "song_a", chartId = "my_1", chartType = "2" };
-        PlayerDataRules.SanitizeLastSelection(badType);
-        Assert.AreEqual("Official", badType.chartType, "숫자 문자열은 받지 않는다");
-        Assert.AreEqual("my_1", badType.chartId);
-
-        Assert.IsFalse(PlayerDataRules.TrySetLastPlayed(new LastSelectionSaveData(), "", "c", ChartType.Official), "빈 ID는 저장하지 않음");
+        // 없는 ID → 빈 값 (나만의 채보는 첫 정지점, 공식은 첫 곡)
+        Assert.IsTrue(PlayerDataRules.ResolveTab(new TabSelectionSaveData { songId = "song_a", chartId = "my_deleted" }, ChartType.Custom, SongIds, ChartExists).IsEmpty, "삭제된 나만의 채보");
+        Assert.IsTrue(PlayerDataRules.ResolveTab(new TabSelectionSaveData { songId = "song_x", chartId = "" }, ChartType.Custom, SongIds, ChartExists).IsEmpty, "목록에 없는 곡");
+        StartSelection fallback = PlayerDataRules.ResolveOfficialStart(new LastSelectionSaveData { official = new TabSelectionSaveData { songId = "song_x", chartId = "c" } }, SongIds, ChartExists);
+        Assert.IsFalse(fallback.FromLastSelection);
+        Assert.AreEqual("song_a", fallback.SongId, "공식 첫 곡");
+        Assert.IsNull(fallback.ChartId, "가장 낮은 난이도");
+        Assert.IsNull(PlayerDataRules.ResolveOfficialStart(null, new string[0], ChartExists).SongId, "곡이 없으면 null");
     }
 
     // ───── 3. 나만의 채보 목록 이동 (11/18: 정지점 = 채보 줄 + 곡마다 + 줄) ─────

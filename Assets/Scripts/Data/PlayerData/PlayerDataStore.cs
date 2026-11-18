@@ -109,6 +109,22 @@ public class PlayerDataStore
         }
     }
 
+    /// <summary>
+    /// JSON 글자를 PlayerData로 읽는다. 예전 lastSelection 형식(곡·채보·탭 한 벌, 11/18 이전)이면 탭에 맞는 칸으로 옮긴다 (PlayerDataRules.MigrateLegacyLastSelection).
+    /// 정리(Sanitize)는 하지 않는다. JSON이 아니면 예외.
+    /// </summary>
+    public static PlayerData Parse(string json)
+    {
+        PlayerData data = JsonUtility.FromJson<PlayerData>(json);
+        if (data == null) return null;
+
+        LegacyPlayerDataFile legacy = JsonUtility.FromJson<LegacyPlayerDataFile>(json);
+        if (data.lastSelection == null && legacy != null && legacy.lastSelection != null) data.lastSelection = new LastSelectionSaveData();
+        if (legacy != null && PlayerDataRules.MigrateLegacyLastSelection(data.lastSelection, legacy.lastSelection))
+            Debug.Log($"[PlayerDataStore] 예전 lastSelection 형식을 탭 칸으로 옮겼습니다: {legacy.lastSelection.chartType} 곡 {legacy.lastSelection.songId}, 채보 {legacy.lastSelection.chartId}");
+        return data;
+    }
+
     /// <summary>JSON을 읽어 PlayerData로. 비었거나 JSON이 아니거나 null이면 실패</summary>
     private static bool TryRead(string path, out PlayerData data, out string error)
     {
@@ -122,7 +138,7 @@ public class PlayerDataStore
                 return false;
             }
 
-            data = JsonUtility.FromJson<PlayerData>(json);
+            data = Parse(json);
             if (data == null)
             {
                 error = "JSON을 읽지 못함";
