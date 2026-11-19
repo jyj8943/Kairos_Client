@@ -62,6 +62,24 @@ public static class GameConstants
         public const string RankSpritePrefix = "Rank_";
         public const string FullComboSpriteName = "Clear_FC";
 
+        /// <summary>
+        /// 기어 판정 글자·FAST/SLOW 이미지 폴더 (Resources 기준, 11/19). 이름 = JudgeSpritePrefix + JudgeType 또는 FastSlow 이름 (Judge_Perfect, Judge_Fast 등).
+        /// 색·PERFECT 그라데이션·빛이 이미지 안에 있다.
+        /// </summary>
+        public const string JudgeSpriteFolder = "Images/InGame/Judge/";
+        public const string JudgeSpritePrefix = "Judge_";
+
+        /// <summary>판정 이미지 표시 배율: 이미지를 화면 크기의 2배로 만들었으므로 원본 크기 × 0.5로 그린다</summary>
+        public const float JudgeSpriteDisplayScale = 0.5f;
+
+        /// <summary>
+        /// 인게임 왼쪽 판정 패널의 판정 이름 이미지 배율 (11/19, 기어 판정 글자와 같은 이미지).
+        /// 판정 4개: 이미지 안 글자 높이 약 93px × 0.195 ≈ 18px (바꾸기 전 TMP 카트 고딕 21의 대문자 높이 18.1px).
+        /// FAST·SLOW: 이미지 안 글자 높이 약 34px × 0.405 ≈ 13.8px (바꾸기 전 TMP 16의 대문자 높이 13.8px).
+        /// </summary>
+        public const float PanelJudgeImageScale = 0.195f;
+        public const float PanelFastSlowImageScale = 0.405f;
+
         /// <summary>첫 노트 전 최소 준비 시간 (초)</summary>
         public const double LeadInSeconds = 2.0;
 
@@ -124,11 +142,17 @@ public static class GameConstants
         /// <summary>인게임 배속·밝기 카드(Img_SpeedBrightnessCard) 배속 값: {0} 배속 "x5.5" (플레이 중 1 / 2 키로 바꾸면 다시 쓴다)</summary>
         public const string InGameSpeedFormat = "x{0:0.0}";
 
-        /// <summary>인게임 배속·밝기 카드 왼쪽 칸 라벨 (한글 + 영문 작은 글씨)</summary>
-        public const string SpeedCardLabel = "배속 <size=80%>SPEED</size>";
+        /// <summary>인게임 배속·밝기 카드 왼쪽 칸 이름 (위 줄 한글, Txt_SpeedTitle)</summary>
+        public const string SpeedCardLabel = "배속";
 
-        /// <summary>인게임 배속·밝기 카드 오른쪽 칸 라벨 (한글 + 영문 작은 글씨)</summary>
-        public const string BrightnessCardLabel = "밝기 <size=80%>BG</size>";
+        /// <summary>인게임 배속·밝기 카드 왼쪽 칸 이름 아래 영문 (Txt_SpeedTitleEn)</summary>
+        public const string SpeedCardLabelEn = "SPEED";
+
+        /// <summary>인게임 배속·밝기 카드 오른쪽 칸 이름 (위 줄 한글, Txt_BrightnessTitle)</summary>
+        public const string BrightnessCardLabel = "밝기";
+
+        /// <summary>인게임 배속·밝기 카드 오른쪽 칸 이름 아래 영문 (Txt_BrightnessTitleEn)</summary>
+        public const string BrightnessCardLabelEn = "BG";
 
         /// <summary>인게임 배속·밝기 카드 밝기 값: {0} 밝기 % "100%"</summary>
         public const string BrightnessFormat = "{0}%";
@@ -647,9 +671,13 @@ public static class GameConstants
         /// <summary>최대 콤보 전체: {0} = 노트 수 + 롱노트 유지 틱 수</summary>
         public const string MaxComboTotalFormat = "/ {0}";
 
-        /// <summary>FAST/SLOW 막대 양쪽: {0} 개수</summary>
-        public const string FastFormat = "FAST {0}";
-        public const string SlowFormat = "{0} SLOW";
+        /// <summary>
+        /// 판정 이름 이미지 배율 (11/19, 인게임 판정 패널과 같은 이미지 JudgeSprites). 결과 화면 글자가 인게임보다 작아 따로 둔다.
+        /// 판정 4개: 이미지 안 글자 높이 약 93px × 0.176 ≈ 16.4px (바꾸기 전 카트 고딕 19의 대문자 높이 16.4px).
+        /// FAST·SLOW: 약 34px × 0.356 ≈ 12.1px (바꾸기 전 카트 고딕 14의 대문자 높이 12.1px).
+        /// </summary>
+        public const float JudgeImageScale = 0.176f;
+        public const float FastSlowImageScale = 0.356f;
 
         /// <summary>곡 정보 셋째 줄 배속: {0} 배속</summary>
         public const string SpeedFormat = "· x{0:0.0}";

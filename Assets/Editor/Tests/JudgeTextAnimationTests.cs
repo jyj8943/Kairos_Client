@@ -1,9 +1,9 @@
 using NUnit.Framework;
-using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
-/// 판정 글자·FAST/SLOW 글자 애니메이션 계산(JudgeTextAnimation)과 적용(Txt_Judge·Txt_FastSlow) EditMode 테스트 (DJMAX RESPECT V 기준 기본값).
+/// 판정 글자·FAST/SLOW 글자 애니메이션 계산(JudgeTextAnimation)과 적용(Img_Judge·Img_FastSlow, 11/19 이미지) EditMode 테스트 (DJMAX RESPECT V 기준 기본값).
 /// </summary>
 public class JudgeTextAnimationTests
 {
@@ -12,7 +12,7 @@ public class JudgeTextAnimationTests
     /// <summary>판정 글자 기본값: 0.7 → 1 (0.08초) · 투명도 0 → 1 (0.04초) · 0.82초 유지 · 0.13초 퇴장</summary>
     private static JudgeTextAnimation Judge() => new JudgeTextAnimation();
 
-    /// <summary>FAST/SLOW 기본값 (Txt_FastSlow와 같음): 바로 불투명 · 0.47초 유지 · 0.15초 퇴장</summary>
+    /// <summary>FAST/SLOW 기본값 (Img_FastSlow와 같음): 바로 불투명 · 0.47초 유지 · 0.15초 퇴장</summary>
     private static JudgeTextAnimation FastSlow() => new JudgeTextAnimation
     {
         StartScale = 1f, ScaleInSeconds = 0f, FadeInSeconds = 0f, HoldSeconds = 0.47f, FadeOutSeconds = 0.15f
@@ -128,26 +128,26 @@ public class JudgeTextAnimationTests
         Assert.IsFalse(a.Current.Visible);
     }
 
-    // ───── 화면 적용 (Txt_Judge · Txt_FastSlow) ─────
+    // ───── 화면 적용 (Img_Judge · Img_FastSlow, 11/19 이미지) ─────
 
     private GameObject root;
-    private Txt_Judge judge;
-    private Txt_FastSlow fastSlow;
-    private TextMeshProUGUI judgeTmp;
-    private TextMeshProUGUI fastSlowTmp;
+    private Img_Judge judge;
+    private Img_FastSlow fastSlow;
+    private Image judgeImage;
+    private Image fastSlowImage;
 
     [SetUp]
     public void SetUp()
     {
         root = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas));
-        var j = new GameObject("Txt_Judge", typeof(RectTransform), typeof(TextMeshProUGUI));
+        var j = new GameObject("Img_Judge", typeof(RectTransform), typeof(Image));
         j.transform.SetParent(root.transform, false);
-        judgeTmp = j.GetComponent<TextMeshProUGUI>();
-        judge = j.AddComponent<Txt_Judge>();
-        var f = new GameObject("Txt_FastSlow", typeof(RectTransform), typeof(TextMeshProUGUI));
+        judgeImage = j.GetComponent<Image>();
+        judge = j.AddComponent<Img_Judge>();
+        var f = new GameObject("Img_FastSlow", typeof(RectTransform), typeof(Image));
         f.transform.SetParent(root.transform, false);
-        fastSlowTmp = f.GetComponent<TextMeshProUGUI>();
-        fastSlow = f.AddComponent<Txt_FastSlow>();
+        fastSlowImage = f.GetComponent<Image>();
+        fastSlow = f.AddComponent<Img_FastSlow>();
         judge.ResetView();
         fastSlow.ResetView();
     }
@@ -158,43 +158,43 @@ public class JudgeTextAnimationTests
         Object.DestroyImmediate(root);
     }
 
-    /// <summary>ResetView: 둘 다 숨김. Show: 판정 색을 유지하고 크기·알파만 바뀜, 퇴장 뒤 숨김</summary>
+    /// <summary>ResetView: 둘 다 숨김. Show: 이미지·크기(원본 × 0.5)를 바꾸고 크기 0.7 → 1, 알파 0 → 1, 퇴장 뒤 Image 끔</summary>
     [Test]
-    public void View_ResetAndShowKeepsColor()
+    public void View_ResetAndShow_ScaleAlphaSize()
     {
         Assert.IsFalse(judge.IsVisible);
-        Assert.IsFalse(judgeTmp.enabled);
+        Assert.IsFalse(judgeImage.enabled);
         Assert.IsFalse(fastSlow.IsVisible);
 
-        Color great = new Color32(0x6E, 0xC8, 0xF5, 0xFF);
-        judge.Show(GameConstants.Play.GreatText, great);
-        Assert.IsTrue(judgeTmp.enabled);
-        Assert.AreEqual(0.7f, judgeTmp.rectTransform.localScale.x, Eps);
-        Assert.AreEqual(0f, judgeTmp.color.a, Eps);
+        Sprite great = JudgeSprites.Get(JudgeType.Great);
+        judge.Show(great);
+        Assert.AreSame(great, judgeImage.sprite);
+        Assert.AreEqual(JudgeSprites.DisplaySize(great), judgeImage.rectTransform.sizeDelta, "크기 = 원본 × 0.5");
+        Assert.IsTrue(judgeImage.enabled);
+        Assert.AreEqual(0.7f, judgeImage.rectTransform.localScale.x, Eps);
+        Assert.AreEqual(0f, judgeImage.color.a, Eps);
         judge.Tick(0.1f);
-        Assert.AreEqual(1f, judgeTmp.rectTransform.localScale.x, Eps);
-        Assert.AreEqual(great.r, judgeTmp.color.r, Eps, "판정 색 그대로");
-        Assert.AreEqual(great.b, judgeTmp.color.b, Eps);
-        Assert.AreEqual(1f, judgeTmp.color.a, Eps);
+        Assert.AreEqual(1f, judgeImage.rectTransform.localScale.x, Eps);
+        Assert.AreEqual(Color.white, judgeImage.color, "색은 흰색 그대로 (색은 이미지 안)");
         judge.Tick(1f);
-        Assert.IsFalse(judgeTmp.enabled, "퇴장 뒤 숨김");
-        Assert.AreEqual(1f, judgeTmp.rectTransform.localScale.x, Eps);
+        Assert.IsFalse(judgeImage.enabled, "퇴장 뒤 숨김");
+        Assert.AreEqual(1f, judgeImage.rectTransform.localScale.x, Eps);
     }
 
     /// <summary>7. FAST/SLOW 표시 중 PERFECT 판정이 나도 (판정 글자만 다시 재생) 남은 시간 그대로</summary>
     [Test]
     public void View_FastSlowSurvivesPerfect()
     {
-        fastSlow.Show(GameConstants.Play.FastText, Color.cyan);
-        judge.Show(GameConstants.Play.GreatText, Color.blue);
+        fastSlow.Show(JudgeSprites.Get(global::FastSlow.Fast));
+        judge.Show(JudgeSprites.Get(JudgeType.Great));
         judge.Tick(0.2f);
         fastSlow.Tick(0.2f);
 
-        judge.Show(GameConstants.Play.PerfectText, Color.yellow); // 다음 판정 PERFECT: FAST/SLOW는 부르지 않는다 (ShowFastSlow(None)도 아무것도 안 함)
+        judge.Show(JudgeSprites.Get(JudgeType.Perfect)); // 다음 판정 PERFECT: FAST/SLOW는 부르지 않는다
         Assert.AreEqual(0f, judge.Animation.Elapsed, Eps);
         Assert.AreEqual(0.2f, fastSlow.Animation.Elapsed, Eps, "FAST 시간 그대로");
         Assert.IsTrue(fastSlow.IsVisible);
-        Assert.AreEqual(GameConstants.Play.FastText, fastSlow.Text);
+        Assert.AreSame(JudgeSprites.Get(global::FastSlow.Fast), fastSlow.ShownSprite);
 
         judge.Tick(0.45f);
         fastSlow.Tick(0.45f);
@@ -202,17 +202,18 @@ public class JudgeTextAnimationTests
         Assert.IsTrue(judge.IsVisible, "PERFECT는 0.45초째라 보임");
     }
 
-    /// <summary>8. FAST/SLOW 표시 중 새 FAST/SLOW → 시간 재시작, 글자·색 바뀜</summary>
+    /// <summary>8. FAST/SLOW 표시 중 새 FAST/SLOW → 시간 재시작, 이미지 바뀜</summary>
     [Test]
     public void View_NewFastSlowRestarts()
     {
-        fastSlow.Show(GameConstants.Play.FastText, Color.cyan);
+        fastSlow.Show(JudgeSprites.Get(global::FastSlow.Fast));
         fastSlow.Tick(0.4f);
-        fastSlow.Show(GameConstants.Play.SlowText, new Color(1f, 0.5f, 0f, 1f));
+        Sprite slow = JudgeSprites.Get(global::FastSlow.Slow);
+        fastSlow.Show(slow);
         Assert.AreEqual(0f, fastSlow.Animation.Elapsed, Eps);
-        Assert.AreEqual(GameConstants.Play.SlowText, fastSlow.Text);
-        Assert.AreEqual(0.5f, fastSlowTmp.color.g, Eps, "색 바뀜");
-        Assert.AreEqual(1f, fastSlowTmp.color.a, Eps, "바로 불투명");
+        Assert.AreSame(slow, fastSlowImage.sprite, "이미지 바뀜");
+        Assert.AreEqual(JudgeSprites.DisplaySize(slow), fastSlowImage.rectTransform.sizeDelta, "SLOW 크기");
+        Assert.AreEqual(1f, fastSlowImage.color.a, Eps, "바로 불투명");
         fastSlow.Tick(0.4f);
         Assert.IsTrue(fastSlow.IsVisible, "다시 센 지 0.4초 → 아직 보임");
     }

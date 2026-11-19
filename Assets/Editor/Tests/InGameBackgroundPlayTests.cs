@@ -12,8 +12,10 @@ using UnityEngine.TestTools;
 /// <summary>
 /// 인게임 배경 · 배경 밝기 · 배속/밝기 카드 · 판정 색·글꼴 (기획서 3-4 「배경 · BGA (11/19)」) 실제 씬 확인. 곡 시작 직후 몇 초 안에 끝난다.
 /// B1. Critical Velocity NORMAL 시작 → 배경 소스 = 곡 일러스트(블러 아님), 덮개 알파 0, 카드 "x1.0 · 100% · 막대 4칸", 곡 정보 3줄 "BPM 150.07"(채보 첫 BPM 구간),
-///     배속 2(올림)·1(내림) → 카드 값만 바뀜, Txt_SpeedChange 없음, 판정 글자 글꼴 = 카트 고딕, PERFECT colorGradient 두 색 = 테마 값
+///     배속 2(올림)·1(내림) → 카드 값만 바뀜, Txt_SpeedChange 없음, 판정 패널 판정 이름 = 판정 이미지(크기 = 원본 × 배율), 개수 숫자는 TMP
 /// B2. 테스트 플레이: PgDn 두 번(한 번은 실제 키 입력) → 50% · 막대 2칸 · 덮개 0.5 · 저장값 50, F5 재시작 뒤에도 50%, 일시정지 팝업이 열린 동안 PgDn 무시
+/// B3. 와이어프레임 맞춤 (11/19): 기어 바탕·키 칸 색 알파 1, 판정 글자 = 이미지(TMP 없음),
+///     Txt_Combo = NEXON Lv2 Bold 72, 배속·밝기 카드 요소들의 세로 중심이 같음 (한 줄)
 /// PlayerData.json의 마지막 선택은 테스트 앞뒤로 되돌린다.
 /// </summary>
 public class InGameBackgroundPlayTests
@@ -82,6 +84,54 @@ public class InGameBackgroundPlayTests
         }
     }
 
+    /// <summary>B3: 불투명 기어 · 판정 글자 빛(Glow만) · 콤보 글꼴 · 카드 한 줄</summary>
+    [UnityTest]
+    public IEnumerator B3_Wireframe_OpaqueGear_JudgeGlow_ComboFont_CardRow()
+    {
+        yield return Prepare(100);
+        Assert.IsTrue(GameManager.Scene.Load(GameConstants.Scenes.InGame, new InGameEntryData
+        {
+            songId = TestCharts.OfficialSongId,
+            chartId = TestCharts.OfficialChartId,
+            chartType = ChartType.Official,
+            mode = InGameMode.Normal,
+            scrollMultiplier = 1f
+        }));
+        InGameScene scene = null;
+        yield return WaitPlaying(null, s => scene = s);
+        Canvas_InGame canvas = Get<Canvas_InGame>(scene, "canvas");
+
+        // 기어 바탕 · 키 칸: 불투명 (배경이 레인 안으로 비치지 않음)
+        GearView gear = Get<GearView>(scene, "gear");
+        SpriteRenderer lane = Get<SpriteRenderer>(gear, "laneBackground");
+        Assert.AreEqual(1f, lane.color.a, 1e-4f, "기어 바탕 알파 1");
+        for (int i = 0; i < 4; i++) Assert.AreEqual(1f, gear.GetKeyCellColor(i).a, 1e-4f, $"키 칸 {i} 알파 1");
+
+        // 기어 판정 글자는 이미지 (11/19): TMP 글자 없음
+        Assert.IsNotNull(canvas.Judge.ImageComponent, "Img_Judge Image");
+        Assert.IsNull(canvas.Judge.GetComponent<TMP_Text>(), "판정 글자에 TMP 없음");
+        Assert.IsNull(canvas.FastSlowImage.GetComponent<TMP_Text>(), "FAST/SLOW에 TMP 없음");
+
+        // 콤보 숫자: NEXON Lv2 Bold 72
+        TMP_Text combo = canvas.Combo.GetComponent<TMP_Text>();
+        Assert.AreEqual("NEXON Lv2 Gothic Bold SDF", combo.font.name, "Txt_Combo 글꼴");
+        Assert.AreEqual(72f, combo.fontSize, "Txt_Combo 크기");
+
+        // 카드: 모든 요소의 세로 중심이 같다
+        RectTransform cardRect = (RectTransform)canvas.SpeedBrightnessCard.transform;
+        float? centerY = null;
+        foreach (RectTransform item in canvas.SpeedBrightnessCard.RowItems)
+        {
+            Assert.IsNotNull(item, "카드 한 줄 요소");
+            float y = cardRect.InverseTransformPoint(item.TransformPoint(item.rect.center)).y;
+            if (centerY == null) centerY = y;
+            Assert.AreEqual(centerY.Value, y, 0.5f, item.name + " 세로 중심");
+        }
+        Assert.AreEqual(-cardRect.rect.height / 2f, centerY.Value, 0.5f, "카드 세로 가운데");
+
+        Debug.Log($"[InGameBackgroundTest] B3: 기어 알파 {lane.color.a}, 판정 글자 이미지, 콤보 {combo.font.name} {combo.fontSize}, 카드 중심 {centerY:0.#}");
+    }
+
     /// <summary>B1: 배경 소스·덮개·카드·BPM·배속 키·Txt_SpeedChange 없음·판정 글꼴·PERFECT 그라데이션</summary>
     [UnityTest]
     public IEnumerator B1_OfficialStart_BackgroundCardBpmJudgeFont()
@@ -126,27 +176,34 @@ public class InGameBackgroundPlayTests
         Assert.AreEqual("x1.0", card.SpeedText, "1 → x1.0");
         Assert.IsNull(GameObject.Find("Txt_SpeedChange"), "Txt_SpeedChange 오브젝트 없음");
 
-        // 판정 글꼴 · PERFECT 그라데이션
-        TMP_Text judge = canvas.Judge.TextComponent;
-        Assert.AreEqual(KartFontName, judge.font.name, "Txt_Judge 글꼴");
-        Assert.AreEqual(KartFontName, canvas.FastSlowText.TextComponent.font.name, "Txt_FastSlow 글꼴");
-        foreach (TMP_Text title in canvas.JudgePanel.JudgeTitles) Assert.AreEqual(KartFontName, title.font.name, title.name + " 글꼴");
+        // 판정 패널 판정 이름 = 기어 판정 글자와 같은 이미지 (11/19), 크기 = 원본 × 배율, 개수 숫자는 TMP 그대로
+        Img_JudgePanel panel = canvas.JudgePanel;
+        foreach (JudgeType judgeType in System.Enum.GetValues(typeof(JudgeType)))
+        {
+            UnityEngine.UI.Image title = panel.GetJudgeTitle(judgeType);
+            Assert.IsNotNull(title, judgeType + " 이름 이미지");
+            Assert.AreSame(JudgeSprites.Get(judgeType), title.sprite, judgeType + " 이미지");
+            Assert.AreEqual(JudgeSprites.DisplaySize(title.sprite, GameConstants.Play.PanelJudgeImageScale), title.rectTransform.sizeDelta, judgeType + " 크기 = 원본 × 판정 배율");
+            Assert.IsTrue(title.preserveAspect && !title.raycastTarget, judgeType + " Preserve Aspect 켬 · Raycast 끔");
+            Assert.AreEqual(Color.white, title.color, judgeType + " 색 흰색 (색은 이미지 안)");
+        }
+        foreach (FastSlow dir in new[] { FastSlow.Fast, FastSlow.Slow })
+        {
+            UnityEngine.UI.Image title = panel.GetFastSlowTitle(dir);
+            Assert.AreSame(JudgeSprites.Get(dir), title.sprite, dir + " 이미지");
+            Assert.AreEqual(JudgeSprites.DisplaySize(title.sprite, GameConstants.Play.PanelFastSlowImageScale), title.rectTransform.sizeDelta, dir + " 크기 = 원본 × FAST·SLOW 배율");
+        }
         Assert.AreNotEqual(KartFontName, Get<TMP_Text>(canvas, "scoreText").font.name, "점수 숫자는 NEXON Lv2 그대로");
 
-        canvas.ShowJudge(JudgeType.Perfect, FastSlow.None, 0, 0);
-        UITheme theme = UITheme.Current;
-        Assert.IsTrue(judge.enableVertexGradient, "PERFECT 그라데이션 켬");
-        Assert.AreEqual(theme.inGamePerfectStart, judge.colorGradient.topLeft, "왼쪽 = 금");
-        Assert.AreEqual(theme.inGamePerfectEnd, judge.colorGradient.topRight, "오른쪽 = 분홍");
-        Assert.AreEqual(theme.inGamePerfectEnd.r, canvas.Judge.GlowColor.r, 1e-3f, "PERFECT 빛 = 분홍빛");
-        TMP_Text panelPerfect = canvas.JudgePanel.JudgeTitles[0];
-        Assert.IsTrue(panelPerfect.enableVertexGradient, "판정 패널 PERFECT 그라데이션");
-        Assert.AreEqual(theme.judgePerfectStart, panelPerfect.colorGradient.bottomLeft, "패널 PERFECT 왼쪽 = 메뉴용 금");
-        canvas.ShowJudge(JudgeType.Great, FastSlow.None, 0, 0);
-        Assert.IsFalse(judge.enableVertexGradient, "GREAT는 단색");
+        ScoreCalculator sample = new ScoreCalculator(10);
+        sample.Add(JudgeType.Great);
+        sample.Add(JudgeType.Miss);
+        canvas.RefreshJudgePanel(sample);
+        StringAssert.Contains(">1<", Get<TMP_Text>(panel, "greatCount").text, "개수 TMP는 그대로 바뀜");
+        StringAssert.Contains(">1<", Get<TMP_Text>(panel, "missCount").text);
 
         Debug.Log($"[InGameBackgroundTest] B1: 배경 {background.SourceImage.texture.name}, 덮개 {background.DimImage.color.a:0.##}, 카드 {card.SpeedText} · {card.BrightnessText} · 막대 {card.FilledBarCount}칸, " +
-                  $"키 {string.Join("/", card.KeyTexts)}, {canvas.BpmLine}, 판정 글꼴 {judge.font.name}");
+                  $"키 {string.Join("/", card.KeyTexts)}, {canvas.BpmLine}, PERFECT 이름 {panel.GetJudgeTitle(JudgeType.Perfect).rectTransform.sizeDelta}");
     }
 
     /// <summary>B2: PgDn 두 번 → 50% · 막대 2칸 · 덮개 0.5 · 저장, F5 재시작 뒤 50%, 일시정지 중 무시</summary>

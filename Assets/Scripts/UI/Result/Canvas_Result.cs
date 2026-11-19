@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
@@ -13,7 +14,7 @@ using UnityEngine.UI;
 /// - 화면 이름 "RESULT" + 테스트 플레이 표시. 결과 패널(흰색 58%) 위에서 아래로:
 ///   ⑧ 곡 정보 (앨범 · 제목 · 아티스트 · 난이도 뱃지 · Lv · 배속. 나만의 채보는 CUSTOM 뱃지 + 채보 이름, 길면 채보 이름만 줄임표)
 ///   → ② 점수 + 이전 최고와 차이 / ① 랭크 이미지 (점수 오른쪽 240×160 칸, S~F 높이 150 정사각형, AP는 가로로 김. 기획서 3-3 「랭크·FC 표시 (11/18 개정)」)
-///   → ④ 판정별 개수(메뉴용 판정 색) + FAST/SLOW 막대 / ⑥ RATE · ⑤ MAX COMBO (왼쪽 최대 / 전체, 오른쪽 ⑦ FC 이미지 폭 78 → 그 아래 NEW RECORD).
+///   → ④ 판정별 개수(이름은 판정 이미지) + FAST/SLOW 막대 / ⑥ RATE · ⑤ MAX COMBO (왼쪽 최대 / 전체, 오른쪽 ⑦ FC 이미지 폭 78 → 그 아래 NEW RECORD).
 ///   FC가 아니면 FC 이미지만 숨긴다 (NEW RECORD 자리는 그대로). AP면 FC도 함께 띄운다.
 ///   ③ NEW RECORD는 SCORE · RATE 값 오른쪽, MAX COMBO는 FC 아래. 그 항목이 신기록일 때만 (테스트 플레이는 띄우지 않음).
 /// - 오른쪽 x 1300~1860은 카이로스 일러스트 자리로 비워 둔다 (KairosSlot).
@@ -23,11 +24,12 @@ using UnityEngine.UI;
 /// </summary>
 public class Canvas_Result : UIBase
 {
-    /// <summary>판정 한 줄 (이름 · 개수)</summary>
+    /// <summary>판정 한 줄 (이름 이미지 · 개수)</summary>
     [Serializable]
     public class JudgeRow
     {
-        public TMP_Text nameText;
+        [Tooltip("판정 이름 이미지 (Img_JudgeName, JudgeSprites)")]
+        public Image nameImage;
         public TMP_Text countText;
     }
 
@@ -62,8 +64,16 @@ public class Canvas_Result : UIBase
     [SerializeField] private JudgeRow greatRow;
     [SerializeField] private JudgeRow goodRow;
     [SerializeField] private JudgeRow missRow;
-    [SerializeField] private TMP_Text fastText;
-    [SerializeField] private TMP_Text slowText;
+    [Tooltip("왼쪽 FAST 이름 이미지 (Img_FastTitle)")]
+    [SerializeField] private Image fastTitle;
+    [Tooltip("FAST 개수 (Txt_FastCount, FAST 이름 오른쪽)")]
+    [FormerlySerializedAs("fastText")]
+    [SerializeField] private TMP_Text fastCountText;
+    [Tooltip("SLOW 개수 (Txt_SlowCount, SLOW 이름 왼쪽)")]
+    [FormerlySerializedAs("slowText")]
+    [SerializeField] private TMP_Text slowCountText;
+    [Tooltip("오른쪽 SLOW 이름 이미지 (Img_SlowTitle)")]
+    [SerializeField] private Image slowTitle;
     [Tooltip("막대 바탕 (FAST·SLOW가 둘 다 0이면 구분선 색 빈 막대)")]
     [SerializeField] private Image fastSlowTrack;
     [SerializeField] private Image fastFill;
@@ -182,21 +192,23 @@ public class Canvas_Result : UIBase
     }
 
     /// <summary>
-    /// ④ 판정별 개수 (이름은 넥슨 카트 고딕 + 메뉴용 판정 색, PERFECT는 금 → 분홍 가로 그라데이션 / 숫자는 기본 글자색) + FAST/SLOW 막대.
-    /// FAST/SLOW 글자는 카트 고딕 (숫자는 글꼴 에셋 fallback인 NEXON Lv2로 그려진다).
+    /// ④ 판정별 개수 (이름은 인게임 판정 패널과 같은 판정 이미지 JudgeSprites, 크기 = 원본 × GameConstants.Result.JudgeImageScale / 숫자는 기본 글자색) + FAST/SLOW 막대.
+    /// FAST/SLOW: 왼쪽 [FAST 이미지][개수] · 오른쪽 [개수][SLOW 이미지] (이미지 배율 Result.FastSlowImageScale), 개수 글자색은 메뉴용 judgeFast · judgeSlow.
     /// </summary>
     private void ShowJudges(ResultData result)
     {
         UITheme theme = UITheme.Current;
-        SetJudgeRow(perfectRow, GameConstants.Play.PerfectText, result.perfectCount, theme.GetMenuJudge(JudgeType.Perfect));
-        SetJudgeRow(greatRow, GameConstants.Play.GreatText, result.greatCount, theme.GetMenuJudge(JudgeType.Great));
-        SetJudgeRow(goodRow, GameConstants.Play.GoodText, result.goodCount, theme.GetMenuJudge(JudgeType.Good));
-        SetJudgeRow(missRow, GameConstants.Play.MissText, result.missCount, theme.GetMenuJudge(JudgeType.Miss));
+        SetJudgeRow(perfectRow, JudgeType.Perfect, result.perfectCount);
+        SetJudgeRow(greatRow, JudgeType.Great, result.greatCount);
+        SetJudgeRow(goodRow, JudgeType.Good, result.goodCount);
+        SetJudgeRow(missRow, JudgeType.Miss, result.missCount);
 
-        fastText.text = string.Format(GameConstants.Result.FastFormat, ResultFormat.FormatCount(result.fastCount));
-        fastText.color = theme.judgeFast;
-        slowText.text = string.Format(GameConstants.Result.SlowFormat, ResultFormat.FormatCount(result.slowCount));
-        slowText.color = theme.judgeSlow;
+        SetJudgeImage(fastTitle, JudgeSprites.Get(FastSlow.Fast), GameConstants.Result.FastSlowImageScale);
+        SetJudgeImage(slowTitle, JudgeSprites.Get(FastSlow.Slow), GameConstants.Result.FastSlowImageScale);
+        fastCountText.text = ResultFormat.FormatCount(result.fastCount);
+        fastCountText.color = theme.judgeFast;
+        slowCountText.text = ResultFormat.FormatCount(result.slowCount);
+        slowCountText.color = theme.judgeSlow;
 
         bool hasData = ResultFormat.TryGetFastRatio(result.fastCount, result.slowCount, out float ratio);
         fastSlowTrack.color = theme.divider;
@@ -209,13 +221,23 @@ public class Canvas_Result : UIBase
         FastRatio = hasData ? ratio : -1f;
     }
 
-    private static void SetJudgeRow(JudgeRow row, string name, int count, JudgeColor color)
+    private static void SetJudgeRow(JudgeRow row, JudgeType judge, int count)
     {
         if (row == null) return;
-        row.nameText.text = name;
-        UIThemePaint.JudgeText(row.nameText, color);
+        SetJudgeImage(row.nameImage, JudgeSprites.Get(judge), GameConstants.Result.JudgeImageScale);
         row.countText.text = ResultFormat.FormatCount(count);
         UIThemePaint.Text(row.countText, UITextLevel.Primary);
+    }
+
+    /// <summary>판정 이름 이미지를 넣고 크기를 원본 × 배율로 맞춘다 (색은 이미지 안이라 흰색)</summary>
+    private static void SetJudgeImage(Image target, Sprite sprite, float scale)
+    {
+        if (target == null) return;
+        target.sprite = sprite;
+        target.preserveAspect = true;
+        target.raycastTarget = false;
+        target.color = Color.white;
+        target.rectTransform.sizeDelta = JudgeSprites.DisplaySize(sprite, scale);
     }
 
     private static void SetHorizontalRange(RectTransform rect, float min, float max)
@@ -295,8 +317,11 @@ public class Canvas_Result : UIBase
     /// <summary>FAST 막대 비율 (빈 막대면 -1, 확인용)</summary>
     public float FastRatio { get; private set; }
 
-    /// <summary>판정 이름·FAST/SLOW 글자 (확인용: PERFECT · GREAT · GOOD · MISS 이름, FAST, SLOW)</summary>
-    public TMP_Text[] JudgeTexts => new[] { perfectRow?.nameText, greatRow?.nameText, goodRow?.nameText, missRow?.nameText, fastText, slowText };
+    /// <summary>판정 이름 이미지 (확인용: PERFECT · GREAT · GOOD · MISS · FAST · SLOW 순서)</summary>
+    public Image[] JudgeTitles => new[] { perfectRow?.nameImage, greatRow?.nameImage, goodRow?.nameImage, missRow?.nameImage, fastTitle, slowTitle };
+
+    /// <summary>판정 개수 글자 (확인용: PERFECT · GREAT · GOOD · MISS · FAST · SLOW 순서)</summary>
+    public TMP_Text[] JudgeCountTexts => new[] { perfectRow?.countText, greatRow?.countText, goodRow?.countText, missRow?.countText, fastCountText, slowCountText };
 
     /// <summary>돌아가기 버튼 글자 (확인용)</summary>
     public string ReturnLabel => returnLabelText != null ? returnLabelText.text : null;

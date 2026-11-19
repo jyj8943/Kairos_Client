@@ -17,7 +17,7 @@ public class Txt_Combo : MonoBehaviour
     [SerializeField] private CanvasGroup comboGroup;
 
     [Header("오름 애니메이션")]
-    [Tooltip("오름 시작 위치: 제자리보다 이만큼 아래 (px, 글꼴 96 숫자 높이의 약 45%)")]
+    [Tooltip("오름 시작 위치: 제자리보다 이만큼 아래 (px, 글꼴 72 숫자 높이의 약 60%)")]
     [SerializeField] private float riseOffset = 30f;
     [Tooltip("투명 → 불투명 시간 (초)")]
     [SerializeField] private float fadeInSeconds = 0.05f;

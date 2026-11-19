@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -210,21 +209,21 @@ public class LongNoteJudgeTextTests
         GameObject root = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas));
         try
         {
-            GameObject f = new GameObject("Txt_FastSlow", typeof(RectTransform), typeof(TextMeshProUGUI));
+            GameObject f = new GameObject("Img_FastSlow", typeof(RectTransform), typeof(UnityEngine.UI.Image));
             f.transform.SetParent(root.transform, false);
-            Txt_FastSlow fastSlow = f.AddComponent<Txt_FastSlow>();
-            GameObject j = new GameObject("Txt_Judge", typeof(RectTransform), typeof(TextMeshProUGUI));
+            Img_FastSlow fastSlow = f.AddComponent<Img_FastSlow>();
+            GameObject j = new GameObject("Img_Judge", typeof(RectTransform), typeof(UnityEngine.UI.Image));
             j.transform.SetParent(root.transform, false);
-            Txt_Judge judgeText = j.AddComponent<Txt_Judge>();
+            Img_Judge judgeText = j.AddComponent<Img_Judge>();
             fastSlow.ResetView();
             judgeText.ResetView();
 
-            fastSlow.Show(GameConstants.Play.FastText, Color.cyan);
-            judgeText.Show(GameConstants.Play.GreatText, Color.blue);
+            fastSlow.Show(JudgeSprites.Get(FastSlow.Fast));
+            judgeText.Show(JudgeSprites.Get(JudgeType.Great));
             fastSlow.Tick(0.2f);
             judgeText.Tick(0.2f);
 
-            judgeText.Show(GameConstants.Play.GreatText, Color.blue); // 틱: 판정 글자만 처음부터
+            judgeText.Show(JudgeSprites.Get(JudgeType.Great)); // 틱: 판정 글자만 처음부터
             Assert.AreEqual(0f, judgeText.Animation.Elapsed, 1e-6f);
             Assert.AreEqual(0.2f, fastSlow.Animation.Elapsed, 1e-6f, "FAST 시간 그대로");
             Assert.IsTrue(fastSlow.IsVisible);

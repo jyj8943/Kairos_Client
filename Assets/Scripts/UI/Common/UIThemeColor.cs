@@ -41,15 +41,14 @@ public enum UIColorRole
     InGamePanel,
     InGameBrightnessBarOff,
     /// <summary>메뉴용 PERFECT (TMP 글자면 금 → 분홍 가로 그라데이션)</summary>
-    JudgePerfect,
-    /// <summary>인게임용 PERFECT (TMP 글자면 금 → 분홍 가로 그라데이션)</summary>
-    InGameJudgePerfect
+    JudgePerfect
+    // 11/19: 인게임용 PERFECT 역할(InGameJudgePerfect)은 기어 판정 글자가 이미지가 되어 지웠다 (쓰던 씬·프리팹 없음)
 }
 
 /// <summary>
 /// 바뀌지 않는 그래픽(패널·라벨·선·키 모양 등)에 붙여 역할만 정해 두면, 화면 Init에서 UITheme 색으로 칠한다 (메뉴 화면 공용 컴포넌트).
 /// - 씬·프리팹에는 색 대신 역할(enum)만 남긴다. 화면 스크립트가 Init에서 UIThemeColor.ApplyAll(루트)을 부른다.
-/// - 판정 PERFECT 역할(JudgePerfect · InGameJudgePerfect)은 TMP 글자면 가로 그라데이션(UIThemePaint.JudgeText)으로, 다른 그래픽이면 왼쪽 색으로 칠한다.
+/// - 판정 PERFECT 역할(JudgePerfect)은 TMP 글자면 가로 그라데이션(UIThemePaint.JudgeText)으로, 다른 그래픽이면 왼쪽 색으로 칠한다.
 /// - 선택에 따라 바뀌는 색(탭·목록 항목·난이도 카드)은 각 스크립트가 UIThemePaint로 칠한다. 랭크·FC는 이미지라 색을 칠하지 않는다.
 /// </summary>
 [RequireComponent(typeof(Graphic))]
@@ -99,7 +98,6 @@ public class UIThemeColor : MonoBehaviour
         switch (role)
         {
             case UIColorRole.JudgePerfect: color = theme.GetMenuJudge(JudgeType.Perfect); return true;
-            case UIColorRole.InGameJudgePerfect: color = theme.GetInGameJudge(JudgeType.Perfect); return true;
             default: color = default; return false;
         }
     }
@@ -139,7 +137,6 @@ public class UIThemeColor : MonoBehaviour
             case UIColorRole.InGamePanel: return theme.inGamePanel;
             case UIColorRole.InGameBrightnessBarOff: return theme.inGameBrightnessBarOff;
             case UIColorRole.JudgePerfect: return theme.judgePerfectStart;
-            case UIColorRole.InGameJudgePerfect: return theme.inGamePerfectStart;
             default: return Color.magenta;
         }
     }

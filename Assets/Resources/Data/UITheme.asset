@@ -63,7 +63,7 @@ MonoBehaviour:
   inGameStatBoxBorder: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.14}
   inGameBrightnessBarOn: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 1}
   inGameBrightnessBarOff: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.14}
-  gearBackground: {r: 0.14117648, g: 0.1254902, b: 0.18039216, a: 0.86}
+  gearBackground: {r: 0.09019608, g: 0.078431375, b: 0.12156863, a: 1}
   gearBorder: {r: 0.4862745, g: 0.76862746, b: 0.98039216, a: 0.55}
   laneDivider: {r: 1, g: 1, b: 1, a: 0.08}
   measureLine: {r: 1, g: 1, b: 1, a: 0.35}
@@ -73,7 +73,7 @@ MonoBehaviour:
   longNoteTopAlpha: 0.55
   longNoteBottomAlpha: 0.85
   longNoteMissed: {r: 0.3529412, g: 0.3529412, b: 0.36862746, a: 1}
-  keyCell: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.86}
+  keyCell: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 1}
   keyCellFrame: {r: 1, g: 1, b: 1, a: 0.12}
   keyLabel: {r: 0.8509804, g: 0.8352941, b: 0.8862745, a: 1}
   keyCellPressed: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 1}
@@ -82,11 +82,3 @@ MonoBehaviour:
   laneGlow: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 0.55}
   comboTitle: {r: 0.6627451, g: 0.6392157, b: 0.72156864, a: 1}
   comboNumber: {r: 1, g: 1, b: 1, a: 1}
-  inGamePerfectStart: {r: 1, g: 0.827451, b: 0.41960785, a: 1}
-  inGamePerfectEnd: {r: 1, g: 0.47843137, b: 0.7764706, a: 1}
-  inGameGreat: {r: 0.6627451, g: 0.6117647, b: 1, a: 1}
-  inGameGood: {r: 0.43529412, g: 0.8784314, b: 0.6431373, a: 1}
-  inGameMiss: {r: 0.9411765, g: 0.5411765, b: 0.6431373, a: 1}
-  inGameFast: {r: 0.49019608, g: 0.827451, b: 0.9882353, a: 1}
-  inGameSlow: {r: 1, g: 0.7058824, b: 0.36078432, a: 1}
-  inGameJudgeGlowAlpha: 0.45

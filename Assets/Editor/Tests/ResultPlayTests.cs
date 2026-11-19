@@ -55,6 +55,32 @@ public class ResultPlayTests
         Assert.AreEqual((Color32)theme.difficultyNormal, (Color32)canvas.ChartBadgeColor, "메뉴용 NORMAL #2F7FC8");
         Assert.IsFalse(canvas.IsChartNameShown, "공식 채보는 채보 이름 숨김");
         Assert.AreEqual(0.75f, canvas.FastRatio, 1e-5f, "FAST 30 : SLOW 10");
+
+        // 판정 이름 · FAST/SLOW 이름 = 인게임과 같은 판정 이미지 (11/19), 개수는 따로 된 글자
+        official.fastCount = 9;
+        official.slowCount = 6;
+        canvas.Init(official, null, null);
+        UnityEngine.UI.Image[] titles = canvas.JudgeTitles;
+        Sprite[] expected =
+        {
+            JudgeSprites.Get(JudgeType.Perfect), JudgeSprites.Get(JudgeType.Great), JudgeSprites.Get(JudgeType.Good), JudgeSprites.Get(JudgeType.Miss),
+            JudgeSprites.Get(FastSlow.Fast), JudgeSprites.Get(FastSlow.Slow)
+        };
+        for (int i = 0; i < expected.Length; i++)
+        {
+            Assert.IsNotNull(titles[i], $"이름 이미지 {i}");
+            Assert.AreSame(expected[i], titles[i].sprite, titles[i].name + " 이미지");
+            float scale = expected[i] == JudgeSprites.Get(FastSlow.Fast) || expected[i] == JudgeSprites.Get(FastSlow.Slow)
+                ? GameConstants.Result.FastSlowImageScale : GameConstants.Result.JudgeImageScale;
+            Assert.AreEqual(JudgeSprites.DisplaySize(expected[i], scale), titles[i].rectTransform.sizeDelta, titles[i].name + " 크기 = 원본 × 배율");
+            Assert.IsTrue(titles[i].preserveAspect && !titles[i].raycastTarget, titles[i].name + " Preserve Aspect 켬 · Raycast 끔");
+        }
+        TMPro.TMP_Text[] counts = canvas.JudgeCountTexts;
+        Assert.AreEqual("9", counts[4].text, "FAST 개수만");
+        Assert.AreEqual("6", counts[5].text, "SLOW 개수만");
+        Assert.AreEqual((Color32)theme.judgeFast, (Color32)counts[4].color, "FAST 개수 색");
+        Assert.AreEqual((Color32)theme.judgeSlow, (Color32)counts[5].color, "SLOW 개수 색");
+        Assert.AreEqual(0.6f, canvas.FastRatio, 1e-5f, "막대 비율 9 : 6");
         yield return new ExitPlayMode();
     }
 

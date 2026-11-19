@@ -135,8 +135,8 @@ public class UITheme : ScriptableObject
     public Color inGameBrightnessBarOff = new Color(44 / 255f, 40 / 255f, 56 / 255f, 0.14f);
 
     [Header("인게임 · 기어 (기획서 3-4 「인게임 톤 개편 (11/18)」, 어두운 기어)")]
-    [Tooltip("기어 바탕 LaneBackground (rgba(36,32,46) 86%)")]
-    public Color gearBackground = new Color(36 / 255f, 32 / 255f, 46 / 255f, 0.86f);
+    [Tooltip("기어 바탕 LaneBackground (불투명 #17141F, 11/19: 레인 안으로 BGA·일러스트가 비치지 않게)")]
+    public Color gearBackground = new Color32(0x17, 0x14, 0x1F, 0xFF);
     [Tooltip("양옆 테두리 Border_Left · Border_Right (#7CC4FA 55%)")]
     public Color gearBorder = new Color(0x7C / 255f, 0xC4 / 255f, 0xFA / 255f, 0.55f);
     [Tooltip("라인 구분선 (흰색 8%)")]
@@ -159,8 +159,8 @@ public class UITheme : ScriptableObject
     public Color longNoteMissed = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
 
     [Header("인게임 · 키 칸 · 라인 빛 (판정선은 이미지 그대로라 색이 없다)")]
-    [Tooltip("키 칸 평소 바탕 (rgba(44,40,56) 86%)")]
-    public Color keyCell = new Color(44 / 255f, 40 / 255f, 56 / 255f, 0.86f);
+    [Tooltip("키 칸 평소 바탕 (불투명 rgb(44,40,56), 11/19)")]
+    public Color keyCell = new Color(44 / 255f, 40 / 255f, 56 / 255f, 1f);
     [Tooltip("키 칸 평소 테두리 (흰색 12%)")]
     public Color keyCellFrame = new Color(1f, 1f, 1f, 0.12f);
     [Tooltip("키 칸 평소 글자 (#D9D5E2)")]
@@ -174,27 +174,11 @@ public class UITheme : ScriptableObject
     [Tooltip("누른 라인 빛 LaneGlow (하늘색, 알파 = 판정선 쪽 가장 진한 곳)")]
     public Color laneGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.55f);
 
-    [Header("인게임 · 기어 위 글자 (밝은 색)")]
+    [Header("인게임 · 기어 위 콤보 (밝은 색. 기어 판정 글자·FAST/SLOW는 색이 든 이미지 Images/InGame/Judge/, 11/19)")]
     [Tooltip("콤보 제목 COMBO (#A9A3B8)")]
     public Color comboTitle = new Color32(0xA9, 0xA3, 0xB8, 0xFF);
     [Tooltip("콤보 숫자 (흰색)")]
     public Color comboNumber = Color.white;
-    [Tooltip("PERFECT 가로 그라데이션 왼쪽 (금 #FFD36B)")]
-    public Color inGamePerfectStart = new Color32(0xFF, 0xD3, 0x6B, 0xFF);
-    [Tooltip("PERFECT 가로 그라데이션 오른쪽 (분홍 #FF7AC6). 빛도 이 색 (분홍빛)")]
-    public Color inGamePerfectEnd = new Color32(0xFF, 0x7A, 0xC6, 0xFF);
-    [Tooltip("GREAT (#A99CFF)")]
-    public Color inGameGreat = new Color32(0xA9, 0x9C, 0xFF, 0xFF);
-    [Tooltip("GOOD (#6FE0A4)")]
-    public Color inGameGood = new Color32(0x6F, 0xE0, 0xA4, 0xFF);
-    [Tooltip("MISS (#F08AA4)")]
-    public Color inGameMiss = new Color32(0xF0, 0x8A, 0xA4, 0xFF);
-    [Tooltip("FAST (#7DD3FC)")]
-    public Color inGameFast = new Color32(0x7D, 0xD3, 0xFC, 0xFF);
-    [Tooltip("SLOW (#FFB45C)")]
-    public Color inGameSlow = new Color32(0xFF, 0xB4, 0x5C, 0xFF);
-    [Tooltip("판정 글자 빛 세기 (판정 색 × 이 알파로 TMP Glow를 칠한다, 0이면 빛 없음)")]
-    [Range(0f, 1f)] public float inGameJudgeGlowAlpha = 0.45f;
 
     private static UITheme current;
 
@@ -262,18 +246,6 @@ public class UITheme : ScriptableObject
         }
     }
 
-    /// <summary>인게임용(어두운 기어 위) 판정 글자 색. PERFECT는 금 → 분홍 가로 그라데이션</summary>
-    public JudgeColor GetInGameJudge(JudgeType judge)
-    {
-        switch (judge)
-        {
-            case JudgeType.Perfect: return JudgeColor.Gradient(inGamePerfectStart, inGamePerfectEnd);
-            case JudgeType.Great: return JudgeColor.Solid(inGameGreat);
-            case JudgeType.Good: return JudgeColor.Solid(inGameGood);
-            default: return JudgeColor.Solid(inGameMiss);
-        }
-    }
-
     /// <summary>
     /// 롱노트 몸통 세로 불투명도 (순수 함수): t = 0 아래 끝(머리) → 1 위 끝(꼬리), 사이는 직선으로 잇는다.
     /// 셰이더 Kairos/LongNoteBody가 같은 식을 쓴다 (롱노트 길이와 상관없이 막대 전체에 걸친다).
@@ -330,9 +302,6 @@ public readonly struct JudgeColor
     public static JudgeColor Solid(Color color) => new JudgeColor(color, color, false);
 
     public static JudgeColor Gradient(Color start, Color end) => new JudgeColor(start, end, true);
-
-    /// <summary>빛 색 (그라데이션은 오른쪽 색 = PERFECT 분홍빛)</summary>
-    public Color GlowColor => IsGradient ? End : Start;
 
     /// <summary>TMP 가로 그라데이션 (왼쪽 위·아래 = Start, 오른쪽 위·아래 = End)</summary>
     public TMPro.VertexGradient ToVertexGradient() => new TMPro.VertexGradient(Start, End, Start, End);

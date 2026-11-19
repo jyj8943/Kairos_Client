@@ -22,9 +22,13 @@ public readonly struct SpeedBrightnessKeys
 /// <summary>
 /// 인게임 왼쪽 아래 배속·밝기 카드 (Img_SpeedBrightnessCard, 기획서 3-4 「배경 · BGA 와이어프레임 (11/19)」). 늘 보인다.
 /// Canvas_InGame.Init이 Init()을 부르고, 배속·밝기가 바뀌면 SetSpeed·SetBrightness를 부른다.
-/// - 위치: x 60~680, y 960~1048 (620×88, 판정 패널과 폭이 같고 20px 아래).
-/// - 왼쪽 칸: "배속 SPEED" 라벨 · 값 "x5.5"(26) · 키 [1][2] / 가운데 가는 세로 구분선 /
-///   오른쪽 칸: "밝기 BG" 라벨 · 단계 막대 4칸(16×8, 25%마다 한 칸 #3E9BE0, 나머지 rgba(44,40,56) 14%) · 값 "100%"(26) · 키 [PgDn][PgUp].
+/// - 위치: x 60~680, y 960~1048 (620×88, 판정 패널과 폭이 같고 20px 아래), 안쪽 여백 좌우 12.
+/// - 모든 요소를 한 줄에 두고 세로 가운데(카드 위에서 44)를 맞춘다 (11/19 와이어프레임).
+/// - 왼쪽 칸 (너비 238): 이름 묶음 SpeedName[배속(15, Bold) / SPEED(10, 자간 0.2em)] → 값 "x5.5"(26, Bold, 오른쪽 정렬 고정 폭) → 키 [1][2] /
+///   가운데 세로 구분선 1×44 /
+///   오른쪽 칸: 이름 묶음 BrightnessName[밝기 / BG] → 단계 막대 4칸(16×8, 간격 4, 25%마다 한 칸 #3E9BE0, 나머지 rgba(44,40,56) 14%)
+///   → 값 "100%"(26, Bold, 오른쪽 정렬 고정 폭) → 키 [PgDn][PgUp].
+/// - 값 칸 폭은 x10.0 · 100%가 들어가는 고정 폭이라 값이 바뀌어도 키 위치가 흔들리지 않는다.
 /// - 값이 바뀌면 숫자·막대만 바뀐다 (강조 색·나타남 효과 없음). 같은 값이면 다시 쓰지 않는다.
 /// - 키 이름은 입력 에셋 바인딩에서 읽어 넘겨받는다 (Page Up/Down은 카드 폭에 맞게 PgUp/PgDn으로 줄인다, ShortKeyName).
 /// - 바탕·글자·막대 색은 UITheme (UIThemeColor 역할 + 막대 켜진 칸은 여기서 칠함). 씬에 색을 직렬화하지 않는다.
@@ -32,8 +36,10 @@ public readonly struct SpeedBrightnessKeys
 public class Img_SpeedBrightnessCard : MonoBehaviour
 {
     [Header("왼쪽 칸: 배속")]
-    [Tooltip("라벨 (Txt_SpeedTitle, \"배속 SPEED\")")]
+    [Tooltip("이름 (SpeedName/Txt_SpeedTitle, \"배속\")")]
     [SerializeField] private TMP_Text speedTitle;
+    [Tooltip("이름 아래 영문 (SpeedName/Txt_SpeedTitleEn, \"SPEED\")")]
+    [SerializeField] private TMP_Text speedTitleEn;
     [Tooltip("배속 값 (Txt_SpeedValue, \"x5.5\")")]
     [SerializeField] private TMP_Text speedValue;
     [Tooltip("배속 내리기 키 (Img_SpeedDownKey/Txt_SpeedDownKey)")]
@@ -42,8 +48,10 @@ public class Img_SpeedBrightnessCard : MonoBehaviour
     [SerializeField] private TMP_Text speedUpKey;
 
     [Header("오른쪽 칸: 밝기")]
-    [Tooltip("라벨 (Txt_BrightnessTitle, \"밝기 BG\")")]
+    [Tooltip("이름 (BrightnessName/Txt_BrightnessTitle, \"밝기\")")]
     [SerializeField] private TMP_Text brightnessTitle;
+    [Tooltip("이름 아래 영문 (BrightnessName/Txt_BrightnessTitleEn, \"BG\")")]
+    [SerializeField] private TMP_Text brightnessTitleEn;
     [Tooltip("단계 막대 칸 (BrightnessBars/Img_BrightnessBar0~3, 왼쪽부터)")]
     [SerializeField] private Image[] brightnessBars;
     [Tooltip("밝기 값 (Txt_BrightnessValue, \"100%\")")]
@@ -65,6 +73,26 @@ public class Img_SpeedBrightnessCard : MonoBehaviour
     /// <summary>켜진 막대 칸 수 (확인용)</summary>
     public int FilledBarCount { get; private set; }
 
+    /// <summary>값 글자 두 개 (확인용: 배속, 밝기)</summary>
+    public TMP_Text[] ValueTexts => new[] { speedValue, brightnessValue };
+
+    /// <summary>
+    /// 한 줄에 놓인 요소 (확인용, 왼쪽부터): 이름 묶음 · 값 · 키 두 개 / 구분선 / 이름 묶음 · 막대 · 값 · 키 두 개.
+    /// 키 글자는 키 칸(Img_*Key), 이름은 묶음(SpeedName · BrightnessName)을 돌려준다.
+    /// </summary>
+    public RectTransform[] RowItems
+    {
+        get
+        {
+            Transform card = transform;
+            string[] names = { "SpeedName", "Txt_SpeedValue", "Img_SpeedDownKey", "Img_SpeedUpKey", "Img_SpeedBrightnessDivider",
+                "BrightnessName", "BrightnessBars", "Txt_BrightnessValue", "Img_BrightnessDownKey", "Img_BrightnessUpKey" };
+            RectTransform[] items = new RectTransform[names.Length];
+            for (int i = 0; i < names.Length; i++) items[i] = card.Find(names[i]) as RectTransform;
+            return items;
+        }
+    }
+
     /// <summary>키 글자 네 개 (확인용: 배속 내림·올림, 밝기 내림·올림)</summary>
     public string[] KeyTexts => new[]
     {
@@ -80,7 +108,9 @@ public class Img_SpeedBrightnessCard : MonoBehaviour
     public void Init(SpeedBrightnessKeys keys, float scrollMultiplier, int brightness)
     {
         if (speedTitle != null) speedTitle.text = GameConstants.Play.SpeedCardLabel;
+        if (speedTitleEn != null) speedTitleEn.text = GameConstants.Play.SpeedCardLabelEn;
         if (brightnessTitle != null) brightnessTitle.text = GameConstants.Play.BrightnessCardLabel;
+        if (brightnessTitleEn != null) brightnessTitleEn.text = GameConstants.Play.BrightnessCardLabelEn;
         SetKey(speedDownKey, keys.SpeedDown);
         SetKey(speedUpKey, keys.SpeedUp);
         SetKey(brightnessDownKey, keys.BrightnessDown);

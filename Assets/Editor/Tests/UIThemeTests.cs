@@ -108,12 +108,12 @@ public class UIThemeTests
         {
             Assert.IsNotNull(target, "UITheme 에셋");
             string who = target == theme ? "기본값" : "에셋";
-            AssertRgb(36, 32, 46, 0.86f, target.gearBackground, who + " 기어 바탕");
+            AssertHex("17141F", 1f, target.gearBackground, who + " 기어 바탕 불투명 #17141F (11/19)");
             AssertHex("7CC4FA", 0.55f, target.gearBorder, who + " 기어 양옆 테두리");
             AssertHex("FFFFFF", 0.08f, target.laneDivider, who + " 라인 구분선");
             AssertHex("FFFFFF", 0.35f, target.measureLine, who + " 마디선");
             AssertHex("F7F5FA", 1f, target.shortNote, who + " 숏노트");
-            AssertRgb(44, 40, 56, 0.86f, target.keyCell, who + " 키 칸 평소");
+            AssertRgb(44, 40, 56, 1f, target.keyCell, who + " 키 칸 평소 불투명 (11/19)");
             AssertHex("FFFFFF", 0.12f, target.keyCellFrame, who + " 키 칸 테두리");
             AssertHex("D9D5E2", 1f, target.keyLabel, who + " 키 칸 글자");
             AssertHex("3E9BE0", 1f, target.keyCellPressed, who + " 키 칸 누름");
@@ -148,22 +148,10 @@ public class UIThemeTests
             AssertHex("C24D6B", 1f, target.judgeMiss, who + " MISS");
             AssertHex("2389C4", 1f, target.judgeFast, who + " FAST");
             AssertHex("C97418", 1f, target.judgeSlow, who + " SLOW");
-            // 인게임용 (기어 위)
-            AssertHex("FFD36B", 1f, target.inGamePerfectStart, who + " 인게임 PERFECT 왼쪽");
-            AssertHex("FF7AC6", 1f, target.inGamePerfectEnd, who + " 인게임 PERFECT 오른쪽");
-            AssertHex("A99CFF", 1f, target.inGameGreat, who + " 인게임 GREAT");
-            AssertHex("6FE0A4", 1f, target.inGameGood, who + " 인게임 GOOD");
-            AssertHex("F08AA4", 1f, target.inGameMiss, who + " 인게임 MISS");
-            AssertHex("7DD3FC", 1f, target.inGameFast, who + " 인게임 FAST");
-            AssertHex("FFB45C", 1f, target.inGameSlow, who + " 인게임 SLOW");
-
-            JudgeColor perfect = target.GetInGameJudge(JudgeType.Perfect);
-            Assert.IsTrue(perfect.IsGradient, who + " 인게임 PERFECT 그라데이션");
-            Assert.AreEqual(target.inGamePerfectEnd, perfect.GlowColor, who + " PERFECT 빛 = 분홍");
+            // 기어 위 판정 글자는 색이 든 이미지 (JudgeSprites, 11/19)라 테마 색이 없다
             Assert.IsTrue(target.GetMenuJudge(JudgeType.Perfect).IsGradient, who + " 메뉴 PERFECT 그라데이션");
             Assert.IsFalse(target.GetMenuJudge(JudgeType.Great).IsGradient, who + " GREAT 단색");
             AssertHex("6650D8", 1f, target.GetMenuJudge(JudgeType.Great).Start, who + " 판정 패널 GREAT");
-            AssertHex("F08AA4", 1f, target.GetInGameJudge(JudgeType.Miss).Start, who + " 기어 MISS");
             // 난이도 색은 판정 색과 따로 (그대로)
             AssertHex("2F7FC8", 1f, target.difficultyNormal, who + " NORMAL 난이도 그대로");
         }
@@ -177,7 +165,7 @@ public class UIThemeTests
         try
         {
             TextMeshProUGUI text = go.AddComponent<TextMeshProUGUI>();
-            JudgeColor perfect = theme.GetInGameJudge(JudgeType.Perfect);
+            JudgeColor perfect = theme.GetMenuJudge(JudgeType.Perfect);
             UIThemePaint.JudgeText(text, perfect, 0.5f);
             Assert.IsTrue(text.enableVertexGradient);
             Assert.AreEqual(perfect.Start, text.colorGradient.topLeft);
@@ -186,9 +174,9 @@ public class UIThemeTests
             Assert.AreEqual(perfect.End, text.colorGradient.bottomRight);
             Assert.AreEqual(new Color(1f, 1f, 1f, 0.5f), text.color, "글자 색은 흰색 × 알파");
 
-            UIThemePaint.JudgeText(text, theme.GetInGameJudge(JudgeType.Great));
+            UIThemePaint.JudgeText(text, theme.GetMenuJudge(JudgeType.Great));
             Assert.IsFalse(text.enableVertexGradient, "단색은 그라데이션 끔");
-            Assert.AreEqual(theme.inGameGreat, text.color);
+            Assert.AreEqual(theme.judgeGreat, text.color);
         }
         finally
         {

@@ -143,7 +143,7 @@ public class InGameHudPlayTests
         yield return Load(false);
         NoteJudge judge = Get<NoteJudge>(scene, "judge");
         Img_JudgePanel panel = Get<Img_JudgePanel>(canvas, "judgePanel");
-        Assert.AreEqual(string.Empty, canvas.FastSlowShown, "시작: FAST/SLOW 없음");
+        Assert.AreEqual(FastSlow.None, canvas.FastSlowShown, "시작: FAST/SLOW 없음");
         Assert.AreEqual("0.00%", Get<TMP_Text>(panel, "rate").text, "판정 전 RATE 0% (기획서 3-4, 11/14)");
 
         double greatEarly = (GameConstants.Play.DefaultPerfectMs + GameConstants.Play.DefaultGreatMs) * 0.5 / 1000.0;
@@ -157,7 +157,7 @@ public class InGameHudPlayTests
         }
         Assert.IsFalse(Get<bool>(scene, "isPaused"), "에디터 포커스를 잃어 일시정지되면 안 된다");
         scene.TestPress(first.Lane, first.Time - greatEarly);
-        Assert.AreEqual(GameConstants.Play.FastText, canvas.FastSlowShown, "GREAT 일찍 → FAST");
+        Assert.AreEqual(FastSlow.Fast, canvas.FastSlowShown, "GREAT 일찍 → FAST");
         StringAssert.Contains(">1<", Get<TMP_Text>(panel, "greatCount").text);
         StringAssert.Contains(">1<", Get<TMP_Text>(panel, "fastCount").text);
         StringAssert.Contains(">0<", Get<TMP_Text>(panel, "slowCount").text);
@@ -168,15 +168,16 @@ public class InGameHudPlayTests
             Assert.Less(Time.realtimeSinceStartup, deadline, "둘째 노트 대기 시간 초과");
             yield return null;
         }
-        float fastElapsedBefore = canvas.FastSlowText.Animation.Elapsed;
+        float fastElapsedBefore = canvas.FastSlowImage.Animation.Elapsed;
         scene.TestPress(second.Lane, second.Time);
-        Assert.AreEqual(GameConstants.Play.FastText, canvas.FastSlowShown, "다음 PERFECT가 나도 FAST는 남음");
-        Assert.AreEqual(fastElapsedBefore, canvas.FastSlowText.Animation.Elapsed, 1e-6f, "FAST 시간은 다시 세지 않음");
-        Assert.AreEqual(GameConstants.Play.PerfectText, canvas.Judge.Text);
+        Assert.AreEqual(FastSlow.Fast, canvas.FastSlowShown, "다음 PERFECT가 나도 FAST는 남음");
+        Assert.AreEqual(fastElapsedBefore, canvas.FastSlowImage.Animation.Elapsed, 1e-6f, "FAST 시간은 다시 세지 않음");
+        Assert.AreEqual(JudgeType.Perfect, canvas.JudgeShown);
+        Assert.AreSame(JudgeSprites.Get(JudgeType.Perfect), canvas.Judge.ShownSprite, "PERFECT 이미지");
         Assert.AreEqual(0f, canvas.Judge.Animation.Elapsed, 1e-6f, "판정 글자는 처음부터 다시");
         StringAssert.Contains(">1<", Get<TMP_Text>(panel, "perfectCount").text);
         Assert.AreEqual("85.00%", Get<TMP_Text>(panel, "rate").text, "(100 + 70) ÷ 2");
-        Debug.Log($"[InGameHudPlayTest] H2: GREAT FAST → 패널 {Get<TMP_Text>(panel, "greatCount").text} / {Get<TMP_Text>(panel, "fastCount").text}, PERFECT 뒤 FAST/SLOW '{canvas.FastSlowShown}' (경과 {canvas.FastSlowText.Animation.Elapsed:0.000}초), RATE {Get<TMP_Text>(panel, "rate").text}");
+        Debug.Log($"[InGameHudPlayTest] H2: GREAT FAST → 패널 {Get<TMP_Text>(panel, "greatCount").text} / {Get<TMP_Text>(panel, "fastCount").text}, PERFECT 뒤 FAST/SLOW '{canvas.FastSlowShown}' (경과 {canvas.FastSlowImage.Animation.Elapsed:0.000}초), RATE {Get<TMP_Text>(panel, "rate").text}");
     }
 
     /// <summary>
