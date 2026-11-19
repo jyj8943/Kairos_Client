@@ -76,7 +76,7 @@ public class SongSelectPlayTests
             // 라벤더 톤 (UITheme): 블러 색 보정, 덮는 색 그라데이션, 고른 목록 항목 = 선택 색, 고른 탭·시작 버튼 = 포인트색
             UITheme theme = UITheme.Current;
             Assert.AreEqual(new Vector2(theme.illustrationSaturation, theme.illustrationBrightness), blur.ColorGrade, "채도·밝기 = UITheme");
-            MenuBackground menu = Object.FindFirstObjectByType<MenuBackground>();
+            MenuBackground menu = songSelect.GetComponentInChildren<MenuBackground>(true);
             Assert.IsNotNull(menu.Overlay.texture, "덮는 색 그라데이션 텍스처");
             Btn_SongItem chosen = null;
             foreach (Btn_SongItem item in songSelect.SongItems)

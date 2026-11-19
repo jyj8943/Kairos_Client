@@ -702,6 +702,41 @@ public static class GameConstants
     }
 
     /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17 · 나만의 채보 탭 11/18 개정 · 3-7 ④ 새 채보 팝업). 색은 여기 두지 않고 UITheme(메뉴 화면 톤)에 둔다</summary>
+    /// <summary>곡 로딩 오버레이 (기획서 3-9 「곡 로딩」, Canvas_SongLoading)</summary>
+    public static class SongLoading
+    {
+        /// <summary>열기 연출이 화면을 다 덮는 시각 (초). 이 뒤에 지금 씬을 떠나고 다음 씬을 불러온다</summary>
+        public const float CoverSeconds = 0.35f;
+
+        /// <summary>최소 표시 시간 (초, 열기 시작부터). 불러오기가 빨리 끝나도 이만큼은 보인다</summary>
+        public const float MinSeconds = 1.5f;
+
+        /// <summary>열기 연출 길이 (초, 말풍선이 다 나오는 시각)</summary>
+        public const float OpenSeconds = 1.1f;
+
+        /// <summary>닫기 연출 길이 (초). 끝나면 다음 씬 OnEnter</summary>
+        public const float CloseSeconds = 0.64f;
+
+        /// <summary>정렬 순서 (Canvas_Overlay 팝업 100보다 위)</summary>
+        public const int SortOrder = 200;
+
+        public const string ScreenName = "LOADING";
+        public const string ScreenNameKo = "인게임으로 이동";
+        public const string Phrase = "플레이 준비";
+        /// <summary>레벨 ("Lv. 7")</summary>
+        public const string LevelFormat = "Lv. {0}";
+        public const string SpeedLabel = "배속";
+        /// <summary>배속 ("x5.5")</summary>
+        public const string SpeedFormat = "x{0:0.0}";
+        public const string ChartLabel = "CHART";
+        public const string BestScoreLabel = "최고 점수";
+        public const string BestRankLabel = "최고 랭크";
+        public const string MaxComboLabel = "최대 콤보";
+        /// <summary>말풍선 대사 (임시, 대사는 나중에 정한다)</summary>
+        public const string Bubble = "이번 곡, 같이 들어 볼까?";
+        public const string Loading = "곡을 불러오는 중";
+    }
+
     public static class SongSelect
     {
         /// <summary>

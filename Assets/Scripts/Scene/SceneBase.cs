@@ -6,6 +6,8 @@ using UnityEngine;
 /// 씬 진입점 베이스. 씬마다 루트에 하나 두고, 씬 안 오브젝트의 Init()을 정해진 순서로 호출한다.
 /// - 진행 순서: 전역 매니저 초기화 대기 → GameSceneManager에 등록 → 씬 Canvas를 UIManager에 등록 → Init() → OnEnter()
 /// - 떠날 때: GameSceneManager가 Exit()을 부른다 → OnExit() → 씬 Canvas 해제·열린 팝업 닫기
+/// - 곡 로딩(GameSceneManager.LoadWithSongLoading)으로 들어온 씬은 Init() 뒤 OnEnter()를 바로 부르지 않는다.
+///   GameSceneManager가 오버레이 닫기 연출이 끝난 뒤 Enter()로 부른다 (일반 Load는 지금처럼 바로 OnEnter).
 /// - ESC는 UIManager가 받고, 팝업이 없으면 현재 씬의 OnBack()을 부른다.
 /// - 싱글톤이 아니다. 현재 씬은 GameManager.Scene.Current로 접근한다.
 /// </summary>
@@ -26,7 +28,26 @@ public abstract class SceneBase : MonoBehaviour
         RegisterCanvases();
 
         yield return Init();
+        IsInitDone = true;
 
+        // 곡 로딩 중이면 오버레이가 걷힌 뒤 GameSceneManager가 Enter()를 부른다
+        if (GameManager.Scene.DeferEnter(this)) yield break;
+        Enter();
+    }
+
+    /// <summary>Init이 끝났으면 true (곡 로딩이 기다린다)</summary>
+    public bool IsInitDone { get; private set; }
+
+    /// <summary>OnEnter를 불렀으면 true (확인용)</summary>
+    public bool IsEntered { get; private set; }
+
+    /// <summary>
+    /// OnEnter를 한 번 부른다. 일반 Load는 Init 바로 뒤, 곡 로딩은 오버레이가 다 걷힌 뒤 GameSceneManager가 부른다.
+    /// </summary>
+    public void Enter()
+    {
+        if (IsEntered) return;
+        IsEntered = true;
         OnEnter();
     }
 

@@ -45,7 +45,7 @@ public class ResultPlayTests
         Assert.AreEqual((Color32)theme.difficultyCustom, (Color32)canvas.ChartBadgeColor, "CUSTOM #8B7FD1");
         Assert.IsTrue(canvas.IsChartNameShown, "채보 이름 표시");
         Assert.AreEqual("결과 확인용 채보", canvas.ChartNameLabel);
-        Assert.IsNotNull(Object.FindFirstObjectByType<MenuBackground>().Blur.FrontImage.texture, "배경 일러스트");
+        Assert.IsNotNull(canvas.GetComponentInChildren<MenuBackground>(true).Blur.FrontImage.texture, "배경 일러스트 (곡 로딩 오버레이 것 말고 결과 화면 것)");
 
         ResultData official = CreateResult(false);
         official.chartType = ChartType.Official;

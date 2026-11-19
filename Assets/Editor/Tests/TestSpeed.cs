@@ -13,6 +13,7 @@ using UnityEngine.TestRunner;
 /// - 실행이 시작될 때 TestSpeedRunCallback이 적용하고 끝나면 되돌린다. 실제 시간 정확도를 보는 테스트는 [NormalSpeed]를 붙여 1.0으로 돌린다.
 /// - 테스트의 마감 시간은 Deadline(곡 시간 초)로 정한다: 실제 초 = 곡 시간 ÷ 지금 배율, 최소 MinDeadlineSeconds.
 /// - 테스트 중 다른 창을 써도 인게임이 멈추지 않게 InGameScene.IgnoreFocusPauseForTests를 켠다 (창 포커스·앱 일시정지 자동 일시정지 끔).
+/// - 인게임 진입이 곡 로딩 오버레이(1.5초 이상)를 건너뛰게 InGameLauncher.SkipSongLoadingForTests를 켠다 (곡 로딩 테스트만 잠깐 끈다).
 /// </summary>
 public static class TestSpeed
 {
@@ -68,6 +69,7 @@ public class TestSpeedRunCallback : ITestRunCallback
         AudioListener.volume = TestSpeed.Volume;
         SoundManager.SetPlaybackRateForTests(TestSpeed.PlaybackRate);
         InGameScene.IgnoreFocusPauseForTests = true;
+        InGameLauncher.SkipSongLoadingForTests = true;
         EditorApplication.playModeStateChanged += OnPlayModeChanged;
         Debug.Log($"[TestSpeed] 테스트 실행 시작: 재생 배율 x{TestSpeed.PlaybackRate}, 음량 {TestSpeed.Volume} (원래 {originalVolume})");
     }
@@ -79,6 +81,7 @@ public class TestSpeedRunCallback : ITestRunCallback
         EditorApplication.playModeStateChanged -= OnPlayModeChanged;
         SoundManager.SetPlaybackRateForTests(1.0);
         InGameScene.IgnoreFocusPauseForTests = false;
+        InGameLauncher.SkipSongLoadingForTests = false;
         AudioListener.volume = originalVolume;
         Debug.Log($"[TestSpeed] 테스트 실행 끝: 재생 배율 x1.0, 음량 {originalVolume}으로 되돌림");
     }

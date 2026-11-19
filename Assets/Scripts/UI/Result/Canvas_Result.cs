@@ -409,7 +409,7 @@ public class Canvas_Result : UIBase
     }
 
     /// <summary>팝업이 열려 있으면 키를 받지 않는다</summary>
-    private static bool IsShortcutBlocked => UIManager.HasInstance && GameManager.UI.HasOpenPopup;
+    private static bool IsShortcutBlocked => (UIManager.HasInstance && GameManager.UI.HasOpenPopup) || (GameSceneManager.HasInstance && GameManager.Scene.IsLoading);
 
 #if UNITY_EDITOR
     /// <summary>테스트 전용 (Unity 에디터): 다시 하기·돌아가기가 실행된 횟수 (Enter 한 번에 한 번만 실행되는지 확인)</summary>

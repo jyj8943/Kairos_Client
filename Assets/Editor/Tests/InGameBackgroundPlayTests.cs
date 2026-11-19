@@ -156,7 +156,8 @@ public class InGameBackgroundPlayTests
         Assert.AreEqual(InGameBackgroundSource.Illustration, background.SourceKind);
         Assert.AreSame(song.Background.texture, background.SourceImage.texture, "배경 소스 = SongData.Background 텍스처 (흐린 RenderTexture 아님)");
         Assert.AreEqual(0f, background.DimImage.color.a, 1e-4f, "100% → 덮개 알파 0");
-        Assert.IsNull(Object.FindFirstObjectByType<MenuBackground>(), "인게임에 MenuBackground 없음");
+        Assert.IsNull(Object.FindFirstObjectByType<Canvas_InGame>().GetComponentInChildren<MenuBackground>(true), "인게임에 MenuBackground 없음 (곡 로딩 오버레이의 배경은 Managers_DontDestroy 쪽)");
+        Assert.IsNull(Object.FindFirstObjectByType<Canvas_InGameBackground>().GetComponentInChildren<MenuBackground>(true), "인게임 배경 Canvas에도 없음");
 
         // 카드 · BPM
         Img_SpeedBrightnessCard card = canvas.SpeedBrightnessCard;

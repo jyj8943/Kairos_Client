@@ -1139,7 +1139,7 @@ public class Canvas_SongSelect : UIBase
     /// <summary>
     /// 키보드 단축키를 막아야 하면 true: 씬을 떠나는 중이거나 팝업이 열려 있을 때.
     /// </summary>
-    private bool IsShortcutBlocked => isLeaving || (UIManager.HasInstance && GameManager.UI.HasOpenPopup);
+    private bool IsShortcutBlocked => isLeaving || (UIManager.HasInstance && GameManager.UI.HasOpenPopup) || (GameSceneManager.HasInstance && GameManager.Scene.IsLoading);
 
     /// <summary>
     /// 타이틀로 나간다 (ESC → SongSelectScene.OnBack).

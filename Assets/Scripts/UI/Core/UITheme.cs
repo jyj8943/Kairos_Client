@@ -120,6 +120,20 @@ public class UITheme : ScriptableObject
     [Tooltip("카운트다운 숫자 빛 (하늘색, 알파 = 빛 세기, TMP Underlay)")]
     public Color countdownGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.6f);
 
+    [Header("곡 로딩 (기획서 3-9 「곡 로딩」, Canvas_SongLoading. 글자·포인트·난이도·판 바탕은 위 공용 값)")]
+    [Tooltip("정보 판 흰 테두리 (흰색 80%)")]
+    public Color songLoadingPanelBorder = new Color(1f, 1f, 1f, 0.8f);
+    [Tooltip("기록 3칸 바탕 (흰색 70%)")]
+    public Color songLoadingRecordCell = new Color(1f, 1f, 1f, 0.7f);
+    [Tooltip("배경의 시계 원 문양 (보라 #7B6BD8, 16%)")]
+    public Color songLoadingClockPattern = new Color(0x7B / 255f, 0x6B / 255f, 0xD8 / 255f, 0.16f);
+    [Tooltip("불러오는 중 작은 시계 (보라 #7B6BD8)")]
+    public Color songLoadingClock = new Color32(0x7B, 0x6B, 0xD8, 0xFF);
+    [Tooltip("말풍선 바탕 (흰색 82%)")]
+    public Color songLoadingBubble = new Color(1f, 1f, 1f, 0.82f);
+    [Tooltip("말풍선 테두리 (흰색)")]
+    public Color songLoadingBubbleBorder = Color.white;
+
     [Header("인게임 왼쪽 패널 (11/19 라벤더 불투명: 곡 정보 카드 · 판정 패널 · 배속·밝기 카드, 밝기와 상관없이 고정. 글자는 메뉴용 색)")]
     [Tooltip("패널 바탕 (라벤더 불투명 #F4F1F8, 뒤 흐림 없음)")]
     public Color inGamePanel = new Color32(0xF4, 0xF1, 0xF8, 0xFF);

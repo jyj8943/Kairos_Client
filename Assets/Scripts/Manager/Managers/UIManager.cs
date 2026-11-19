@@ -20,6 +20,8 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
 
     [Tooltip("공용 팝업을 두는 오버레이 Canvas (Canvas_Overlay)")]
     [SerializeField] private Canvas overlayCanvas;
+    [Tooltip("곡 로딩 오버레이 (Canvas_SongLoading, UIManager 아래). 정렬 순서는 Canvas_Overlay 팝업보다 위")]
+    [SerializeField] private Canvas_SongLoading songLoading;
     [Tooltip("입력 에셋의 UI/Cancel (ESC)")]
     [SerializeField] private InputActionReference cancelAction;
 
@@ -36,6 +38,9 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
 
     /// <summary>오버레이 Canvas</summary>
     public Canvas OverlayCanvas => overlayCanvas;
+
+    /// <summary>곡 로딩 오버레이. Bootstrapper가 Init을 한 번 부른다</summary>
+    public Canvas_SongLoading SongLoading => songLoading;
 
     /// <summary>등록된 화면 수 (확인용)</summary>
     public int RegisteredCount => uis.Count;
@@ -67,6 +72,14 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
             overlayCanvas.sortingOrder = GameConstants.UI.OverlaySortOrder;
             Register(overlayCanvas, UILayer.Overlay);
         }
+
+        if (songLoading != null)
+        {
+            Canvas loadingCanvas = songLoading.GetComponent<Canvas>();
+            loadingCanvas.sortingOrder = GameConstants.SongLoading.SortOrder;
+            Register(loadingCanvas, UILayer.Overlay);
+        }
+        else Debug.LogError($"{LogPrefix} songLoading(Canvas_SongLoading)이 연결되지 않았습니다.", this);
 
         Popup_Confirm confirm = Get<Popup_Confirm>();
         if (confirm != null) confirm.Init();
