@@ -61,13 +61,21 @@ public class UITheme : ScriptableObject
     public Color textDescription = new Color32(0x5A, 0x54, 0x70, 0xFF);
     public Color textMuted = new Color32(0x7A, 0x73, 0x90, 0xFF);
 
-    [Header("판정 색 (메뉴용 = 밝은 배경용 진한 색. 기어 위 판정 글자는 인게임 묶음)")]
-    public Color judgePerfect = new Color32(0xB7, 0x86, 0x1E, 0xFF);
-    public Color judgeGreat = new Color32(0x2F, 0x7F, 0xC8, 0xFF);
-    public Color judgeGood = new Color32(0x2E, 0x9C, 0x6A, 0xFF);
-    public Color judgeMiss = new Color32(0xC9, 0x50, 0x4A, 0xFF);
-    public Color judgeFast = new Color32(0x2E, 0x9C, 0x8F, 0xFF);
-    public Color judgeSlow = new Color32(0xD2, 0x7A, 0x3C, 0xFF);
+    [Header("판정 색 (메뉴용 = 밝은 배경용 진한 색, 11/19 B3안. 인게임 판정 패널·결과. 기어 위 판정 글자는 인게임 묶음)")]
+    [Tooltip("PERFECT 가로 그라데이션 왼쪽 (금 #B87A10)")]
+    public Color judgePerfectStart = new Color32(0xB8, 0x7A, 0x10, 0xFF);
+    [Tooltip("PERFECT 가로 그라데이션 오른쪽 (분홍 #C8358C)")]
+    public Color judgePerfectEnd = new Color32(0xC8, 0x35, 0x8C, 0xFF);
+    [Tooltip("GREAT (남보라 #6650D8)")]
+    public Color judgeGreat = new Color32(0x66, 0x50, 0xD8, 0xFF);
+    [Tooltip("GOOD (초록 #2C9C66)")]
+    public Color judgeGood = new Color32(0x2C, 0x9C, 0x66, 0xFF);
+    [Tooltip("MISS (장미빛 #C24D6B)")]
+    public Color judgeMiss = new Color32(0xC2, 0x4D, 0x6B, 0xFF);
+    [Tooltip("FAST (하늘 #2389C4)")]
+    public Color judgeFast = new Color32(0x23, 0x89, 0xC4, 0xFF);
+    [Tooltip("SLOW (호박 #C97418)")]
+    public Color judgeSlow = new Color32(0xC9, 0x74, 0x18, 0xFF);
 
     [Header("난이도 색 (메뉴용, 위 글자 흰색. 인게임 곡 정보 카드 뱃지도 이 색)")]
     public Color difficultyEasy = new Color32(0x2E, 0x9C, 0x6A, 0xFF);
@@ -112,13 +120,19 @@ public class UITheme : ScriptableObject
     [Tooltip("카운트다운 숫자 빛 (하늘색, 알파 = 빛 세기, TMP Underlay)")]
     public Color countdownGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.6f);
 
-    [Header("인게임 왼쪽 패널 (유리 패널 위, 글자는 메뉴용 색)")]
-    [Tooltip("유리 패널 1px 테두리 (흰색 70%). 패널 바탕은 panel")]
-    public Color panelBorder = new Color(1f, 1f, 1f, 0.70f);
-    [Tooltip("RATE · SCORE 박스 바탕 (흰색 62%)")]
-    public Color statBox = new Color(1f, 1f, 1f, 0.62f);
-    [Tooltip("RATE · SCORE 박스 1px 테두리 (#2C2838 20%)")]
-    public Color statBoxBorder = new Color(0x2C / 255f, 0x28 / 255f, 0x38 / 255f, 0.20f);
+    [Header("인게임 왼쪽 패널 (11/19 라벤더 불투명: 곡 정보 카드 · 판정 패널 · 배속·밝기 카드, 밝기와 상관없이 고정. 글자는 메뉴용 색)")]
+    [Tooltip("패널 바탕 (라벤더 불투명 #F4F1F8, 뒤 흐림 없음)")]
+    public Color inGamePanel = new Color32(0xF4, 0xF1, 0xF8, 0xFF);
+    [Tooltip("패널 1px 테두리 (흰색)")]
+    public Color inGamePanelBorder = Color.white;
+    [Tooltip("RATE · SCORE 박스 바탕 (흰색)")]
+    public Color inGameStatBox = Color.white;
+    [Tooltip("RATE · SCORE 박스 1px 테두리 (rgba(44,40,56) 14%)")]
+    public Color inGameStatBoxBorder = new Color(44 / 255f, 40 / 255f, 56 / 255f, 0.14f);
+    [Tooltip("배속·밝기 카드 밝기 막대 켜진 칸 (#3E9BE0)")]
+    public Color inGameBrightnessBarOn = new Color32(0x3E, 0x9B, 0xE0, 0xFF);
+    [Tooltip("배속·밝기 카드 밝기 막대 꺼진 칸 (rgba(44,40,56) 14%)")]
+    public Color inGameBrightnessBarOff = new Color(44 / 255f, 40 / 255f, 56 / 255f, 0.14f);
 
     [Header("인게임 · 기어 (기획서 3-4 「인게임 톤 개편 (11/18)」, 어두운 기어)")]
     [Tooltip("기어 바탕 LaneBackground (rgba(36,32,46) 86%)")]
@@ -165,14 +179,20 @@ public class UITheme : ScriptableObject
     public Color comboTitle = new Color32(0xA9, 0xA3, 0xB8, 0xFF);
     [Tooltip("콤보 숫자 (흰색)")]
     public Color comboNumber = Color.white;
-    public Color inGamePerfect = new Color32(0xFF, 0xD5, 0x4F, 0xFF);
-    [Tooltip("GREAT (#7CC4FA)")]
-    public Color inGameGreat = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
-    public Color inGameGood = new Color32(0x9C, 0xCC, 0x65, 0xFF);
-    public Color inGameMiss = new Color32(0xEF, 0x53, 0x50, 0xFF);
-    [Tooltip("FAST (#5EEAD4)")]
-    public Color inGameFast = new Color32(0x5E, 0xEA, 0xD4, 0xFF);
-    public Color inGameSlow = new Color32(0xFB, 0x92, 0x3C, 0xFF);
+    [Tooltip("PERFECT 가로 그라데이션 왼쪽 (금 #FFD36B)")]
+    public Color inGamePerfectStart = new Color32(0xFF, 0xD3, 0x6B, 0xFF);
+    [Tooltip("PERFECT 가로 그라데이션 오른쪽 (분홍 #FF7AC6). 빛도 이 색 (분홍빛)")]
+    public Color inGamePerfectEnd = new Color32(0xFF, 0x7A, 0xC6, 0xFF);
+    [Tooltip("GREAT (#A99CFF)")]
+    public Color inGameGreat = new Color32(0xA9, 0x9C, 0xFF, 0xFF);
+    [Tooltip("GOOD (#6FE0A4)")]
+    public Color inGameGood = new Color32(0x6F, 0xE0, 0xA4, 0xFF);
+    [Tooltip("MISS (#F08AA4)")]
+    public Color inGameMiss = new Color32(0xF0, 0x8A, 0xA4, 0xFF);
+    [Tooltip("FAST (#7DD3FC)")]
+    public Color inGameFast = new Color32(0x7D, 0xD3, 0xFC, 0xFF);
+    [Tooltip("SLOW (#FFB45C)")]
+    public Color inGameSlow = new Color32(0xFF, 0xB4, 0x5C, 0xFF);
     [Tooltip("판정 글자 빛 세기 (판정 색 × 이 알파로 TMP Glow를 칠한다, 0이면 빛 없음)")]
     [Range(0f, 1f)] public float inGameJudgeGlowAlpha = 0.45f;
 
@@ -230,27 +250,27 @@ public class UITheme : ScriptableObject
         }
     }
 
-    /// <summary>메뉴용(밝은 배경) 판정 이름 색 (인게임 왼쪽 판정 패널 라벨)</summary>
-    public Color GetMenuJudge(JudgeType judge)
+    /// <summary>메뉴용(밝은 배경) 판정 이름 색 (인게임 왼쪽 판정 패널 라벨 · 결과). PERFECT는 금 → 분홍 가로 그라데이션</summary>
+    public JudgeColor GetMenuJudge(JudgeType judge)
     {
         switch (judge)
         {
-            case JudgeType.Perfect: return judgePerfect;
-            case JudgeType.Great: return judgeGreat;
-            case JudgeType.Good: return judgeGood;
-            default: return judgeMiss;
+            case JudgeType.Perfect: return JudgeColor.Gradient(judgePerfectStart, judgePerfectEnd);
+            case JudgeType.Great: return JudgeColor.Solid(judgeGreat);
+            case JudgeType.Good: return JudgeColor.Solid(judgeGood);
+            default: return JudgeColor.Solid(judgeMiss);
         }
     }
 
-    /// <summary>인게임용(어두운 기어 위) 판정 글자 색</summary>
-    public Color GetInGameJudge(JudgeType judge)
+    /// <summary>인게임용(어두운 기어 위) 판정 글자 색. PERFECT는 금 → 분홍 가로 그라데이션</summary>
+    public JudgeColor GetInGameJudge(JudgeType judge)
     {
         switch (judge)
         {
-            case JudgeType.Perfect: return inGamePerfect;
-            case JudgeType.Great: return inGameGreat;
-            case JudgeType.Good: return inGameGood;
-            default: return inGameMiss;
+            case JudgeType.Perfect: return JudgeColor.Gradient(inGamePerfectStart, inGamePerfectEnd);
+            case JudgeType.Great: return JudgeColor.Solid(inGameGreat);
+            case JudgeType.Good: return JudgeColor.Solid(inGameGood);
+            default: return JudgeColor.Solid(inGameMiss);
         }
     }
 
@@ -283,4 +303,37 @@ public class UITheme : ScriptableObject
         color.a = alpha;
         return color;
     }
+}
+
+/// <summary>
+/// 판정 글자 색 한 벌 (단색 또는 가로 그라데이션). PERFECT만 그라데이션이고 나머지는 단색이다.
+/// 그라데이션은 TMP colorGradient(enableVertexGradient)로 칠한다: 왼쪽 위·아래 = Start, 오른쪽 위·아래 = End (UIThemePaint.JudgeText).
+/// </summary>
+public readonly struct JudgeColor
+{
+    /// <summary>단색이면 그 색, 그라데이션이면 왼쪽 색</summary>
+    public readonly Color Start;
+
+    /// <summary>그라데이션 오른쪽 색 (단색이면 Start와 같음)</summary>
+    public readonly Color End;
+
+    /// <summary>가로 그라데이션이면 true</summary>
+    public readonly bool IsGradient;
+
+    private JudgeColor(Color start, Color end, bool isGradient)
+    {
+        Start = start;
+        End = end;
+        IsGradient = isGradient;
+    }
+
+    public static JudgeColor Solid(Color color) => new JudgeColor(color, color, false);
+
+    public static JudgeColor Gradient(Color start, Color end) => new JudgeColor(start, end, true);
+
+    /// <summary>빛 색 (그라데이션은 오른쪽 색 = PERFECT 분홍빛)</summary>
+    public Color GlowColor => IsGradient ? End : Start;
+
+    /// <summary>TMP 가로 그라데이션 (왼쪽 위·아래 = Start, 오른쪽 위·아래 = End)</summary>
+    public TMPro.VertexGradient ToVertexGradient() => new TMPro.VertexGradient(Start, End, Start, End);
 }

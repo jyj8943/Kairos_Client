@@ -88,6 +88,7 @@ public static class PlayerDataRules
     /// <summary>
     /// 마지막 선택 값을 정리한다 (기획서 2-4 「마지막 선택」 11/18, 탭마다 한 칸). 넘긴 s를 고친다.
     /// - 배속: 1.0 ~ 8.0 범위·0.1 단위로 (ScrollSpeedRules)
+    /// - 배경 밝기: 단계(0 · 25 · 50 · 75 · 100)에 없으면 가장 가까운 단계로 (BackgroundBrightnessRules)
     /// - 칸이 없으면(null) 빈 칸, ID가 null이면 빈 문자열
     /// - 채보만 있고 곡이 없는 칸은 비운다. 나만의 채보 칸의 "곡만 있음"은 그 곡의 + 줄이라 그대로 둔다 (공식 칸은 그 곡의 가장 낮은 난이도)
     /// 곡·채보가 실제로 있는지는 곡 선택에 들어올 때 ResolveTab으로 확인한다 (없으면 빈 값 → 그 탭의 첫 정지점).
@@ -97,6 +98,10 @@ public static class PlayerDataRules
         float speed = SanitizeScrollMultiplier(s.scrollMultiplier);
         if (!speed.Equals(s.scrollMultiplier)) log?.Add($"lastSelection.scrollMultiplier {s.scrollMultiplier} → {speed}");
         s.scrollMultiplier = speed;
+
+        int brightness = BackgroundBrightnessRules.Sanitize(s.backgroundBrightness);
+        if (brightness != s.backgroundBrightness) log?.Add($"lastSelection.backgroundBrightness {s.backgroundBrightness} → {brightness}");
+        s.backgroundBrightness = brightness;
 
         foreach (ChartType type in new[] { ChartType.Official, ChartType.Custom })
         {
@@ -209,6 +214,17 @@ public static class PlayerDataRules
         float speed = SanitizeScrollMultiplier(value);
         if (ScrollSpeedRules.ToSteps(speed) == ScrollSpeedRules.ToSteps(s.scrollMultiplier)) return false;
         s.scrollMultiplier = speed;
+        return true;
+    }
+
+    /// <summary>
+    /// 마지막 배경 밝기를 value로 바꾼다 (단계로 정리한 값). 바뀌었으면 true — 호출하는 쪽은 true일 때만 파일에 저장한다.
+    /// </summary>
+    public static bool TrySetLastBackgroundBrightness(LastSelectionSaveData s, int value)
+    {
+        int brightness = BackgroundBrightnessRules.Sanitize(value);
+        if (brightness == s.backgroundBrightness) return false;
+        s.backgroundBrightness = brightness;
         return true;
     }
 

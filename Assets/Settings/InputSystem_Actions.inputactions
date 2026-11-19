@@ -877,6 +877,24 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "BackgroundBrighter",
+                    "type": "Button",
+                    "id": "b7e3c1a4-2f5d-4e8a-9c61-3d7f0a9b1e21",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "BackgroundDarker",
+                    "type": "Button",
+                    "id": "c4a8d2e6-7b19-4f30-8e5a-6f2b1c9d0a43",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -954,6 +972,28 @@
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "Restart",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d1f5a7b3-8c2e-4d6a-b9f0-2e4c6a8b0d15",
+                    "path": "<Keyboard>/pageUp",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "BackgroundBrighter",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e2a6b8c4-9d3f-4e7b-a0c1-3f5d7b9c1e26",
+                    "path": "<Keyboard>/pageDown",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "BackgroundDarker",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -181,14 +181,17 @@ public class Canvas_Result : UIBase
         rankImage.SetRank(result.rank);
     }
 
-    /// <summary>④ 판정별 개수 (이름은 메뉴용 판정 색, 숫자는 기본 글자색) + FAST/SLOW 막대</summary>
+    /// <summary>
+    /// ④ 판정별 개수 (이름은 넥슨 카트 고딕 + 메뉴용 판정 색, PERFECT는 금 → 분홍 가로 그라데이션 / 숫자는 기본 글자색) + FAST/SLOW 막대.
+    /// FAST/SLOW 글자는 카트 고딕 (숫자는 글꼴 에셋 fallback인 NEXON Lv2로 그려진다).
+    /// </summary>
     private void ShowJudges(ResultData result)
     {
         UITheme theme = UITheme.Current;
-        SetJudgeRow(perfectRow, GameConstants.Play.PerfectText, result.perfectCount, theme.judgePerfect);
-        SetJudgeRow(greatRow, GameConstants.Play.GreatText, result.greatCount, theme.judgeGreat);
-        SetJudgeRow(goodRow, GameConstants.Play.GoodText, result.goodCount, theme.judgeGood);
-        SetJudgeRow(missRow, GameConstants.Play.MissText, result.missCount, theme.judgeMiss);
+        SetJudgeRow(perfectRow, GameConstants.Play.PerfectText, result.perfectCount, theme.GetMenuJudge(JudgeType.Perfect));
+        SetJudgeRow(greatRow, GameConstants.Play.GreatText, result.greatCount, theme.GetMenuJudge(JudgeType.Great));
+        SetJudgeRow(goodRow, GameConstants.Play.GoodText, result.goodCount, theme.GetMenuJudge(JudgeType.Good));
+        SetJudgeRow(missRow, GameConstants.Play.MissText, result.missCount, theme.GetMenuJudge(JudgeType.Miss));
 
         fastText.text = string.Format(GameConstants.Result.FastFormat, ResultFormat.FormatCount(result.fastCount));
         fastText.color = theme.judgeFast;
@@ -206,11 +209,11 @@ public class Canvas_Result : UIBase
         FastRatio = hasData ? ratio : -1f;
     }
 
-    private static void SetJudgeRow(JudgeRow row, string name, int count, Color color)
+    private static void SetJudgeRow(JudgeRow row, string name, int count, JudgeColor color)
     {
         if (row == null) return;
         row.nameText.text = name;
-        row.nameText.color = color;
+        UIThemePaint.JudgeText(row.nameText, color);
         row.countText.text = ResultFormat.FormatCount(count);
         UIThemePaint.Text(row.countText, UITextLevel.Primary);
     }
@@ -291,6 +294,9 @@ public class Canvas_Result : UIBase
 
     /// <summary>FAST 막대 비율 (빈 막대면 -1, 확인용)</summary>
     public float FastRatio { get; private set; }
+
+    /// <summary>판정 이름·FAST/SLOW 글자 (확인용: PERFECT · GREAT · GOOD · MISS 이름, FAST, SLOW)</summary>
+    public TMP_Text[] JudgeTexts => new[] { perfectRow?.nameText, greatRow?.nameText, goodRow?.nameText, missRow?.nameText, fastText, slowText };
 
     /// <summary>돌아가기 버튼 글자 (확인용)</summary>
     public string ReturnLabel => returnLabelText != null ? returnLabelText.text : null;

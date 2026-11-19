@@ -4,10 +4,11 @@ using UnityEngine;
 /// <summary>
 /// 판정 글자(Txt_Judge)·FAST/SLOW 글자(Txt_FastSlow) 공통: JudgeTextAnimation 값을 글자에 적용만 한다.
 /// - 크기는 RectTransform localScale(기준점 = RectTransform 가운데 pivot), 투명도는 글자 색 알파(Show로 받은 색의 알파에 곱함)로 바꾼다.
+/// - 색은 JudgeColor: 단색은 vertex color, PERFECT는 TMP colorGradient 가로 그라데이션 (UIThemePaint.JudgeText, 11/19).
 /// - 시간은 Canvas_InGame.TickAnimations → Tick으로만 흐른다 (자체 Update 없음, 일시정지·카운트다운 중에는 멈춘다. 콤보 Txt_Combo와 같은 방식).
 /// - 숨길 때는 TMP 컴포넌트를 끈다 (그리지 않음). 글자·색은 Show 때만 바꿔 매 프레임 GC 할당이 없다.
 /// - glow를 켜면 은은한 빛을 TMP Underlay(오프셋 0, 부드러운 가장자리)로 그린다 (후처리 Bloom 없음).
-///   빛 색 = Show로 받은 색 × UITheme.inGameJudgeGlowAlpha. 처음 한 번 이 글자 전용 머티리얼 사본을 만들고, 색은 Show 때만 바꾼다.
+///   빛 색 = Show로 받은 색(그라데이션은 오른쪽 색 = PERFECT 분홍빛) × UITheme.inGameJudgeGlowAlpha. 처음 한 번 이 글자 전용 머티리얼 사본을 만들고, 색은 Show 때만 바꾼다.
 ///   글자 알파(등장·퇴장)에 빛도 같이 곱해진다.
 /// </summary>
 [RequireComponent(typeof(TMP_Text))]
@@ -23,7 +24,7 @@ public abstract class AnimatedJudgeText : MonoBehaviour
     private TMP_Text text;
     private Material glowMaterial;
     private RectTransform rect;
-    private Color baseColor = Color.white;
+    private JudgeColor baseColor = JudgeColor.Solid(Color.white);
     private readonly JudgeTextAnimation textAnimation = new JudgeTextAnimation();
 
     /// <summary>계산 상태 (확인용)</summary>
@@ -31,6 +32,12 @@ public abstract class AnimatedJudgeText : MonoBehaviour
 
     /// <summary>지금 보이는지 (확인용)</summary>
     public bool IsVisible => text != null && text.enabled && textAnimation.IsPlaying;
+
+    /// <summary>지금 글자 색 한 벌 (확인용)</summary>
+    public JudgeColor ShownColor => baseColor;
+
+    /// <summary>TMP 글자 (확인용)</summary>
+    public TMP_Text TextComponent => text != null ? text : GetComponent<TMP_Text>();
 
     /// <summary>지금 글자 (확인용)</summary>
     public string Text => text != null ? text.text : string.Empty;
@@ -59,14 +66,20 @@ public abstract class AnimatedJudgeText : MonoBehaviour
         Apply();
     }
 
-    /// <summary>글자·색을 바꾸고 애니메이션을 처음부터 다시 재생한다</summary>
+    /// <summary>글자·단색을 바꾸고 애니메이션을 처음부터 다시 재생한다 (FAST/SLOW 등 단색)</summary>
     public void Show(string value, Color color)
+    {
+        Show(value, JudgeColor.Solid(color));
+    }
+
+    /// <summary>글자·색(단색 또는 PERFECT 가로 그라데이션)을 바꾸고 애니메이션을 처음부터 다시 재생한다</summary>
+    public void Show(string value, JudgeColor color)
     {
         if (text == null) CacheComponents();
         ApplySettings(textAnimation);
         text.text = value;
         baseColor = color;
-        if (glow) SetGlowColor(color);
+        if (glow) SetGlowColor(color.GlowColor);
         textAnimation.Restart();
         Apply();
     }
@@ -106,9 +119,7 @@ public abstract class AnimatedJudgeText : MonoBehaviour
         text.enabled = frame.Visible;
         rect.localScale = new Vector3(frame.Scale, frame.Scale, 1f);
 
-        Color color = baseColor;
-        color.a = baseColor.a * frame.Alpha;
-        text.color = color;
+        UIThemePaint.JudgeText(text, baseColor, frame.Alpha);
     }
 
 #if UNITY_EDITOR

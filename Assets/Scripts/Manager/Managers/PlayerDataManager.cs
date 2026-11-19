@@ -168,6 +168,25 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
         return Save();
     }
 
+    /// <summary>저장된 마지막 인게임 배경 밝기 (%, 단계로 정리한 값). Init 전이거나 저장된 값이 없으면 기본값(100)</summary>
+    public int LastBackgroundBrightness => data != null && data.lastSelection != null
+        ? BackgroundBrightnessRules.Sanitize(data.lastSelection.backgroundBrightness)
+        : GameConstants.Play.DefaultBackgroundBrightness;
+
+    /// <summary>
+    /// 마지막 배경 밝기를 바꾸고 바로 저장한다 (인게임 PgUp·PgDn, 일반·테스트 플레이 같은 값). 값이 같으면 저장하지 않는다.
+    /// </summary>
+    /// <returns>저장했으면 true</returns>
+    public bool SetLastBackgroundBrightness(int value)
+    {
+        if (data == null) return false;
+        if (data.lastSelection == null) data.lastSelection = new LastSelectionSaveData();
+        if (!PlayerDataRules.TrySetLastBackgroundBrightness(data.lastSelection, value)) return false;
+
+        Debug.Log($"{LogPrefix} 마지막 배경 밝기 {data.lastSelection.backgroundBrightness}% 저장", this);
+        return Save();
+    }
+
     /// <summary>저장된 마지막 선택 (배속 · 탭마다 마지막 곡·채보, 기획서 2-4 11/18). Init 전이면 null. 고치지 않는다</summary>
     public LastSelectionSaveData LastSelection => data != null ? data.lastSelection : null;
 

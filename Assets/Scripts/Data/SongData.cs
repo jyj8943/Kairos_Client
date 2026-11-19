@@ -1,5 +1,6 @@
 using System.Globalization;
 using UnityEngine;
+using UnityEngine.Video;
 
 /// <summary>
 /// 제공 곡 하나의 정보. 곡마다 에셋 하나를 만든다.
@@ -19,10 +20,23 @@ public class SongData : ScriptableObject
     [SerializeField] private AudioClip clip;
     [Tooltip("선택. 없으면 회색 칸으로 표시")]
     [SerializeField] private Sprite cover;
-    [Tooltip("곡 선택 배경 일러스트 (1920×1080). 없으면 앨범 이미지(cover)로 대신한다")]
+    [Tooltip("배경 일러스트 (1920×1080). 곡 선택·결과는 흐리게, 인게임은 그대로 쓴다. 없으면 앨범 이미지(cover)로 대신한다")]
     [SerializeField] private Sprite background;
 
+    [Header("BGA (기획서 3-4 「배경 · BGA (11/19)」, 지금은 비어 있음)")]
+    [Tooltip("BGA 동영상. 있으면 인게임 배경에 일러스트 대신 쓴다 (재생·싱크는 아직 없음, Canvas_InGameBackground TODO)")]
+    [SerializeField] private VideoClip bga;
+    [Tooltip("BGA 시작 오프셋 (ms). 곡 시간 0초에 동영상의 몇 ms를 보여 줄지")]
+    [SerializeField] private int bgaOffsetMs;
+
     public string SongId => songId;
+
+    /// <summary>BGA 동영상 (없으면 null)</summary>
+    public VideoClip Bga => bga;
+
+    /// <summary>BGA 시작 오프셋 (ms)</summary>
+    public int BgaOffsetMs => bgaOffsetMs;
+
     public string Title => title;
     public string Artist => artist;
     public float Bpm => bpm;

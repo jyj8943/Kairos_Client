@@ -121,15 +121,36 @@ public static class GameConstants
         /// <summary>인게임 배속 키 반복 간격 (초)</summary>
         public const double SpeedKeyRepeatIntervalSeconds = 0.08;
 
-        /// <summary>인게임 배속을 바꿀 때 기어 옆에 잠깐 보여주는 문구 형식과 시간 (초, realtime)</summary>
-        public const string SpeedChangeFormat = "x{0:0.0}";
-        public const float SpeedChangeShowSeconds = 0.8f;
-
-        /// <summary>인게임 곡 정보 카드 3줄: {0} 배속 "x5.5" (플레이 중 1 / 2 키로 바꾸면 다시 쓴다). 뒤에 [1] [2] 키 모양 + SpeedKeyHint</summary>
+        /// <summary>인게임 배속·밝기 카드(Img_SpeedBrightnessCard) 배속 값: {0} 배속 "x5.5" (플레이 중 1 / 2 키로 바꾸면 다시 쓴다)</summary>
         public const string InGameSpeedFormat = "x{0:0.0}";
 
-        /// <summary>인게임 곡 정보 카드 3줄: 배속 키 모양 뒤 안내</summary>
-        public const string InGameSpeedKeyHint = "로 변경";
+        /// <summary>인게임 배속·밝기 카드 왼쪽 칸 라벨 (한글 + 영문 작은 글씨)</summary>
+        public const string SpeedCardLabel = "배속 <size=80%>SPEED</size>";
+
+        /// <summary>인게임 배속·밝기 카드 오른쪽 칸 라벨 (한글 + 영문 작은 글씨)</summary>
+        public const string BrightnessCardLabel = "밝기 <size=80%>BG</size>";
+
+        /// <summary>인게임 배속·밝기 카드 밝기 값: {0} 밝기 % "100%"</summary>
+        public const string BrightnessFormat = "{0}%";
+
+        /// <summary>인게임 곡 정보 카드 3줄 BPM 라벨 (값은 SongData.FormatBpm, 지금 곡 시간 위치의 BPM)</summary>
+        public const string BpmLabel = "BPM";
+
+        /// <summary>
+        /// 인게임 배경 밝기 단계 (%, 기획서 3-4 「배경 · BGA (11/19)」). PgUp 밝게 · PgDn 어둡게 한 단계씩, 끝값에서 더 누르면 그대로.
+        /// 배경 위 검은 덮개 알파 = 1 − 밝기 (BackgroundBrightnessRules)
+        /// </summary>
+        public static readonly int[] BackgroundBrightnessSteps = { 0, 25, 50, 75, 100 };
+
+        /// <summary>인게임 배경 밝기 기본값 (%, 저장값이 없을 때)</summary>
+        public const int DefaultBackgroundBrightness = 100;
+
+        /// <summary>배속·밝기 카드 밝기 단계 막대 칸 수 (25%마다 한 칸)</summary>
+        public const int BrightnessBarCount = 4;
+
+        /// <summary>배경 밝기 키 이름 (입력 에셋 바인딩에서 읽지 못했을 때 쓴다)</summary>
+        public const string BrightnessDownKeyFallback = "PgDn";
+        public const string BrightnessUpKeyFallback = "PgUp";
 
         /// <summary>인게임 곡 정보 카드 배속 키 (입력 에셋 바인딩에서 읽지 못했을 때 쓴다)</summary>
         public const string SpeedDownKeyFallback = "1";

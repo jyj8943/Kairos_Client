@@ -20,6 +20,7 @@ public enum PopupButtonStyle
 /// - Text: 글자 단계 · Panel: 패널(흰색 58%) · SelectableRow: 목록 항목 선택 표시(포인트색 18% 바탕 + 왼쪽 막대)
 /// - Badge: 뱃지 바탕 + 흰 글자 (랭크·FC는 이미지라 여기서 칠하지 않는다: Img_Rank · Img_FullCombo)
 /// - PopupButton: 팝업 버튼 (기본 · 강조 · 위험)
+/// - JudgeText: 판정 글자 (단색 / PERFECT 가로 그라데이션)
 /// </summary>
 public static class UIThemePaint
 {
@@ -85,6 +86,27 @@ public static class UIThemePaint
             bar.color = theme.accent;
             bar.gameObject.SetActive(selected);
         }
+    }
+
+    /// <summary>
+    /// 판정 글자 색: 단색은 vertex color(그라데이션 끔), 그라데이션(PERFECT)은 글자 색 흰색 + TMP colorGradient
+    /// (왼쪽 위·아래 = Start, 오른쪽 위·아래 = End). 알파는 alpha를 글자 색에 곱한다 (그라데이션과 곱해져 함께 투명해진다).
+    /// </summary>
+    public static void JudgeText(TMP_Text text, JudgeColor color, float alpha = 1f)
+    {
+        if (text == null) return;
+        if (color.IsGradient)
+        {
+            text.enableVertexGradient = true;
+            text.colorGradient = color.ToVertexGradient();
+            text.color = new Color(1f, 1f, 1f, alpha);
+            return;
+        }
+
+        text.enableVertexGradient = false;
+        Color solid = color.Start;
+        solid.a *= alpha;
+        text.color = solid;
     }
 
     /// <summary>뱃지: 바탕 색 + 흰 글자</summary>

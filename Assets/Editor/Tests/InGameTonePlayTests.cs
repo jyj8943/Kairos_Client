@@ -12,9 +12,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 인게임 톤 개편 (기획서 3-4 「인게임 톤 개편 (11/18)」) 실제 씬 확인. 곡이 시작되면 바로 확인하고 끝낸다 (곡 시간 몇 초).
-/// T1. Critical Velocity NORMAL 일반 플레이 시작 → 배경 RawImage에 흐린 일러스트 텍스처, Img_Album = 곡 앨범, 난이도 뱃지 = #2F7FC8, RATE 0.00% · SCORE 0
+/// T1. Critical Velocity NORMAL 일반 플레이 시작 → 배경 소스 RawImage에 곡 일러스트(흐림 없이 그대로, 11/19), Img_Album = 곡 앨범, 난이도 뱃지 = #2F7FC8, RATE 0.00% · SCORE 0
 /// T2. 나만의 채보 테스트 플레이 → CUSTOM 뱃지(#8B7FD1) + 채보 이름 + 테스트 플레이 뱃지.
-///     F5 재시작 뒤에는 같은 곡이라 배경을 다시 흐리게 처리하지 않는다 (남겨 둔 결과를 다시 씀).
+///     F5 재시작 뒤에도 배경 소스는 같은 곡 일러스트 텍스처다.
 ///     재시작은 테스트 플레이로 확인한다 (일반 플레이 재시작은 PlayerData에 마지막 배속을 저장하므로)
 /// T3. 라인 키(A)를 누르면 키 칸이 #3E9BE0, 떼면 평소 색 (입력 에셋 → InGameInput → GearView 실제 경로)
 /// T4. 판정선 이미지 (11/18): 스프라이트 JudgeLine, 색 흰색(덧칠 없음), Sliced, 폭 = 기어 폭, 두께 = JudgeLineThicknessPx, 세로 중심 = y 900 (이전 JudgeLineY 그대로)
@@ -124,10 +124,9 @@ public class InGameTonePlayTests
         Canvas_InGame canvas = Get<Canvas_InGame>(scene, "canvas");
 
         Assert.IsNotNull(scene.Background, "배경 연결");
-        RawImage background = scene.Background.Blur.FrontImage;
-        Assert.IsNotNull(background.texture, "배경 RawImage에 흐린 일러스트 텍스처");
-        Assert.IsTrue(background.enabled && background.color.a > 0.99f, "배경 보임");
-        Assert.AreSame(song.Background.texture, scene.Background.Blur.Source, "곡 일러스트(SongData.Background)가 입력");
+        RawImage background = scene.Background.SourceImage;
+        Assert.IsTrue(background.gameObject.activeInHierarchy && background.color.a > 0.99f, "배경 보임");
+        Assert.AreSame(song.Background.texture, background.texture, "곡 일러스트(SongData.Background) 그대로");
 
         Assert.IsNotNull(song.Cover, "곡 앨범 에셋");
         Assert.AreSame(song.Cover, canvas.AlbumSprite, "Img_Album = 곡 앨범");
@@ -135,7 +134,7 @@ public class InGameTonePlayTests
         Assert.AreEqual("0.00%", canvas.JudgePanel.RateText, "판정 전 RATE 0.00%");
         Assert.AreEqual("0", canvas.ScoreText, "SCORE 0 (쉼표 없음)");
 
-        Debug.Log($"[InGameToneTest] T1: 배경 {background.texture.width}×{background.texture.height} (블러 {scene.Background.Blur.ProcessCount}회, 다시 씀 {scene.Background.Blur.ReusedCount}회), " +
+        Debug.Log($"[InGameToneTest] T1: 배경 {background.texture.name} {background.texture.width}×{background.texture.height}, " +
                   $"앨범 {canvas.AlbumSprite.name}, 뱃지 #{ColorUtility.ToHtmlStringRGB(canvas.ChartBadgeColor)}, RATE {canvas.JudgePanel.RateText}, SCORE {canvas.ScoreText}");
     }
 
@@ -159,8 +158,8 @@ public class InGameTonePlayTests
 
         string badgeLog = $"뱃지 {Get<TMP_Text>(canvas, "chartBadgeText").text} #{ColorUtility.ToHtmlStringRGB(canvas.ChartBadgeColor)}, 이름 '{chartName.text}', 테스트 플레이 뱃지 켜짐";
 
-        // F5 재시작: 씬을 다시 불러오지만 같은 곡이라 블러를 다시 하지 않는다
-        Texture firstResult = scene.Background.Blur.FrontImage.texture;
+        // F5 재시작: 씬을 다시 불러와도 같은 곡 일러스트
+        Texture firstResult = scene.Background.SourceImage.texture;
         Assert.IsNotNull(firstResult, "배경 텍스처");
         InGameScene before = scene;
         Assert.IsTrue(scene.TestPressRestartKey(), "F5 재시작");
@@ -172,12 +171,9 @@ public class InGameTonePlayTests
             if (scene != null && scene != before && !GameManager.Scene.IsLoading && Get<bool>(scene, "isPlaying")) break;
             yield return null;
         }
-        UIBlurBackground blur = scene.Background.Blur;
-        Assert.AreEqual(0, blur.ProcessCount, "재시작 뒤 블러 다시 안 함");
-        Assert.AreEqual(1, blur.ReusedCount, "남겨 둔 결과를 다시 씀");
-        Assert.AreSame(firstResult, blur.FrontImage.texture, "같은 결과 텍스처");
+        Assert.AreSame(firstResult, scene.Background.SourceImage.texture, "재시작 뒤 같은 일러스트 텍스처");
 
-        Debug.Log($"[InGameToneTest] T2: {badgeLog} → 재시작 뒤 블러 {blur.ProcessCount}회 · 다시 씀 {blur.ReusedCount}회");
+        Debug.Log($"[InGameToneTest] T2: {badgeLog} → 재시작 뒤 같은 배경 {firstResult.name}");
     }
 
     /// <summary>T3: 라인 키 A를 누르면 키 칸이 #3E9BE0, 떼면 평소 색</summary>

@@ -4,6 +4,7 @@ using System;
 /// PlayerData.json에 저장하는 곡 선택의 마지막 선택 상태 (기획서 2-4 「마지막 선택」 11/18: 탭마다 따로 저장).
 /// 설정 창에서 바꾸는 값이 아니라서 settings와 따로 둔다.
 /// - 배속(하나): 일반 플레이로 인게임에 들어갈 때·떠날 때 저장한다.
+/// - 배경 밝기(하나, 11/19): 인게임에서 PgUp·PgDn으로 바꿀 때 저장한다 (일반·테스트 플레이 같은 값).
 /// - official: 마지막으로 플레이한 공식 곡·난이도 (일반 플레이로 인게임에 들어갈 때). 타이틀 "플레이"가 이 칸으로 들어간다.
 /// - custom: 마지막으로 플레이하거나 에디터로 연 나만의 채보 (일반 플레이 · E 편집 · 새 채보 만들기 · 에디터에서 새 채보를 처음 저장할 때).
 ///   chartId가 비어 있고 songId만 있으면 "그 곡의 + 새 채보 만들기 줄" (새 채보를 저장하지 않고 나감). 타이틀 "에디터"가 이 칸으로 들어간다.
@@ -16,6 +17,12 @@ public class LastSelectionSaveData
 {
     /// <summary>마지막 배속 (1.0 ~ 8.0, 0.1 단위)</summary>
     public float scrollMultiplier = GameConstants.Play.DefaultScrollMultiplier;
+
+    /// <summary>
+    /// 마지막 인게임 배경 밝기 (%, 0 · 25 · 50 · 75 · 100, 기획서 2-4 11/19). 인게임에서 PgUp·PgDn으로 바꿀 때 저장하고 판 시작 때 읽는다.
+    /// 예전 JSON(이 필드 없음)은 기본값 100이 남는다. 단계에 없는 값은 Sanitize가 가장 가까운 단계로 바꾼다.
+    /// </summary>
+    public int backgroundBrightness = GameConstants.Play.DefaultBackgroundBrightness;
 
     /// <summary>공식 채보 탭의 마지막 선택</summary>
     public TabSelectionSaveData official = new TabSelectionSaveData();
@@ -36,6 +43,7 @@ public class LastSelectionSaveData
         return new LastSelectionSaveData
         {
             scrollMultiplier = scrollMultiplier,
+            backgroundBrightness = backgroundBrightness,
             official = Get(ChartType.Official).Clone(),
             custom = Get(ChartType.Custom).Clone()
         };
@@ -46,6 +54,7 @@ public class LastSelectionSaveData
     {
         if (other == null) return;
         scrollMultiplier = other.scrollMultiplier;
+        backgroundBrightness = other.backgroundBrightness;
         official = other.Get(ChartType.Official).Clone();
         custom = other.Get(ChartType.Custom).Clone();
     }

@@ -54,12 +54,6 @@ public class UIThemeTests
         AssertHex("5A5470", 1f, theme.textDescription, "설명 글자");
         AssertHex("7A7390", 1f, theme.textMuted, "흐린 글자");
         AssertHex("2C2838", 0.12f, theme.divider, "구분선");
-        AssertHex("B7861E", 1f, theme.judgePerfect, "PERFECT");
-        AssertHex("2F7FC8", 1f, theme.judgeGreat, "GREAT");
-        AssertHex("2E9C6A", 1f, theme.judgeGood, "GOOD");
-        AssertHex("C9504A", 1f, theme.judgeMiss, "MISS");
-        AssertHex("2E9C8F", 1f, theme.judgeFast, "FAST");
-        AssertHex("D27A3C", 1f, theme.judgeSlow, "SLOW");
         AssertHex("2E9C6A", 1f, theme.GetDifficulty("EASY"), "EASY");
         AssertHex("2F7FC8", 1f, theme.GetDifficulty("normal"), "NORMAL (대소문자 무시)");
         AssertHex("C2457E", 1f, theme.GetDifficulty("HARD"), "HARD");
@@ -126,12 +120,79 @@ public class UIThemeTests
             AssertHex("FFFFFF", 1f, target.keyLabelPressed, who + " 키 칸 누름 글자");
             AssertHex("A9A3B8", 1f, target.comboTitle, who + " 콤보 라벨");
             AssertHex("FFFFFF", 1f, target.comboNumber, who + " 콤보 숫자");
-            AssertHex("7CC4FA", 1f, target.GetInGameJudge(JudgeType.Great), who + " 인게임 GREAT");
-            AssertHex("5EEAD4", 1f, target.inGameFast, who + " 인게임 FAST");
-            AssertHex("2F7FC8", 1f, target.GetMenuJudge(JudgeType.Great), who + " 판정 패널 GREAT (메뉴용)");
-            AssertHex("FFFFFF", 0.70f, target.panelBorder, who + " 유리 패널 테두리");
-            AssertHex("FFFFFF", 0.62f, target.statBox, who + " RATE·SCORE 박스");
-            AssertHex("2C2838", 0.20f, target.statBoxBorder, who + " 박스 테두리");
+            // 11/19 왼쪽 패널 라벤더 불투명 (배경 · BGA 와이어프레임)
+            AssertHex("F4F1F8", 1f, target.inGamePanel, who + " 인게임 패널 #F4F1F8");
+            AssertHex("FFFFFF", 1f, target.inGamePanelBorder, who + " 인게임 패널 테두리 흰색");
+            AssertHex("FFFFFF", 1f, target.inGameStatBox, who + " RATE·SCORE 박스 흰색");
+            AssertRgb(44, 40, 56, 0.14f, target.inGameStatBoxBorder, who + " 박스 테두리 14%");
+            AssertHex("3E9BE0", 1f, target.inGameBrightnessBarOn, who + " 밝기 막대 켜짐");
+            AssertRgb(44, 40, 56, 0.14f, target.inGameBrightnessBarOff, who + " 밝기 막대 꺼짐");
+            Assert.AreEqual(target.inGamePanel, UIThemeColor.GetColor(target, UIColorRole.InGamePanel), who + " 역할 InGamePanel");
+            Assert.AreEqual(target.inGameStatBoxBorder, UIThemeColor.GetColor(target, UIColorRole.InGameStatBoxBorder), who + " 역할 InGameStatBoxBorder");
+        }
+    }
+
+    /// <summary>판정 색 B3안 (11/19): 메뉴용·인게임용 6색 + PERFECT 그라데이션 두 색, 기본값과 에셋 둘 다</summary>
+    [Test]
+    public void JudgeColors_B3_DefaultsAndAsset()
+    {
+        foreach (UITheme target in new[] { theme, Resources.Load<UITheme>(UITheme.ResourcePath) })
+        {
+            Assert.IsNotNull(target, "UITheme 에셋");
+            string who = target == theme ? "기본값" : "에셋";
+            // 메뉴용 (판정 패널 · 결과)
+            AssertHex("B87A10", 1f, target.judgePerfectStart, who + " PERFECT 왼쪽 금");
+            AssertHex("C8358C", 1f, target.judgePerfectEnd, who + " PERFECT 오른쪽 분홍");
+            AssertHex("6650D8", 1f, target.judgeGreat, who + " GREAT");
+            AssertHex("2C9C66", 1f, target.judgeGood, who + " GOOD");
+            AssertHex("C24D6B", 1f, target.judgeMiss, who + " MISS");
+            AssertHex("2389C4", 1f, target.judgeFast, who + " FAST");
+            AssertHex("C97418", 1f, target.judgeSlow, who + " SLOW");
+            // 인게임용 (기어 위)
+            AssertHex("FFD36B", 1f, target.inGamePerfectStart, who + " 인게임 PERFECT 왼쪽");
+            AssertHex("FF7AC6", 1f, target.inGamePerfectEnd, who + " 인게임 PERFECT 오른쪽");
+            AssertHex("A99CFF", 1f, target.inGameGreat, who + " 인게임 GREAT");
+            AssertHex("6FE0A4", 1f, target.inGameGood, who + " 인게임 GOOD");
+            AssertHex("F08AA4", 1f, target.inGameMiss, who + " 인게임 MISS");
+            AssertHex("7DD3FC", 1f, target.inGameFast, who + " 인게임 FAST");
+            AssertHex("FFB45C", 1f, target.inGameSlow, who + " 인게임 SLOW");
+
+            JudgeColor perfect = target.GetInGameJudge(JudgeType.Perfect);
+            Assert.IsTrue(perfect.IsGradient, who + " 인게임 PERFECT 그라데이션");
+            Assert.AreEqual(target.inGamePerfectEnd, perfect.GlowColor, who + " PERFECT 빛 = 분홍");
+            Assert.IsTrue(target.GetMenuJudge(JudgeType.Perfect).IsGradient, who + " 메뉴 PERFECT 그라데이션");
+            Assert.IsFalse(target.GetMenuJudge(JudgeType.Great).IsGradient, who + " GREAT 단색");
+            AssertHex("6650D8", 1f, target.GetMenuJudge(JudgeType.Great).Start, who + " 판정 패널 GREAT");
+            AssertHex("F08AA4", 1f, target.GetInGameJudge(JudgeType.Miss).Start, who + " 기어 MISS");
+            // 난이도 색은 판정 색과 따로 (그대로)
+            AssertHex("2F7FC8", 1f, target.difficultyNormal, who + " NORMAL 난이도 그대로");
+        }
+    }
+
+    /// <summary>판정 글자 칠하기: PERFECT는 colorGradient(왼쪽 = 첫 색, 오른쪽 = 둘째 색), 단색은 그라데이션 끔</summary>
+    [Test]
+    public void JudgeText_GradientAndSolid()
+    {
+        GameObject go = new GameObject("Txt_JudgeColorTest", typeof(RectTransform));
+        try
+        {
+            TextMeshProUGUI text = go.AddComponent<TextMeshProUGUI>();
+            JudgeColor perfect = theme.GetInGameJudge(JudgeType.Perfect);
+            UIThemePaint.JudgeText(text, perfect, 0.5f);
+            Assert.IsTrue(text.enableVertexGradient);
+            Assert.AreEqual(perfect.Start, text.colorGradient.topLeft);
+            Assert.AreEqual(perfect.Start, text.colorGradient.bottomLeft);
+            Assert.AreEqual(perfect.End, text.colorGradient.topRight);
+            Assert.AreEqual(perfect.End, text.colorGradient.bottomRight);
+            Assert.AreEqual(new Color(1f, 1f, 1f, 0.5f), text.color, "글자 색은 흰색 × 알파");
+
+            UIThemePaint.JudgeText(text, theme.GetInGameJudge(JudgeType.Great));
+            Assert.IsFalse(text.enableVertexGradient, "단색은 그라데이션 끔");
+            Assert.AreEqual(theme.inGameGreat, text.color);
+        }
+        finally
+        {
+            Object.DestroyImmediate(go);
         }
     }
 

@@ -3,11 +3,13 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 인게임 화면 UI (기획서 3-4, 배치 11/13 · 톤 11/18 라벤더 안개). InGameScene이 Init()을 호출한다.
-/// - 왼쪽 ⑧ 곡 정보 카드(Img_SongInfo, 흰색 58% 유리 패널 + 1px 테두리):
-///   윗줄 Img_Album(곡 앨범 150×150, 없으면 빈 앨범 색) + 오른쪽 3줄 (곡 제목 + 테스트 플레이 뱃지 / 난이도·CUSTOM 뱃지 + 채보 이름 + Lv. / 배속 + [1] [2]로 변경),
+/// 인게임 화면 UI (기획서 3-4, 배치 11/13 · 톤 11/18 라벤더 안개 · 11/19 배경·BGA 개편). InGameScene이 Init()을 호출한다.
+/// - 왼쪽 패널(곡 정보 카드 · 판정 패널 · 배속·밝기 카드)은 라벤더 불투명 #F4F1F8 + 흰색 1px 테두리 (배경 밝기와 상관없이 고정, 뒤 흐림 없음).
+/// - 왼쪽 ⑧ 곡 정보 카드(Img_SongInfo):
+///   윗줄 Img_Album(곡 앨범 150×150, 없으면 빈 앨범 색) + 오른쪽 3줄 (곡 제목 + 테스트 플레이 뱃지 / 난이도·CUSTOM 뱃지 + 채보 이름 + Lv. / "BPM" + 지금 곡 시간 위치의 BPM),
 ///   아랫줄 카드 폭 전체 곡 진행 바(Img_Progress/Img_ProgressFill). 무엇을 보일지는 InGameHudRules.BuildSongInfo가 정한다.
 /// - 왼쪽 ⑥ 판정 패널(Img_JudgePanel): 판정 개수·FAST/SLOW 개수·RATE 박스(Img_JudgePanel 스크립트) + SCORE 박스(이 스크립트).
+/// - 왼쪽 아래 배속·밝기 카드(Img_SpeedBrightnessCard): 배속 · 배경 밝기 값과 키. 늘 보이고 값이 바뀌면 숫자·막대만 바뀐다.
 /// - 기어 위쪽 콤보(Txt_Combo: 오름·쉬면 숨기기 애니메이션), 판정선 위 판정 글자(빛)와 그 위 FAST/SLOW(Txt_FastSlow), 안내 문구, 재개 카운트다운.
 /// - 재개 카운트다운 (기획서 3-7 ③): 일시정지 메뉴가 닫힌 뒤 블러 없이 덮개(Img_CountdownDim, rgba(36,32,46) 28%)만 깔고
 ///   기어 가운데에 흰 숫자(180, 하늘색 빛 = TMP Underlay) 3 → 2 → 1. 끝나면 덮개도 숨긴다.
@@ -16,9 +18,10 @@ using UnityEngine.UI;
 ///   FAST/SLOW를 띄울지는 InGameScene이 FastSlowRules로 정해 넘긴다 (이 스크립트는 규칙을 판단하지 않는다).
 ///   콤보·판정 글자·FAST/SLOW 애니메이션은 TickAnimations로만 흐른다 (일시정지·카운트다운 중에는 InGameScene이 부르지 않아 멈춤).
 /// - 색은 모두 UITheme에서 Init 때 읽는다 (씬에 색을 직렬화하지 않는다):
-///   왼쪽 패널(유리 패널 위)은 메뉴 묶음(글자·판정 이름·난이도 뱃지·포인트색), 기어 위 판정 글자·콤보는 인게임 묶음(밝은 색).
+///   왼쪽 패널은 메뉴 묶음(글자·판정 이름·난이도 뱃지·포인트색) + 인게임 패널 색(inGamePanel 등), 기어 위 판정 글자·콤보는 인게임 묶음(밝은 색).
+///   PERFECT는 금 → 분홍 가로 그라데이션 (UIThemePaint.JudgeText).
 ///   바뀌지 않는 그래픽은 UIThemeColor 역할로 칠하고(UIThemeColor.ApplyAll), 바뀌는 색은 여기서 칠한다.
-/// - 플레이 중 배속을 바꾸면 곡 정보의 배속을 고치고, 기어 옆(Txt_SpeedChange)에 "x5.6"을 잠깐(SpeedChangeShowSeconds) 보여준다.
+/// - 플레이 중 배속·배경 밝기를 바꾸면 배속·밝기 카드의 값만 바뀐다 (따로 뜨는 글자 없음).
 /// - 결과는 결과 씬(ResultScene)이 보여준다.
 /// - 플레이 중 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다 (점수는 곡 선택·결과와 같은 FormatScore, 바뀔 때만). 진행 바는 채움의 anchorMax.x만 바꾼다.
 /// </summary>
@@ -39,14 +42,10 @@ public class Canvas_InGame : UIBase
     [SerializeField] private TMP_Text chartNameText;
     [Tooltip("레벨 (Txt_Level, \"Lv.3\"). 항상 보인다")]
     [SerializeField] private TMP_Text levelText;
-    [Tooltip("배속 (Txt_Speed, \"x5.5\")")]
-    [SerializeField] private TMP_Text speedText;
-    [Tooltip("배속 내리기 키 이름 (Img_SpeedDownKey/Txt_SpeedDownKey, 입력 에셋 바인딩)")]
-    [SerializeField] private TMP_Text speedDownKeyText;
-    [Tooltip("배속 올리기 키 이름 (Img_SpeedUpKey/Txt_SpeedUpKey, 입력 에셋 바인딩)")]
-    [SerializeField] private TMP_Text speedUpKeyText;
-    [Tooltip("키 모양 뒤 안내 (Txt_SpeedHint, \"로 변경\")")]
-    [SerializeField] private TMP_Text speedHintText;
+    [Tooltip("3줄 BPM 라벨 (BpmRow/Txt_BpmTitle, \"BPM\" 14 보조 글자색)")]
+    [SerializeField] private TMP_Text bpmTitleText;
+    [Tooltip("3줄 BPM 값 (BpmRow/Txt_Bpm, \"150.61\" 22 기본 글자색). 지금 곡 시간 위치의 BPM")]
+    [SerializeField] private TMP_Text bpmText;
     [Tooltip("곡 진행 바 채움 (Img_Progress/Img_ProgressFill). 왼쪽 기준 anchorMax.x = 비율로 채운다")]
     [SerializeField] private RectTransform progressFill;
     [Tooltip("테스트 플레이 뱃지 (Img_TestPlay, 포인트색). 테스트 플레이일 때만 켠다")]
@@ -56,6 +55,9 @@ public class Canvas_InGame : UIBase
 
     [Header("FULL COMBO / ALL PERFECT 연출 (ClearEffect)")]
     [SerializeField] private ClearEffect clearEffect;
+
+    [Header("배속·밝기 카드 (Img_SpeedBrightnessCard, 왼쪽 아래)")]
+    [SerializeField] private Img_SpeedBrightnessCard speedBrightnessCard;
 
     [Header("⑥ 판정 패널 (Img_JudgePanel)")]
     [Tooltip("판정 개수·FAST/SLOW·RATE. 점수는 scoreText")]
@@ -78,8 +80,6 @@ public class Canvas_InGame : UIBase
     [SerializeField] private TMP_Text countdownText;
     [Tooltip("카운트다운 덮개 (Img_CountdownDim, 화면 전체, UIThemeColor 역할 PopupCountdownDim)")]
     [SerializeField] private GameObject countdownDim;
-    [Tooltip("배속을 바꿀 때 기어 옆에 잠깐 보여주는 배속 (Txt_SpeedChange)")]
-    [SerializeField] private TMP_Text speedChangeText;
 
     /// <summary>테스트 플레이 뱃지 글자 좌우 여백 (px)</summary>
     private const float BadgePaddingX = 12f;
@@ -87,8 +87,8 @@ public class Canvas_InGame : UIBase
     /// <summary>점수 칸에 마지막으로 쓴 값 (같으면 다시 쓰지 않는다)</summary>
     private int shownScore = -1;
 
-    /// <summary>배속 변경 표시를 숨길 시각 (realtime, 음수면 숨김)</summary>
-    private float speedChangeHideAt = -1f;
+    /// <summary>BPM 칸에 마지막으로 쓴 값 (같으면 다시 쓰지 않는다, 음수면 아직 안 씀)</summary>
+    private float shownBpm = -1f;
 
     /// <summary>진행 바에 마지막으로 쓴 비율 (같은 값이면 다시 쓰지 않는다)</summary>
     private float shownProgress = -1f;
@@ -113,15 +113,16 @@ public class Canvas_InGame : UIBase
     /// 테마 색을 칠하고, 곡 정보 카드·테스트 플레이 뱃지를 채우고, 점수·콤보·진행 바를 비운다.
     /// </summary>
     /// <param name="cover">곡 앨범 (SongData.Cover). 없으면 빈 앨범 색</param>
-    /// <param name="speedDownKey">배속 내리기 키 이름 (입력 에셋 바인딩에서 읽은 것)</param>
-    /// <param name="speedUpKey">배속 올리기 키 이름</param>
+    /// <param name="keys">배속·밝기 카드 키 이름 (입력 에셋 바인딩에서 읽은 것)</param>
+    /// <param name="brightness">시작 배경 밝기 (%, 배속·밝기 카드에 표시)</param>
+    /// <param name="bpm">시작 위치의 BPM (곡 정보 3줄)</param>
     /// <param name="chartType">채보 종류 (ChartData.type). 공식이면 난이도 뱃지, 나만의 채보면 CUSTOM 뱃지 + 채보 이름</param>
     /// <param name="difficulty">난이도 이름 (ChartData.difficulty)</param>
     /// <param name="isAutoPlay">자동 플레이면 테스트 플레이 표시에 "자동 플레이"를 함께 쓴다</param>
-    /// <param name="scrollMultiplier">시작 배속 (곡 정보에 표시)</param>
+    /// <param name="scrollMultiplier">시작 배속 (배속·밝기 카드에 표시)</param>
     /// <param name="score">이번 판의 점수 계산 (판정 패널의 시작 값: 판정 0개, 정확도 0.00%)</param>
     public void Init(string songTitle, Sprite cover, ChartType chartType, string difficulty, string chartName, int level,
-        bool isTestPlay, bool isAutoPlay, float scrollMultiplier, string speedDownKey, string speedUpKey, ScoreCalculator score)
+        bool isTestPlay, bool isAutoPlay, float scrollMultiplier, int brightness, float bpm, SpeedBrightnessKeys keys, ScoreCalculator score)
     {
         UITheme theme = UITheme.Current;
         UIThemeColor.ApplyAll(gameObject);
@@ -136,21 +137,19 @@ public class Canvas_InGame : UIBase
         levelText.text = info.LevelText;
         testPlayText.text = info.TestPlayText;
         testPlayBadge.SetActive(info.ShowTestPlay);
-        // 줄 안에서 줄어들지 않을 것(테스트 플레이 뱃지·Lv.·배속 글자)은 글자 폭을 최소 폭으로 둔다.
+        // 줄 안에서 줄어들지 않을 것(테스트 플레이 뱃지·Lv.)은 글자 폭을 최소 폭으로 둔다.
         // 넘치면 최소 폭 0인 곡 제목·채보 이름만 줄어들고 줄임표가 붙는다
         FitWidthToText(testPlayBadge, testPlayText, BadgePaddingX * 2f);
         FitWidthToText(levelText.gameObject, levelText, 0f);
 
-        if (speedDownKeyText != null) speedDownKeyText.text = speedDownKey;
-        if (speedUpKeyText != null) speedUpKeyText.text = speedUpKey;
-        if (speedHintText != null)
+        if (bpmTitleText != null)
         {
-            speedHintText.text = GameConstants.Play.InGameSpeedKeyHint;
-            FitWidthToText(speedHintText.gameObject, speedHintText, 0f);
+            bpmTitleText.text = GameConstants.Play.BpmLabel;
+            FitWidthToText(bpmTitleText.gameObject, bpmTitleText, 0f);
         }
-        SetSpeed(scrollMultiplier, false);
-        if (speedChangeText != null) speedChangeText.gameObject.SetActive(false);
-        speedChangeHideAt = -1f;
+        shownBpm = -1f;
+        SetBpm(bpm);
+        if (speedBrightnessCard != null) speedBrightnessCard.Init(keys, scrollMultiplier, brightness);
         shownProgress = -1f;
         SetProgress(0f);
         judgeText.ResetView();
@@ -241,19 +240,33 @@ public class Canvas_InGame : UIBase
     /// <summary>판정 패널 (확인용)</summary>
     public Img_JudgePanel JudgePanel => judgePanel;
 
-    /// <summary>
-    /// 곡 정보의 배속을 바꾼다. showChange면 기어 옆에 "x5.6"을 잠깐 보여준다 (플레이 중 1 / 2 키).
-    /// </summary>
-    public void SetSpeed(float scrollMultiplier, bool showChange)
-    {
-        speedText.text = string.Format(GameConstants.Play.InGameSpeedFormat, scrollMultiplier);
-        FitWidthToText(speedText.gameObject, speedText, 0f);
-        if (!showChange || speedChangeText == null) return;
+    /// <summary>배속·밝기 카드 (확인용)</summary>
+    public Img_SpeedBrightnessCard SpeedBrightnessCard => speedBrightnessCard;
 
-        speedChangeText.text = string.Format(GameConstants.Play.SpeedChangeFormat, scrollMultiplier);
-        speedChangeText.gameObject.SetActive(true);
-        speedChangeHideAt = Time.realtimeSinceStartup + GameConstants.Play.SpeedChangeShowSeconds;
+    /// <summary>배속·밝기 카드의 배속 값을 바꾼다 (플레이 중 1 / 2 키)</summary>
+    public void SetSpeed(float scrollMultiplier)
+    {
+        if (speedBrightnessCard != null) speedBrightnessCard.SetSpeed(scrollMultiplier);
     }
+
+    /// <summary>배속·밝기 카드의 밝기 값·막대를 바꾼다 (플레이 중 PgUp·PgDn)</summary>
+    public void SetBrightness(int brightness)
+    {
+        if (speedBrightnessCard != null) speedBrightnessCard.SetBrightness(brightness);
+    }
+
+    /// <summary>
+    /// 곡 정보 3줄의 BPM을 바꾼다 (SongData.FormatBpm 형식). 값이 같으면 글자를 다시 만들지 않는다 (InGameScene이 매 프레임 불러도 된다).
+    /// </summary>
+    public void SetBpm(float bpm)
+    {
+        if (bpmText == null || bpm == shownBpm) return;
+        shownBpm = bpm;
+        bpmText.text = SongData.FormatBpm(bpm);
+    }
+
+    /// <summary>곡 정보 3줄 BPM 글자 (확인용, 예: "BPM 150.61")</summary>
+    public string BpmLine => (bpmTitleText != null ? bpmTitleText.text : string.Empty) + " " + (bpmText != null ? bpmText.text : string.Empty);
 
     /// <summary>
     /// 곡 진행 바를 채운다 (0~1). InGameScene이 플레이 중 매 프레임 부른다 (일시정지·카운트다운 중에는 부르지 않아 멈춘다).
@@ -273,18 +286,6 @@ public class Canvas_InGame : UIBase
 
     /// <summary>진행 바 채움 비율 (확인용)</summary>
     public float Progress => progressFill != null ? progressFill.anchorMax.x : 0f;
-
-    /// <summary>배속 변경 표시가 켜져 있으면 true (확인용)</summary>
-    public bool IsSpeedChangeVisible => speedChangeText != null && speedChangeText.gameObject.activeSelf;
-
-    private void Update()
-    {
-        // 일시정지·카운트다운 중에도 시간이 지나면 숨긴다 (realtime)
-        if (speedChangeHideAt < 0f || Time.realtimeSinceStartup < speedChangeHideAt) return;
-
-        speedChangeHideAt = -1f;
-        if (speedChangeText != null) speedChangeText.gameObject.SetActive(false);
-    }
 
     /// <summary>
     /// 재개 카운트다운 숫자를 보여준다.
@@ -326,7 +327,7 @@ public class Canvas_InGame : UIBase
     /// <param name="fastSlow">판정 글자 위에 띄울 방향 (FastSlowRules.GetDisplay). None이면 앞의 FAST/SLOW를 건드리지 않는다</param>
     public void ShowJudge(JudgeType judge, FastSlow fastSlow, int combo, int score)
     {
-        Color color = UITheme.Current.GetInGameJudge(judge);
+        JudgeColor color = UITheme.Current.GetInGameJudge(judge);
         switch (judge)
         {
             case JudgeType.Perfect: judgeText.Show(GameConstants.Play.PerfectText, color); break;
@@ -349,8 +350,8 @@ public class Canvas_InGame : UIBase
         if (fastSlowText == null) return;
         switch (fastSlow)
         {
-            case FastSlow.Fast: fastSlowText.Show(GameConstants.Play.FastText, UITheme.Current.inGameFast); break;
-            case FastSlow.Slow: fastSlowText.Show(GameConstants.Play.SlowText, UITheme.Current.inGameSlow); break;
+            case FastSlow.Fast: fastSlowText.Show(GameConstants.Play.FastText, JudgeColor.Solid(UITheme.Current.inGameFast)); break;
+            case FastSlow.Slow: fastSlowText.Show(GameConstants.Play.SlowText, JudgeColor.Solid(UITheme.Current.inGameSlow)); break;
         }
     }
 

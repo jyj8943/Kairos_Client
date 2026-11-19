@@ -107,7 +107,7 @@ public class InGameHudPlayTests
         Assert.AreEqual("Lv.7", Get<TMP_Text>(canvas, "levelText").text);
         Assert.IsTrue(Get<GameObject>(canvas, "testPlayBadge").activeInHierarchy, "테스트 플레이 표시 켜짐");
         Assert.AreEqual(GameConstants.Play.AutoTestPlayLabel, Get<TMP_Text>(canvas, "testPlayText").text);
-        Assert.AreEqual("x1.0", Get<TMP_Text>(canvas, "speedText").text);
+        Assert.AreEqual("x1.0", canvas.SpeedBrightnessCard.SpeedText, "배속·밝기 카드 배속");
 
         // 첫 노트(약 2.4초) 뒤까지 기다리며 키 칸이 밝아지는지 본다
         NoteJudge judge = Get<NoteJudge>(scene, "judge");

@@ -27,6 +27,10 @@ using UnityEngine.InputSystem;
 ///   팝업(일시정지·확인)이 열려 있으면 받지 않고, 재개 카운트다운 중에는 받는다. 바꾼 배속은 진입 데이터(entry.scrollMultiplier)에 남겨
 ///   재시작·다시 하기·곡 선택·에디터 복귀로 이어 넘긴다 (싱글톤에 남기지 않는다).
 ///   일반 플레이를 떠날 때(결과·재시작·나가기)는 그 배속을 PlayerData.json의 마지막 배속으로도 저장한다 (판 도중 키를 누를 때는 쓰지 않는다).
+/// - 배경 (기획서 3-4 「배경 · BGA (11/19)」): 판 시작 때 Canvas_InGameBackground에 곡 일러스트(BGA 자리 포함)와 저장된 밝기를 한 번 넣는다.
+///   PgUp(Gameplay/BackgroundBrighter)·PgDn(Gameplay/BackgroundDarker)로 0 · 25 · 50 · 75 · 100% 한 단계씩 바꾼다 (꾹 누르기 반복 없음, 끝값에서 그대로).
+///   플레이 중·재개 카운트다운 중·결과 대기 중에 받고, 팝업(일시정지·확인)이 열려 있으면 무시한다. 바꿀 때마다 PlayerData.json에 저장한다 (일반·테스트 플레이 같은 값).
+/// - 곡 정보 3줄 BPM: 지금 곡 시간 위치의 BPM(TimingMap)을 매 프레임 넘기고, Canvas_InGame이 값이 바뀔 때만 글자를 바꾼다.
 /// - 판정 오프셋(설정): 판이 시작될 때 GameManager.Settings.OffsetMs를 한 번 읽어(appliedOffsetMs) 곡 offset에 더해 TimingMap을 만든다.
 ///   노트 시간 전체(화면·판정·롱노트 틱·MISS·테스트 플레이 시작 위치)가 함께 움직이고 입력 시각은 그대로다. + = 노트를 늦게, - = 빠르게.
 ///   일시정지 중 설정 창에서 바꾸고 닫으면 재시작을 묻는다 (OnSettingsClosed). 에디터 재생·메트로놈에는 적용하지 않는다.
@@ -48,11 +52,15 @@ public class InGameScene : SceneBase
     [SerializeField] private Canvas_InGame canvas;
     [SerializeField] private Popup_Pause pausePopup;
 
-    [Header("⑨ 배경 (Canvas_InGameBackground/MenuBackground: 흐린 곡 일러스트 + 라벤더빛 덮기, 기어 뒤)")]
-    [SerializeField] private MenuBackground background;
+    [Header("⑨ 배경 (Canvas_InGameBackground: 검은 바탕 → 곡 일러스트(BGA 자리) → 검은 덮개, 기어 뒤)")]
+    [SerializeField] private Canvas_InGameBackground background;
 
     /// <summary>배경 (확인용)</summary>
-    public MenuBackground Background => background;
+    public Canvas_InGameBackground Background => background;
+
+    [Header("배경 밝기 키 (입력 에셋 Gameplay/BackgroundBrighter = Page Up, Gameplay/BackgroundDarker = Page Down)")]
+    [SerializeField] private InputActionReference brightnessUpAction;
+    [SerializeField] private InputActionReference brightnessDownAction;
 
     [Header("배속 키 (입력 에셋 Gameplay/SpeedDown = 1, Gameplay/SpeedUp = 2)")]
     [SerializeField] private InputActionReference speedDownAction;
@@ -88,6 +96,13 @@ public class InGameScene : SceneBase
     private readonly KeyRepeat speedDownRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
     private readonly KeyRepeat speedUpRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
     private bool isSpeedInputEnabled;
+    private bool isBrightnessInputEnabled;
+
+    /// <summary>지금 배경 밝기 (%). 판 시작 때 PlayerData.json의 마지막 밝기를 읽는다</summary>
+    private int backgroundBrightness = GameConstants.Play.DefaultBackgroundBrightness;
+
+    /// <summary>지금 배경 밝기 (%, 확인용)</summary>
+    public int BackgroundBrightness => backgroundBrightness;
     private bool isRestartInputEnabled;
     private readonly List<JudgeResult> releaseResults = new List<JudgeResult>();
 
@@ -249,12 +264,9 @@ public class InGameScene : SceneBase
         nextSyncWarningRealtime = 0;
 #endif
 
-        // 배경: 판 시작 때 한 번만 흐리게 처리한다 (재시작은 같은 곡이라 UIBlurBackground가 앞 결과를 다시 쓴다)
-        if (background != null)
-        {
-            background.Init();
-            background.SetIllustration(song.Background, true);
-        }
+        // 배경: 판 시작 때 한 번 곡 일러스트(BGA 자리)와 저장된 밝기를 넣는다 (재시작은 씬을 다시 불러와 여기서 다시 한 번)
+        backgroundBrightness = PlayerDataManager.HasInstance ? GameManager.PlayerData.LastBackgroundBrightness : BackgroundBrightnessRules.Default;
+        if (background != null) background.Init(song, backgroundBrightness);
         gear.Init();
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.Init(gear);
@@ -276,10 +288,14 @@ public class InGameScene : SceneBase
         gear.SetKeyLabels(input.GetLaneKeyLabels());
         // 채보 종류는 채보 데이터(type)로 정한다 (테스트 플레이·자동 플레이도 같은 규칙). 모르는 값이면 나만의 채보로 본다
         ChartType chartType = ChartData.TryParseType(chart.type, out ChartType parsedType) ? parsedType : ChartType.Custom;
-        canvas.Init(song.Title, song.Cover, chartType, chart.difficulty, chart.chartName, chart.level, IsTestPlay, isAutoPlay, noteLayer.ScrollMultiplier,
+        SpeedBrightnessKeys cardKeys = new SpeedBrightnessKeys(
             KeyGuideBar.GetKeyText(speedDownAction != null ? speedDownAction.action : null, GameConstants.Play.SpeedDownKeyFallback),
             KeyGuideBar.GetKeyText(speedUpAction != null ? speedUpAction.action : null, GameConstants.Play.SpeedUpKeyFallback),
-            score);
+            KeyGuideBar.GetKeyText(brightnessDownAction != null ? brightnessDownAction.action : null, GameConstants.Play.BrightnessDownKeyFallback),
+            KeyGuideBar.GetKeyText(brightnessUpAction != null ? brightnessUpAction.action : null, GameConstants.Play.BrightnessUpKeyFallback));
+        float startBpm = timing.BpmAt(IsTestPlay ? entry.testPlay.startBeat : 0f);
+        canvas.Init(song.Title, song.Cover, chartType, chart.difficulty, chart.chartName, chart.level, IsTestPlay, isAutoPlay, noteLayer.ScrollMultiplier,
+            backgroundBrightness, startBpm, cardKeys, score);
         pausePopup.SetSong(song.Title, song.Cover,
             InGameHudRules.BuildSongInfo(chartType, chart.difficulty, chart.chartName, chart.level, IsTestPlay, isAutoPlay), IsTestPlay);
         entry.scrollMultiplier = noteLayer.ScrollMultiplier;
@@ -308,6 +324,7 @@ public class InGameScene : SceneBase
         ScheduleCountInClicks();
         input.EnableInput();
         EnableSpeedInput();
+        EnableBrightnessInput();
         EnableRestartInput();
         SubscribeSettingsClosed();
 #if UNITY_EDITOR
@@ -325,6 +342,7 @@ public class InGameScene : SceneBase
         StopCountdown();
         if (input != null) input.DisableInput();
         DisableSpeedInput();
+        DisableBrightnessInput();
         DisableRestartInput();
         UnsubscribeSettingsClosed();
 #if UNITY_EDITOR
@@ -335,13 +353,14 @@ public class InGameScene : SceneBase
 
     /// <summary>
     /// 인게임 도중 Play를 멈추거나 PlayMode 테스트가 인게임에서 끝나면 OnExit가 불리지 않는다.
-    /// 입력 에셋의 액션은 도메인 리로드를 끈 설정에서 Play를 넘어 남으므로, 여기서도 배속 키 구독을 끊는다 (이미 끊었으면 아무것도 하지 않는다).
+    /// 입력 에셋의 액션은 도메인 리로드를 끈 설정에서 Play를 넘어 남으므로, 여기서도 배속·밝기 키 구독을 끊는다 (이미 끊었으면 아무것도 하지 않는다).
     /// 라인 키(InGameInput)·개발용 패널(Canvas_InGameDebug)은 각자 OnDestroy에서 끊는다.
     /// </summary>
     private void OnDestroy()
     {
         if (countInClick != null) Destroy(countInClick);
         DisableSpeedInput();
+        DisableBrightnessInput();
         DisableRestartInput();
         UnsubscribeSettingsClosed();
     }
@@ -419,6 +438,9 @@ public class InGameScene : SceneBase
 
         // 곡 진행 바 (일시정지·카운트다운 중에는 위에서 돌아가 멈춘다)
         canvas.SetProgress(InGameHudRules.ProgressRatio(songTime, song.Length));
+
+        // 곡 정보 3줄 BPM: BPM 구간이 있을 때만 지금 위치를 다시 본다 (글자는 값이 바뀔 때만 바뀐다)
+        if (timing.PointCount > 1) canvas.SetBpm(timing.BpmAt(timing.SecondsToBeat(songTime)));
 
         if (isAutoPlay)
         {
@@ -583,7 +605,7 @@ public class InGameScene : SceneBase
 
         noteLayer.SetScrollMultiplier(next);
         entry.scrollMultiplier = noteLayer.ScrollMultiplier;
-        canvas.SetSpeed(noteLayer.ScrollMultiplier, true);
+        canvas.SetSpeed(noteLayer.ScrollMultiplier);
         Debug.Log($"[InGameScene] 배속 x{noteLayer.ScrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###}유닛/초 (보이는 시간 {ScrollSpeedRules.VisibleSeconds(noteLayer.ScrollMultiplier):0.###}초)", this);
     }
 
@@ -597,6 +619,66 @@ public class InGameScene : SceneBase
         KeyRepeat repeat = up ? speedUpRepeat : speedDownRepeat;
         PressSpeedKey(repeat, up ? 1 : -1);
         repeat.Release();
+    }
+#endif
+
+    // ───── 배경 밝기 (PgUp · PgDn) ─────
+
+    /// <summary>밝기 키 구독을 시작한다 (OnEnter). 액션은 여러 곳이 같이 쓰므로 Disable하지 않고 구독만 끊는다.</summary>
+    private void EnableBrightnessInput()
+    {
+        if (isBrightnessInputEnabled) return;
+        if (brightnessUpAction == null || brightnessDownAction == null)
+        {
+            Debug.LogWarning("[InGameScene] brightnessUpAction·brightnessDownAction이 연결되지 않아 배경 밝기 키를 받지 않습니다.", this);
+            return;
+        }
+
+        brightnessUpAction.action.started += OnBrightnessUpStarted;
+        brightnessDownAction.action.started += OnBrightnessDownStarted;
+        brightnessUpAction.action.Enable();
+        brightnessDownAction.action.Enable();
+        isBrightnessInputEnabled = true;
+    }
+
+    /// <summary>밝기 키 구독을 끊는다 (OnExit, OnDestroy).</summary>
+    private void DisableBrightnessInput()
+    {
+        if (!isBrightnessInputEnabled) return;
+        brightnessUpAction.action.started -= OnBrightnessUpStarted;
+        brightnessDownAction.action.started -= OnBrightnessDownStarted;
+        isBrightnessInputEnabled = false;
+    }
+
+    private void OnBrightnessUpStarted(InputAction.CallbackContext context) => ChangeBrightness(1);
+    private void OnBrightnessDownStarted(InputAction.CallbackContext context) => ChangeBrightness(-1);
+
+    /// <summary>밝기를 바꿀 수 있으면 true: 플레이 중·재개 카운트다운 중·결과 대기 중. 팝업(일시정지·확인)이 열려 있으면 false</summary>
+    private bool CanChangeBrightness => isReady && isPlaying && !isFinished && !(UIManager.HasInstance && GameManager.UI.HasOpenPopup);
+
+    /// <summary>
+    /// 배경 밝기를 delta 단계(25%)만큼 바꾼다. 끝값(0%·100%)에서는 그대로. 덮개·카드에 바로 반영하고 PlayerData.json에 저장한다.
+    /// </summary>
+    private void ChangeBrightness(int delta)
+    {
+        if (delta == 0 || !CanChangeBrightness) return;
+
+        int next = BackgroundBrightnessRules.Step(backgroundBrightness, delta);
+        if (next == backgroundBrightness) return;
+
+        backgroundBrightness = next;
+        if (background != null) background.SetBrightness(next);
+        canvas.SetBrightness(next);
+        if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastBackgroundBrightness(next);
+        Debug.Log($"[InGameScene] 배경 밝기 {next}% (덮개 알파 {BackgroundBrightnessRules.DimAlpha(next):0.##})", this);
+    }
+
+#if UNITY_EDITOR
+    /// <summary>테스트 전용 (Unity 에디터): 밝기 키를 한 번 누른 것과 같다 (키 콜백과 같은 ChangeBrightness 경로, 팝업 확인 포함)</summary>
+    /// <param name="up">true면 PgUp(밝게), false면 PgDn(어둡게)</param>
+    public void TestTapBrightnessKey(bool up)
+    {
+        ChangeBrightness(up ? 1 : -1);
     }
 #endif
 

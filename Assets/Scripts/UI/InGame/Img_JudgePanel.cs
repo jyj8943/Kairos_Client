@@ -3,8 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// 인게임 왼쪽 ⑥ 판정 패널 (Img_JudgePanel, 기획서 3-4 "판정 패널 규칙" · 11/18 톤 개편). Canvas_InGame.Init이 Init()을 부르고, 판정마다 Refresh를 부른다.
-/// - 흰색 58% 유리 패널 위: PERFECT · GREAT · GOOD · MISS 개수 / FAST · SLOW 개수 / 맨 아래 RATE 박스(Img_RateBox) · SCORE 박스(Img_ScoreBox, 점수는 Canvas_InGame이 쓴다).
-/// - 판정 이름 색은 밝은 배경용 진한 판정 색(UITheme 메뉴 묶음 judgePerfect 등), 숫자는 기본 글자색.
+/// - 라벤더 불투명 패널(#F4F1F8, 11/19) 위: PERFECT · GREAT · GOOD · MISS 개수 / FAST · SLOW 개수 / 맨 아래 RATE 박스(Img_RateBox) · SCORE 박스(Img_ScoreBox, 점수는 Canvas_InGame이 쓴다).
+/// - 판정 이름은 넥슨 카트 고딕 ExtraBold, 색은 밝은 배경용 진한 판정 색(UITheme.GetMenuJudge, PERFECT는 금 → 분홍 가로 그라데이션), 숫자는 기본 글자색 NEXON Lv2.
 /// - 개수는 앞에 0을 채우지 않고 오른쪽 정렬, 자릿수가 바뀌어도 흔들리지 않게 고정폭 숫자(&lt;mspace&gt;)로 쓴다.
 /// - RATE는 플레이 중 정확도(ScoreCalculator.LiveAccuracy, 지금까지 판정한 수로 나눔)를 소수 둘째 자리까지 쓴다 (판정 전 0.00%).
 /// - 숫자는 TMP SetText(형식, 숫자)로 바꿔 GC 할당을 만들지 않는다.
@@ -50,14 +50,14 @@ public class Img_JudgePanel : MonoBehaviour
     public void Init(ScoreCalculator score)
     {
         UITheme theme = UITheme.Current;
-        SetTitle(perfectTitle, GameConstants.Play.PerfectText, theme.judgePerfect);
-        SetTitle(greatTitle, GameConstants.Play.GreatText, theme.judgeGreat);
-        SetTitle(goodTitle, GameConstants.Play.GoodText, theme.judgeGood);
-        SetTitle(missTitle, GameConstants.Play.MissText, theme.judgeMiss);
-        SetTitle(fastTitle, GameConstants.Play.FastText, theme.judgeFast);
-        SetTitle(slowTitle, GameConstants.Play.SlowText, theme.judgeSlow);
-        SetTitle(rateTitle, GameConstants.Play.RateTitleText, theme.textDescription);
-        SetTitle(scoreTitle, GameConstants.Play.ScoreTitleText, theme.textDescription);
+        SetTitle(perfectTitle, GameConstants.Play.PerfectText, theme.GetMenuJudge(JudgeType.Perfect));
+        SetTitle(greatTitle, GameConstants.Play.GreatText, theme.GetMenuJudge(JudgeType.Great));
+        SetTitle(goodTitle, GameConstants.Play.GoodText, theme.GetMenuJudge(JudgeType.Good));
+        SetTitle(missTitle, GameConstants.Play.MissText, theme.GetMenuJudge(JudgeType.Miss));
+        SetTitle(fastTitle, GameConstants.Play.FastText, JudgeColor.Solid(theme.judgeFast));
+        SetTitle(slowTitle, GameConstants.Play.SlowText, JudgeColor.Solid(theme.judgeSlow));
+        SetTitle(rateTitle, GameConstants.Play.RateTitleText, JudgeColor.Solid(theme.textDescription));
+        SetTitle(scoreTitle, GameConstants.Play.ScoreTitleText, JudgeColor.Solid(theme.textDescription));
 
         Refresh(score);
     }
@@ -79,10 +79,13 @@ public class Img_JudgePanel : MonoBehaviour
         slowCount.SetText(CountFormat, slow);
     }
 
-    private static void SetTitle(TMP_Text title, string text, Color color)
+    private static void SetTitle(TMP_Text title, string text, JudgeColor color)
     {
         if (title == null) return;
         title.text = text;
-        title.color = color;
+        UIThemePaint.JudgeText(title, color);
     }
+
+    /// <summary>판정 이름 라벨 (확인용: PERFECT · GREAT · GOOD · MISS · FAST · SLOW)</summary>
+    public TMP_Text[] JudgeTitles => new[] { perfectTitle, greatTitle, goodTitle, missTitle, fastTitle, slowTitle };
 }
