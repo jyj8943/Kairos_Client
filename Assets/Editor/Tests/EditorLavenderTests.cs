@@ -124,8 +124,8 @@ public class EditorLavenderTests
             new BpmSection(0, 150.61f), new BpmSection(GameConstants.Editor.TicksPerBeat * 16, 180f)
         };
         string add = Popup_BpmSection.FormatNeighbors(sections, GameConstants.Editor.TicksPerBeat * 4, false, Color.black);
-        Assert.AreEqual("이전 구간 <color=#000000>150.61</color> · 다음 구간 <color=#000000>180</color>", add, "추가: 앞 · 뒤 구간");
+        Assert.AreEqual("이전 구간 <color=#000000><b>150.61</b></color><space=18>다음 구간 <color=#000000><b>180</b></color>", add, "추가: 앞 · 뒤 구간");
         string edit = Popup_BpmSection.FormatNeighbors(sections, GameConstants.Editor.TicksPerBeat * 16, true, Color.black);
-        Assert.AreEqual("이전 구간 <color=#000000>150.61</color> · 다음 구간 없음", edit, "수정: 자기 구간 앞 · 뒤");
+        Assert.AreEqual("이전 구간 <color=#000000><b>150.61</b></color><space=18>다음 구간 <color=#000000><b>없음</b></color>", edit, "수정: 자기 구간 앞 · 뒤 (없으면 \"없음\"도 호박)");
     }
 }

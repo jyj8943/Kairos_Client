@@ -104,8 +104,11 @@ public class Canvas_Editor : UIBase
     [SerializeField] private GameObject shortNoteRing;
     [SerializeField] private GameObject longNoteRing;
     [SerializeField] private GameObject bpmSectionRing;
-    [Tooltip("BPM 구간 도구 ♩ 아이콘 (호박)")]
+    [Tooltip("BPM 구간 도구 ♩ 아이콘 글자 (호박 둥근 사각 위 흰 글자)")]
     [SerializeField] private TMP_Text bpmSectionIcon;
+    [Tooltip("숏노트 · 롱노트 도구 아이콘 막대 (고르면 하늘, 아니면 흐린 회색)")]
+    [SerializeField] private Image shortNoteIcon;
+    [SerializeField] private Image longNoteIcon;
     [Tooltip("고른 도구 사용법 한 줄 (Txt_ToolHint, 13, textMuted)")]
     [SerializeField] private TMP_Text toolHintText;
 
@@ -117,8 +120,6 @@ public class Canvas_Editor : UIBase
     [Tooltip("지금 테스트 플레이 배속 (Txt_Speed)")]
     [SerializeField] private TMP_Text speedText;
     [SerializeField] private TMP_Text speedTitleText;
-    [Tooltip("배속 아래 안내 (Txt_SpeedHint)")]
-    [SerializeField] private TMP_Text speedHintText;
 
     [Header("오른쪽 패널")]
     [SerializeField] private TMP_Text snapTitleText;
@@ -424,10 +425,10 @@ public class Canvas_Editor : UIBase
         if (autoTestShadow != null) autoTestShadow.color = UITheme.WithAlpha(theme.editorAutoTest, theme.editorButtonShadowAlpha);
         if (testPlayShadow != null) testPlayShadow.color = UITheme.WithAlpha(theme.accent, theme.editorButtonShadowAlpha);
 
-        SetText(notesTitleText, GameConstants.Editor.NotesTitle);
+        SetText(notesTitleText, SectionLabel(GameConstants.Editor.NotesTitle, GameConstants.Editor.NotesTitleEn));
         SetText(notesCardLabel, GameConstants.Editor.NotesCardLabel);
         SetText(longNotesCardLabel, GameConstants.Editor.LongNotesCardLabel);
-        SetText(toolsTitleText, GameConstants.Editor.ToolsTitle);
+        SetText(toolsTitleText, SectionLabel(GameConstants.Editor.ToolsTitle, GameConstants.Editor.ToolsTitleEn));
         SetText(shortNoteLabel, GameConstants.Editor.ToolShortNoteName);
         SetText(longNoteLabel, GameConstants.Editor.ToolLongNoteName);
         SetText(bpmSectionLabel, GameConstants.Editor.ToolBpmSectionName);
@@ -437,19 +438,18 @@ public class Canvas_Editor : UIBase
         if (bpmSectionIcon != null)
         {
             bpmSectionIcon.text = GameConstants.Editor.BpmSectionIcon;
-            bpmSectionIcon.color = theme.editorAmber;
+            bpmSectionIcon.color = theme.onAccentText;
         }
         if (toolHintText != null) toolHintText.color = theme.textMuted;
-        SetText(speedTitleText, GameConstants.Editor.SpeedTitle);
-        SetText(speedHintText, GameConstants.Editor.SpeedHint);
+        SetText(speedTitleText, SectionLabel(GameConstants.Editor.SpeedTitle, GameConstants.Editor.SpeedTitleEn));
 
-        SetText(snapTitleText, GameConstants.Editor.SnapTitle);
-        SetText(zoomTitleText, GameConstants.Editor.ZoomTitle);
+        SetText(snapTitleText, SectionLabel(GameConstants.Editor.SnapTitle, GameConstants.Editor.SnapTitleEn));
+        SetText(zoomTitleText, SectionLabel(GameConstants.Editor.ZoomTitle, GameConstants.Editor.ZoomTitleEn));
         SetText(zoomKeyText, KeyGuideBar.GetKeyText(zoomModifierAction != null ? zoomModifierAction.action : null, "Ctrl"));
         SetText(zoomWheelKeyText, GameConstants.Editor.KeyWheel);
-        SetText(currentBpmTitleText, GameConstants.Editor.CurrentBpmTitle);
+        SetText(currentBpmTitleText, SectionLabel(GameConstants.Editor.CurrentBpmTitle, GameConstants.Editor.CurrentBpmTitleEn));
         if (currentBpmBar != null) currentBpmBar.color = theme.editorAmber;
-        SetText(bpmSectionsTitleText, GameConstants.Editor.BpmSectionsTitle);
+
         if (timeTotalText != null) timeTotalText.color = theme.textDescription;
         shownTimeMeasure = -1;
         shownSongLength = -1f;
@@ -460,6 +460,12 @@ public class Canvas_Editor : UIBase
     private static void SetText(TMP_Text text, string value)
     {
         if (text != null) text.text = value;
+    }
+
+    /// <summary>묶음 제목 "굵은 한글 + 작은 회색 보조 글자" (보조 글자 색은 UITheme.textMuted)</summary>
+    public static string SectionLabel(string title, string sub)
+    {
+        return string.Format(GameConstants.Editor.SectionLabelFormat, title, sub, ColorUtility.ToHtmlStringRGB(UITheme.Current.textMuted));
     }
 
     /// <summary>
@@ -503,6 +509,8 @@ public class Canvas_Editor : UIBase
     {
         bpmSectionList.SetSections(session.BpmSections);
         RefreshResetBpmButton();
+        SetText(bpmSectionsTitleText, SectionLabel(GameConstants.Editor.BpmSectionsTitle,
+            string.Format(GameConstants.Editor.BpmSectionsCountFormat, session.BpmSections.Count)));
         RefreshTimelineMarkers();
         shownSectionIndex = -1;
         RefreshTimeline();
@@ -719,6 +727,9 @@ public class Canvas_Editor : UIBase
         PaintTool(shortNoteToggle, shortNoteLabel, shortNoteRing, theme);
         PaintTool(longNoteToggle, longNoteLabel, longNoteRing, theme);
         PaintTool(bpmSectionToggle, bpmSectionLabel, bpmSectionRing, theme);
+        // 막대 아이콘: 고른 도구면 하늘, 아니면 흐린 회색 (BPM 구간 ♩는 늘 호박 사각)
+        if (shortNoteIcon != null) shortNoteIcon.color = shortNoteToggle != null && shortNoteToggle.isOn ? theme.accent : theme.textMuted;
+        if (longNoteIcon != null) longNoteIcon.color = longNoteToggle != null && longNoteToggle.isOn ? theme.accent : theme.textMuted;
 
         if (toolHintText != null)
         {
@@ -773,12 +784,12 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 곡 기본 BPM으로 되돌리기 버튼: 되돌릴 것이 있으면(곡 기본 BPM 1개 상태가 아니면) 빨간 글자 + 빨간 50% 테두리로 켜고, 아니면 회색으로 끈다.
+    /// 곡 기본 BPM으로 되돌리기 버튼: 구간이 2개 이상이면 빨간 글자 + 빨간 50% 테두리로 켜고, 하나뿐이면 회색으로 끈다 (11/19 와이어프레임).
     /// </summary>
     private void RefreshResetBpmButton()
     {
         UITheme theme = UITheme.Current;
-        bool on = !session.IsSongDefaultBpm;
+        bool on = session.BpmSections.Count >= 2;
         resetBpmButton.interactable = on;
         if (resetBpmButton.targetGraphic != null) resetBpmButton.targetGraphic.color = theme.toolNormalBackground;
         if (resetBpmLabel != null) resetBpmLabel.color = on ? theme.danger : theme.textMuted;

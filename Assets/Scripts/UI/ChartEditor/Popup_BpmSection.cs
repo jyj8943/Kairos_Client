@@ -42,6 +42,8 @@ public class Popup_BpmSection : UIPopup
     [SerializeField] private Image titleLine;
 
     [Header("위치 · 입력")]
+    [Tooltip("위치 카드 왼쪽 이름 \"위치\" (Img_PositionCard/Txt_PositionLabel)")]
+    [SerializeField] private TMP_Text positionLabelText;
     [SerializeField] private TMP_Text positionText;
     [Tooltip("위치 줄 오른쪽 시간 (Txt_PositionTime)")]
     [SerializeField] private TMP_Text positionTimeText;
@@ -61,9 +63,14 @@ public class Popup_BpmSection : UIPopup
     [Header("⑨ 안내 자리")]
     [Tooltip("안내 박스 바탕 (Img_Notice). 평소에는 투명")]
     [SerializeField] private Image noticeBox;
-    [Tooltip("안내 박스 왼쪽 ! (Txt_NoticeMark). 평소에는 숨김")]
+    [Tooltip("안내 박스 왼쪽 ! 원 (Img_NoticeIcon, 경고 호박 · 오류 빨강). 평소에는 숨김")]
+    [SerializeField] private Image noticeIcon;
+    [Tooltip("원 안 흰 ! (Img_NoticeIcon/Txt_NoticeMark)")]
     [SerializeField] private TMP_Text noticeMarkText;
     [SerializeField] private TMP_Text noticeText;
+    [Tooltip("안내 글자 글꼴: 경고 · 오류는 굵게, 평소는 보통")]
+    [SerializeField] private TMP_FontAsset noticeBoldFont;
+    [SerializeField] private TMP_FontAsset noticeRegularFont;
 
     [Header("버튼 · 키 안내")]
     [SerializeField] private Button cancelButton;
@@ -150,7 +157,8 @@ public class Popup_BpmSection : UIPopup
             titleEnText.color = theme.editorAmber;
         }
         if (titleLine != null) titleLine.color = theme.editorAmber;
-        if (rangeHintText != null) rangeHintText.text = GameConstants.Editor.BpmSectionRangeHint;
+        if (rangeHintText != null) rangeHintText.text = Canvas_Editor.SectionLabel(GameConstants.Editor.BpmSectionInputLabel, GameConstants.Editor.BpmSectionRangeHint);
+        if (positionLabelText != null) positionLabelText.text = GameConstants.Editor.BpmSectionPositionLabel;
         if (unitText != null) unitText.text = GameConstants.Editor.BpmSectionUnit;
         if (inputRing != null) inputRing.color = UITheme.WithAlpha(theme.accent, theme.selectedAlpha);
         if (cancelLabel != null) cancelLabel.text = GameConstants.Editor.BpmSectionCancel;
@@ -216,8 +224,8 @@ public class Popup_BpmSection : UIPopup
         int previous = isEditMode ? own - 1 : own;
         int next = own + 1;
         string hex = ColorUtility.ToHtmlStringRGB(valueColor);
-        string prevText = previous >= 0 && previous < sections.Count ? $"<color=#{hex}>{SongData.FormatBpm(sections[previous].Bpm)}</color>" : GameConstants.Editor.BpmSectionNeighborNone;
-        string nextText = next >= 0 && next < sections.Count ? $"<color=#{hex}>{SongData.FormatBpm(sections[next].Bpm)}</color>" : GameConstants.Editor.BpmSectionNeighborNone;
+        string prevText = $"<color=#{hex}><b>{(previous >= 0 && previous < sections.Count ? SongData.FormatBpm(sections[previous].Bpm) : GameConstants.Editor.BpmSectionNeighborNone)}</b></color>";
+        string nextText = $"<color=#{hex}><b>{(next >= 0 && next < sections.Count ? SongData.FormatBpm(sections[next].Bpm) : GameConstants.Editor.BpmSectionNeighborNone)}</b></color>";
         return string.Format(GameConstants.Editor.BpmSectionNeighborFormat, prevText, nextText);
     }
 
@@ -279,11 +287,20 @@ public class Popup_BpmSection : UIPopup
                 noticeText.color = theme.textMuted;
                 break;
         }
-        if (noticeMarkText != null)
+        if (noticeIcon != null)
         {
-            noticeMarkText.gameObject.SetActive(kind != NoticeKind.Normal);
-            noticeMarkText.color = noticeText.color;
+            noticeIcon.gameObject.SetActive(kind != NoticeKind.Normal);
+            noticeIcon.color = noticeText.color;
         }
+        if (noticeMarkText != null) noticeMarkText.color = theme.onAccentText;
+        TMP_FontAsset font = kind == NoticeKind.Normal ? noticeRegularFont : noticeBoldFont;
+        if (font != null && noticeText.font != font)
+        {
+            noticeText.font = font;
+            noticeText.fontSharedMaterial = font.material;
+        }
+        // 평소에는 박스 없이 글자만 왼쪽 여백 16, 경고 · 오류는 ! 원 오른쪽에서 시작
+        noticeText.margin = new Vector4(kind == NoticeKind.Normal ? 16f : 48f, 0f, 16f, 0f);
     }
 
     /// <summary>오른쪽 버튼: 올바르면 하늘 채움 + 흰 글자, 오류면 회색으로 꺼짐</summary>

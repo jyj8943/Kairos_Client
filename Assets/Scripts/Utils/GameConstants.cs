@@ -859,7 +859,7 @@ public static class GameConstants
         public const string ScreenTitleEn = "EDITOR";
 
         /// <summary>상단 바 곡 정보 둘째 줄 레벨: {0} 레벨</summary>
-        public const string LevelFormat = "Lv.{0}";
+        public const string LevelFormat = "Lv. {0}";
 
         /// <summary>타임라인 정보 뒤쪽 (현재 시간은 Bold 따로): {0} 곡 길이, {1} 마디 번호</summary>
         public const string TimeTotalFormat = "/ {0} · 마디 {1}";
@@ -941,10 +941,15 @@ public static class GameConstants
         /// <summary>키 안내 줄에서 재생 항목 id (재생 중이면 "멈춤"으로 바꾼다)</summary>
         public const string GuidePlayId = "play";
 
-        /// <summary>왼쪽 패널 묶음 제목 (한글 + 작은 영문)</summary>
-        public const string NotesTitle = "노트 수 <size=72%>NOTES</size>";
-        public const string ToolsTitle = "도구 <size=72%>TOOLS</size>";
-        public const string SpeedTitle = "테스트 플레이 배속 <size=72%>SPEED</size>";
+        /// <summary>묶음 제목: {0} 굵은 한글, {1} 작은 회색 보조 글자, {2} 보조 글자 색 (UITheme.textMuted 16진수). 와이어프레임 「박자 스냅 SNAP」 형식</summary>
+        public const string SectionLabelFormat = "{0} <size=72%><color=#{2}><cspace=0.12em>{1}</cspace></color></size>";
+        /// <summary>왼쪽 패널 묶음 제목 (한글 / 작은 영문)</summary>
+        public const string NotesTitle = "노트 수";
+        public const string NotesTitleEn = "NOTES";
+        public const string ToolsTitle = "도구";
+        public const string ToolsTitleEn = "TOOLS";
+        public const string SpeedTitle = "테스트 플레이 배속";
+        public const string SpeedTitleEn = "SPEED";
         /// <summary>노트 수 카드 이름</summary>
         public const string NotesCardLabel = "노트";
         public const string LongNotesCardLabel = "롱노트";
@@ -952,18 +957,21 @@ public static class GameConstants
         public const string ToolShortNoteName = "숏노트";
         public const string ToolLongNoteName = "롱노트";
         public const string ToolBpmSectionName = "BPM 구간";
-        /// <summary>고른 도구 사용법 한 줄</summary>
-        public const string ToolShortNoteHint = "클릭: 숏노트 놓기 · 우클릭: 지우기";
-        public const string ToolLongNoteHint = "드래그: 롱노트 놓기 · 우클릭: 지우기";
-        public const string ToolBpmSectionHint = "가로선 클릭: 구간 추가 · 구간선 우클릭: 지우기";
-        /// <summary>테스트 플레이 배속 아래 안내</summary>
-        public const string SpeedHint = "처음 x1.0 · 마지막으로 쓴 값을 기억해요";
+        /// <summary>고른 도구 사용법 (숏노트 · 롱노트는 같은 문구)</summary>
+        public const string ToolShortNoteHint = "클릭으로 놓고, 오른쪽 클릭으로 지워요.";
+        public const string ToolLongNoteHint = "클릭으로 놓고, 오른쪽 클릭으로 지워요.";
+        public const string ToolBpmSectionHint = "가로선 왼쪽을 클릭하면 BPM 입력 창이 열려요. 구간선 오른쪽 클릭은 삭제예요.";
 
         /// <summary>오른쪽 패널 묶음 제목</summary>
-        public const string SnapTitle = "박자 스냅 <size=72%>SNAP</size>";
-        public const string ZoomTitle = "그리드 높이 <size=72%>ZOOM</size>";
-        public const string CurrentBpmTitle = "BPM <size=72%>현재 위치</size>";
+        public const string SnapTitle = "박자 스냅";
+        public const string SnapTitleEn = "SNAP";
+        public const string ZoomTitle = "그리드 높이";
+        public const string ZoomTitleEn = "ZOOM";
+        public const string CurrentBpmTitle = "BPM";
+        public const string CurrentBpmTitleEn = "현재 위치";
         public const string BpmSectionsTitle = "BPM 구간";
+        /// <summary>BPM 구간 제목 옆 개수: {0} 구간 수</summary>
+        public const string BpmSectionsCountFormat = "{0}개";
         /// <summary>그리드 높이 값: {0} 배율 (키 안내는 오른쪽 키 칩)</summary>
         public const string GridHeightFormat = "x{0}";
 
@@ -1015,7 +1023,7 @@ public static class GameConstants
         public const string BpmSectionRangeToEndFormat = "{0} ~ 곡 끝";
 
         /// <summary>뒤 노트 경고: {0} 노트 수 (안내 박스 왼쪽 ! 표시와 함께, 11/19)</summary>
-        public const string BpmSectionNotesWarningFormat = "이 뒤 노트 {0}개는 마디·박 위치 그대로, 시간이 바뀝니다 (Ctrl+Z로 되돌릴 수 있음)";
+        public const string BpmSectionNotesWarningFormat = "이 뒤 노트 {0}개는 마디 · 박 위치 그대로, 시간이 바뀝니다.";
 
         /// <summary>BPM 구간 입력 창 글자 (11/19 라벤더 톤: 추가 / 수정 모드로 제목·버튼이 바뀐다)</summary>
         public const string BpmSectionPopupTitleAdd = "BPM 구간 추가";
@@ -1034,7 +1042,11 @@ public static class GameConstants
         /// <summary>안내 박스 왼쪽 표시</summary>
         public const string BpmSectionNoticeMark = "!";
         /// <summary>이전 · 다음 구간 BPM: {0} 이전, {1} 다음 (값은 화면에서 호박색으로 감싼다). 없으면 NoneLabel</summary>
-        public const string BpmSectionNeighborFormat = "이전 구간 {0} · 다음 구간 {1}";
+        public const string BpmSectionNeighborFormat = "이전 구간 {0}<space=18>다음 구간 {1}";
+        /// <summary>위치 카드 왼쪽 이름</summary>
+        public const string BpmSectionPositionLabel = "위치";
+        /// <summary>입력칸 위 이름 (옆에 작은 회색 범위 안내 BpmSectionRangeHint)</summary>
+        public const string BpmSectionInputLabel = "BPM";
         public const string BpmSectionNeighborNone = "없음";
 
         /// <summary>오른쪽 패널 현재 위치 BPM 오른쪽 다음 구간: {0} BPM</summary>

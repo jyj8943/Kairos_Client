@@ -149,6 +149,111 @@ public class EditorLavenderPlayTests
         Debug.Log("[EditorLavenderPlayTest] L2: 저장 안 됨 숨김 → 보임 → 숨김, 입력 창 평소 / 노트 경고 / 같은 BPM 오류 / 범위 밖 오류 확인");
     }
 
+    /// <summary>
+    /// L3: 와이어프레임 맞춤 (11/19) — 바뀐 오브젝트가 Canvas 안, 글자 넘침 없음, 제목 한 줄. 표는 로그로 남긴다.
+    /// BPM 구간 2개(곡 시작 + 마디 2 · 3박 180) 상태로 열고, 입력 창 4가지 상태의 보이는 오브젝트 · 버튼 상태도 확인한다.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator L3_WireframeLayout_AndPopupStates()
+    {
+        yield return OpenEditor("새 채보 6");
+        Assert.IsTrue(session.AddBpmSection(6 * T, 180f, out _));
+        Assert.IsTrue(session.AddNote(0, 8 * T));
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+
+        RectTransform root = (RectTransform)canvas.transform;
+        var log = new System.Text.StringBuilder("[EditorLavenderPlayTest] L3 배치 (Canvas " + root.rect.size + ")\n");
+        string[] paths =
+        {
+            "TopBar/TitleRow", "TopBar/TitleRow/Txt_Title", "TopBar/TitleRow/Txt_TitleEn", "TopBar/Img_TitleLine", "TopBar/Img_TopDivider", "TopBar/Img_AlbumMask",
+            "TopBar/Txt_SongTitle", "TopBar/ChartRow", "TopBar/Btn_Save", "TopBar/Btn_AutoTestPlay", "TopBar/Btn_TestPlay", "TopBar/Btn_Exit",
+            "LeftTools/NoteCards", "LeftTools/Toggle_ShortNote", "LeftTools/Toggle_BpmSection", "LeftTools/Txt_ToolHint", "LeftTools/TestPlaySpeed",
+            "RightPanel/Bpm/Txt_CurrentBpmTitle", "RightPanel/Bpm/Img_CurrentBpmBox", "RightPanel/Bpm/Img_CurrentBpmBox/Txt_NextBpm",
+            "RightPanel/BpmSections/Txt_BpmSectionsTitle", "RightPanel/BpmSections/ScrollView_BpmSections", "RightPanel/Btn_ResetBpm",
+            "RightPanel/Toggle_Metronome", "RightPanel/Toggle_KeySound", "GridArea/Txt_CurrentLineArrow", "BottomTimeline/Slider_Timeline",
+            "BottomTimeline/Txt_TimeInfo", "BottomTimeline/Txt_TimeTotal", "KeyGuideBar"
+        };
+        Vector3[] rc = new Vector3[4];
+        root.GetWorldCorners(rc);
+        foreach (string p in paths)
+        {
+            RectTransform rt = (RectTransform)canvas.transform.Find(p);
+            Assert.IsNotNull(rt, p);
+            log.AppendLine(Describe(root, rt));
+            Vector3[] c = new Vector3[4];
+            rt.GetWorldCorners(c);
+            Assert.IsTrue(c[0].x >= rc[0].x - 0.5f && c[2].x <= rc[2].x + 0.5f && c[0].y >= rc[0].y - 0.5f && c[2].y <= rc[2].y + 0.5f, p + " Canvas 안");
+            TMPro.TMP_Text t = rt.GetComponent<TMPro.TMP_Text>();
+            if (t != null)
+            {
+                t.ForceMeshUpdate();
+                Assert.IsFalse(t.isTextOverflowing, p + " 글자 넘침");
+            }
+        }
+        TMPro.TMP_Text title = canvas.transform.Find("TopBar/TitleRow/Txt_Title").GetComponent<TMPro.TMP_Text>();
+        TMPro.TMP_Text titleEn = canvas.transform.Find("TopBar/TitleRow/Txt_TitleEn").GetComponent<TMPro.TMP_Text>();
+        Assert.AreEqual(1, title.textInfo.lineCount, "에디터 제목 한 줄");
+        Assert.AreEqual(1, titleEn.textInfo.lineCount, "EDITOR 한 줄");
+        Assert.Less(title.rectTransform.position.x, titleEn.rectTransform.position.x, "EDITOR는 제목 오른쪽 (가로 배치)");
+        Assert.IsNull(canvas.transform.Find("LeftTools/Txt_SpeedHint"), "배속 안내 문구 삭제");
+        Assert.IsNull(canvas.transform.Find("TopBar/Img_AutoTestShadow"), "자동 테스트 뒤 판 삭제");
+        Assert.IsNull(canvas.transform.Find("TopBar/Img_TestPlayShadow"), "테스트 플레이 뒤 판 삭제");
+        StringAssert.Contains("2개", Get<TMPro.TMP_Text>(canvas, "bpmSectionsTitleText").text, "BPM 구간 개수");
+        Assert.IsTrue(Get<Button>(canvas, "resetBpmButton").interactable, "구간 2개 → 되돌리기 켜짐");
+        log.AppendLine("제목 lineCount " + title.textInfo.lineCount + " / " + titleEn.textInfo.lineCount + ", 구간 제목 '" + Get<TMPro.TMP_Text>(canvas, "bpmSectionsTitleText").text + "'");
+
+        // 입력 창 4가지 상태
+        Popup_BpmSection popup = canvas.BpmSectionPopup;
+        Transform panel = popup.transform.Find("Img_Panel");
+        TMPro.TMP_Text popupTitle = panel.Find("TitleRow/Txt_Title").GetComponent<TMPro.TMP_Text>();
+        int total = session.Data.TotalTicks;
+        (string name, int tick, int notesAfter, string input, Popup_BpmSection.NoticeKind kind, bool confirm)[] cases =
+        {
+            ("추가", 10 * T, 0, "200", Popup_BpmSection.NoticeKind.Normal, true),
+            ("수정+경고", 6 * T, 12, "200", Popup_BpmSection.NoticeKind.NotesWarning, true),
+            ("같은 BPM 오류", 4 * T, 0, SongData.FormatBpm(session.Bpm), Popup_BpmSection.NoticeKind.Error, false),
+            ("범위 밖 오류", 4 * T, 0, "520", Popup_BpmSection.NoticeKind.Error, false)
+        };
+        foreach (var c in cases)
+        {
+            Assert.IsTrue(popup.Show(session.BpmSections, session.Timing, c.tick, total, c.notesAfter, (t, b) => { }), c.name + " 열림");
+            popup.BpmInput.text = c.input;
+            Canvas.ForceUpdateCanvases();
+            popupTitle.ForceMeshUpdate();
+            Assert.AreEqual(c.kind, popup.Notice, c.name);
+            Assert.AreEqual(c.confirm, popup.ConfirmButton.interactable, c.name + " 확인 버튼");
+            Assert.AreEqual(1, popupTitle.textInfo.lineCount, c.name + " 제목 한 줄");
+            bool iconOn = panel.Find("Img_Notice/Img_NoticeIcon").gameObject.activeInHierarchy;
+            Assert.AreEqual(c.kind != Popup_BpmSection.NoticeKind.Normal, iconOn, c.name + " ! 아이콘");
+            popup.NoticeText.ForceMeshUpdate();
+            Assert.IsFalse(popup.NoticeText.isTextOverflowing, c.name + " 안내 글자 넘침");
+            log.AppendLine($"팝업 {c.name}: 제목 '{popup.TitleLabel}' · 버튼 '{popup.ConfirmLabel}' {(popup.ConfirmButton.interactable ? "켜짐" : "꺼짐")} · 안내 {popup.Notice} '{popup.NoticeText.text}' · ! {(iconOn ? "보임" : "숨김")} · 박스 알파 {popup.NoticeBox.color.a:0.00} · 입력 테두리 #{ColorUtility.ToHtmlStringRGB(popup.InputFrame.color)} · 이웃 '{popup.NeighborLabel}'");
+            if (c.name == "추가")
+            {
+                foreach (string p in new[] { "TitleRow", "Img_TitleLine", "Img_PositionCard", "Txt_RangeHint", "Input_BpmSectionValue", "Txt_Neighbor", "Img_Notice", "Btn_Cancel", "Btn_Confirm", "KeyGuideBar" })
+                    log.AppendLine("  " + Describe(root, (RectTransform)panel.Find(p)));
+                log.AppendLine("  " + Describe(root, (RectTransform)panel));
+            }
+            popup.OnCancelRequested();
+            yield return new WaitUntilOrTimeout(() => !popup.IsOpen, 3f);
+            yield return null;
+        }
+        Debug.Log(log.ToString());
+    }
+
+    /// <summary>"이름 x a~b y c~d (w×h)" (1920×1080 화면 좌표, 위에서 아래)</summary>
+    private static string Describe(RectTransform root, RectTransform rt)
+    {
+        Vector3[] c = new Vector3[4];
+        rt.GetWorldCorners(c);
+        Vector3 tl = root.InverseTransformPoint(c[1]);
+        Vector3 br = root.InverseTransformPoint(c[3]);
+        float x0 = tl.x + root.rect.width / 2f, y0 = root.rect.height / 2f - tl.y, x1 = br.x + root.rect.width / 2f, y1 = root.rect.height / 2f - br.y;
+        TMPro.TMP_Text t = rt.GetComponent<TMPro.TMP_Text>();
+        return $"{rt.name}: x {x0:0}~{x1:0} y {y0:0}~{y1:0} ({x1 - x0:0}×{y1 - y0:0})" + (t != null ? $" 넘침={t.isTextOverflowing} 줄={t.textInfo.lineCount}" : "");
+    }
+
     private static IEnumerator WaitManagers()
     {
         float deadline = TestSpeed.Deadline(20f);
