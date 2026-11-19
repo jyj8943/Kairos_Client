@@ -702,6 +702,83 @@ public static class GameConstants
     }
 
     /// <summary>곡 선택 화면 표시 문구·값 (기획서 3-3 곡 선택 화면 개편 11/17 · 나만의 채보 탭 11/18 개정 · 3-7 ④ 새 채보 팝업). 색은 여기 두지 않고 UITheme(메뉴 화면 톤)에 둔다</summary>
+    /// <summary>TIP 한 줄 (분류 · 문구)</summary>
+    public readonly struct LoadingTip
+    {
+        public readonly string Category;
+        public readonly string Text;
+
+        public LoadingTip(string category, string text)
+        {
+            Category = category;
+            Text = text;
+        }
+    }
+
+    /// <summary>일반 로딩 오버레이 (기획서 3-10 「일반 로딩」, Canvas_Loading)</summary>
+    public static class Loading
+    {
+        /// <summary>최소 표시 시간 (초, 들어오기 0초부터)</summary>
+        public const float MinSeconds = 1.5f;
+
+        /// <summary>들어오기 연출 길이 (초). 끝나면 화면을 다 덮고, 이 뒤에 지금 씬을 떠나고 다음 씬을 불러온다</summary>
+        public const float InSeconds = 0.5f;
+
+        /// <summary>나가기 연출 길이 (초). 끝나면 다음 씬 OnEnter</summary>
+        public const float OutSeconds = 0.5f;
+
+        // 들어오기 · 나가기 「일러스트 먼저」 (초, 각 0.5초 안)
+        /// <summary>들어오기: 일러스트 · 화면 이름 알파 0 → 1 (0 ~ 0.3, easeInOutCubic)</summary>
+        public const float InFrontStart = 0f;
+        public const float InFrontDuration = 0.3f;
+        /// <summary>들어오기: 띠 y 1080 → 864 (0.2 ~ 0.5, easeOutCubic)</summary>
+        public const float InBandStart = 0.2f;
+        public const float InBandDuration = 0.3f;
+        /// <summary>나가기: 띠 y 864 → 1080 (0 ~ 0.3, easeInCubic). 일러스트는 그대로</summary>
+        public const float OutBandStart = 0f;
+        public const float OutBandDuration = 0.3f;
+        /// <summary>나가기: 일러스트 · 화면 이름 알파 1 → 0 (0.15 ~ 0.5, easeInOutCubic)</summary>
+        public const float OutFrontStart = 0.15f;
+        public const float OutFrontDuration = 0.35f;
+
+        /// <summary>정렬 순서 (Canvas_Overlay 팝업 100 · 곡 로딩 200보다 위)</summary>
+        public const int SortOrder = 210;
+
+        /// <summary>로딩 일러스트 폴더 (Resources 안). 이 폴더의 스프라이트를 모두 읽어 무작위로 고른다</summary>
+        public const string IllustFolder = "Images/Loading";
+
+        /// <summary>점 하나가 켜지는 간격 (초). 3개 뒤 처음부터</summary>
+        public const float DotStepSeconds = 0.33f;
+
+        /// <summary>꺼진 점 알파</summary>
+        public const float DotOffAlpha = 0.25f;
+
+        public const string ScreenName = "LOADING";
+        public const string NowLoading = "NOW LOADING";
+        public const string TipBadge = "TIP";
+
+        public const string ToSongSelect = "곡 선택으로 이동";
+        public const string ToEditor = "에디터로 이동";
+        public const string ToTitle = "타이틀로 이동";
+        public const string ToTestPlay = "테스트 플레이로 이동";
+
+        public const string CategoryControl = "조작 · CONTROL";
+        public const string CategoryJudge = "판정 · JUDGE";
+        public const string CategoryEditor = "에디터 · EDITOR";
+
+        /// <summary>TIP 목록 (게임 플레이 관련만, 키는 InputSystem_Actions 바인딩 기준)</summary>
+        public static readonly LoadingTip[] Tips =
+        {
+            new LoadingTip(CategoryControl, "곡 선택과 플레이 중에 1 · 2 키로 배속을 바꿀 수 있어요."),
+            new LoadingTip(CategoryControl, "플레이 중 PgUp · PgDn으로 배경 밝기를 조절할 수 있어요."),
+            new LoadingTip(CategoryControl, "곡 선택에서 Tab으로 공식 채보와 나만의 채보를 오갈 수 있어요."),
+            new LoadingTip(CategoryJudge, "MISS 없이 끝내면 FULL COMBO, 모두 PERFECT면 ALL PERFECT예요."),
+            new LoadingTip(CategoryEditor, "에디터에서 Ctrl+Z로 되돌리고, Ctrl+Y로 다시 할 수 있어요."),
+            new LoadingTip(CategoryEditor, "에디터에서 Space로 재생하고 멈출 수 있어요."),
+            new LoadingTip(CategoryEditor, "나만의 채보 탭에서 채보를 고르고 E를 누르면 바로 편집할 수 있어요.")
+        };
+    }
+
     /// <summary>곡 로딩 오버레이 (기획서 3-9 「곡 로딩」, Canvas_SongLoading)</summary>
     public static class SongLoading
     {

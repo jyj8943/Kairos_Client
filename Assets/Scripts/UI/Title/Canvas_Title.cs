@@ -140,7 +140,7 @@ public class Canvas_Title : UIBase
     /// </summary>
     private void OnClickPlay()
     {
-        if (GameManager.Scene.Load(GameConstants.Scenes.SongSelect, new SongSelectEntryData { chartType = ChartType.Official }))
+        if (GameManager.Scene.LoadWithLoading(GameConstants.Scenes.SongSelect, new SongSelectEntryData { chartType = ChartType.Official }))
             SetMenuInteractable(false);
     }
 
@@ -157,7 +157,7 @@ public class Canvas_Title : UIBase
     /// </summary>
     private void OnClickEditor()
     {
-        if (GameManager.Scene.Load(GameConstants.Scenes.SongSelect, new SongSelectEntryData { chartType = ChartType.Custom }))
+        if (GameManager.Scene.LoadWithLoading(GameConstants.Scenes.SongSelect, new SongSelectEntryData { chartType = ChartType.Custom }))
             SetMenuInteractable(false);
     }
 

@@ -93,27 +93,16 @@ public static class SongLoadingTimeline
         return f;
     }
 
-    private static float Progress(float t, float start, float duration)
-    {
-        if (t <= start) return 0f;
-        if (duration <= 0f) return 1f;
-        return Mathf.Clamp01((t - start) / duration);
-    }
+    private static float Progress(float t, float start, float duration) => UIEasing.Progress(t, start, duration);
 
-    public static float EaseOutCubic(float x) { float y = 1f - x; return 1f - y * y * y; }
+    public static float EaseOutCubic(float x) => UIEasing.OutCubic(x);
 
-    public static float EaseInCubic(float x) => x * x * x;
+    public static float EaseInCubic(float x) => UIEasing.InCubic(x);
 
-    public static float EaseInOutCubic(float x) => x < 0.5f ? 4f * x * x * x : 1f - Mathf.Pow(-2f * x + 2f, 3f) / 2f;
+    public static float EaseInOutCubic(float x) => UIEasing.InOutCubic(x);
 
     /// <summary>easeOutBack (튀어 오름 1.70158)</summary>
-    public static float EaseOutBack(float x)
-    {
-        const float c1 = 1.70158f;
-        const float c3 = c1 + 1f;
-        float y = x - 1f;
-        return 1f + c3 * y * y * y + c1 * y * y;
-    }
+    public static float EaseOutBack(float x) => UIEasing.OutBack(x);
 }
 
 /// <summary>곡 로딩 카드에 그릴 값 (SongLoadingInfo.Build 결과)</summary>

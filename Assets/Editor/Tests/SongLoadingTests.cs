@@ -112,21 +112,21 @@ public class SongLoadingTests
     [Test]
     public void Launcher_UsesSongLoadingOnlyForNormalPlay()
     {
-        bool saved = InGameLauncher.SkipSongLoadingForTests;
+        bool saved = GameSceneManager.SkipLoadingOverlayForTests;
         try
         {
-            InGameLauncher.SkipSongLoadingForTests = false;
+            GameSceneManager.SkipLoadingOverlayForTests = false;
             InGameEntryData normal = InGameLauncher.CreateNormalEntry(TestCharts.OfficialSongId, TestCharts.OfficialChartId, ChartType.Official, 1f);
             Assert.IsTrue(InGameLauncher.UsesSongLoading(normal), "곡 선택 시작 · 결과 다시 하기 (일반 플레이) → 곡 로딩");
             InGameEntryData testPlay = new InGameEntryData { songId = TestCharts.OfficialSongId, mode = InGameMode.TestPlay, testPlay = new TestPlayData() };
             Assert.IsFalse(InGameLauncher.UsesSongLoading(testPlay), "테스트 플레이 → 바로");
             Assert.IsFalse(InGameLauncher.UsesSongLoading(null));
-            InGameLauncher.SkipSongLoadingForTests = true;
+            GameSceneManager.SkipLoadingOverlayForTests = true;
             Assert.IsFalse(InGameLauncher.UsesSongLoading(normal), "테스트 실행 중 건너뛰기");
         }
         finally
         {
-            InGameLauncher.SkipSongLoadingForTests = saved;
+            GameSceneManager.SkipLoadingOverlayForTests = saved;
         }
     }
 }

@@ -105,7 +105,7 @@ public class Canvas_SongTuning : MonoBehaviour
     private void OnToggle(InputAction.CallbackContext context)
     {
         // 팝업이 열려 있으면 F1을 받지 않는다
-        if (UIManager.HasInstance && GameManager.UI.HasOpenPopup) return;
+        if (UIManager.HasInstance && GameManager.UI.IsShortcutBlocked) return;
 
         panel.SetActive(!panel.activeSelf);
         if (panel.activeSelf) Refresh();

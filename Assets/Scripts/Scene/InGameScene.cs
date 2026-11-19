@@ -1103,7 +1103,7 @@ public class InGameScene : SceneBase
         StopForLeave();
         Debug.Log($"[InGameScene] 나가기 → {target.sceneName}", this);
         SaveLastScrollMultiplier();
-        GameManager.Scene.Load(target.sceneName, target.sceneData);
+        GameManager.Scene.LoadWithLoading(target.sceneName, target.sceneData);
     }
 
     /// <summary>

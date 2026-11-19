@@ -930,7 +930,7 @@ public class Canvas_Editor : UIBase
     /// </summary>
     private static bool IsShortcutBlocked()
     {
-        return (UIManager.HasInstance && GameManager.UI.HasOpenPopup) || IsTypingInInputField();
+        return (UIManager.HasInstance && GameManager.UI.IsShortcutBlocked) || IsTypingInInputField();
     }
 
     private static bool IsTypingInInputField()
@@ -979,7 +979,7 @@ public class Canvas_Editor : UIBase
     /// </summary>
     private void OnScroll(InputAction.CallbackContext context)
     {
-        if (UIManager.HasInstance && GameManager.UI.HasOpenPopup) return;
+        if (UIManager.HasInstance && GameManager.UI.IsShortcutBlocked) return;
 
         float value = context.ReadValue<float>();
         if (Mathf.Approximately(value, 0f) || grid == null || !IsPointerOverGrid()) return;

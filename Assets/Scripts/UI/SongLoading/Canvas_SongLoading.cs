@@ -16,18 +16,17 @@ using UnityEngine.UI;
 ///   Panel(Img_PanelBack · Img_PanelFrame · Txt_Phrase · Txt_Title · Txt_Artist · BadgeRow · ChartRow · Records) · Img_SD · Img_Bubble └ Txt_Bubble ·
 ///   Loading(Img_LoadingClock + Txt_Loading) · Img_InputBlocker(맨 앞, 투명, 마우스를 막는다).
 /// - 같은 진입 데이터(곡 · 채보 · 배속)와 기록(PlayerData)으로 카드를 그린다. 싱글톤에 값을 남기지 않는다.
+/// - 불러오는 중 시계 바늘은 공용 UILoadingClock(Img_LoadingClock)이 돌린다.
 /// - 시간은 unscaled 프레임 시각(Time.unscaledTimeAsDouble, unscaledDeltaTime을 더한 것과 같음)으로 센다 (로딩 중 timeScale · 씬 변화와 상관없이). 색은 UITheme에서 Init 때 칠한다 (씬 · 프리팹에 색을 직렬화하지 않는다).
 /// - Img_SD는 SD 일러스트가 아직 없어 스프라이트 없이 투명하다. 스프라이트를 넣으면 흰색으로 보인다.
 /// </summary>
 [RequireComponent(typeof(Canvas))]
-public class Canvas_SongLoading : UIBase
+public class Canvas_SongLoading : UIBase, ILoadingOverlay
 {
     /// <summary>AP 랭크 이미지 높이 (다른 랭크는 Img_Rank의 56)</summary>
     public const float ApRankHeight = 54f;
     /// <summary>최대 콤보 글자와 FC 이미지 사이 (px)</summary>
     public const float FullComboGap = 12f;
-    /// <summary>작은 시계 바늘이 한 바퀴 도는 시간 (초)</summary>
-    public const float ClockTurnSeconds = 1f;
 
     [Header("배경")]
     [SerializeField] private CanvasGroup backgroundGroup;
@@ -95,12 +94,18 @@ public class Canvas_SongLoading : UIBase
     private bool isClosing;
     private double openStart;
     private double closeStart;
-    private float clockAngle;
     private Coroutine openRoutine;
     private bool openStarted;
     private bool isPrewarming;
 
     public override UILayer Layer => UILayer.Overlay;
+
+    // 오버레이 규약 (ILoadingOverlay) 로그 이름: 곡 로딩 단계 이름은 바꾸지 않는다
+    public string LogName => "곡 로딩";
+    public string OpenStartStep => "열기 연출 0초";
+    public string OpenEndStep => "열기 끝";
+    public string OpeningPhase => "열기 0~1.1초";
+    public string ClosingPhase => "닫기";
 
     /// <summary>오버레이가 보이는 중이면 true (열기 시작 ~ 닫기 끝)</summary>
     public bool IsShown => isShown;
@@ -327,14 +332,6 @@ public class Canvas_SongLoading : UIBase
             closeElapsed = (float)(Time.unscaledTimeAsDouble - closeStart);
         }
         Hide();
-    }
-
-    private void Update()
-    {
-        if (!isShown) return;
-        float dt = Time.unscaledDeltaTime;
-        clockAngle = Mathf.Repeat(clockAngle + 360f * dt / ClockTurnSeconds, 360f);
-        if (loadingClockHand != null) loadingClockHand.rectTransform.localEulerAngles = new Vector3(0f, 0f, -clockAngle);
     }
 
     /// <summary>숨긴다 (연출 없이)</summary>

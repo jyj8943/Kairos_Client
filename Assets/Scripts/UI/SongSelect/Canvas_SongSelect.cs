@@ -1148,7 +1148,7 @@ public class Canvas_SongSelect : UIBase
     {
         if (isLeaving) return;
 
-        if (GameManager.Scene.Load(GameConstants.Scenes.Title))
+        if (GameManager.Scene.LoadWithLoading(GameConstants.Scenes.Title))
             SetLeaving();
     }
 

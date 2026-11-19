@@ -21,8 +21,8 @@ public class SongLoadingMeasureTests
     [UnitySetUp]
     public IEnumerator SetUp()
     {
-        savedSkip = InGameLauncher.SkipSongLoadingForTests;
-        InGameLauncher.SkipSongLoadingForTests = false;
+        savedSkip = GameSceneManager.SkipLoadingOverlayForTests;
+        GameSceneManager.SkipLoadingOverlayForTests = false;
         yield return new EnterPlayMode();
         Application.runInBackground = true;
     }
@@ -30,7 +30,7 @@ public class SongLoadingMeasureTests
     [UnityTearDown]
     public IEnumerator TearDown()
     {
-        InGameLauncher.SkipSongLoadingForTests = savedSkip;
+        GameSceneManager.SkipLoadingOverlayForTests = savedSkip;
         yield return new ExitPlayMode();
     }
 
@@ -60,8 +60,8 @@ public class SongLoadingMeasureTests
             yield return null;
         }
         sb.AppendLine($"[{title}]");
-        sb.AppendLine("  단계: " + GameManager.Scene.DescribeSongLoading());
-        sb.AppendLine("  프레임: " + GameManager.Scene.DescribeSongLoadingFrames());
+        sb.AppendLine("  단계: " + GameManager.Scene.DescribeLoading());
+        sb.AppendLine("  프레임: " + GameManager.Scene.DescribeLoadingFrames());
         float until = Time.realtimeSinceStartup + 1f;
         while (Time.realtimeSinceStartup < until) yield return null;
     }

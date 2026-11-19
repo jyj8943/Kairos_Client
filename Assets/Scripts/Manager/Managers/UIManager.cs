@@ -22,6 +22,8 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
     [SerializeField] private Canvas overlayCanvas;
     [Tooltip("곡 로딩 오버레이 (Canvas_SongLoading, UIManager 아래). 정렬 순서는 Canvas_Overlay 팝업보다 위")]
     [SerializeField] private Canvas_SongLoading songLoading;
+    [Tooltip("일반 로딩 오버레이 (Canvas_Loading, UIManager 아래). 정렬 순서는 Canvas_Overlay 팝업보다 위")]
+    [SerializeField] private Canvas_Loading loading;
     [Tooltip("입력 에셋의 UI/Cancel (ESC)")]
     [SerializeField] private InputActionReference cancelAction;
 
@@ -41,6 +43,12 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
 
     /// <summary>곡 로딩 오버레이. Bootstrapper가 Init을 한 번 부른다</summary>
     public Canvas_SongLoading SongLoading => songLoading;
+
+    /// <summary>일반 로딩 오버레이. Bootstrapper가 Init을 한 번 부른다</summary>
+    public Canvas_Loading Loading => loading;
+
+    /// <summary>화면 키보드 단축키를 막을 때 true: 팝업이 열려 있거나 씬을 불러오는 중 (곡 로딩 · 일반 로딩 포함)</summary>
+    public bool IsShortcutBlocked => HasOpenPopup || (GameSceneManager.HasInstance && GameManager.Scene.IsLoading);
 
     /// <summary>등록된 화면 수 (확인용)</summary>
     public int RegisteredCount => uis.Count;
@@ -80,6 +88,14 @@ public class UIManager : MonoSingleton<UIManager>, IGameModule
             Register(loadingCanvas, UILayer.Overlay);
         }
         else Debug.LogError($"{LogPrefix} songLoading(Canvas_SongLoading)이 연결되지 않았습니다.", this);
+
+        if (loading != null)
+        {
+            Canvas loadingCanvas = loading.GetComponent<Canvas>();
+            loadingCanvas.sortingOrder = GameConstants.Loading.SortOrder;
+            Register(loadingCanvas, UILayer.Overlay);
+        }
+        else Debug.LogError($"{LogPrefix} loading(Canvas_Loading)이 연결되지 않았습니다.", this);
 
         Popup_Confirm confirm = Get<Popup_Confirm>();
         if (confirm != null) confirm.Init();

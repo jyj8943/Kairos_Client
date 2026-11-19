@@ -42,20 +42,10 @@ public static class InGameLauncher
         return true;
     }
 
-#if UNITY_EDITOR
-    /// <summary>
-    /// 테스트 전용 (Unity 에디터): true면 곡 로딩 오버레이 없이 바로 인게임을 불러온다. TestSpeedRunCallback이 테스트 실행 동안 켜고,
-    /// 곡 로딩 테스트만 잠깐 끈다.
-    /// </summary>
-    public static bool SkipSongLoadingForTests;
-#endif
-
     /// <summary>곡 로딩 오버레이를 거칠지: 일반 플레이(테스트 플레이 아님)만. 테스트 실행 중 SkipSongLoadingForTests면 건너뛴다</summary>
     public static bool UsesSongLoading(InGameEntryData entry)
     {
-#if UNITY_EDITOR
-        if (SkipSongLoadingForTests) return false;
-#endif
+        if (GameSceneManager.IsOverlaySkipped) return false;
         return entry != null && entry.mode == InGameMode.Normal && entry.testPlay == null;
     }
 
@@ -72,7 +62,7 @@ public static class InGameLauncher
     public static bool StartEditor(EditorEntryData entry)
     {
         if (entry == null || string.IsNullOrEmpty(entry.songId)) return false;
-        if (!GameManager.Scene.Load(GameConstants.Scenes.Editor, entry)) return false;
+        if (!GameManager.Scene.LoadWithLoading(GameConstants.Scenes.Editor, entry)) return false;
 
         LastEditorEntry = entry;
         EditorStartCount++;

@@ -6,7 +6,7 @@ using UnityEngine;
 /// 씬 진입점 베이스. 씬마다 루트에 하나 두고, 씬 안 오브젝트의 Init()을 정해진 순서로 호출한다.
 /// - 진행 순서: 전역 매니저 초기화 대기 → GameSceneManager에 등록 → 씬 Canvas를 UIManager에 등록 → Init() → OnEnter()
 /// - 떠날 때: GameSceneManager가 Exit()을 부른다 → OnExit() → 씬 Canvas 해제·열린 팝업 닫기
-/// - 곡 로딩(GameSceneManager.LoadWithSongLoading)으로 들어온 씬은 Init() 뒤 OnEnter()를 바로 부르지 않는다.
+/// - 오버레이 로딩(곡 로딩 LoadWithSongLoading · 일반 로딩 LoadWithLoading)으로 들어온 씬은 Init() 뒤 OnEnter()를 바로 부르지 않는다.
 ///   GameSceneManager가 오버레이 닫기 연출이 끝난 뒤 Enter()로 부른다 (일반 Load는 지금처럼 바로 OnEnter).
 /// - ESC는 UIManager가 받고, 팝업이 없으면 현재 씬의 OnBack()을 부른다.
 /// - 싱글톤이 아니다. 현재 씬은 GameManager.Scene.Current로 접근한다.
@@ -27,7 +27,7 @@ public abstract class SceneBase : MonoBehaviour
         GameManager.Scene.SetCurrent(this);
         RegisterCanvases();
 
-        if (GameManager.Scene.IsSongLoading) GameManager.Scene.MarkSongLoading($"{gameObject.scene.name} Init 시작");
+        if (GameManager.Scene.IsOverlayLoading) GameManager.Scene.MarkLoading($"{gameObject.scene.name} Init 시작");
         System.Diagnostics.Stopwatch initWatch = System.Diagnostics.Stopwatch.StartNew();
         yield return Init();
         IsInitDone = true;

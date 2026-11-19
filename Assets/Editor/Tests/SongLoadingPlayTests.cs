@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 /// <summary>
-/// 곡 로딩 오버레이 (기획서 3-9 「곡 로딩」) 실제 흐름 확인. 이 테스트만 InGameLauncher.SkipSongLoadingForTests를 끄고 오버레이 경로를 탄다.
+/// 곡 로딩 오버레이 (기획서 3-9 「곡 로딩」) 실제 흐름 확인. 이 테스트만 GameSceneManager.SkipLoadingOverlayForTests를 끄고 오버레이 경로를 탄다.
 /// - L1 곡 선택 Enter → 곡 로딩 → 인게임: 단계 순서(열기 연출 1.1초가 끝난 뒤 곡 선택 OnExit · 로드, 정리는 닫기 전, 닫기 시작은 열기 끝 + 2초 뒤, OnEnter와 첫 클릭은 닫기 끝 뒤),
 ///   로딩 중 ESC · Enter · ↓를 눌러도 아무 일도 없음 (곡 선택 선택 그대로, 팝업 · 일시정지 없음, 시작 한 번)
 /// - L2 결과 다시 하기 → 같은 곡 로딩 (결과 위에 덮고 0.35초 뒤 결과 OnExit)
@@ -31,8 +31,8 @@ public class SongLoadingPlayTests
     [UnitySetUp]
     public IEnumerator SetUp()
     {
-        savedSkip = InGameLauncher.SkipSongLoadingForTests;
-        InGameLauncher.SkipSongLoadingForTests = false;
+        savedSkip = GameSceneManager.SkipLoadingOverlayForTests;
+        GameSceneManager.SkipLoadingOverlayForTests = false;
         savedEditorBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
         savedBackground = InputSystem.settings.backgroundBehavior;
         yield return new EnterPlayMode();
@@ -46,7 +46,7 @@ public class SongLoadingPlayTests
     {
         InputSystem.settings.editorInputBehaviorInPlayMode = savedEditorBehavior;
         InputSystem.settings.backgroundBehavior = savedBackground;
-        InGameLauncher.SkipSongLoadingForTests = savedSkip;
+        GameSceneManager.SkipLoadingOverlayForTests = savedSkip;
         yield return new ExitPlayMode();
     }
 
@@ -153,16 +153,16 @@ public class SongLoadingPlayTests
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "노래 0박 대기 시간 초과");
             double songTime = GameManager.Sound.SongTime;
-            if (!clicked && songTime >= clicks[0]) { GameManager.Scene.MarkSongLoading("첫 카운트인 클릭 (이 프레임에 지남)"); clicked = true; }
-            if (songTime >= 0) { GameManager.Scene.MarkSongLoading("노래 0박"); break; }
+            if (!clicked && songTime >= clicks[0]) { GameManager.Scene.MarkLoading("첫 카운트인 클릭 (이 프레임에 지남)"); clicked = true; }
+            if (songTime >= 0) { GameManager.Scene.MarkLoading("노래 0박"); break; }
             yield return null;
         }
     }
 
     /// <summary>이름이 prefix로 시작하는 첫 단계의 시각 (단계 이름 뒤에 걸린 ms가 붙어 있다)</summary>
-    private static double At(IReadOnlyList<SongLoadingStep> steps, string prefix)
+    private static double At(IReadOnlyList<LoadingStep> steps, string prefix)
     {
-        foreach (SongLoadingStep step in steps)
+        foreach (LoadingStep step in steps)
             if (step.Name.StartsWith(prefix)) return step.Seconds;
         Assert.Fail($"단계 '{prefix}'가 없습니다");
         return 0;
@@ -171,9 +171,9 @@ public class SongLoadingPlayTests
     /// <summary>단계 시각 표를 만들고 순서 조건을 확인한다</summary>
     private static void CheckSteps(string fromScene, StringBuilder log)
     {
-        IReadOnlyList<SongLoadingStep> steps = GameManager.Scene.SongLoadingSteps;
+        IReadOnlyList<LoadingStep> steps = GameManager.Scene.LoadingSteps;
         log.AppendLine("  단계 | Enter부터 (초)");
-        foreach (SongLoadingStep step in steps) log.AppendLine($"  {step.Name} | {step.Seconds:0.000}");
+        foreach (LoadingStep step in steps) log.AppendLine($"  {step.Name} | {step.Seconds:0.000}");
         double openZero = At(steps, "열기 연출 0초");
         double openEnd = At(steps, "열기 끝");
         double exit = At(steps, $"{fromScene} OnExit");
@@ -195,7 +195,7 @@ public class SongLoadingPlayTests
         Assert.GreaterOrEqual(closeStart, cleanup, "정리는 닫기 전에 끝남");
         Assert.GreaterOrEqual(closeStart - openEnd, GameConstants.SongLoading.MinLoadSeconds - 1e-3, "닫기 시작은 열기 끝 + 2초 이후");
         Assert.GreaterOrEqual(closeStart, init, "닫기 시작은 인게임 Init 뒤");
-        foreach (SongLoadingFrameStats stats in GameManager.Scene.SongLoadingFrames)
+        foreach (LoadingFrameStats stats in GameManager.Scene.LoadingFrames)
             log.AppendLine($"  프레임 [{stats.Phase}] {stats.FrameCount}개, 최대 {stats.MaxMs:0.0}ms, 33ms 넘음 {stats.SlowCount}개");
         Assert.GreaterOrEqual(closeEnd - closeStart, GameConstants.SongLoading.CloseSeconds - 0.02, "닫기 0.64초");
         Assert.GreaterOrEqual(enter, closeEnd, "OnEnter는 닫기 끝 뒤");

@@ -112,7 +112,7 @@ public class ResultScene : SceneBase
             target = new ResultReturnTarget { sceneName = GameConstants.Scenes.Title };
         }
 
-        if (GameManager.Scene.Load(target.sceneName, target.sceneData))
+        if (GameManager.Scene.LoadWithLoading(target.sceneName, target.sceneData))
             canvas.SetInteractable(false);
     }
 

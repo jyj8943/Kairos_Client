@@ -57,6 +57,9 @@ MonoBehaviour:
   popupRingInner: {r: 1, g: 1, b: 1, a: 1}
   countdownNumber: {r: 1, g: 1, b: 1, a: 1}
   countdownGlow: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 0.6}
+  loadingBand: {r: 0.95686275, g: 0.94509804, b: 0.972549, a: 0.85}
+  loadingBandLine: {r: 1, g: 1, b: 1, a: 1}
+  loadingClock: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 1}
   songLoadingPanelBorder: {r: 1, g: 1, b: 1, a: 0.8}
   songLoadingRecordCell: {r: 1, g: 1, b: 1, a: 0.7}
   songLoadingClockPattern: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 0.16}

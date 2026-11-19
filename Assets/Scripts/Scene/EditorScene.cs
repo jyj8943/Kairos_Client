@@ -302,7 +302,7 @@ public class EditorScene : SceneBase
     /// </summary>
     private void OnBpmSectionClicked(int tick)
     {
-        if (!CanUseHistory() || GameManager.UI.HasOpenPopup) return;
+        if (!CanUseHistory() || GameManager.UI.IsShortcutBlocked) return;
 
         playback.Stop(false);
         int notesAfter = BpmSectionRules.CountNotesAfter(session.Data.Notes, tick);
@@ -332,7 +332,7 @@ public class EditorScene : SceneBase
     /// </summary>
     private void OnBpmSectionRemoveRequested(int tick)
     {
-        if (!CanUseHistory() || GameManager.UI.HasOpenPopup) return;
+        if (!CanUseHistory() || GameManager.UI.IsShortcutBlocked) return;
         if (BpmSectionRules.ValidateRemove(session.BpmSections, tick) != BpmSectionError.None) return;
 
         int notesAfter = BpmSectionRules.CountNotesAfter(session.Data.Notes, tick);
@@ -487,7 +487,7 @@ public class EditorScene : SceneBase
         if (isLeaving) return;
 
         playback.Stop(false);
-        if (GameManager.Scene.Load(GameConstants.Scenes.SongSelect, CreateSongSelectEntry(session.SongId, session.ChartId)))
+        if (GameManager.Scene.LoadWithLoading(GameConstants.Scenes.SongSelect, CreateSongSelectEntry(session.SongId, session.ChartId)))
             isLeaving = true;
     }
 
@@ -551,7 +551,7 @@ public class EditorScene : SceneBase
         Debug.Log($"[EditorScene] 테스트 플레이{(autoPlay ? " (자동 플레이)" : "")}: songId={session.SongId}, 시작 {grid.CurrentBeat}박 (마디 {grid.CurrentMeasure}), " +
                   $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}, 배속 x{scrollMultiplier:0.0}", this);
 
-        if (GameManager.Scene.Load(GameConstants.Scenes.InGame, data))
+        if (GameManager.Scene.LoadWithLoading(GameConstants.Scenes.InGame, data))
             isLeaving = true;
     }
 

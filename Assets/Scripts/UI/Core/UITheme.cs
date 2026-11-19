@@ -120,6 +120,14 @@ public class UITheme : ScriptableObject
     [Tooltip("카운트다운 숫자 빛 (하늘색, 알파 = 빛 세기, TMP Underlay)")]
     public Color countdownGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.6f);
 
+    [Header("일반 로딩 (기획서 3-10 「일반 로딩」, Canvas_Loading. 화면 이름 · TIP 글자는 위 글자 색, TIP 알약은 포인트색)")]
+    [Tooltip("아래 띠 (#F4F1F8, 뒤 흐림 대신 85% 단색)")]
+    public Color loadingBand = new Color(0xF4 / 255f, 0xF1 / 255f, 0xF8 / 255f, 0.85f);
+    [Tooltip("띠 위 흰 선 1px")]
+    public Color loadingBandLine = Color.white;
+    [Tooltip("불러오는 중 시계 · 켜진 점 (보라 #7B6BD8)")]
+    public Color loadingClock = new Color32(0x7B, 0x6B, 0xD8, 0xFF);
+
     [Header("곡 로딩 (기획서 3-9 「곡 로딩」, Canvas_SongLoading. 글자·포인트·난이도·판 바탕은 위 공용 값)")]
     [Tooltip("정보 판 흰 테두리 (흰색 80%)")]
     public Color songLoadingPanelBorder = new Color(1f, 1f, 1f, 0.8f);

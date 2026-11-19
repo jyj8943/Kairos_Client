@@ -4,22 +4,22 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
-/// <summary>곡 로딩 한 단계의 시각 (확인용 로그·테스트)</summary>
-public readonly struct SongLoadingStep
+/// <summary>오버레이 로딩(곡 로딩 · 일반 로딩) 한 단계의 시각 (확인용 로그·테스트)</summary>
+public readonly struct LoadingStep
 {
     public readonly string Name;
-    /// <summary>Enter(곡 로딩 시작)부터 지난 unscaled 프레임 시간 (초, 오버레이 연출과 같은 시계)</summary>
+    /// <summary>Enter(로딩 시작)부터 지난 unscaled 프레임 시간 (초, 오버레이 연출과 같은 시계)</summary>
     public readonly double Seconds;
 
-    public SongLoadingStep(string name, double seconds)
+    public LoadingStep(string name, double seconds)
     {
         Name = name;
         Seconds = seconds;
     }
 }
 
-/// <summary>곡 로딩 중 한 단계(열기 · 불러오기 · 닫기)의 프레임 통계 (확인용)</summary>
-public class SongLoadingFrameStats
+/// <summary>오버레이 로딩 중 한 단계(열기 · 불러오기 · 닫기)의 프레임 통계 (확인용)</summary>
+public class LoadingFrameStats
 {
     public string Phase;
     public int FrameCount;
@@ -31,62 +31,95 @@ public class SongLoadingFrameStats
 /// <summary>
 /// 씬 전환과 현재 씬(SceneBase) 관리.
 /// - 씬 간 데이터는 Load(sceneName, data)로 넘기고, 다음 씬 Init에서 TakeSceneData&lt;T&gt;()로 받는다.
-/// - 곡 로딩 (기획서 3-9): LoadWithSongLoading(sceneName, entry)는 곡 로딩 오버레이(Canvas_SongLoading)를 지금 씬 위에 연다.
-///   Enter 프레임에 화면 데이터를 채우고 다음 프레임부터 열기 연출(0~1.1초)을 한다. 열기 연출 동안은 화면 말고는 아무것도 하지 않는다 (끊김 없게).
-///   열기가 끝나 화면이 멈춘 뒤 지금 씬 Exit → 다음 씬 비동기 로드(Single) → 다음 씬 Init (판 시작은 아직) →
-///   정리(Resources.UnloadUnusedAssets · GC.Collect, 닫기 · 시작 메트로놈 중에 GC가 터지지 않게) →
-///   불러오기 끝과 열기 끝부터 2초(최소 불러오기 시간)를 둘 다 채우면 닫기 연출 → 다 걷힌 뒤 다음 씬 OnEnter (SceneBase.Enter).
-///   이 구간에서 끊긴 프레임은 단계별로 모아 로그로 남긴다 (SongLoadingFrames).
-///   그동안 IsLoading이 true라 ESC(UIManager)·씬 이동·화면 단축키를 막고, EventSystem 방향키·Enter(Navigate · Submit) 전달도 잠시 끈다.
-///   일반 Load는 지금 동작 그대로다.
+/// - 오버레이 로딩 (곡 로딩 3-9 · 일반 로딩 3-10, 같은 루틴 OverlayLoadingRoutine, 오버레이 규약 ILoadingOverlay):
+///   1) 입력 차단 (IsLoading, EventSystem 방향키·Enter 전달 끄기) → 2) 화면 데이터 채우기 (오버레이 Open, Enter 프레임) →
+///   3) 다음 프레임부터 열기 연출 (이 동안은 화면 말고 아무것도 하지 않는다) →
+///   4) 열기가 끝나 화면을 다 덮은 뒤 지금 씬 OnExit → 다음 씬 비동기 로드(Single) → 다음 씬 Init (판 시작은 아직) →
+///      정리 (Resources.UnloadUnusedAssets · GC.Collect, 닫기 · 시작 메트로놈 중에 GC가 터지지 않게) →
+///   5) 최소 시간 대기 → 6) 닫기 연출 → 7) 다음 씬 OnEnter (SceneBase.Enter).
+///   - 곡 로딩 (LoadWithSongLoading): 열기 1.1초, 최소 시간 = 열기 끝부터 2초 (GameConstants.SongLoading.MinLoadSeconds).
+///   - 일반 로딩 (LoadWithLoading): 들어오기 0.5초, 최소 시간 = 들어오기 0초부터 1.5초 (GameConstants.Loading.MinSeconds).
+///   - 다음 씬이 Init 중에 Load를 부르면 (예: 에디터가 채보를 못 읽어 곡 선택으로) 같은 오버레이 아래에서 그 씬으로 이어서 간다.
+///   - 단계 시각(LoadingSteps)과 단계별 프레임 통계(LoadingFrames)를 두 로딩 모두 로그로 남긴다.
+/// - 일반 Load는 지금 동작 그대로다 (인게임 → 결과, 인게임 재시작 등).
+/// - 테스트(Unity 에디터): SkipLoadingOverlayForTests가 켜져 있으면 두 오버레이를 건너뛰고 바로 Load한다.
 /// </summary>
 public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
 {
     /// <summary>현재 씬의 진입점. 씬의 SceneBase가 Start에서 등록한다.</summary>
     public SceneBase Current { get; private set; }
 
-    /// <summary>Load 호출부터 다음 씬의 SceneBase가 등록될 때까지 true</summary>
+    /// <summary>Load 호출부터 다음 씬의 SceneBase가 등록될 때까지 true (오버레이 로딩은 다음 씬 OnEnter까지)</summary>
     public bool IsLoading { get; private set; }
 
     private object sceneData;
 
-    /// <summary>곡 로딩 중이면 true (LoadWithSongLoading 호출부터 다음 씬 OnEnter까지). 이 동안 IsLoading도 true</summary>
+    /// <summary>오버레이 로딩(곡 로딩 · 일반 로딩) 중이면 true. 이 동안 IsLoading도 true</summary>
+    public bool IsOverlayLoading { get; private set; }
+
+    /// <summary>곡 로딩 중이면 true (LoadWithSongLoading 호출부터 다음 씬 OnEnter까지)</summary>
     public bool IsSongLoading { get; private set; }
 
-    /// <summary>마지막 곡 로딩의 단계별 시각 (확인용)</summary>
-    public IReadOnlyList<SongLoadingStep> SongLoadingSteps => songLoadingSteps;
+    /// <summary>일반 로딩 중이면 true (LoadWithLoading 호출부터 다음 씬 OnEnter까지)</summary>
+    public bool IsGeneralLoading { get; private set; }
 
-    private readonly List<SongLoadingStep> songLoadingSteps = new List<SongLoadingStep>();
-    private double songLoadingStart;
+#if UNITY_EDITOR
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): true면 곡 로딩 · 일반 로딩 오버레이 없이 바로 불러온다 (씬 이동마다 1.5초 이상 늘지 않게).
+    /// TestSpeedRunCallback이 테스트 실행 동안 켜고, 곡 로딩 · 일반 로딩 테스트만 잠깐 끈다.
+    /// </summary>
+    public static bool SkipLoadingOverlayForTests;
+#endif
+
+    /// <summary>오버레이를 건너뛸지 (테스트 실행 중)</summary>
+    public static bool IsOverlaySkipped
+    {
+        get
+        {
+#if UNITY_EDITOR
+            return SkipLoadingOverlayForTests;
+#else
+            return false;
+#endif
+        }
+    }
+
+    /// <summary>마지막 오버레이 로딩의 단계별 시각 (확인용)</summary>
+    public IReadOnlyList<LoadingStep> LoadingSteps => loadingSteps;
+
+    private readonly List<LoadingStep> loadingSteps = new List<LoadingStep>();
+    private double loadingStart;
     private SceneBase deferredScene;
+    private string redirectScene;
+    private object redirectData;
+    private bool isWaitingInit;
 
-    /// <summary>프레임 통계를 모을 단계 이름 (null이면 안 모은다)</summary>
-    private string framePhase;
     private string lastFramePhase;
-    private readonly List<SongLoadingFrameStats> frameStats = new List<SongLoadingFrameStats>();
+    private ILoadingOverlay phaseOverlay;
+    private readonly List<LoadingFrameStats> frameStats = new List<LoadingFrameStats>();
     private readonly List<string> slowFrames = new List<string>();
 
-    /// <summary>마지막 곡 로딩의 단계별 프레임 통계 (확인용)</summary>
-    public IReadOnlyList<SongLoadingFrameStats> SongLoadingFrames => frameStats;
+    /// <summary>마지막 오버레이 로딩의 단계별 프레임 통계 (확인용)</summary>
+    public IReadOnlyList<LoadingFrameStats> LoadingFrames => frameStats;
 
-    /// <summary>마지막 곡 로딩에서 33ms를 넘은 프레임 (단계 · Enter부터 시각 · ms, 확인용)</summary>
-    public IReadOnlyList<string> SongLoadingSlowFrames => slowFrames;
+    /// <summary>마지막 오버레이 로딩에서 33ms를 넘은 프레임 (단계 · Enter부터 시각 · ms, 확인용)</summary>
+    public IReadOnlyList<string> LoadingSlowFrames => slowFrames;
 
     /// <summary>33ms를 넘으면 끊긴 프레임으로 센다</summary>
     public const double SlowFrameMs = 33.0;
 
     /// <summary>
-    /// 곡 로딩 중 프레임마다 앞 프레임 길이(unscaledDeltaTime)를 그 프레임의 단계에 넣는다.
+    /// 오버레이 로딩 중 프레임마다 앞 프레임 길이(unscaledDeltaTime)를 그 프레임의 단계에 넣는다.
     /// </summary>
     private void Update()
     {
         if (lastFramePhase != null)
         {
             double ms = Time.unscaledDeltaTime * 1000.0;
-            SongLoadingFrameStats stats = frameStats.Find(x => x.Phase == lastFramePhase);
+            LoadingFrameStats stats = frameStats.Find(x => x.Phase == lastFramePhase);
             if (stats == null)
             {
-                stats = new SongLoadingFrameStats { Phase = lastFramePhase };
+                stats = new LoadingFrameStats { Phase = lastFramePhase };
                 frameStats.Add(stats);
             }
             stats.FrameCount++;
@@ -94,30 +127,27 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
             if (ms > SlowFrameMs)
             {
                 stats.SlowCount++;
-                slowFrames.Add($"{lastFramePhase} {Time.unscaledTimeAsDouble - songLoadingStart - Time.unscaledDeltaTime:0.000}초 {ms:0.0}ms");
+                slowFrames.Add($"{lastFramePhase} {Time.unscaledTimeAsDouble - loadingStart - Time.unscaledDeltaTime:0.000}초 {ms:0.0}ms");
             }
         }
-        framePhase = PhaseOf(phaseOverlay);
-        lastFramePhase = framePhase;
+        lastFramePhase = PhaseOf(phaseOverlay);
     }
 
-    private Canvas_SongLoading phaseOverlay;
-
-    /// <summary>지금 프레임의 곡 로딩 단계 (곡 로딩 중이 아니면 null)</summary>
-    private string PhaseOf(Canvas_SongLoading overlay)
+    /// <summary>지금 프레임의 로딩 단계 (오버레이 로딩 중이 아니면 null)</summary>
+    private string PhaseOf(ILoadingOverlay overlay)
     {
-        if (!IsSongLoading || overlay == null || !overlay.IsShown) return null;
-        if (overlay.IsClosing) return "닫기";
+        if (!IsOverlayLoading || overlay == null || !overlay.IsShown) return null;
+        if (overlay.IsClosing) return overlay.ClosingPhase;
         if (!overlay.HasOpenStarted) return "Open 준비 (Enter 프레임)";
-        if (overlay.IsOpening) return "열기 0~1.1초";
+        if (overlay.IsOpening) return overlay.OpeningPhase;
         return "열기 뒤 (불러오기 · 대기)";
     }
 
-    /// <summary>곡 로딩 단계별 프레임 통계를 한 줄로</summary>
-    public string DescribeSongLoadingFrames()
+    /// <summary>단계별 프레임 통계를 한 줄로</summary>
+    public string DescribeLoadingFrames()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        foreach (SongLoadingFrameStats stats in frameStats)
+        foreach (LoadingFrameStats stats in frameStats)
             sb.Append($"[{stats.Phase}] 프레임 {stats.FrameCount}개, 최대 {stats.MaxMs:0.0}ms, 33ms 넘음 {stats.SlowCount}개 / ");
         if (slowFrames.Count > 0) sb.Append("끊긴 프레임: ").Append(string.Join(", ", slowFrames));
         return sb.ToString();
@@ -127,8 +157,13 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     {
         Current = null;
         IsLoading = false;
+        IsOverlayLoading = false;
         IsSongLoading = false;
+        IsGeneralLoading = false;
         deferredScene = null;
+        redirectScene = null;
+        redirectData = null;
+        isWaitingInit = false;
         sceneData = null;
     }
 
@@ -138,34 +173,43 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     public void SetCurrent(SceneBase scene)
     {
         Current = scene;
-        // 곡 로딩은 오버레이가 걷히고 OnEnter를 부를 때까지 로딩 중으로 둔다
-        if (!IsSongLoading) IsLoading = false;
+        // 오버레이 로딩은 오버레이가 걷히고 OnEnter를 부를 때까지 로딩 중으로 둔다
+        if (!IsOverlayLoading) IsLoading = false;
     }
 
     /// <summary>
-    /// SceneBase가 Init 뒤 부른다. 곡 로딩 중이면 OnEnter를 미루고(오버레이가 걷힌 뒤 Enter) true, 아니면 false (바로 OnEnter).
+    /// SceneBase가 Init 뒤 부른다. 오버레이 로딩 중이면 OnEnter를 미루고(오버레이가 걷힌 뒤 Enter) true, 아니면 false (바로 OnEnter).
     /// </summary>
     public bool DeferEnter(SceneBase scene)
     {
-        if (!IsSongLoading || scene == null) return false;
+        if (!IsOverlayLoading || scene == null) return false;
         deferredScene = scene;
-        MarkSongLoading($"{scene.gameObject.scene.name} Init 끝 ({scene.InitMilliseconds:0.0}ms)");
+        MarkLoading($"{scene.gameObject.scene.name} Init 끝 ({scene.InitMilliseconds:0.0}ms)");
         return true;
     }
 
     /// <summary>
     /// 씬을 비동기로 불러온다. 현재 씬의 Exit()(OnExit + UI 해제)을 먼저 호출하고, data는 다음 씬에 넘긴다.
+    /// 오버레이 로딩으로 들어온 씬이 Init 중에 부르면 같은 오버레이 아래에서 그 씬으로 이어서 간다.
     /// </summary>
     /// <returns>로드를 시작했으면 true. 이미 로드 중이거나 씬이 없으면 false</returns>
     public bool Load(string sceneName, object data = null)
     {
+        if (IsOverlayLoading && isWaitingInit && redirectScene == null && IsLoadable(sceneName))
+        {
+            redirectScene = sceneName;
+            redirectData = data;
+            MarkLoading($"Init 중 다른 씬 요청: {sceneName}");
+            return true;
+        }
+
         if (IsLoading)
         {
             Debug.LogWarning($"[GameSceneManager] 이미 씬을 불러오는 중이라 '{sceneName}' 로드를 무시합니다.");
             return false;
         }
 
-        if (string.IsNullOrEmpty(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
+        if (!IsLoadable(sceneName))
         {
             Debug.LogWarning($"[GameSceneManager] '{sceneName}' 씬이 없거나 Build Profiles에 등록되지 않았습니다.");
             return false;
@@ -180,131 +224,187 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         return true;
     }
 
+    private static bool IsLoadable(string sceneName) => !string.IsNullOrEmpty(sceneName) && Application.CanStreamedLevelBeLoaded(sceneName);
+
     /// <summary>
-    /// 곡 로딩 오버레이를 거쳐 씬을 불러온다 (곡 선택 시작 · 결과 다시 하기 → 인게임). 순서는 클래스 설명 참고.
-    /// 오버레이(Canvas_SongLoading)가 없으면 일반 Load로 간다.
+    /// 곡 로딩 오버레이를 거쳐 씬을 불러온다 (곡 선택 시작 · 결과 다시 하기 → 인게임). 오버레이가 없으면 일반 Load로 간다.
     /// </summary>
     /// <returns>로드를 시작했으면 true. 이미 로드 중이거나 씬이 없으면 false</returns>
     public bool LoadWithSongLoading(string sceneName, InGameEntryData entry)
     {
+        Canvas_SongLoading overlay = UIManager.HasInstance ? GameManager.UI.SongLoading : null;
+        if (overlay == null || IsOverlaySkipped)
+        {
+            if (overlay == null) Debug.LogWarning("[GameSceneManager] 곡 로딩 오버레이(Canvas_SongLoading)가 없어 바로 불러옵니다.");
+            return Load(sceneName, entry);
+        }
+        if (!CanStartOverlay(sceneName)) return false;
+
+        IsSongLoading = true;
+        StartOverlayLoading(sceneName, entry, overlay, () => overlay.Open(entry), GameConstants.SongLoading.MinLoadSeconds, true);
+        return true;
+    }
+
+    /// <summary>
+    /// 일반 로딩 오버레이를 거쳐 씬을 불러온다 (타이틀 ↔ 곡 선택, 곡 선택 → 에디터, 에디터 → 곡 선택 · 테스트 플레이, 결과 → 곡 선택, 인게임 나가기).
+    /// 오버레이가 없거나 테스트 실행 중 건너뛰기면 일반 Load로 간다.
+    /// </summary>
+    /// <returns>로드를 시작했으면 true. 이미 로드 중이거나 씬이 없으면 false</returns>
+    public bool LoadWithLoading(string sceneName, object data = null)
+    {
+        Canvas_Loading overlay = UIManager.HasInstance ? GameManager.UI.Loading : null;
+        if (overlay == null || IsOverlaySkipped)
+        {
+            if (overlay == null) Debug.LogWarning("[GameSceneManager] 일반 로딩 오버레이(Canvas_Loading)가 없어 바로 불러옵니다.");
+            return Load(sceneName, data);
+        }
+        if (!CanStartOverlay(sceneName)) return false;
+
+        IsGeneralLoading = true;
+        StartOverlayLoading(sceneName, data, overlay, () => overlay.Open(sceneName), GameConstants.Loading.MinSeconds, false);
+        return true;
+    }
+
+    private bool CanStartOverlay(string sceneName)
+    {
         if (IsLoading)
         {
-            Debug.LogWarning($"[GameSceneManager] 이미 씬을 불러오는 중이라 '{sceneName}' 곡 로딩을 무시합니다.");
+            Debug.LogWarning($"[GameSceneManager] 이미 씬을 불러오는 중이라 '{sceneName}' 로딩을 무시합니다.");
             return false;
         }
-
-        if (string.IsNullOrEmpty(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
+        if (!IsLoadable(sceneName))
         {
             Debug.LogWarning($"[GameSceneManager] '{sceneName}' 씬이 없거나 Build Profiles에 등록되지 않았습니다.");
             return false;
         }
-
-        Canvas_SongLoading overlay = UIManager.HasInstance ? GameManager.UI.SongLoading : null;
-        if (overlay == null)
-        {
-            Debug.LogWarning("[GameSceneManager] 곡 로딩 오버레이(Canvas_SongLoading)가 없어 바로 불러옵니다.");
-            return Load(sceneName, entry);
-        }
-
-        sceneData = entry;
-        IsLoading = true;
-        IsSongLoading = true;
-        deferredScene = null;
-        StartCoroutine(SongLoadingRoutine(sceneName, entry, overlay));
         return true;
     }
 
-    private IEnumerator SongLoadingRoutine(string sceneName, InGameEntryData entry, Canvas_SongLoading overlay)
+    private void StartOverlayLoading(string sceneName, object data, ILoadingOverlay overlay, System.Action open, double minSeconds, bool minFromOpenEnd)
     {
-        songLoadingSteps.Clear();
+        sceneData = data;
+        IsLoading = true;
+        IsOverlayLoading = true;
+        deferredScene = null;
+        redirectScene = null;
+        redirectData = null;
+        isWaitingInit = false;
+        StartCoroutine(OverlayLoadingRoutine(sceneName, overlay, open, minSeconds, minFromOpenEnd));
+    }
+
+    /// <summary>
+    /// 곡 로딩 · 일반 로딩 공용 흐름 (클래스 설명의 1~7). minFromOpenEnd면 최소 시간을 열기 끝부터(곡 로딩), 아니면 열기 0초부터(일반 로딩) 센다.
+    /// </summary>
+    private IEnumerator OverlayLoadingRoutine(string sceneName, ILoadingOverlay overlay, System.Action open, double minSeconds, bool minFromOpenEnd)
+    {
+        loadingSteps.Clear();
         frameStats.Clear();
         slowFrames.Clear();
         lastFramePhase = null;
         phaseOverlay = overlay;
-        songLoadingStart = Time.unscaledTimeAsDouble;
-        MarkSongLoading("Enter");
+        loadingStart = Time.unscaledTimeAsDouble;
+        MarkLoading("Enter");
 
-        // 방향키·Enter가 뒤 화면(곡 선택·결과)의 선택을 옮기지 않게 EventSystem 전달을 잠시 끈다 (UI 맵은 그대로)
+        // 1. 방향키·Enter가 뒤 화면의 선택을 옮기지 않게 EventSystem 전달을 잠시 끈다 (UI 맵은 그대로)
         EventSystem eventSystem = EventSystem.current;
         bool sentNavigation = eventSystem != null && eventSystem.sendNavigationEvents;
         if (eventSystem != null) eventSystem.sendNavigationEvents = false;
 
-        // 1. 화면 데이터를 먼저 채운다 (Enter 프레임). 열기 연출 0초는 다음 프레임부터
+        // 2. 화면 데이터를 먼저 채운다 (Enter 프레임). 3. 열기 연출 0초는 다음 프레임부터
         System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
-        overlay.Open(entry);
-        MarkSongLoading($"오버레이 Open 준비 ({watch.Elapsed.TotalMilliseconds:0.0}ms)");
+        open();
+        MarkLoading($"오버레이 Open 준비 ({watch.Elapsed.TotalMilliseconds:0.0}ms)");
         while (!overlay.HasOpenStarted) yield return null;
-        MarkSongLoading("열기 연출 0초");
+        MarkLoading(overlay.OpenStartStep);
+        double openStartTime = Time.unscaledTimeAsDouble;
 
-        // 2. 열기 연출(0~1.1초) 동안은 화면 말고는 아무것도 하지 않는다
+        // 열기 연출 동안은 화면 말고는 아무것도 하지 않는다
         while (overlay.IsOpening) yield return null;
-        MarkSongLoading("열기 끝");
+        MarkLoading(overlay.OpenEndStep);
         double openEndTime = Time.unscaledTimeAsDouble;
 
-        // 3. 화면이 멈춘 뒤: 앞 씬 OnExit → 다음 씬 비동기 로드(Single, 앞 씬은 함께 내려간다) → 다음 씬 Init
-        if (Current != null)
+        // 4. 화면을 다 덮은 뒤: 앞 씬 OnExit → 다음 씬 비동기 로드(Single, 앞 씬은 함께 내려간다) → 다음 씬 Init
+        string target = sceneName;
+        while (true)
         {
-            string leaving = Current.gameObject.scene.name;
+            if (Current != null)
+            {
+                string leaving = Current.gameObject.scene.name;
+                watch.Restart();
+                Current.Exit();
+                MarkLoading($"{leaving} OnExit ({watch.Elapsed.TotalMilliseconds:0.0}ms)");
+            }
+            Current = null;
+            deferredScene = null;
+
             watch.Restart();
-            Current.Exit();
-            MarkSongLoading($"{leaving} OnExit ({watch.Elapsed.TotalMilliseconds:0.0}ms)");
+            isWaitingInit = true;
+            AsyncOperation operation = SceneManager.LoadSceneAsync(target);
+            MarkLoading($"{target} 로드 시작 (호출 {watch.Elapsed.TotalMilliseconds:0.0}ms)");
+            while (operation != null && !operation.isDone) yield return null;
+            MarkLoading($"{target} 로드 끝");
+            while (deferredScene == null) yield return null;
+            isWaitingInit = false;
+
+            // 다음 씬이 Init 중에 다른 씬을 요청했으면 같은 오버레이 아래에서 이어서 간다
+            if (redirectScene == null) break;
+            target = redirectScene;
+            sceneData = redirectData;
+            redirectScene = null;
+            redirectData = null;
         }
-        Current = null;
 
-        watch.Restart();
-        AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName);
-        MarkSongLoading($"{sceneName} 로드 시작 (호출 {watch.Elapsed.TotalMilliseconds:0.0}ms)");
-        while (operation != null && !operation.isDone) yield return null;
-        MarkSongLoading($"{sceneName} 로드 끝");
-        while (deferredScene == null) yield return null;
-
-        // 5. 닫기 연출 · 시작 메트로놈 중에 GC가 터지지 않게 정리는 닫기 전에 끝낸다
+        // 닫기 연출 · 시작 메트로놈 중에 GC가 터지지 않게 정리는 닫기 전에 끝낸다
         watch.Restart();
         AsyncOperation unload = Resources.UnloadUnusedAssets();
         while (unload != null && !unload.isDone) yield return null;
         double unloadMs = watch.Elapsed.TotalMilliseconds;
         watch.Restart();
         System.GC.Collect();
-        MarkSongLoading($"정리 끝 (UnloadUnusedAssets {unloadMs:0.0}ms, GC.Collect {watch.Elapsed.TotalMilliseconds:0.0}ms)");
+        MarkLoading($"정리 끝 (UnloadUnusedAssets {unloadMs:0.0}ms, GC.Collect {watch.Elapsed.TotalMilliseconds:0.0}ms)");
 
-        // 4. 닫기 조건: 불러오기 끝 AND 열기 끝부터 최소 2초
-        while (Time.unscaledTimeAsDouble - openEndTime < GameConstants.SongLoading.MinLoadSeconds) yield return null;
+        // 5. 최소 시간: 곡 로딩은 열기 끝부터, 일반 로딩은 열기 0초부터
+        double minBase = minFromOpenEnd ? openEndTime : openStartTime;
+        while (Time.unscaledTimeAsDouble - minBase < minSeconds) yield return null;
 
-        MarkSongLoading("닫기 시작");
+        // 6. 닫기 연출
+        MarkLoading("닫기 시작");
         yield return overlay.CloseRoutine();
-        MarkSongLoading("닫기 끝");
+        MarkLoading("닫기 끝");
 
         if (eventSystem != null) eventSystem.sendNavigationEvents = sentNavigation;
         EventSystem next = EventSystem.current;
         if (next != null && next != eventSystem) next.sendNavigationEvents = true;
 
-        // 6. 닫기 끝 → 다음 씬 OnEnter → 시작 메트로놈 (지금 그대로)
+        // 7. 닫기 끝 → 다음 씬 OnEnter (인게임이면 판 시작 · 시작 메트로놈)
         SceneBase scene = deferredScene;
         deferredScene = null;
         IsSongLoading = false;
+        IsGeneralLoading = false;
+        IsOverlayLoading = false;
         IsLoading = false;
         scene.Enter();
-        MarkSongLoading($"{sceneName} OnEnter");
+        MarkLoading($"{target} OnEnter");
         phaseOverlay = null;
         lastFramePhase = null;
-        Debug.Log($"[GameSceneManager] 곡 로딩 끝: {DescribeSongLoading()}", this);
-        Debug.Log($"[GameSceneManager] 곡 로딩 프레임: {DescribeSongLoadingFrames()}", this);
+        Debug.Log($"[GameSceneManager] {overlay.LogName} 끝: {DescribeLoading()}", this);
+        Debug.Log($"[GameSceneManager] {overlay.LogName} 프레임: {DescribeLoadingFrames()}", this);
     }
 
-    /// <summary>곡 로딩 단계를 지금 시각으로 남긴다</summary>
-    public void MarkSongLoading(string step)
+    /// <summary>로딩 단계를 지금 시각으로 남긴다</summary>
+    public void MarkLoading(string step)
     {
-        songLoadingSteps.Add(new SongLoadingStep(step, Time.unscaledTimeAsDouble - songLoadingStart));
+        loadingSteps.Add(new LoadingStep(step, Time.unscaledTimeAsDouble - loadingStart));
     }
 
-    /// <summary>곡 로딩 단계 시각을 한 줄로</summary>
-    public string DescribeSongLoading()
+    /// <summary>로딩 단계 시각을 한 줄로</summary>
+    public string DescribeLoading()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        for (int i = 0; i < songLoadingSteps.Count; i++)
+        for (int i = 0; i < loadingSteps.Count; i++)
         {
             if (i > 0) sb.Append(" → ");
-            sb.Append(songLoadingSteps[i].Name).Append(' ').Append(songLoadingSteps[i].Seconds.ToString("0.000")).Append('초');
+            sb.Append(loadingSteps[i].Name).Append(' ').Append(loadingSteps[i].Seconds.ToString("0.000")).Append('초');
         }
         return sb.ToString();
     }
