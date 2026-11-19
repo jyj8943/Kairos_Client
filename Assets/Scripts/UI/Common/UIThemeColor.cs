@@ -41,8 +41,20 @@ public enum UIColorRole
     InGamePanel,
     InGameBrightnessBarOff,
     /// <summary>메뉴용 PERFECT (TMP 글자면 금 → 분홍 가로 그라데이션)</summary>
-    JudgePerfect
-    // 11/19: 인게임용 PERFECT 역할(InGameJudgePerfect)은 기어 판정 글자가 이미지가 되어 지웠다 (쓰던 씬·프리팹 없음)
+    JudgePerfect,
+    // 11/19: 인게임용 PERFECT 역할(InGameJudgePerfect, 값 30)은 기어 판정 글자가 이미지가 되어 지웠다 (쓰던 씬·프리팹 없음). 아래는 그 뒤에 붙인 에디터 역할
+    /// <summary>에디터 흰 카드 (노트 수 · BPM 현재 위치 · 키 칩 바탕)</summary>
+    EditorCard,
+    /// <summary>에디터 그리드 바탕 (#17141F, 인게임 기어와 같음)</summary>
+    EditorGridBackground,
+    /// <summary>에디터 그리드 양쪽 테두리 (하늘 55%, 인게임 기어 테두리와 같음)</summary>
+    GearBorder,
+    /// <summary>에디터 호박 (#C97418)</summary>
+    EditorAmber,
+    /// <summary>에디터 밝은 호박 (#FFB45C)</summary>
+    EditorAmberLight,
+    /// <summary>흰 버튼 테두리 (rgba(44,40,56) 16%)</summary>
+    EditorButtonBorder
 }
 
 /// <summary>
@@ -137,6 +149,12 @@ public class UIThemeColor : MonoBehaviour
             case UIColorRole.InGamePanel: return theme.inGamePanel;
             case UIColorRole.InGameBrightnessBarOff: return theme.inGameBrightnessBarOff;
             case UIColorRole.JudgePerfect: return theme.judgePerfectStart;
+            case UIColorRole.EditorCard: return theme.toolNormalBackground;
+            case UIColorRole.EditorGridBackground: return theme.editorGridBackground;
+            case UIColorRole.GearBorder: return theme.gearBorder;
+            case UIColorRole.EditorAmber: return theme.editorAmber;
+            case UIColorRole.EditorAmberLight: return theme.editorAmberLight;
+            case UIColorRole.EditorButtonBorder: return theme.editorButtonBorder;
             default: return Color.magenta;
         }
     }

@@ -148,7 +148,7 @@ public class LongNoteEditorSceneTests
         return false;
     }
 
-    private string NoteCountText => Get<TMP_Text>(canvas, "noteCountText").text;
+    private string NoteCountText => canvas.NotesValue + "/" + canvas.LongNotesValue;
     private string StatusText => Get<TMP_Text>(canvas, "saveStatusText").text;
 
     // ───── 에디터 항목 ─────
@@ -167,8 +167,8 @@ public class LongNoteEditorSceneTests
         Assert.AreEqual(1, session.Data.LongCount);
         Assert.IsTrue(TryFind(0, T * 4, out EditorNote note));
         Assert.AreEqual(T * 6, note.EndTick);
-        Assert.AreEqual(string.Format(GameConstants.Editor.NoteCountFormat, 0, 0), before);
-        Assert.AreEqual(string.Format(GameConstants.Editor.NoteCountFormat, 1, 1), after);
+        Assert.AreEqual("0/0", before, "노트 / 롱노트 카드");
+        Assert.AreEqual("1/1", after);
     }
 
     /// <summary>E2: 숏노트 도구로 1/4박 미만 드래그 → 숏노트, 1박 드래그 → 롱노트</summary>

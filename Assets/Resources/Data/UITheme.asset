@@ -82,3 +82,61 @@ MonoBehaviour:
   laneGlow: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 0.55}
   comboTitle: {r: 0.6627451, g: 0.6392157, b: 0.72156864, a: 1}
   comboNumber: {r: 1, g: 1, b: 1, a: 1}
+  editorAutoTest: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 1}
+  editorButtonBorder: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.16}
+  editorButtonShadowAlpha: 0.3
+  editorAmber: {r: 0.7882353, g: 0.45490196, b: 0.09411765, a: 1}
+  editorAmberLight: {r: 1, g: 0.7058824, b: 0.36078432, a: 1}
+  editorAmberSoftAlpha: 0.14
+  editorWarningBoxAlpha: 0.12
+  editorErrorBoxAlpha: 0.1
+  editorIllustrationOpacity: 0.22
+  editorIllustrationBlur: 40
+  editorIllustrationSaturation: 0.5
+  editorOverlayTop: 0.55
+  editorOverlayBottom: 0.85
+  toolSelectedBackground: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 0.14}
+  toolSelectedBorder: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 1}
+  toolSelectedText: {r: 0.18431373, g: 0.49803922, b: 0.78431374, a: 1}
+  toolNormalBackground: {r: 1, g: 1, b: 1, a: 1}
+  toolNormalBorder: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.1}
+  toolNormalText: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 1}
+  toolSelectedBorderWidth: 1.5
+  toolNormalBorderWidth: 1
+  editorSwitchOff: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.18}
+  editorGridBackground: {r: 0.09019608, g: 0.078431375, b: 0.12156863, a: 1}
+  editorGridHatch: {r: 1, g: 1, b: 1, a: 0.04}
+  editorNote: {r: 0.95686275, g: 0.94509804, b: 0.9764706, a: 1}
+  editorLongNoteBodyAlpha: 0.35
+  editorPreview: {r: 0.49019608, g: 0.827451, b: 0.9882353, a: 1}
+  editorLineMeasure:
+    color: {r: 1, g: 1, b: 1, a: 0.7}
+    thickness: 2
+  editorLineBeat:
+    color: {r: 1, g: 0.47843137, b: 0.7764706, a: 0.5}
+    thickness: 1
+  editorLine8th:
+    color: {r: 0.49019608, g: 0.827451, b: 0.9882353, a: 0.32}
+    thickness: 1
+  editorLine16th:
+    color: {r: 0.49019608, g: 0.827451, b: 0.9882353, a: 0.14}
+    thickness: 1
+  editorLine32nd:
+    color: {r: 0.49019608, g: 0.827451, b: 0.9882353, a: 0.08}
+    thickness: 1
+  editorLineTriplet:
+    color: {r: 0.6627451, g: 0.6117647, b: 1, a: 0.3}
+    thickness: 1
+  editorLineTripletFine:
+    color: {r: 0.6627451, g: 0.6117647, b: 1, a: 0.14}
+    thickness: 1
+  editorLineOther:
+    color: {r: 1, g: 1, b: 1, a: 0.06}
+    thickness: 1
+  editorLaneDivider:
+    color: {r: 1, g: 1, b: 1, a: 0.1}
+    thickness: 1
+  editorMeasureNumber: {r: 0.3529412, g: 0.32941177, b: 0.4392157, a: 1}
+  editorCurrentLineStart: {r: 1, g: 0.37254903, b: 0.7058824, a: 1}
+  editorCurrentLineEnd: {r: 0.60784316, g: 0.41960785, b: 1, a: 1}
+  editorCurrentLineFlash: {r: 1, g: 1, b: 1, a: 1}

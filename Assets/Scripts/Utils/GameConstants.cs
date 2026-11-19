@@ -854,16 +854,20 @@ public static class GameConstants
         public const float GridHeightStep = 0.25f;
         public const float DefaultGridHeight = 1f;
 
-        /// <summary>상단 바 채보 정보: {0} 곡 제목, {1} 채보 이름, {2} 레벨</summary>
-        public const string ChartInfoFormat = "{0} · {1} · Lv.{2}";
+        /// <summary>화면 이름 (상단 바 왼쪽, 다른 화면과 같은 형식: 한글 + 하늘색 영문)</summary>
+        public const string ScreenTitle = "에디터";
+        public const string ScreenTitleEn = "EDITOR";
 
-        /// <summary>타임라인 정보: {0} 현재 위치 시간, {1} 곡 길이, {2} 마디 번호</summary>
-        public const string TimeInfoFormat = "{0} / {1} · 마디 {2}";
+        /// <summary>상단 바 곡 정보 둘째 줄 레벨: {0} 레벨</summary>
+        public const string LevelFormat = "Lv.{0}";
+
+        /// <summary>타임라인 정보 뒤쪽 (현재 시간은 Bold 따로): {0} 곡 길이, {1} 마디 번호</summary>
+        public const string TimeTotalFormat = "/ {0} · 마디 {1}";
 
         /// <summary>저장 상태 표시. Saved의 {0}에 저장 시각(SaveTimeFormat)이 들어간다</summary>
         public const string SaveStatusSaved = "저장됨 {0}";
         public const string SaveStatusFailed = "저장 실패";
-        public const string SaveStatusUnsaved = "저장 안 됨";
+        public const string SaveStatusUnsaved = "● 저장 안 됨";
         public const string SaveTimeFormat = "HH:mm";
 
         /// <summary>테스트 플레이를 시작할 수 없을 때 안내. 이 시간(초)만 보여주고 저장 상태 표시로 되돌린다</summary>
@@ -918,8 +922,59 @@ public static class GameConstants
         public const string UndoStatusFormat = "실행 취소: {0}";
         public const string RedoStatusFormat = "다시 실행: {0}";
 
-        /// <summary>그리드 아래 조작 안내 (Txt_ControlHint)</summary>
-        public const string ControlHint = "Space 재생 · 휠 이동 · 클릭 배치 · 우클릭 삭제 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행";
+        /// <summary>맨 아래 키 안내 줄 (KeyGuideBar, 11/19 그리드 아래 회색 글씨에서 옮김). 키 글자는 바인딩에서 읽고, 마우스·Esc는 고정 글자</summary>
+        public const string GuidePlay = "재생";
+        public const string GuidePause = "멈춤";
+        public const string GuideMove = "이동";
+        public const string GuidePlace = "놓기";
+        public const string GuideRemove = "지우기";
+        public const string GuideTools = "도구";
+        public const string GuideUndo = "실행 취소";
+        public const string GuideRedo = "다시 실행";
+        public const string GuideSave = "저장";
+        public const string GuideExit = "나가기";
+        public const string KeyWheel = "휠";
+        public const string KeyClick = "클릭";
+        public const string KeyRightClick = "우클릭";
+        public const string KeyEsc = "Esc";
+        public const string KeyEnter = "Enter";
+        /// <summary>키 안내 줄에서 재생 항목 id (재생 중이면 "멈춤"으로 바꾼다)</summary>
+        public const string GuidePlayId = "play";
+
+        /// <summary>왼쪽 패널 묶음 제목 (한글 + 작은 영문)</summary>
+        public const string NotesTitle = "노트 수 <size=72%>NOTES</size>";
+        public const string ToolsTitle = "도구 <size=72%>TOOLS</size>";
+        public const string SpeedTitle = "테스트 플레이 배속 <size=72%>SPEED</size>";
+        /// <summary>노트 수 카드 이름</summary>
+        public const string NotesCardLabel = "노트";
+        public const string LongNotesCardLabel = "롱노트";
+        /// <summary>도구 이름</summary>
+        public const string ToolShortNoteName = "숏노트";
+        public const string ToolLongNoteName = "롱노트";
+        public const string ToolBpmSectionName = "BPM 구간";
+        /// <summary>고른 도구 사용법 한 줄</summary>
+        public const string ToolShortNoteHint = "클릭: 숏노트 놓기 · 우클릭: 지우기";
+        public const string ToolLongNoteHint = "드래그: 롱노트 놓기 · 우클릭: 지우기";
+        public const string ToolBpmSectionHint = "가로선 클릭: 구간 추가 · 구간선 우클릭: 지우기";
+        /// <summary>테스트 플레이 배속 아래 안내</summary>
+        public const string SpeedHint = "처음 x1.0 · 마지막으로 쓴 값을 기억해요";
+
+        /// <summary>오른쪽 패널 묶음 제목</summary>
+        public const string SnapTitle = "박자 스냅 <size=72%>SNAP</size>";
+        public const string ZoomTitle = "그리드 높이 <size=72%>ZOOM</size>";
+        public const string CurrentBpmTitle = "BPM <size=72%>현재 위치</size>";
+        public const string BpmSectionsTitle = "BPM 구간";
+        /// <summary>그리드 높이 값: {0} 배율 (키 안내는 오른쪽 키 칩)</summary>
+        public const string GridHeightFormat = "x{0}";
+
+        /// <summary>스위치(메트로놈 · 키음) 손잡이와 바탕 끝 사이 여백 (px, 바탕 52×30 · 손잡이 24)</summary>
+        public const float SwitchKnobInset = 3f;
+
+        /// <summary>상단 버튼 글자 (아이콘 포함)</summary>
+        public const string SaveButtonLabel = "저장";
+        public const string AutoTestButtonLabel = "◎ 자동 테스트";
+        public const string TestPlayButtonLabel = "▶ 테스트 플레이";
+        public const string ExitButtonLabel = "나가기";
 
         /// <summary>BPM 구간 기록 설명</summary>
         public const string HistoryAddBpmSection = "BPM 구간 추가";
@@ -959,16 +1014,31 @@ public static class GameConstants
         public const string BpmSectionRangeFormat = "{0} ~ {1} (다음 구간 전까지)";
         public const string BpmSectionRangeToEndFormat = "{0} ~ 곡 끝";
 
-        /// <summary>뒤 노트 경고: {0} 노트 수. 기획서의 ⚠는 NEXON Lv2 Gothic에 글자가 없어 ※로 쓴다</summary>
-        public const string BpmSectionNotesWarningFormat = "※ 이 뒤 노트 {0}개는 마디·박 위치 그대로, 시간이 바뀝니다 (Ctrl+Z로 되돌릴 수 있음)";
+        /// <summary>뒤 노트 경고: {0} 노트 수 (안내 박스 왼쪽 ! 표시와 함께, 11/19)</summary>
+        public const string BpmSectionNotesWarningFormat = "이 뒤 노트 {0}개는 마디·박 위치 그대로, 시간이 바뀝니다 (Ctrl+Z로 되돌릴 수 있음)";
 
-        /// <summary>BPM 구간 입력 창 글자</summary>
-        public const string BpmSectionPopupTitle = "BPM 구간 (추가 · 수정)";
-        public const string BpmSectionPositionHint = "클릭한 스냅 위치";
-        public const string BpmSectionDeleteHint = "삭제는 그리드에서 구간선 우클릭";
+        /// <summary>BPM 구간 입력 창 글자 (11/19 라벤더 톤: 추가 / 수정 모드로 제목·버튼이 바뀐다)</summary>
+        public const string BpmSectionPopupTitleAdd = "BPM 구간 추가";
+        public const string BpmSectionPopupTitleEdit = "BPM 구간 수정";
+        public const string BpmSectionPopupTitleEn = "BPM SECTION";
+        public const string BpmSectionIcon = "♩";
+        public const string BpmSectionConfirmAdd = "추가";
+        public const string BpmSectionConfirmEdit = "수정";
+        public const string BpmSectionCancel = "취소";
+        public const string BpmSectionUnit = "BPM";
+        /// <summary>BPM 입력칸 위 범위 안내</summary>
+        public const string BpmSectionRangeHint = "30 ~ 400 · 소수 둘째 자리까지";
+        /// <summary>안내 자리 평소 문구 (추가 / 수정)</summary>
+        public const string BpmSectionNoticeAdd = "추가를 눌러야 구간이 생겨요. 취소하면 아무것도 생기지 않아요.";
+        public const string BpmSectionNoticeEdit = "수정을 눌러야 바뀌어요. 취소하면 아무것도 바뀌지 않아요.";
+        /// <summary>안내 박스 왼쪽 표시</summary>
+        public const string BpmSectionNoticeMark = "!";
+        /// <summary>이전 · 다음 구간 BPM: {0} 이전, {1} 다음 (값은 화면에서 호박색으로 감싼다). 없으면 NoneLabel</summary>
+        public const string BpmSectionNeighborFormat = "이전 구간 {0} · 다음 구간 {1}";
+        public const string BpmSectionNeighborNone = "없음";
 
-        /// <summary>오른쪽 패널 현재 위치 BPM 옆 다음 구간: {0} 위치, {1} BPM</summary>
-        public const string NextBpmFormat = "다음: {0} → {1}";
+        /// <summary>오른쪽 패널 현재 위치 BPM 오른쪽 다음 구간: {0} BPM</summary>
+        public const string NextBpmFormat = "다음 {0}";
 
         /// <summary>BPM 구간 목록에서 곡 시작 줄 표시, 그리드 라벨 아래 줄 (곡 시작 구간)</summary>
         public const string BpmSectionStartLabel = "곡 시작";
@@ -983,8 +1053,6 @@ public static class GameConstants
         public const string BpmSectionRemovedFormat = "BPM 구간 삭제: {0}";
         public const string BpmResetDoneMessage = "곡 기본 BPM으로 되돌렸습니다";
 
-        /// <summary>오른쪽 패널 노트 수: {0} 전체 노트 수(숏 + 롱), {1} 롱노트 수</summary>
-        public const string NoteCountFormat = "노트 {0}\n<size=80%><color=#52525B>롱노트 {1}</color></size>";
 
         /// <summary>롱노트 드래그 미리보기의 불투명도 (0~1)</summary>
         public const float LongNotePreviewAlpha = 0.45f;

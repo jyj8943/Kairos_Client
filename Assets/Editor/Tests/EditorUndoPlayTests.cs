@@ -114,7 +114,8 @@ public class EditorUndoPlayTests
     [UnityTest]
     public IEnumerator U1_Shortcuts()
     {
-        Assert.AreEqual(GameConstants.Editor.ControlHint, Get<TMP_Text>(canvas, "controlHintText").text, "조작 안내 문구");
+        Assert.AreEqual(9, canvas.KeyGuide.ItemCount, "맨 아래 키 안내 줄 9개 (조작 안내를 옮김, 11/19)");
+        Assert.AreEqual(GameConstants.Editor.GuidePlay, canvas.KeyGuide.GetLabel(GameConstants.Editor.GuidePlayId), "정지 중 Space = 재생");
 
         Assert.IsTrue(session.AddNote(0, 8 * T));
         Assert.IsTrue(session.AddNote(1, 9 * T));

@@ -282,7 +282,7 @@ public class BpmSectionTests
         Assert.AreEqual("마디 17 ~ 마디 25 3박 (다음 구간 전까지)", BpmSectionRules.FormatRange(s, 64 * T));
         Assert.AreEqual("마디 25 3박 ~ 곡 끝", BpmSectionRules.FormatRange(s, 98 * T));
         Assert.AreEqual("마디 9 ~ 마디 17 (다음 구간 전까지)", BpmSectionRules.FormatRange(s, 32 * T), "추가 모드(아직 없는 위치)");
-        Assert.AreEqual("다음: 마디 17 → 200", string.Format(GameConstants.Editor.NextBpmFormat, BpmSectionRules.FormatShortPosition(64 * T), SongData.FormatBpm(200f)));
+        Assert.AreEqual("다음 200", string.Format(GameConstants.Editor.NextBpmFormat, SongData.FormatBpm(200f)), "현재 위치 BPM 오른쪽 다음 구간 (11/19: 값만)");
     }
 
     // ───── 8. 메트로놈 ─────

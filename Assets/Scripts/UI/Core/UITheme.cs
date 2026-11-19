@@ -180,6 +180,83 @@ public class UITheme : ScriptableObject
     [Tooltip("콤보 숫자 (흰색)")]
     public Color comboNumber = Color.white;
 
+    [Header("에디터 (기획서 3-6 「에디터 라벤더 톤 개편 (11/19)」. 패널·글자·포인트색·위험·팝업은 위 공용 값을 쓴다)")]
+    [Tooltip("자동 테스트 버튼 채움 (보라 #7B6BD8)")]
+    public Color editorAutoTest = new Color32(0x7B, 0x6B, 0xD8, 0xFF);
+    [Tooltip("흰 버튼 테두리 (rgba(44,40,56) 16%: 저장 · 나가기 · 취소 · 배속 ◀ ▶)")]
+    public Color editorButtonBorder = new Color(0x2C / 255f, 0x28 / 255f, 0x38 / 255f, 0.16f);
+    [Tooltip("버튼 그림자 세기 (채움 색 × 이 알파, 오프셋 (0, 6) 퍼짐 16)")]
+    [Range(0f, 1f)] public float editorButtonShadowAlpha = 0.30f;
+    [Tooltip("BPM 구간 강조 (호박 #C97418): 라벨 바탕 · 목록 값 · 타임라인 눈금 · BPM(현재 위치) 막대 · 입력 창 강조 · \"● 저장 안 됨\"")]
+    public Color editorAmber = new Color32(0xC9, 0x74, 0x18, 0xFF);
+    [Tooltip("그리드 위 BPM 구간선 (밝은 호박 #FFB45C)")]
+    public Color editorAmberLight = new Color32(0xFF, 0xB4, 0x5C, 0xFF);
+    [Tooltip("호박 연한 바탕 알파 (고른 구간 줄 · 아이콘 바탕 14%, 노트 경고 박스 12%)")]
+    [Range(0f, 1f)] public float editorAmberSoftAlpha = 0.14f;
+    [Range(0f, 1f)] public float editorWarningBoxAlpha = 0.12f;
+    [Tooltip("입력 오류 박스 바탕 알파 (위험 색 × 10%)")]
+    [Range(0f, 1f)] public float editorErrorBoxAlpha = 0.10f;
+
+    [Header("에디터 · 배경 (라벤더 + 아주 옅은 곡 일러스트 + 라벤더 세로 그라데이션)")]
+    [Tooltip("곡 일러스트 불투명도 (22%)")]
+    [Range(0f, 1f)] public float editorIllustrationOpacity = 0.22f;
+    [Tooltip("곡 일러스트 흐림 (1920×1080 기준 sigma px)")]
+    [Min(0f)] public float editorIllustrationBlur = 40f;
+    [Tooltip("곡 일러스트 채도 (50%)")]
+    [Range(0f, 2f)] public float editorIllustrationSaturation = 0.5f;
+    [Tooltip("라벤더 덮기 (overlayColor) 위 → 아래 불투명도")]
+    [Range(0f, 1f)] public float editorOverlayTop = 0.55f;
+    [Range(0f, 1f)] public float editorOverlayBottom = 0.85f;
+
+    [Header("에디터 · 도구 선택 표시 (다른 화면의 선택 표시와 같음: 하늘 14% + 하늘 테두리 + 선택 링)")]
+    public Color toolSelectedBackground = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.14f);
+    public Color toolSelectedBorder = new Color32(0x3E, 0x9B, 0xE0, 0xFF);
+    public Color toolSelectedText = new Color32(0x2F, 0x7F, 0xC8, 0xFF);
+    public Color toolNormalBackground = Color.white;
+    public Color toolNormalBorder = new Color(0x2C / 255f, 0x28 / 255f, 0x38 / 255f, 0.10f);
+    public Color toolNormalText = new Color32(0x2C, 0x28, 0x38, 0xFF);
+    [Tooltip("고른 도구 테두리 두께 (px)")]
+    [Min(0.5f)] public float toolSelectedBorderWidth = 1.5f;
+    [Tooltip("고르지 않은 도구 테두리 두께 (px)")]
+    [Min(0.5f)] public float toolNormalBorderWidth = 1f;
+    [Tooltip("스위치 꺼짐 바탕 (rgba(44,40,56) 18%). 켜짐은 포인트색")]
+    public Color editorSwitchOff = new Color(0x2C / 255f, 0x28 / 255f, 0x38 / 255f, 0.18f);
+
+    [Header("에디터 · 그리드 (바탕은 인게임 기어와 같은 #17141F, 양쪽 테두리는 gearBorder)")]
+    public Color editorGridBackground = new Color32(0x17, 0x14, 0x1F, 0xFF);
+    [Tooltip("곡 시작 전(마디 1 아래) 빗금 (흰 4%)")]
+    public Color editorGridHatch = new Color(1f, 1f, 1f, 0.04f);
+    [Tooltip("숏노트 · 롱노트 머리 (인게임 노트와 같은 #F4F1F9)")]
+    public Color editorNote = new Color32(0xF4, 0xF1, 0xF9, 0xFF);
+    [Tooltip("롱노트 몸통 불투명도 (노트 색 × 이 알파, 35%)")]
+    [Range(0f, 1f)] public float editorLongNoteBodyAlpha = 0.35f;
+    [Tooltip("놓을 자리 미리 보기 테두리 (하늘)")]
+    public Color editorPreview = new Color32(0x7D, 0xD3, 0xFC, 0xFF);
+    public GridLineStyle editorLineMeasure = new GridLineStyle(new Color(1f, 1f, 1f, 0.70f), 2f);
+    public GridLineStyle editorLineBeat = new GridLineStyle(new Color(0xFF / 255f, 0x7A / 255f, 0xC6 / 255f, 0.50f), 1f);
+    [Tooltip("8분 (1박의 1/2)")]
+    public GridLineStyle editorLine8th = new GridLineStyle(new Color(0x7D / 255f, 0xD3 / 255f, 0xFC / 255f, 0.32f), 1f);
+    [Tooltip("16분 (1박의 1/4)")]
+    public GridLineStyle editorLine16th = new GridLineStyle(new Color(0x7D / 255f, 0xD3 / 255f, 0xFC / 255f, 0.14f), 1f);
+    [Tooltip("32분 (1박의 1/8)")]
+    public GridLineStyle editorLine32nd = new GridLineStyle(new Color(0x7D / 255f, 0xD3 / 255f, 0xFC / 255f, 0.08f), 1f);
+    [Tooltip("셋잇단 (1박의 1/3 · 1/6)")]
+    public GridLineStyle editorLineTriplet = new GridLineStyle(new Color(0xA9 / 255f, 0x9C / 255f, 0xFF / 255f, 0.30f), 1f);
+    [Tooltip("셋잇단 잘게 (1박의 1/12)")]
+    public GridLineStyle editorLineTripletFine = new GridLineStyle(new Color(0xA9 / 255f, 0x9C / 255f, 0xFF / 255f, 0.14f), 1f);
+    [Tooltip("나머지 (그 밖의 잘게 나눈 선)")]
+    public GridLineStyle editorLineOther = new GridLineStyle(new Color(1f, 1f, 1f, 0.06f), 1f);
+    [Tooltip("라인 구분선 (흰 10%)")]
+    public GridLineStyle editorLaneDivider = new GridLineStyle(new Color(1f, 1f, 1f, 0.10f), 1f);
+    [Tooltip("마디 번호 (그리드 왼쪽 바깥)")]
+    public Color editorMeasureNumber = new Color32(0x5A, 0x54, 0x70, 0xFF);
+
+    [Header("에디터 · 현재 위치 선 (판정선과 같은 분홍 → 보라 가로 그라데이션 + 왼쪽 분홍 삼각형)")]
+    public Color editorCurrentLineStart = new Color32(0xFF, 0x5F, 0xB4, 0xFF);
+    public Color editorCurrentLineEnd = new Color32(0x9B, 0x6B, 0xFF, 0xFF);
+    [Tooltip("재생 중 박마다 현재 위치 선을 밝게 할 때 덮는 색 (흰색)")]
+    public Color editorCurrentLineFlash = Color.white;
+
     private static UITheme current;
 
     /// <summary>

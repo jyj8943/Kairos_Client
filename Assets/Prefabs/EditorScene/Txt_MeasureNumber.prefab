@@ -67,8 +67,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uB9C8\uB514 1"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
-  m_sharedMaterial: {fileID: -6662165456191364081, guid: 8debd85adffa1b94b9615611877e0e9f, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}
+  m_sharedMaterial: {fileID: 5180054123522931063, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -92,8 +92,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18
-  m_fontSizeBase: 18
+  m_fontSize: 15
+  m_fontSizeBase: 15
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

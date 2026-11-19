@@ -125,13 +125,18 @@ public class BpmSectionEditorPlayTests
         popup.BpmInput.text = "500";
         Assert.AreEqual(BpmSectionError.OutOfRange, popup.CurrentError);
         Assert.IsFalse(popup.ConfirmButton.interactable, "잘못된 값이면 확인 버튼 비활성");
-        Assert.AreEqual(GameConstants.Editor.BpmSectionOutOfRangeMessage, popup.BpmHintText.text);
-        Assert.AreEqual((Color)new Color32(0xDC, 0x26, 0x26, 0xFF), popup.BpmHintText.color, "빨간 글씨");
+        Assert.AreEqual(GameConstants.Editor.BpmSectionOutOfRangeMessage, popup.NoticeText.text);
+        Assert.AreEqual(Popup_BpmSection.NoticeKind.Error, popup.Notice, "오류 안내 박스");
+        Assert.AreEqual(UITheme.Current.danger, popup.NoticeText.color, "빨간 글씨");
+        Assert.AreEqual(UITheme.Current.danger, popup.InputFrame.color, "입력칸 빨간 테두리");
 
         popup.BpmInput.text = "200";
         Assert.AreEqual(BpmSectionError.None, popup.CurrentError);
         Assert.IsTrue(popup.ConfirmButton.interactable);
-        Assert.AreEqual(GameConstants.Editor.BpmSectionInputHint, popup.BpmHintText.text);
+        Assert.AreEqual(GameConstants.Editor.BpmSectionNoticeAdd, popup.NoticeText.text, "평소 회색 안내 (뒤에 노트 없음)");
+        Assert.AreEqual(Popup_BpmSection.NoticeKind.Normal, popup.Notice);
+        Assert.AreEqual(GameConstants.Editor.BpmSectionConfirmAdd, popup.ConfirmLabel, "추가 모드 버튼 이름");
+        Assert.AreEqual(GameConstants.Editor.BpmSectionPopupTitleAdd, popup.TitleLabel);
         popup.ConfirmButton.onClick.Invoke();
         yield return null;
 
@@ -231,11 +236,12 @@ public class BpmSectionEditorPlayTests
         Assert.IsNull(canvasT.Find("RightPanel/PlaybackSpeed"));
         Assert.IsNull(canvasT.Find("RightPanel/SongLength"));
         Assert.IsNotNull(canvasT.Find("LeftTools/Toggle_BpmSection"));
-        Assert.IsNotNull(canvasT.Find("LeftTools/Img_NoteCountBox/Txt_NoteCount"));
+        Assert.IsNotNull(canvasT.Find("LeftTools/NoteCards/Img_NotesCard/Txt_NotesValue"));
 
         session.AddNote(0, 8 * T);
         session.AddLongNote(1, 10 * T, 12 * T, out _);
-        Assert.AreEqual("노트 2\n<size=80%><color=#52525B>롱노트 1</color></size>", Get<TMP_Text>(canvas, "noteCountText").text);
+        Assert.AreEqual("2", canvas.NotesValue, "노트 카드 (숏 + 롱)");
+        Assert.AreEqual("1", canvas.LongNotesValue, "롱노트 카드");
 
         Assert.IsTrue(session.AddBpmSection(64 * T, 200f, out _));
         Assert.IsTrue(session.AddBpmSection(98 * T, 175f, out _));
@@ -245,7 +251,7 @@ public class BpmSectionEditorPlayTests
         Assert.AreEqual("마디 1 · 1박", list.GetItem(0).PositionText.text);
         Assert.AreEqual("마디 25 · 3박", list.GetItem(2).PositionText.text);
         Assert.AreEqual(0, list.CurrentIndex, "현재 위치(0박)가 속한 구간 강조");
-        Assert.AreEqual("다음: 마디 17 → 200", Get<TMP_Text>(canvas, "nextBpmText").text);
+        Assert.AreEqual("다음 200", Get<TMP_Text>(canvas, "nextBpmText").text);
         Assert.IsTrue(Get<Button>(canvas, "resetBpmButton").interactable);
 
         // 목록 줄 클릭 → 그 구간이 현재 위치로
@@ -255,7 +261,7 @@ public class BpmSectionEditorPlayTests
         Assert.AreEqual(1, list.CurrentIndex);
         Assert.AreEqual("200", Get<TMP_Text>(canvas, "currentBpmText").text);
         Assert.IsTrue(list.GetItem(1).IsHighlighted);
-        Assert.AreEqual("다음: 마디 25 3박 → 175", Get<TMP_Text>(canvas, "nextBpmText").text);
+        Assert.AreEqual("다음 175", Get<TMP_Text>(canvas, "nextBpmText").text);
 
         Slider_Timeline timeline = Object.FindFirstObjectByType<Slider_Timeline>();
         Assert.AreEqual(2, timeline.MarkerCount, "곡 시작 구간은 눈금 없음");
@@ -285,8 +291,11 @@ public class BpmSectionEditorPlayTests
         Toggle bpmToggle = Get<Toggle>(canvas, "bpmSectionToggle");
         Assert.AreEqual((Color)new Color32(0xFF, 0xFF, 0xFF, 0xFF), bpmToggle.targetGraphic.color, "선택 안 된 도구: 흰 바탕");
         canvas.SetTool(EditorTool.BpmSection);
-        Assert.AreEqual((Color)new Color32(0xFF, 0xF7, 0xED, 0xFF), bpmToggle.targetGraphic.color, "선택된 도구: 연한 주황 바탕");
-        Assert.AreEqual((Color)new Color32(0xC2, 0x41, 0x0C, 0xFF), bpmToggle.GetComponentInChildren<TMP_Text>().color);
+        Assert.AreEqual(UITheme.Current.toolSelectedBackground, bpmToggle.targetGraphic.color, "고른 도구: 하늘 14% 바탕 (11/19)");
+        Assert.AreEqual(UITheme.Current.toolSelectedText, Get<TMP_Text>(canvas, "bpmSectionLabel").color, "고른 도구 글자 #2F7FC8");
+        Assert.IsTrue(Get<GameObject>(canvas, "bpmSectionRing").activeSelf, "고른 도구 선택 링");
+        Assert.IsFalse(Get<GameObject>(canvas, "shortNoteRing").activeSelf, "고르지 않은 도구는 링 없음");
+        Assert.AreEqual(GameConstants.Editor.ToolBpmSectionHint, canvas.ToolHint, "고른 도구 사용법 한 줄");
         Debug.Log("[BpmSectionEditorPlayTest] P11: Missing 0, 목록·눈금·현재 BPM·라벨·되돌리기·도구 색 확인");
     }
 

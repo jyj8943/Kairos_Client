@@ -6,7 +6,8 @@ using UnityEngine.UI;
 /// <summary>
 /// 그리드의 BPM 구간선과 라벨 표시. EditorScene.unity GridArea 아래 "BpmSectionLayer"(RectMask2D, Img_Grid와 같은 높이)에 붙이고,
 /// EditorScene이 Init()을 호출한다.
-/// - 모든 구간(곡 시작 포함)에 청록 구간선(그리드 폭 + 양옆 lineOverhang, 왼쪽 끝 ▶)을 그리고,
+/// - 모든 구간(곡 시작 포함)에 호박 구간선(#FFB45C, 그리드 폭 + 양옆 lineOverhang, 왼쪽 끝 ▶)을 그리고 (11/19 청록 → 호박,
+///   라벨은 호박 #C97418 바탕 + 흰 글자, 아래 작은 글자는 호박. 색은 Init에서 템플릿을 UITheme으로 칠한 뒤 복제한다),
 ///   그리드 오른쪽 바깥에 "♩ 200 BPM" 라벨과 아래 작은 "150.61 → 200"(곡 시작은 "곡 시작")을 붙인다.
 /// - 보이는 구간만 풀(ComponentPool)에서 꺼내 배치한다 (박자선·노트 표시와 같은 방식). 클릭은 받지 않는다 (raycastTarget 끔).
 /// - 라벨 글자는 구간이 바뀔 때(OnTimingChanged)만 만들고, 스크롤·재생 중에는 위치만 옮긴다.
@@ -71,6 +72,7 @@ public class EditorBpmSectionLayer : MonoBehaviour
         }
 
         lineTemplate.gameObject.SetActive(false);
+        PaintTemplate();
         if (pool == null)
         {
             pool = new ComponentPool<Image>(lineTemplate, transform);
@@ -85,6 +87,24 @@ public class EditorBpmSectionLayer : MonoBehaviour
     private void OnDestroy()
     {
         Unsubscribe();
+    }
+
+    /// <summary>
+    /// 구간선 템플릿을 UITheme으로 칠한다 (풀이 템플릿을 복제하므로 만들기 전에). 자식 순서: 0 ▶, 1 라벨 바탕(자식 라벨 글자), 2 아래 작은 글자.
+    /// </summary>
+    private void PaintTemplate()
+    {
+        UITheme theme = UITheme.Current;
+        lineTemplate.color = theme.editorAmberLight;
+        Transform t = lineTemplate.transform;
+        if (t.childCount > 0 && t.GetChild(0).TryGetComponent(out TMP_Text arrow)) arrow.color = theme.editorAmberLight;
+        if (t.childCount > 1 && t.GetChild(1).TryGetComponent(out Image labelBack))
+        {
+            labelBack.color = theme.editorAmber;
+            TMP_Text label = labelBack.GetComponentInChildren<TMP_Text>(true);
+            if (label != null) label.color = theme.onAccentText;
+        }
+        if (t.childCount > 2 && t.GetChild(2).TryGetComponent(out TMP_Text change)) change.color = theme.editorAmber;
     }
 
     private void Unsubscribe()

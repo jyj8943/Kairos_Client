@@ -11,8 +11,15 @@ using UnityEngine.UI;
 /// 채보 편집 화면 UI. EditorScene이 그리드 Init 뒤에 Init()을 호출한다.
 /// - 상단 바(채보 정보·저장 상태), 왼쪽 패널(노트 수·도구·테스트 플레이 배속),
 ///   오른쪽 패널(박자 스냅·그리드 높이·현재 위치 BPM·BPM 구간 목록·곡 기본 BPM으로 되돌리기·메트로놈/키음), 타임라인 정보를 갱신한다 (기획서 3-6).
+/// - 11/19 라벤더 톤 (기획서 3-6 「에디터 라벤더 톤 개편」): 배경 MenuBackground(아주 옅은 일러스트 + 세로 그라데이션), 흰 유리 패널,
+///   상단 바 "에디터 EDITOR" 제목 · 앨범 · 곡 제목 / CUSTOM 뱃지 · 채보 이름 · Lv · "● 저장 안 됨"(변경이 있을 때만),
+///   버튼 4개(저장 [Ctrl+S] · 자동 테스트 보라 ◎ · 테스트 플레이 하늘 ▶ · 나가기 [Esc]), 맨 아래 키 안내 줄(KeyGuideBar). 색은 모두 UITheme.
 /// - 왼쪽 도구 토글 상태를 CurrentTool로 알려준다 (도구 동작은 각 처리 쪽에서 이 값을 읽는다).
-///   선택된 도구는 연한 주황 바탕 · 주황 테두리 · 진한 주황 글자, 나머지는 흰 바탕 · 회색 테두리 · 진한 회색 글자.
+///   고른 도구는 하늘 14% 바탕 · 하늘 1.5px 테두리 · 선택 링(흰 3 + 하늘 6) · 글자 #2F7FC8, 나머지는 흰 바탕 · 흐린 테두리 · 기본 글자 (UITheme 에디터 묶음).
+///   아래에 고른 도구 사용법 한 줄. 키 칩 [1][2][3]은 입력 에셋 바인딩에서 읽는다.
+/// - 테스트 플레이 배속: 마지막으로 쓴 값을 PlayerData(lastSelection.editorTestPlayMultiplier)에 저장하고, 들어올 때 그 값으로 시작한다 (처음 1.0, 인게임 배속과 따로).
+/// - 저장 상태 글자(Txt_SaveStatus): 저장하지 않은 변경이 있으면 "● 저장 안 됨"(호박), 저장된 상태면 숨김.
+///   잠깐 띄우는 안내(테스트 플레이 안내·BPM 구간 결과 등)와 저장 실패도 같은 자리에 띄우고, 시간이 지나면(EditorScene) 저장 상태로 되돌린다. 저장 성공은 "● 저장 안 됨"이 사라지는 것으로 알린다.
 ///   도구 단축키 1 · 2 · 3(ChartEditor/ToolShortNote·ToolLongNote·ToolBpmSection)은 이벤트로 알린다 (롱노트 드래그 중 확인은 EditorScene).
 /// - BPM 구간: 목록 줄 클릭·Btn_ResetBpm은 이벤트로 알리고, 구간이 바뀌면(RefreshTiming) 목록·현재 BPM·타임라인 눈금을 다시 그린다.
 ///   현재 위치가 속한 구간이 바뀔 때만 현재 BPM 글자·목록 강조를 바꾼다 (재생 중 매 프레임 글자를 새로 만들지 않게).
@@ -29,10 +36,34 @@ using UnityEngine.UI;
 /// </summary>
 public class Canvas_Editor : UIBase
 {
+    [Header("배경")]
+    [Tooltip("라벤더 + 아주 옅은 곡 일러스트 + 세로 그라데이션 (Prefabs/Common/MenuBackground)")]
+    [SerializeField] private MenuBackground menuBackground;
+
     [Header("상단 바")]
-    [SerializeField] private TMP_Text chartInfoText;
-    [Tooltip("저장 상태 (Txt_SaveStatus). 처음에는 비워 둔다")]
+    [SerializeField] private TMP_Text screenTitleText;
+    [SerializeField] private TMP_Text screenTitleEnText;
+    [Tooltip("곡 앨범 (Img_Album, 60×60)")]
+    [SerializeField] private Image albumImage;
+    [SerializeField] private TMP_Text songTitleText;
+    [Tooltip("CUSTOM 뱃지 (Img_ChartBadge)")]
+    [SerializeField] private Image chartBadge;
+    [SerializeField] private TMP_Text chartBadgeText;
+    [SerializeField] private TMP_Text chartNameText;
+    [SerializeField] private TMP_Text levelText;
+    [Tooltip("저장 상태 (Txt_SaveStatus). 변경이 있을 때만 \"● 저장 안 됨\"")]
     [SerializeField] private TMP_Text saveStatusText;
+    [SerializeField] private TMP_Text saveLabel;
+    [SerializeField] private TMP_Text autoTestLabel;
+    [SerializeField] private TMP_Text testPlayLabel;
+    [SerializeField] private TMP_Text exitLabel;
+    [Tooltip("저장 버튼 오른쪽 키 칩 글자 (Ctrl+S, 바인딩)")]
+    [SerializeField] private TMP_Text saveKeyText;
+    [Tooltip("나가기 버튼 오른쪽 키 칩 글자 (Esc)")]
+    [SerializeField] private TMP_Text exitKeyText;
+    [Tooltip("자동 테스트 · 테스트 플레이 버튼 그림자 (PopupShadow 스프라이트, 채움 색 × 30%)")]
+    [SerializeField] private Image autoTestShadow;
+    [SerializeField] private Image testPlayShadow;
     [SerializeField] private Button saveButton;
     [SerializeField] private Button exitButton;
     [SerializeField] private Button testPlayButton;
@@ -42,27 +73,41 @@ public class Canvas_Editor : UIBase
     [Header("그리드")]
     [Tooltip("휠 입력을 받을 영역 (Img_Grid)")]
     [SerializeField] private RectTransform gridRect;
-    [Tooltip("그리드 아래 조작 안내 (Txt_ControlHint). 문구는 GameConstants.Editor.ControlHint")]
-    [SerializeField] private TMP_Text controlHintText;
 
-    [Header("왼쪽 패널: 노트 수")]
-    [Tooltip("노트 수 (Txt_NoteCount). \"노트 413\" / \"롱노트 84\" 두 줄")]
-    [SerializeField] private TMP_Text noteCountText;
+    [Header("맨 아래 키 안내 줄 (그리드 아래 조작 안내를 옮김, 11/19)")]
+    [SerializeField] private KeyGuideBar keyGuideBar;
+
+    [Header("왼쪽 패널: 노트 수 (흰 카드 2개)")]
+    [SerializeField] private TMP_Text notesTitleText;
+    [SerializeField] private TMP_Text notesCardLabel;
+    [Tooltip("노트 수 값 (Txt_NotesValue, 숏노트 + 롱노트)")]
+    [SerializeField] private TMP_Text notesValueText;
+    [SerializeField] private TMP_Text longNotesCardLabel;
+    [Tooltip("롱노트 수 값 (Txt_LongNotesValue)")]
+    [SerializeField] private TMP_Text longNotesValueText;
 
     [Header("왼쪽 도구 (단축키 1 · 2 · 3)")]
     [SerializeField] private Toggle shortNoteToggle;
     [SerializeField] private Toggle longNoteToggle;
     [SerializeField] private Toggle bpmSectionToggle;
 
-    [Header("왼쪽 도구: 선택 표시 색 (기획서 3-6)")]
-    [SerializeField] private Color toolSelectedBackground = new Color32(0xFF, 0xF7, 0xED, 0xFF);
-    [SerializeField] private Color toolSelectedBorder = new Color32(0xF9, 0x73, 0x16, 0xFF);
-    [SerializeField] private Color toolSelectedText = new Color32(0xC2, 0x41, 0x0C, 0xFF);
-    [SerializeField] private Color toolNormalBackground = Color.white;
-    [SerializeField] private Color toolNormalBorder = new Color32(0xA1, 0xA1, 0xAA, 0xFF);
-    [SerializeField] private Color toolNormalText = new Color32(0x27, 0x27, 0x2A, 0xFF);
-    [Tooltip("선택된 도구 테두리 두께 (px). 선택 안 된 도구는 1px 더 얇다")]
-    [Min(1f)] [SerializeField] private float toolSelectedBorderWidth = 3f;
+    [SerializeField] private TMP_Text toolsTitleText;
+    [Tooltip("도구 이름 (Txt_ShortNote · Txt_LongNote · Txt_BpmSection)")]
+    [SerializeField] private TMP_Text shortNoteLabel;
+    [SerializeField] private TMP_Text longNoteLabel;
+    [SerializeField] private TMP_Text bpmSectionLabel;
+    [Tooltip("도구 키 칩 글자 [1][2][3] (바인딩)")]
+    [SerializeField] private TMP_Text shortNoteKeyText;
+    [SerializeField] private TMP_Text longNoteKeyText;
+    [SerializeField] private TMP_Text bpmSectionKeyText;
+    [Tooltip("고른 도구 선택 링 (Img_FocusRing, 흰 3 + 하늘 6). 고른 도구만 켠다")]
+    [SerializeField] private GameObject shortNoteRing;
+    [SerializeField] private GameObject longNoteRing;
+    [SerializeField] private GameObject bpmSectionRing;
+    [Tooltip("BPM 구간 도구 ♩ 아이콘 (호박)")]
+    [SerializeField] private TMP_Text bpmSectionIcon;
+    [Tooltip("고른 도구 사용법 한 줄 (Txt_ToolHint, 13, textMuted)")]
+    [SerializeField] private TMP_Text toolHintText;
 
     [Header("왼쪽 도구: 테스트 플레이 배속 (버튼으로만 바꾼다, 단축키 없음)")]
     [Tooltip("배속 내림 (Btn_SpeedDown, −0.1)")]
@@ -71,37 +116,60 @@ public class Canvas_Editor : UIBase
     [SerializeField] private Button speedUpButton;
     [Tooltip("지금 테스트 플레이 배속 (Txt_Speed)")]
     [SerializeField] private TMP_Text speedText;
+    [SerializeField] private TMP_Text speedTitleText;
+    [Tooltip("배속 아래 안내 (Txt_SpeedHint)")]
+    [SerializeField] private TMP_Text speedHintText;
 
     [Header("오른쪽 패널")]
+    [SerializeField] private TMP_Text snapTitleText;
     [SerializeField] private TMP_Dropdown beatSnapDropdown;
+    [SerializeField] private TMP_Text zoomTitleText;
     [SerializeField] private TMP_Text gridHeightText;
+    [Tooltip("그리드 높이 키 칩 [Ctrl] 글자 (바인딩, 옆 [휠]은 고정 글자)")]
+    [SerializeField] private TMP_Text zoomKeyText;
+    [SerializeField] private TMP_Text zoomWheelKeyText;
     [Tooltip("선 간격이 좁을 때 보여주는 안내 (Txt_GridHeightHint). 기준은 GameConstants.Editor.MinSnapLineSpacingPixels")]
     [SerializeField] private TMP_Text gridHeightHintText;
 
-    [Header("오른쪽 패널: BPM (현재 위치)")]
+    [Header("오른쪽 패널: BPM (현재 위치, 흰 카드 + 왼쪽 호박 막대)")]
+    [SerializeField] private TMP_Text currentBpmTitleText;
+    [Tooltip("BPM 카드 왼쪽 호박 막대 (Img_CurrentBpmBar)")]
+    [SerializeField] private Image currentBpmBar;
     [Tooltip("현재 위치 선의 BPM (Txt_CurrentBpm)")]
     [SerializeField] private TMP_Text currentBpmText;
     [Tooltip("다음 구간 \"다음: 마디 17 → 200\" (Txt_NextBpm). 다음 구간이 없으면 비운다")]
     [SerializeField] private TMP_Text nextBpmText;
 
     [Header("오른쪽 패널: BPM 구간")]
+    [SerializeField] private TMP_Text bpmSectionsTitleText;
     [SerializeField] private ScrollView_BpmSections bpmSectionList;
-    [Tooltip("곡 기본 BPM으로 되돌리기 (Btn_ResetBpm). 곡 기본 BPM 1개 상태면 비활성")]
+    [Tooltip("곡 기본 BPM으로 되돌리기 (Btn_ResetBpm). 곡 기본 BPM 1개 상태면 꺼짐(회색), 켜지면 빨간 글자 + 빨간 50% 테두리")]
     [SerializeField] private Button resetBpmButton;
+    [SerializeField] private TMP_Text resetBpmLabel;
+    [Tooltip("되돌리기 버튼 테두리 (Img_Frame)")]
+    [SerializeField] private Image resetBpmFrame;
     [Tooltip("BPM 구간 추가 · 수정 창")]
     [SerializeField] private Popup_BpmSection bpmSectionPopup;
 
     [Header("타임라인")]
+    [Tooltip("현재 시간 (Txt_TimeInfo, 20 Bold)")]
     [SerializeField] private TMP_Text timeInfoText;
+    [Tooltip("\" / 곡 길이 · 마디 N\" (Txt_TimeTotal, Regular textDescription). 마디가 바뀔 때만 다시 쓴다")]
+    [SerializeField] private TMP_Text timeTotalText;
     [SerializeField] private Button playButton;
     [Tooltip("재생 버튼 아이콘 글자 (Txt_Play). 정지 중 ▶, 재생 중 ❚❚")]
     [SerializeField] private TMP_Text playIconText;
     [SerializeField] private Slider_Timeline timelineSlider;
 
-    [Header("재생 설정 (재생은 항상 1배)")]
+    [Header("재생 설정 (재생은 항상 1배, 체크박스 대신 스위치 52×30 · 켜짐 하늘)")]
     [SerializeField] private Toggle metronomeToggle;
     [Tooltip("에디터 키음 (Toggle_KeySound). 재생 중 노트가 현재 위치 선에 닿을 때 키음을 낸다")]
     [SerializeField] private Toggle keySoundToggle;
+    [Tooltip("스위치 바탕 (Img_SwitchTrack) · 손잡이 (Img_SwitchKnob)")]
+    [SerializeField] private Image metronomeTrack;
+    [SerializeField] private RectTransform metronomeKnob;
+    [SerializeField] private Image keySoundTrack;
+    [SerializeField] private RectTransform keySoundKnob;
 
     [Header("입력")]
     [Tooltip("입력 에셋의 ChartEditor/Scroll (마우스 휠 y)")]
@@ -181,9 +249,11 @@ public class Canvas_Editor : UIBase
     private Action onTestPlayRequested;
     private Action onAutoTestPlayRequested;
 
-    /// <summary>마지막 저장 결과 문구. 나가기 안내가 끝나면 이 문구로 되돌린다</summary>
-    private string lastSaveStatus = string.Empty;
     private bool isInputEnabled;
+
+    /// <summary>시간 뒤쪽 글자를 마지막으로 쓴 마디 (바뀔 때만 다시 쓴다)</summary>
+    private int shownTimeMeasure = -1;
+    private float shownSongLength = -1f;
 
     /// <summary>현재 BPM 글자·목록 강조를 마지막으로 맞춘 구간 번호. 구간이 바뀌면 −1로 돌려 다시 맞춘다</summary>
     private int shownSectionIndex = -1;
@@ -249,7 +319,7 @@ public class Canvas_Editor : UIBase
         autoTestPlayButton.onClick.RemoveListener(RequestAutoTestPlay);
         autoTestPlayButton.onClick.AddListener(RequestAutoTestPlay);
 
-        // 테스트 플레이 배속: 에디터에 들어올 때마다 1.0에서 시작한다 (테스트 플레이에서 돌아오면 EditorScene이 SetTestPlaySpeed로 되돌린다)
+        // 테스트 플레이 배속: 마지막으로 쓴 값(PlayerData)으로 시작한다 (테스트 플레이에서 돌아오면 EditorScene이 SetTestPlaySpeed로 되돌린다)
         if (speedDownButton != null && speedUpButton != null && speedText != null)
         {
             speedDownButton.onClick.RemoveListener(OnSpeedDownClicked);
@@ -261,13 +331,10 @@ public class Canvas_Editor : UIBase
         {
             Debug.LogWarning("[Canvas_Editor] 테스트 플레이 배속 버튼·글자가 연결되지 않았습니다.", this);
         }
-        SetTestPlaySpeed(GameConstants.Play.DefaultScrollMultiplier);
+        SetTestPlaySpeed(PlayerDataManager.HasInstance ? GameManager.PlayerData.LastEditorTestPlayMultiplier : GameConstants.Play.DefaultScrollMultiplier);
 
-        chartInfoText.text = string.Format(GameConstants.Editor.ChartInfoFormat, song.Title, session.ChartName, session.Level);
-        lastSaveStatus = string.Empty;
-        saveStatusText.text = lastSaveStatus;
-        if (controlHintText != null) controlHintText.text = GameConstants.Editor.ControlHint;
-        else Debug.LogWarning("[Canvas_Editor] 조작 안내(Txt_ControlHint)가 연결되지 않았습니다.", this);
+        InitTheme(song, session);
+        RefreshSaveStatus();
 
         // 도구: 선택 표시 색을 토글이 바뀔 때마다 맞춘다
         foreach (Toggle toggle in ToolToggles())
@@ -277,6 +344,7 @@ public class Canvas_Editor : UIBase
             toggle.onValueChanged.AddListener(OnToolToggled);
         }
         RefreshToolStyles();
+        RefreshSwitches();
 
         // BPM 구간: 목록·되돌리기·입력 창
         bpmSectionList.Init(tick => BpmSectionChosen?.Invoke(tick));
@@ -295,6 +363,7 @@ public class Canvas_Editor : UIBase
         keySoundToggle.onValueChanged.RemoveListener(OnKeySoundToggled);
         keySoundToggle.SetIsOnWithoutNotify(GameConstants.Editor.KeySoundDefaultOn);
         keySoundToggle.onValueChanged.AddListener(OnKeySoundToggled);
+        RefreshSwitches();
 
         // 폰트에 ❚ 글자가 없으면 굵은 "II"로 대신한다
         pauseIcon = playIconText.font != null && playIconText.font.HasCharacters(GameConstants.Editor.PauseIcon)
@@ -309,11 +378,122 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 재생 버튼 아이콘을 바꾼다 (정지 중 ▶, 재생 중 ❚❚).
+    /// 고정 글자 · 곡 정보 · 키 칩 · 키 안내 줄 · 배경 · 버튼 그림자를 UITheme · GameConstants · 바인딩으로 채운다 (Init에서 한 번).
+    /// </summary>
+    private void InitTheme(SongData song, ChartEditSession session)
+    {
+        UITheme theme = UITheme.Current;
+        // 바뀌지 않는 그래픽(패널·테두리·카드·글자)은 역할로 칠한다. 선택에 따라 바뀌는 색은 아래 Refresh 함수들이 덮어 칠한다
+        UIThemeColor.ApplyAll(gameObject);
+        if (menuBackground != null)
+        {
+            menuBackground.Init(new MenuBackgroundStyle
+            {
+                vertical = true,
+                overlayTopAlpha = theme.editorOverlayTop,
+                overlayBottomAlpha = theme.editorOverlayBottom,
+                illustrationOpacity = theme.editorIllustrationOpacity,
+                blurSigmaPx = theme.editorIllustrationBlur,
+                saturation = theme.editorIllustrationSaturation,
+                brightness = 1f
+            });
+            menuBackground.SetIllustration(song.Background, true);
+        }
+
+        SetText(screenTitleText, GameConstants.Editor.ScreenTitle);
+        SetText(screenTitleEnText, GameConstants.Editor.ScreenTitleEn);
+        if (albumImage != null)
+        {
+            albumImage.sprite = song.Cover;
+            albumImage.color = song.Cover != null ? Color.white : theme.emptyCover;
+        }
+        SetText(songTitleText, song.Title);
+        if (chartBadge != null) UIThemePaint.Badge(chartBadge, chartBadgeText, theme.difficultyCustom);
+        SetText(chartBadgeText, GameConstants.Play.ChartBadgeCustomText);
+        SetText(chartNameText, session.ChartName);
+        SetText(levelText, string.Format(GameConstants.Editor.LevelFormat, session.Level));
+
+        SetText(saveLabel, GameConstants.Editor.SaveButtonLabel);
+        SetText(autoTestLabel, GameConstants.Editor.AutoTestButtonLabel);
+        SetText(testPlayLabel, GameConstants.Editor.TestPlayButtonLabel);
+        SetText(exitLabel, GameConstants.Editor.ExitButtonLabel);
+        SetText(saveKeyText, KeyGuideBar.GetKeyText(saveAction != null ? saveAction.action : null, "Ctrl+S"));
+        SetText(exitKeyText, GameConstants.Editor.KeyEsc);
+        if (autoTestPlayButton != null && autoTestPlayButton.targetGraphic != null) autoTestPlayButton.targetGraphic.color = theme.editorAutoTest;
+        if (testPlayButton != null && testPlayButton.targetGraphic != null) testPlayButton.targetGraphic.color = theme.accent;
+        if (autoTestShadow != null) autoTestShadow.color = UITheme.WithAlpha(theme.editorAutoTest, theme.editorButtonShadowAlpha);
+        if (testPlayShadow != null) testPlayShadow.color = UITheme.WithAlpha(theme.accent, theme.editorButtonShadowAlpha);
+
+        SetText(notesTitleText, GameConstants.Editor.NotesTitle);
+        SetText(notesCardLabel, GameConstants.Editor.NotesCardLabel);
+        SetText(longNotesCardLabel, GameConstants.Editor.LongNotesCardLabel);
+        SetText(toolsTitleText, GameConstants.Editor.ToolsTitle);
+        SetText(shortNoteLabel, GameConstants.Editor.ToolShortNoteName);
+        SetText(longNoteLabel, GameConstants.Editor.ToolLongNoteName);
+        SetText(bpmSectionLabel, GameConstants.Editor.ToolBpmSectionName);
+        SetText(shortNoteKeyText, KeyGuideBar.GetKeyText(toolShortNoteAction != null ? toolShortNoteAction.action : null, "1"));
+        SetText(longNoteKeyText, KeyGuideBar.GetKeyText(toolLongNoteAction != null ? toolLongNoteAction.action : null, "2"));
+        SetText(bpmSectionKeyText, KeyGuideBar.GetKeyText(toolBpmSectionAction != null ? toolBpmSectionAction.action : null, "3"));
+        if (bpmSectionIcon != null)
+        {
+            bpmSectionIcon.text = GameConstants.Editor.BpmSectionIcon;
+            bpmSectionIcon.color = theme.editorAmber;
+        }
+        if (toolHintText != null) toolHintText.color = theme.textMuted;
+        SetText(speedTitleText, GameConstants.Editor.SpeedTitle);
+        SetText(speedHintText, GameConstants.Editor.SpeedHint);
+
+        SetText(snapTitleText, GameConstants.Editor.SnapTitle);
+        SetText(zoomTitleText, GameConstants.Editor.ZoomTitle);
+        SetText(zoomKeyText, KeyGuideBar.GetKeyText(zoomModifierAction != null ? zoomModifierAction.action : null, "Ctrl"));
+        SetText(zoomWheelKeyText, GameConstants.Editor.KeyWheel);
+        SetText(currentBpmTitleText, GameConstants.Editor.CurrentBpmTitle);
+        if (currentBpmBar != null) currentBpmBar.color = theme.editorAmber;
+        SetText(bpmSectionsTitleText, GameConstants.Editor.BpmSectionsTitle);
+        if (timeTotalText != null) timeTotalText.color = theme.textDescription;
+        shownTimeMeasure = -1;
+        shownSongLength = -1f;
+
+        InitKeyGuide();
+    }
+
+    private static void SetText(TMP_Text text, string value)
+    {
+        if (text != null) text.text = value;
+    }
+
+    /// <summary>
+    /// 맨 아래 키 안내 줄: Space 재생 · 휠 이동 · 클릭 놓기 · 우클릭 지우기 · 1 2 3 도구 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행 · Ctrl+S 저장 · Esc 나가기.
+    /// 키 글자는 바인딩에서 읽고, 마우스·Esc는 고정 글자.
+    /// </summary>
+    private void InitKeyGuide()
+    {
+        if (keyGuideBar == null) return;
+        keyGuideBar.Init(new[]
+        {
+            new KeyGuideEntry(GameConstants.Editor.GuidePlay, KeyGuideKey.FromAction(playPauseAction, "Space")).WithId(GameConstants.Editor.GuidePlayId),
+            new KeyGuideEntry(GameConstants.Editor.GuideMove, KeyGuideKey.Fixed(GameConstants.Editor.KeyWheel)),
+            new KeyGuideEntry(GameConstants.Editor.GuidePlace, KeyGuideKey.Fixed(GameConstants.Editor.KeyClick)),
+            new KeyGuideEntry(GameConstants.Editor.GuideRemove, KeyGuideKey.Fixed(GameConstants.Editor.KeyRightClick)),
+            new KeyGuideEntry(GameConstants.Editor.GuideTools,
+                KeyGuideKey.FromAction(toolShortNoteAction, "1"), KeyGuideKey.FromAction(toolLongNoteAction, "2"), KeyGuideKey.FromAction(toolBpmSectionAction, "3")),
+            new KeyGuideEntry(GameConstants.Editor.GuideUndo, KeyGuideKey.FromAction(undoAction, "Ctrl+Z")),
+            new KeyGuideEntry(GameConstants.Editor.GuideRedo, KeyGuideKey.FromAction(redoAction, "Ctrl+Y")),
+            new KeyGuideEntry(GameConstants.Editor.GuideSave, KeyGuideKey.FromAction(saveAction, "Ctrl+S")),
+            new KeyGuideEntry(GameConstants.Editor.GuideExit, KeyGuideKey.Fixed(GameConstants.Editor.KeyEsc))
+        });
+    }
+
+    /// <summary>키 안내 줄 (확인용)</summary>
+    public KeyGuideBar KeyGuide => keyGuideBar;
+
+    /// <summary>
+    /// 재생 버튼 아이콘을 바꾼다 (정지 중 ▶, 재생 중 ❚❚). 키 안내 줄의 Space 항목도 "재생" ↔ "멈춤".
     /// </summary>
     public void SetPlaying(bool playing)
     {
         playIconText.text = playing ? pauseIcon : GameConstants.Editor.PlayIcon;
+        if (keyGuideBar != null) keyGuideBar.SetLabel(GameConstants.Editor.GuidePlayId, playing ? GameConstants.Editor.GuidePause : GameConstants.Editor.GuidePlay);
     }
 
     /// <summary>
@@ -322,7 +502,7 @@ public class Canvas_Editor : UIBase
     public void RefreshTiming()
     {
         bpmSectionList.SetSections(session.BpmSections);
-        resetBpmButton.interactable = !session.IsSongDefaultBpm;
+        RefreshResetBpmButton();
         RefreshTimelineMarkers();
         shownSectionIndex = -1;
         RefreshTimeline();
@@ -341,7 +521,7 @@ public class Canvas_Editor : UIBase
         shownSectionIndex = index;
         currentBpmText.text = SongData.FormatBpm(sections[index].Bpm);
         nextBpmText.text = index + 1 < sections.Count
-            ? string.Format(GameConstants.Editor.NextBpmFormat, BpmSectionRules.FormatShortPosition(sections[index + 1].Tick), SongData.FormatBpm(sections[index + 1].Bpm))
+            ? string.Format(GameConstants.Editor.NextBpmFormat, SongData.FormatBpm(sections[index + 1].Bpm))
             : string.Empty;
         bpmSectionList.SetCurrent(index);
         // 스냅 선 간격 안내는 현재 위치 BPM 기준이다
@@ -446,22 +626,31 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 저장 결과를 표시한다. 성공: "저장됨 14:32", 실패: "저장 실패" (이유는 EditorScene이 콘솔에 남긴다).
+    /// 저장 결과를 표시한다. 성공: "● 저장 안 됨"이 사라진다 (숨김), 실패: 빨간 "저장 실패"를 띄운다 (이유는 EditorScene이 콘솔에 남긴다).
     /// </summary>
     public void ShowSaveResult(bool saved)
     {
-        SetSaveStatus(saved
-            ? string.Format(GameConstants.Editor.SaveStatusSaved, DateTime.Now.ToString(GameConstants.Editor.SaveTimeFormat, CultureInfo.InvariantCulture))
-            : GameConstants.Editor.SaveStatusFailed);
+        if (saved) RefreshSaveStatus();
+        else ShowStatus(GameConstants.Editor.SaveStatusFailed, UITheme.Current.danger);
     }
 
     /// <summary>
-    /// 저장 상태 자리에 안내를 잠깐 표시한다. 되돌릴 때는 RefreshSaveStatus를 부른다 (EditorScene이 시간을 잰다).
+    /// 저장 상태 자리에 안내를 잠깐 표시한다 (보조 글자색). 되돌릴 때는 RefreshSaveStatus를 부른다 (EditorScene이 시간을 잰다).
     /// </summary>
     public void ShowStatusMessage(string message)
     {
-        saveStatusText.text = message;
+        ShowStatus(message, UITheme.Current.textDescription);
     }
+
+    private void ShowStatus(string message, Color color)
+    {
+        saveStatusText.text = message;
+        saveStatusText.color = color;
+        saveStatusText.gameObject.SetActive(!string.IsNullOrEmpty(message));
+    }
+
+    /// <summary>"● 저장 안 됨"이 보이면 true (확인용)</summary>
+    public bool IsUnsavedShown => saveStatusText != null && saveStatusText.gameObject.activeSelf && saveStatusText.text == GameConstants.Editor.SaveStatusUnsaved;
 
     /// <summary>
     /// 도구 토글을 바꾼다 (테스트 플레이에서 돌아와 복원할 때).
@@ -486,6 +675,8 @@ public class Canvas_Editor : UIBase
 
         testPlaySpeedSteps = next;
         RefreshSpeed();
+        // 마지막으로 쓴 테스트 플레이 배속을 저장한다 (인게임 배속과 따로, 기획서 2-4 11/19)
+        if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastEditorTestPlayMultiplier(TestPlayScrollMultiplier);
     }
 
     /// <summary>배속 글자를 고치고, 범위 끝이면 그쪽 버튼을 끈다.</summary>
@@ -519,39 +710,88 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 도구 버튼 색을 선택 상태에 맞춘다: 바탕은 Toggle의 targetGraphic, 테두리는 같은 오브젝트의 Outline, 글자는 자식 TMP.
+    /// 도구 버튼 모양을 선택 상태에 맞춘다 (UITheme 에디터 묶음): 바탕 = Toggle의 targetGraphic, 테두리 = 같은 오브젝트의 Outline,
+    /// 이름 글자, 선택 링(고른 도구만). 아래 사용법 한 줄도 고른 도구로 바꾼다.
     /// </summary>
     private void RefreshToolStyles()
     {
-        foreach (Toggle toggle in ToolToggles())
+        UITheme theme = UITheme.Current;
+        PaintTool(shortNoteToggle, shortNoteLabel, shortNoteRing, theme);
+        PaintTool(longNoteToggle, longNoteLabel, longNoteRing, theme);
+        PaintTool(bpmSectionToggle, bpmSectionLabel, bpmSectionRing, theme);
+
+        if (toolHintText != null)
         {
-            if (toggle == null) continue;
-            bool on = toggle.isOn;
-            if (toggle.targetGraphic != null) toggle.targetGraphic.color = on ? toolSelectedBackground : toolNormalBackground;
-            Outline outline = toggle.GetComponent<Outline>();
-            if (outline != null)
+            switch (CurrentTool)
             {
-                outline.effectColor = on ? toolSelectedBorder : toolNormalBorder;
-                float width = on ? toolSelectedBorderWidth : Mathf.Max(1f, toolSelectedBorderWidth - 1f);
-                outline.effectDistance = new Vector2(width, -width);
+                case EditorTool.LongNote: toolHintText.text = GameConstants.Editor.ToolLongNoteHint; break;
+                case EditorTool.BpmSection: toolHintText.text = GameConstants.Editor.ToolBpmSectionHint; break;
+                default: toolHintText.text = GameConstants.Editor.ToolShortNoteHint; break;
             }
-            TMP_Text label = toggle.GetComponentInChildren<TMP_Text>(true);
-            if (label != null) label.color = on ? toolSelectedText : toolNormalText;
+        }
+    }
+
+    private static void PaintTool(Toggle toggle, TMP_Text label, GameObject ring, UITheme theme)
+    {
+        if (toggle == null) return;
+        bool on = toggle.isOn;
+        if (toggle.targetGraphic != null) toggle.targetGraphic.color = on ? theme.toolSelectedBackground : theme.toolNormalBackground;
+        if (toggle.TryGetComponent(out Outline outline))
+        {
+            outline.effectColor = on ? theme.toolSelectedBorder : theme.toolNormalBorder;
+            float width = on ? theme.toolSelectedBorderWidth : theme.toolNormalBorderWidth;
+            outline.effectDistance = new Vector2(width, -width);
+        }
+        if (label != null) label.color = on ? theme.toolSelectedText : theme.toolNormalText;
+        if (ring != null && ring.activeSelf != on) ring.SetActive(on);
+    }
+
+    /// <summary>고른 도구 사용법 한 줄 (확인용)</summary>
+    public string ToolHint => toolHintText != null ? toolHintText.text : string.Empty;
+
+    /// <summary>
+    /// 스위치(메트로놈 · 키음) 모양을 토글 상태에 맞춘다: 켜짐 = 하늘 바탕 + 손잡이 오른쪽, 꺼짐 = 흐린 바탕 + 손잡이 왼쪽.
+    /// </summary>
+    private void RefreshSwitches()
+    {
+        PaintSwitch(metronomeToggle, metronomeTrack, metronomeKnob);
+        PaintSwitch(keySoundToggle, keySoundTrack, keySoundKnob);
+    }
+
+    private static void PaintSwitch(Toggle toggle, Image track, RectTransform knob)
+    {
+        if (toggle == null) return;
+        UITheme theme = UITheme.Current;
+        bool on = toggle.isOn;
+        if (track != null) track.color = on ? theme.accent : theme.editorSwitchOff;
+        if (knob != null)
+        {
+            knob.anchorMin = knob.anchorMax = new Vector2(on ? 1f : 0f, 0.5f);
+            knob.pivot = new Vector2(on ? 1f : 0f, 0.5f);
+            knob.anchoredPosition = new Vector2(on ? -GameConstants.Editor.SwitchKnobInset : GameConstants.Editor.SwitchKnobInset, 0f);
         }
     }
 
     /// <summary>
-    /// 잠깐 보여준 안내를 끝내고 저장 상태 표시(마지막 저장 결과 또는 "저장 안 됨")로 되돌린다.
+    /// 곡 기본 BPM으로 되돌리기 버튼: 되돌릴 것이 있으면(곡 기본 BPM 1개 상태가 아니면) 빨간 글자 + 빨간 50% 테두리로 켜고, 아니면 회색으로 끈다.
+    /// </summary>
+    private void RefreshResetBpmButton()
+    {
+        UITheme theme = UITheme.Current;
+        bool on = !session.IsSongDefaultBpm;
+        resetBpmButton.interactable = on;
+        if (resetBpmButton.targetGraphic != null) resetBpmButton.targetGraphic.color = theme.toolNormalBackground;
+        if (resetBpmLabel != null) resetBpmLabel.color = on ? theme.danger : theme.textMuted;
+        if (resetBpmFrame != null) resetBpmFrame.color = on ? UITheme.WithAlpha(theme.danger, 0.5f) : theme.divider;
+    }
+
+    /// <summary>
+    /// 잠깐 보여준 안내를 끝내고 저장 상태 표시로 되돌린다: 저장하지 않은 변경이 있으면 "● 저장 안 됨"(호박), 없으면 숨김.
     /// </summary>
     public void RefreshSaveStatus()
     {
-        saveStatusText.text = session != null && session.IsDirty ? GameConstants.Editor.SaveStatusUnsaved : lastSaveStatus;
-    }
-
-    private void SetSaveStatus(string status)
-    {
-        lastSaveStatus = status;
-        saveStatusText.text = status;
+        bool dirty = session != null && session.IsDirty;
+        ShowStatus(dirty ? GameConstants.Editor.SaveStatusUnsaved : string.Empty, UITheme.Current.editorAmber);
     }
 
     private void OnDestroy()
@@ -576,8 +816,7 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 저장 뒤 다시 편집하면 "저장 안 됨"을, 실행 취소로 저장 시점에 돌아오면 마지막 저장 결과("저장됨 14:32")를 표시한다.
-    /// 저장 성공 표시는 ShowSaveResult가 맡는다. 마지막 저장 결과 문구(lastSaveStatus)는 여기서 덮어쓰지 않는다.
+    /// 저장 뒤 다시 편집하면 "● 저장 안 됨"을, 실행 취소로 저장 시점에 돌아오면 숨긴다.
     /// </summary>
     private void OnDirtyChanged(bool isDirty)
     {
@@ -656,11 +895,13 @@ public class Canvas_Editor : UIBase
 
     private void OnMetronomeToggled(bool on)
     {
+        RefreshSwitches();
         MetronomeChanged?.Invoke(on);
     }
 
     private void OnKeySoundToggled(bool on)
     {
+        RefreshSwitches();
         KeySoundChanged?.Invoke(on);
     }
 
@@ -756,13 +997,13 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// "x1.5 (Ctrl+휠)" 형식으로 그리드 높이 배율을 표시하고, 지금 스냅의 선 간격이 좁으면 안내를 보여준다.
+    /// "x1.5" 형식으로 그리드 높이 배율을 표시하고(키 안내는 오른쪽 키 칩 [Ctrl]+[휠]), 지금 스냅의 선 간격이 좁으면 안내를 보여준다.
     /// 스냅·그리드 높이·BPM이 바뀔 때 부른다.
     /// </summary>
     private void RefreshGridHeightText()
     {
         string scale = grid.GridHeightScale.ToString("0.0#", CultureInfo.InvariantCulture);
-        gridHeightText.text = $"x{scale} (Ctrl+휠)";
+        gridHeightText.text = string.Format(GameConstants.Editor.GridHeightFormat, scale);
 
         // 선 간격은 현재 위치의 BPM으로 본다
         bool tooDense = BeatGridMath.IsSnapLineSpacingTooSmall(session.Timing.BpmAt(grid.CurrentBeat), grid.GridHeightScale, grid.SnapDivision);
@@ -771,20 +1012,35 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// "노트 N" / "롱노트 M" 두 줄(NoteCountFormat)로 노트 수를 표시한다. N은 숏노트와 롱노트를 합한 수다.
+    /// 노트 수 카드 두 개: 노트(숏노트 + 롱노트) · 롱노트.
     /// </summary>
     private void RefreshNoteCountText()
     {
-        noteCountText.text = string.Format(GameConstants.Editor.NoteCountFormat, data.ShortCount + data.LongCount, data.LongCount);
+        notesValueText.SetText("{0}", data.ShortCount + data.LongCount);
+        longNotesValueText.SetText("{0}", data.LongCount);
     }
 
+    /// <summary>노트 수 카드 값 (확인용: 노트, 롱노트)</summary>
+    public string NotesValue => notesValueText != null ? notesValueText.text : string.Empty;
+    public string LongNotesValue => longNotesValueText != null ? longNotesValueText.text : string.Empty;
+
     /// <summary>
-    /// "현재 위치 시간 / 곡 길이 · 마디 N"을 표시한다. 현재 위치 시간은 현재 박을 offset·BPM으로 바꾼 값이다.
+    /// "0:00.169" (Bold) + " / 2:19 · 마디 1" (Regular)을 표시한다. 현재 위치 시간은 현재 박을 offset·BPM으로 바꾼 값이다.
+    /// 뒤쪽 글자는 마디·곡 길이가 바뀔 때만 다시 쓴다 (재생 중 매 프레임 문자열 할당을 늘리지 않게).
     /// </summary>
     private void RefreshTimeInfoText()
     {
         float currentSeconds = (float)session.Timing.BeatToSeconds(grid.CurrentBeat);
-        timeInfoText.text = string.Format(GameConstants.Editor.TimeInfoFormat,
-            TimeFormat.ToMinSecMillis(currentSeconds), TimeFormat.ToMinSec(session.SongLengthSeconds), grid.CurrentMeasure);
+        timeInfoText.text = TimeFormat.ToMinSecMillis(currentSeconds);
+
+        int measure = grid.CurrentMeasure;
+        float length = session.SongLengthSeconds;
+        if (timeTotalText == null || (measure == shownTimeMeasure && Mathf.Approximately(length, shownSongLength))) return;
+        shownTimeMeasure = measure;
+        shownSongLength = length;
+        timeTotalText.text = string.Format(GameConstants.Editor.TimeTotalFormat, TimeFormat.ToMinSec(length), measure);
     }
+
+    /// <summary>시간 글자 (확인용: 현재 시간 + 뒤쪽)</summary>
+    public string TimeLabel => (timeInfoText != null ? timeInfoText.text : string.Empty) + " " + (timeTotalText != null ? timeTotalText.text : string.Empty);
 }

@@ -29,9 +29,14 @@ public class ScrollSpeedPlayTests
         Application.runInBackground = true;
     }
 
+    /// <summary>테스트가 바꾼 마지막 에디터 테스트 플레이 배속을 되돌릴 값 (S6)</summary>
+    private float? savedEditorSpeed;
+
     [UnityTearDown]
     public IEnumerator TearDown()
     {
+        if (savedEditorSpeed.HasValue && PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastEditorTestPlayMultiplier(savedEditorSpeed.Value);
+        savedEditorSpeed = null;
         scene = null;
         yield return new ExitPlayMode();
     }
@@ -339,6 +344,9 @@ public class ScrollSpeedPlayTests
     public IEnumerator S6_EditorSpeedTool()
     {
         yield return WaitManagers();
+        // 에디터는 마지막 테스트 플레이 배속(PlayerData)으로 시작한다 (11/19). 이 테스트는 1.0에서 시작하도록 맞추고 끝나면 되돌린다
+        savedEditorSpeed = GameManager.PlayerData.LastEditorTestPlayMultiplier;
+        GameManager.PlayerData.SetLastEditorTestPlayMultiplier(1f);
         Assert.IsTrue(GameManager.Scene.Load(GameConstants.Scenes.Editor, new EditorEntryData { songId = Song, chartName = "배속 확인", level = 1 }));
         EditorScene editor = null;
         float deadline = TestSpeed.Deadline(20f);
@@ -367,7 +375,7 @@ public class ScrollSpeedPlayTests
         Debug.Log($"[ScrollSpeedTest] S6: 에디터 시작 x{startValue:0.0} (− 버튼 {(downAtStart ? "켜짐" : "꺼짐")}), + 50번 → \"{text}\", 인게임 배속 x{layer.ScrollMultiplier:0.0}, " +
                   $"낙하 속도 {layer.ScrollSpeed:0.####} (6.0배 공식 {expected:0.####}, 1.0배 {layer.BaseScrollSpeed:0.####} × 6 = {layer.BaseScrollSpeed * 6f:0.####})");
 
-        Assert.AreEqual(1f, startValue, "에디터는 1.0에서 시작");
+        Assert.AreEqual(1f, startValue, "에디터는 저장된 테스트 플레이 배속(1.0)으로 시작");
         Assert.IsFalse(downAtStart, "1.0에서는 − 버튼 꺼짐");
         Assert.AreEqual("x6.0", text);
         Assert.AreEqual(6f, layer.ScrollMultiplier, 1e-4f);

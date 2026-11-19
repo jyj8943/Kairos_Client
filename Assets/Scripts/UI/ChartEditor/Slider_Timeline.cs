@@ -9,7 +9,8 @@ using UnityEngine.UI;
 /// 에디터 하단 타임라인 슬라이더 (Slider_Timeline). Canvas_Editor가 Init()을 호출한다.
 /// - 값은 현재 시간 ÷ 곡 길이 (0~1). 코드로 바꿀 때는 SetValueWithoutNotify로 이벤트를 다시 부르지 않는다.
 /// - 누를 때·드래그로 값이 바뀔 때·놓을 때를 따로 알려준다 (누르면 재생 정지, 놓으면 스냅 선에 맞춤).
-/// - BPM 구간 눈금: 막대 위 BpmMarkers(막대와 같은 폭)에 구간 위치마다 청록 눈금(Img_BpmMarker)과 작은 BPM 숫자(Txt_BpmMarker)를 둔다.
+/// - 모양 (11/19 라벤더 톤): 바탕 rgba(44,40,56) 12%(divider), 채움 하늘(accent), 손잡이 흰 바탕 + 하늘 3px 테두리(Outline). 색은 Init에서 UITheme으로 칠한다.
+/// - BPM 구간 눈금: 막대 위 BpmMarkers(막대와 같은 폭)에 구간 위치마다 호박 눈금(Img_BpmMarker)과 작은 BPM 숫자(Txt_BpmMarker, 호박)를 둔다.
 ///   곡 시작 구간은 표시하지 않는다. 눈금은 클릭을 받지 않는다.
 /// </summary>
 [RequireComponent(typeof(Slider))]
@@ -20,6 +21,14 @@ public class Slider_Timeline : MonoBehaviour, IPointerDownHandler, IPointerUpHan
     [SerializeField] private RectTransform markerParent;
     [Tooltip("눈금 템플릿 (Img_BpmMarker, 자식 Txt_BpmMarker). 꺼 둔다")]
     [SerializeField] private Image markerTemplate;
+
+    [Header("모양 (색은 UITheme)")]
+    [Tooltip("막대 바탕 (Img_Background)")]
+    [SerializeField] private Image trackImage;
+    [Tooltip("채움 (Img_Fill)")]
+    [SerializeField] private Image fillImage;
+    [Tooltip("손잡이 (Img_Handle, Outline = 하늘 테두리)")]
+    [SerializeField] private Image handleImage;
 
     private readonly List<Image> markers = new List<Image>();
     private int markerCount;
@@ -55,12 +64,38 @@ public class Slider_Timeline : MonoBehaviour, IPointerDownHandler, IPointerUpHan
         this.onPressed = onPressed;
         this.onDragged = onDragged;
         this.onReleased = onReleased;
+        ApplyTheme();
 
         slider.minValue = 0f;
         slider.maxValue = 1f;
         slider.wholeNumbers = false;
         slider.onValueChanged.RemoveListener(OnValueChanged);
         slider.onValueChanged.AddListener(OnValueChanged);
+    }
+
+    /// <summary>막대·채움·손잡이 색을 UITheme으로 칠한다 (Init에서)</summary>
+    private void ApplyTheme()
+    {
+        UITheme theme = UITheme.Current;
+        if (trackImage != null) trackImage.color = theme.divider;
+        if (fillImage != null) fillImage.color = theme.accent;
+        if (handleImage != null)
+        {
+            handleImage.color = Color.white;
+            if (handleImage.TryGetComponent(out Outline border)) border.effectColor = theme.accent;
+        }
+        PaintMarker(markerTemplate);
+        foreach (Image marker in markers) PaintMarker(marker);
+    }
+
+    /// <summary>눈금과 그 위 BPM 글자를 호박으로 칠한다 (템플릿을 복제하므로 템플릿도 칠한다)</summary>
+    private static void PaintMarker(Image marker)
+    {
+        if (marker == null) return;
+        Color amber = UITheme.Current.editorAmber;
+        marker.color = amber;
+        TMP_Text label = marker.GetComponentInChildren<TMP_Text>(true);
+        if (label != null) label.color = amber;
     }
 
     /// <summary>
@@ -79,6 +114,7 @@ public class Slider_Timeline : MonoBehaviour, IPointerDownHandler, IPointerUpHan
     /// <param name="labels">눈금 위 BPM 글자 (positions와 같은 순서)</param>
     public void SetBpmMarkers(IReadOnlyList<float> positions, IReadOnlyList<string> labels)
     {
+        PaintMarker(markerTemplate);
         if (markerParent == null || markerTemplate == null) return;
 
         markerTemplate.gameObject.SetActive(false);

@@ -103,6 +103,10 @@ public static class PlayerDataRules
         if (brightness != s.backgroundBrightness) log?.Add($"lastSelection.backgroundBrightness {s.backgroundBrightness} → {brightness}");
         s.backgroundBrightness = brightness;
 
+        float testSpeed = SanitizeScrollMultiplier(s.editorTestPlayMultiplier);
+        if (!testSpeed.Equals(s.editorTestPlayMultiplier)) log?.Add($"lastSelection.editorTestPlayMultiplier {s.editorTestPlayMultiplier} → {testSpeed}");
+        s.editorTestPlayMultiplier = testSpeed;
+
         foreach (ChartType type in new[] { ChartType.Official, ChartType.Custom })
         {
             TabSelectionSaveData tab = s.Get(type);
@@ -214,6 +218,18 @@ public static class PlayerDataRules
         float speed = SanitizeScrollMultiplier(value);
         if (ScrollSpeedRules.ToSteps(speed) == ScrollSpeedRules.ToSteps(s.scrollMultiplier)) return false;
         s.scrollMultiplier = speed;
+        return true;
+    }
+
+    /// <summary>
+    /// 마지막 에디터 테스트 플레이 배속을 value로 바꾼다 (인게임 배속과 같은 범위 · 0.1 단위로 정리). 바뀌었으면 true.
+    /// 인게임 배속(scrollMultiplier)은 건드리지 않는다.
+    /// </summary>
+    public static bool TrySetEditorTestPlayMultiplier(LastSelectionSaveData s, float value)
+    {
+        float speed = SanitizeScrollMultiplier(value);
+        if (ScrollSpeedRules.ToSteps(speed) == ScrollSpeedRules.ToSteps(s.editorTestPlayMultiplier)) return false;
+        s.editorTestPlayMultiplier = speed;
         return true;
     }
 

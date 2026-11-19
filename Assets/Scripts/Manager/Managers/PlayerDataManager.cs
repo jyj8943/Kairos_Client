@@ -168,6 +168,25 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
         return Save();
     }
 
+    /// <summary>저장된 마지막 에디터 테스트 플레이 배속 (정리한 값). Init 전이거나 저장된 값이 없으면 기본 배속(1.0)</summary>
+    public float LastEditorTestPlayMultiplier => data != null && data.lastSelection != null
+        ? PlayerDataRules.SanitizeScrollMultiplier(data.lastSelection.editorTestPlayMultiplier)
+        : GameConstants.Play.DefaultScrollMultiplier;
+
+    /// <summary>
+    /// 마지막 에디터 테스트 플레이 배속을 바꾸고 바로 저장한다 (에디터 왼쪽 패널 ◀ ▶). 값이 같으면 저장하지 않는다. 인게임 배속과 따로다.
+    /// </summary>
+    /// <returns>저장했으면 true</returns>
+    public bool SetLastEditorTestPlayMultiplier(float value)
+    {
+        if (data == null) return false;
+        if (data.lastSelection == null) data.lastSelection = new LastSelectionSaveData();
+        if (!PlayerDataRules.TrySetEditorTestPlayMultiplier(data.lastSelection, value)) return false;
+
+        Debug.Log($"{LogPrefix} 마지막 테스트 플레이 배속 x{data.lastSelection.editorTestPlayMultiplier:0.0} 저장", this);
+        return Save();
+    }
+
     /// <summary>저장된 마지막 인게임 배경 밝기 (%, 단계로 정리한 값). Init 전이거나 저장된 값이 없으면 기본값(100)</summary>
     public int LastBackgroundBrightness => data != null && data.lastSelection != null
         ? BackgroundBrightnessRules.Sanitize(data.lastSelection.backgroundBrightness)

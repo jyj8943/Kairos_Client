@@ -306,7 +306,7 @@ public class EditorScene : SceneBase
 
         playback.Stop(false);
         int notesAfter = BpmSectionRules.CountNotesAfter(session.Data.Notes, tick);
-        canvas.BpmSectionPopup.Show(session.BpmSections, tick, session.Data.TotalTicks, notesAfter, OnBpmSectionConfirmed);
+        canvas.BpmSectionPopup.Show(session.BpmSections, session.Timing, tick, session.Data.TotalTicks, notesAfter, OnBpmSectionConfirmed);
     }
 
     /// <summary>BPM 구간 창에서 확인: 그 위치에 구간이 있으면 수정, 없으면 추가</summary>
