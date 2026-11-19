@@ -18,12 +18,25 @@ public readonly struct SongLoadingStep
     }
 }
 
+/// <summary>곡 로딩 중 한 단계(열기 · 불러오기 · 닫기)의 프레임 통계 (확인용)</summary>
+public class SongLoadingFrameStats
+{
+    public string Phase;
+    public int FrameCount;
+    public double MaxMs;
+    /// <summary>33ms를 넘은 프레임 수</summary>
+    public int SlowCount;
+}
+
 /// <summary>
 /// 씬 전환과 현재 씬(SceneBase) 관리.
 /// - 씬 간 데이터는 Load(sceneName, data)로 넘기고, 다음 씬 Init에서 TakeSceneData&lt;T&gt;()로 받는다.
-/// - 곡 로딩 (기획서 3-9): LoadWithSongLoading(sceneName, entry)는 곡 로딩 오버레이(Canvas_SongLoading)를 지금 씬 위에 열고,
-///   0.35초(화면을 다 덮은 뒤)에 지금 씬 Exit + 다음 씬 비동기 로드 → 다음 씬 Init (판 시작은 아직) →
-///   로드 끝과 열기 시작부터 1.5초를 둘 다 채우면 닫기 연출 → 다 걷힌 뒤 다음 씬 OnEnter (SceneBase.Enter).
+/// - 곡 로딩 (기획서 3-9): LoadWithSongLoading(sceneName, entry)는 곡 로딩 오버레이(Canvas_SongLoading)를 지금 씬 위에 연다.
+///   Enter 프레임에 화면 데이터를 채우고 다음 프레임부터 열기 연출(0~1.1초)을 한다. 열기 연출 동안은 화면 말고는 아무것도 하지 않는다 (끊김 없게).
+///   열기가 끝나 화면이 멈춘 뒤 지금 씬 Exit → 다음 씬 비동기 로드(Single) → 다음 씬 Init (판 시작은 아직) →
+///   정리(Resources.UnloadUnusedAssets · GC.Collect, 닫기 · 시작 메트로놈 중에 GC가 터지지 않게) →
+///   불러오기 끝과 열기 끝부터 2초(최소 불러오기 시간)를 둘 다 채우면 닫기 연출 → 다 걷힌 뒤 다음 씬 OnEnter (SceneBase.Enter).
+///   이 구간에서 끊긴 프레임은 단계별로 모아 로그로 남긴다 (SongLoadingFrames).
 ///   그동안 IsLoading이 true라 ESC(UIManager)·씬 이동·화면 단축키를 막고, EventSystem 방향키·Enter(Navigate · Submit) 전달도 잠시 끈다.
 ///   일반 Load는 지금 동작 그대로다.
 /// </summary>
@@ -46,6 +59,69 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     private readonly List<SongLoadingStep> songLoadingSteps = new List<SongLoadingStep>();
     private double songLoadingStart;
     private SceneBase deferredScene;
+
+    /// <summary>프레임 통계를 모을 단계 이름 (null이면 안 모은다)</summary>
+    private string framePhase;
+    private string lastFramePhase;
+    private readonly List<SongLoadingFrameStats> frameStats = new List<SongLoadingFrameStats>();
+    private readonly List<string> slowFrames = new List<string>();
+
+    /// <summary>마지막 곡 로딩의 단계별 프레임 통계 (확인용)</summary>
+    public IReadOnlyList<SongLoadingFrameStats> SongLoadingFrames => frameStats;
+
+    /// <summary>마지막 곡 로딩에서 33ms를 넘은 프레임 (단계 · Enter부터 시각 · ms, 확인용)</summary>
+    public IReadOnlyList<string> SongLoadingSlowFrames => slowFrames;
+
+    /// <summary>33ms를 넘으면 끊긴 프레임으로 센다</summary>
+    public const double SlowFrameMs = 33.0;
+
+    /// <summary>
+    /// 곡 로딩 중 프레임마다 앞 프레임 길이(unscaledDeltaTime)를 그 프레임의 단계에 넣는다.
+    /// </summary>
+    private void Update()
+    {
+        if (lastFramePhase != null)
+        {
+            double ms = Time.unscaledDeltaTime * 1000.0;
+            SongLoadingFrameStats stats = frameStats.Find(x => x.Phase == lastFramePhase);
+            if (stats == null)
+            {
+                stats = new SongLoadingFrameStats { Phase = lastFramePhase };
+                frameStats.Add(stats);
+            }
+            stats.FrameCount++;
+            if (ms > stats.MaxMs) stats.MaxMs = ms;
+            if (ms > SlowFrameMs)
+            {
+                stats.SlowCount++;
+                slowFrames.Add($"{lastFramePhase} {Time.unscaledTimeAsDouble - songLoadingStart - Time.unscaledDeltaTime:0.000}초 {ms:0.0}ms");
+            }
+        }
+        framePhase = PhaseOf(phaseOverlay);
+        lastFramePhase = framePhase;
+    }
+
+    private Canvas_SongLoading phaseOverlay;
+
+    /// <summary>지금 프레임의 곡 로딩 단계 (곡 로딩 중이 아니면 null)</summary>
+    private string PhaseOf(Canvas_SongLoading overlay)
+    {
+        if (!IsSongLoading || overlay == null || !overlay.IsShown) return null;
+        if (overlay.IsClosing) return "닫기";
+        if (!overlay.HasOpenStarted) return "Open 준비 (Enter 프레임)";
+        if (overlay.IsOpening) return "열기 0~1.1초";
+        return "열기 뒤 (불러오기 · 대기)";
+    }
+
+    /// <summary>곡 로딩 단계별 프레임 통계를 한 줄로</summary>
+    public string DescribeSongLoadingFrames()
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (SongLoadingFrameStats stats in frameStats)
+            sb.Append($"[{stats.Phase}] 프레임 {stats.FrameCount}개, 최대 {stats.MaxMs:0.0}ms, 33ms 넘음 {stats.SlowCount}개 / ");
+        if (slowFrames.Count > 0) sb.Append("끊긴 프레임: ").Append(string.Join(", ", slowFrames));
+        return sb.ToString();
+    }
 
     public void Init()
     {
@@ -73,7 +149,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     {
         if (!IsSongLoading || scene == null) return false;
         deferredScene = scene;
-        MarkSongLoading($"{scene.gameObject.scene.name} Init 끝");
+        MarkSongLoading($"{scene.gameObject.scene.name} Init 끝 ({scene.InitMilliseconds:0.0}ms)");
         return true;
     }
 
@@ -141,35 +217,58 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     private IEnumerator SongLoadingRoutine(string sceneName, InGameEntryData entry, Canvas_SongLoading overlay)
     {
         songLoadingSteps.Clear();
+        frameStats.Clear();
+        slowFrames.Clear();
+        lastFramePhase = null;
+        phaseOverlay = overlay;
         songLoadingStart = Time.unscaledTimeAsDouble;
-        MarkSongLoading("Enter (오버레이 열기 시작)");
+        MarkSongLoading("Enter");
 
         // 방향키·Enter가 뒤 화면(곡 선택·결과)의 선택을 옮기지 않게 EventSystem 전달을 잠시 끈다 (UI 맵은 그대로)
         EventSystem eventSystem = EventSystem.current;
         bool sentNavigation = eventSystem != null && eventSystem.sendNavigationEvents;
         if (eventSystem != null) eventSystem.sendNavigationEvents = false;
 
+        // 1. 화면 데이터를 먼저 채운다 (Enter 프레임). 열기 연출 0초는 다음 프레임부터
+        System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
         overlay.Open(entry);
-        while (overlay.OpenElapsed < GameConstants.SongLoading.CoverSeconds) yield return null;
-        MarkSongLoading("덮기 완료");
+        MarkSongLoading($"오버레이 Open 준비 ({watch.Elapsed.TotalMilliseconds:0.0}ms)");
+        while (!overlay.HasOpenStarted) yield return null;
+        MarkSongLoading("열기 연출 0초");
 
-        // 덮은 뒤에야 지금 씬을 떠난다 (덮기 전에 지우면 빈 화면이 한 프레임 보일 수 있다)
+        // 2. 열기 연출(0~1.1초) 동안은 화면 말고는 아무것도 하지 않는다
+        while (overlay.IsOpening) yield return null;
+        MarkSongLoading("열기 끝");
+        double openEndTime = Time.unscaledTimeAsDouble;
+
+        // 3. 화면이 멈춘 뒤: 앞 씬 OnExit → 다음 씬 비동기 로드(Single, 앞 씬은 함께 내려간다) → 다음 씬 Init
         if (Current != null)
         {
             string leaving = Current.gameObject.scene.name;
+            watch.Restart();
             Current.Exit();
-            MarkSongLoading($"{leaving} OnExit");
+            MarkSongLoading($"{leaving} OnExit ({watch.Elapsed.TotalMilliseconds:0.0}ms)");
         }
         Current = null;
 
+        watch.Restart();
         AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName);
-        MarkSongLoading($"{sceneName} 로드 시작");
+        MarkSongLoading($"{sceneName} 로드 시작 (호출 {watch.Elapsed.TotalMilliseconds:0.0}ms)");
         while (operation != null && !operation.isDone) yield return null;
         MarkSongLoading($"{sceneName} 로드 끝");
+        while (deferredScene == null) yield return null;
 
-        // 다음 씬 Init 끝(DeferEnter)과 최소 표시 시간(열기 시작부터 1.5초, 열기 연출 1.1초 포함)을 둘 다 기다린다
-        while (deferredScene == null || overlay.OpenElapsed < GameConstants.SongLoading.MinSeconds || overlay.IsOpening)
-            yield return null;
+        // 5. 닫기 연출 · 시작 메트로놈 중에 GC가 터지지 않게 정리는 닫기 전에 끝낸다
+        watch.Restart();
+        AsyncOperation unload = Resources.UnloadUnusedAssets();
+        while (unload != null && !unload.isDone) yield return null;
+        double unloadMs = watch.Elapsed.TotalMilliseconds;
+        watch.Restart();
+        System.GC.Collect();
+        MarkSongLoading($"정리 끝 (UnloadUnusedAssets {unloadMs:0.0}ms, GC.Collect {watch.Elapsed.TotalMilliseconds:0.0}ms)");
+
+        // 4. 닫기 조건: 불러오기 끝 AND 열기 끝부터 최소 2초
+        while (Time.unscaledTimeAsDouble - openEndTime < GameConstants.SongLoading.MinLoadSeconds) yield return null;
 
         MarkSongLoading("닫기 시작");
         yield return overlay.CloseRoutine();
@@ -179,13 +278,17 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         EventSystem next = EventSystem.current;
         if (next != null && next != eventSystem) next.sendNavigationEvents = true;
 
+        // 6. 닫기 끝 → 다음 씬 OnEnter → 시작 메트로놈 (지금 그대로)
         SceneBase scene = deferredScene;
         deferredScene = null;
         IsSongLoading = false;
         IsLoading = false;
         scene.Enter();
         MarkSongLoading($"{sceneName} OnEnter");
+        phaseOverlay = null;
+        lastFramePhase = null;
         Debug.Log($"[GameSceneManager] 곡 로딩 끝: {DescribeSongLoading()}", this);
+        Debug.Log($"[GameSceneManager] 곡 로딩 프레임: {DescribeSongLoadingFrames()}", this);
     }
 
     /// <summary>곡 로딩 단계를 지금 시각으로 남긴다</summary>

@@ -27,13 +27,19 @@ public abstract class SceneBase : MonoBehaviour
         GameManager.Scene.SetCurrent(this);
         RegisterCanvases();
 
+        if (GameManager.Scene.IsSongLoading) GameManager.Scene.MarkSongLoading($"{gameObject.scene.name} Init 시작");
+        System.Diagnostics.Stopwatch initWatch = System.Diagnostics.Stopwatch.StartNew();
         yield return Init();
         IsInitDone = true;
+        InitMilliseconds = initWatch.Elapsed.TotalMilliseconds;
 
         // 곡 로딩 중이면 오버레이가 걷힌 뒤 GameSceneManager가 Enter()를 부른다
         if (GameManager.Scene.DeferEnter(this)) yield break;
         Enter();
     }
+
+    /// <summary>Init에 걸린 실제 시간 (ms, 코루틴이면 프레임을 넘긴 시간 포함, 확인용)</summary>
+    public double InitMilliseconds { get; private set; }
 
     /// <summary>Init이 끝났으면 true (곡 로딩이 기다린다)</summary>
     public bool IsInitDone { get; private set; }

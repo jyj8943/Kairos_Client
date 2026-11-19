@@ -708,8 +708,8 @@ public static class GameConstants
         /// <summary>열기 연출이 화면을 다 덮는 시각 (초). 이 뒤에 지금 씬을 떠나고 다음 씬을 불러온다</summary>
         public const float CoverSeconds = 0.35f;
 
-        /// <summary>최소 표시 시간 (초, 열기 시작부터). 불러오기가 빨리 끝나도 이만큼은 보인다</summary>
-        public const float MinSeconds = 1.5f;
+        /// <summary>최소 불러오기 시간 (초, 열기 연출이 끝난 뒤부터). 불러오기가 빨리 끝나도 닫기 연출은 이만큼 지난 뒤에 시작한다</summary>
+        public const float MinLoadSeconds = 2f;
 
         /// <summary>열기 연출 길이 (초, 말풍선이 다 나오는 시각)</summary>
         public const float OpenSeconds = 1.1f;

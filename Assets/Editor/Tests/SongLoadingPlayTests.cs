@@ -13,7 +13,7 @@ using UnityEngine.TestTools;
 
 /// <summary>
 /// 곡 로딩 오버레이 (기획서 3-9 「곡 로딩」) 실제 흐름 확인. 이 테스트만 InGameLauncher.SkipSongLoadingForTests를 끄고 오버레이 경로를 탄다.
-/// - L1 곡 선택 Enter → 곡 로딩 → 인게임: 단계 순서(덮기 0.35 뒤 곡 선택 OnExit · 닫기 시작은 1.5초 뒤 · OnEnter와 첫 클릭은 닫기 끝 뒤),
+/// - L1 곡 선택 Enter → 곡 로딩 → 인게임: 단계 순서(열기 연출 1.1초가 끝난 뒤 곡 선택 OnExit · 로드, 정리는 닫기 전, 닫기 시작은 열기 끝 + 2초 뒤, OnEnter와 첫 클릭은 닫기 끝 뒤),
 ///   로딩 중 ESC · Enter · ↓를 눌러도 아무 일도 없음 (곡 선택 선택 그대로, 팝업 · 일시정지 없음, 시작 한 번)
 /// - L2 결과 다시 하기 → 같은 곡 로딩 (결과 위에 덮고 0.35초 뒤 결과 OnExit)
 /// - L3 카드 네 상태(공식 / 나만의 채보 / AP 기록 / 기록 없음) + 긴 제목 · 긴 채보 이름: 보이는 오브젝트, Canvas 안, 넘침, 곡 선택 앨범과 같은 자리
@@ -112,14 +112,14 @@ public class SongLoadingPlayTests
         Assert.IsTrue(GameManager.Scene.IsLoading, "로딩 중 = 씬 로딩 중 (ESC 무시)");
         Assert.IsTrue(overlay.IsShown);
 
-        // 덮기 전 (앞 씬이 아직 있음): ↓ · Enter · ESC
+        // 열기 연출 중 (앞 씬이 아직 있음): ↓ · Enter · ESC
         while (overlay.OpenElapsed < 0.1f) yield return null;
-        Assert.AreEqual(fromScene, GameManager.Scene.Current.gameObject.scene.name, "덮기 전에는 앞 씬 그대로");
+        Assert.AreEqual(fromScene, GameManager.Scene.Current.gameObject.scene.name, "열기 연출 중에는 앞 씬 그대로");
         yield return TapBlockedKeys();
         Assert.AreEqual(fromSelected, EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null, $"{fromScene} 선택 그대로 (방향키 무시)");
         Assert.IsFalse(GameManager.UI.HasOpenPopup, "팝업 안 열림");
         Assert.AreEqual(starts, InGameLauncher.StartCount, "Enter로 다시 시작하지 않음");
-        log.AppendLine($"  덮기 전 ↓·Enter·ESC ({overlay.OpenElapsed:0.00}초): 선택 그대로, 팝업 없음, 시작 횟수 그대로");
+        log.AppendLine($"  열기 중 ↓·Enter·ESC ({overlay.OpenElapsed:0.00}초): 선택 그대로, 팝업 없음, 시작 횟수 그대로");
 
         // 인게임 Init 뒤 · OnEnter 전: ESC · Enter · ↓
         InGameScene inGame = null;
@@ -159,32 +159,44 @@ public class SongLoadingPlayTests
         }
     }
 
+    /// <summary>이름이 prefix로 시작하는 첫 단계의 시각 (단계 이름 뒤에 걸린 ms가 붙어 있다)</summary>
+    private static double At(IReadOnlyList<SongLoadingStep> steps, string prefix)
+    {
+        foreach (SongLoadingStep step in steps)
+            if (step.Name.StartsWith(prefix)) return step.Seconds;
+        Assert.Fail($"단계 '{prefix}'가 없습니다");
+        return 0;
+    }
+
     /// <summary>단계 시각 표를 만들고 순서 조건을 확인한다</summary>
     private static void CheckSteps(string fromScene, StringBuilder log)
     {
         IReadOnlyList<SongLoadingStep> steps = GameManager.Scene.SongLoadingSteps;
-        Dictionary<string, double> at = new Dictionary<string, double>();
         log.AppendLine("  단계 | Enter부터 (초)");
-        foreach (SongLoadingStep step in steps)
-        {
-            at[step.Name] = step.Seconds;
-            log.AppendLine($"  {step.Name} | {step.Seconds:0.000}");
-        }
-        double cover = at["덮기 완료"];
-        double exit = at[$"{fromScene} OnExit"];
-        double loadStart = at[$"{GameConstants.Scenes.InGame} 로드 시작"];
-        double init = at[$"{GameConstants.Scenes.InGame} Init 끝"];
-        double closeStart = at["닫기 시작"];
-        double closeEnd = at["닫기 끝"];
-        double enter = at[$"{GameConstants.Scenes.InGame} OnEnter"];
-        double click = at["첫 카운트인 클릭 (이 프레임에 지남)"];
-        double zero = at["노래 0박"];
-        Assert.GreaterOrEqual(cover, GameConstants.SongLoading.CoverSeconds - 1e-3, "0.35초에 덮기 완료");
-        Assert.GreaterOrEqual(exit, cover, "언로드(OnExit)는 덮기 완료 뒤");
+        foreach (SongLoadingStep step in steps) log.AppendLine($"  {step.Name} | {step.Seconds:0.000}");
+        double openZero = At(steps, "열기 연출 0초");
+        double openEnd = At(steps, "열기 끝");
+        double exit = At(steps, $"{fromScene} OnExit");
+        double loadStart = At(steps, $"{GameConstants.Scenes.InGame} 로드 시작");
+        double init = At(steps, $"{GameConstants.Scenes.InGame} Init 끝");
+        double cleanup = At(steps, "정리 끝");
+        double closeStart = At(steps, "닫기 시작");
+        double closeEnd = At(steps, "닫기 끝");
+        double enter = At(steps, $"{GameConstants.Scenes.InGame} OnEnter");
+        double click = At(steps, "첫 카운트인 클릭");
+        double zero = At(steps, "노래 0박");
+        Assert.Greater(openZero, 0.0, "열기 연출 0초는 Enter 다음 프레임");
+        Assert.GreaterOrEqual(openEnd - openZero, GameConstants.SongLoading.OpenSeconds - 1e-3, "열기 연출 1.1초");
+        Assert.GreaterOrEqual(exit, openEnd, "앞 씬 OnExit는 열기 끝 뒤");
+        Assert.GreaterOrEqual(loadStart, openEnd, "인게임 로드 시작은 열기 끝 뒤");
         Assert.GreaterOrEqual(loadStart, exit, "인게임 로드는 OnExit 뒤");
         Assert.GreaterOrEqual(init, loadStart);
-        Assert.GreaterOrEqual(closeStart, GameConstants.SongLoading.MinSeconds - 0.02, "닫기 시작은 Enter + 1.5초 이후");
+        Assert.GreaterOrEqual(cleanup, init, "정리(UnloadUnusedAssets · GC)는 Init 뒤");
+        Assert.GreaterOrEqual(closeStart, cleanup, "정리는 닫기 전에 끝남");
+        Assert.GreaterOrEqual(closeStart - openEnd, GameConstants.SongLoading.MinLoadSeconds - 1e-3, "닫기 시작은 열기 끝 + 2초 이후");
         Assert.GreaterOrEqual(closeStart, init, "닫기 시작은 인게임 Init 뒤");
+        foreach (SongLoadingFrameStats stats in GameManager.Scene.SongLoadingFrames)
+            log.AppendLine($"  프레임 [{stats.Phase}] {stats.FrameCount}개, 최대 {stats.MaxMs:0.0}ms, 33ms 넘음 {stats.SlowCount}개");
         Assert.GreaterOrEqual(closeEnd - closeStart, GameConstants.SongLoading.CloseSeconds - 0.02, "닫기 0.64초");
         Assert.GreaterOrEqual(enter, closeEnd, "OnEnter는 닫기 끝 뒤");
         Assert.Greater(click, closeEnd, "첫 클릭은 닫기 끝 뒤");

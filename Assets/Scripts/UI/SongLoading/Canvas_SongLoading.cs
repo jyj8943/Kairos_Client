@@ -8,7 +8,9 @@ using UnityEngine.UI;
 /// 곡 로딩 오버레이 (기획서 3-9 「곡 로딩」, 와이어프레임 12_SongLoading). 곡 선택 시작 · 결과 다시 하기 → 인게임 사이에 덮는다.
 /// - Managers_DontDestroy/UIManager 아래에 있어 씬이 바뀌어도 살아 있다. 정렬 순서는 Canvas_Overlay 팝업보다 위(GameConstants.SongLoading.SortOrder).
 /// - Bootstrapper가 전역 매니저 Init 때 Init()을 한 번 부르고 숨겨 둔다.
-/// - 흐름은 GameSceneManager.LoadWithSongLoading이 정한다: Open(진입 데이터) → (0.35초 덮기 뒤 씬 교체 · 다음 씬 Init) → CloseRoutine() → 다음 씬 OnEnter.
+/// - 흐름은 GameSceneManager.LoadWithSongLoading이 정한다: Open(진입 데이터, 카드를 먼저 채움) → 다음 프레임부터 열기 연출 0~1.1초(화면만) →
+///   열기 끝 뒤 앞 씬 Exit · 다음 씬 로드 · Init → 정리(UnloadUnusedAssets · GC) → CloseRoutine() → 다음 씬 OnEnter.
+/// - Init이 숨긴 채로 한 번 그려 둔다(PrewarmRoutine): 폰트 글자 · 랭크 이미지 · 배경 블러 RenderTexture · 첫 Canvas 그리기.
 ///   Open은 열기 연출을 시작하고, 끝까지 기다리려면 OpenRoutine을, 닫기는 CloseRoutine을 기다린다.
 /// - 자식 (README 6절): Background(MenuBackground + Img_ClockPattern) · Img_Album(Mask) └ Img_AlbumCover · ScreenName(Txt_ScreenName + Txt_ScreenNameKo) ·
 ///   Panel(Img_PanelBack · Img_PanelFrame · Txt_Phrase · Txt_Title · Txt_Artist · BadgeRow · ChartRow · Records) · Img_SD · Img_Bubble └ Txt_Bubble ·
@@ -95,6 +97,8 @@ public class Canvas_SongLoading : UIBase
     private double closeStart;
     private float clockAngle;
     private Coroutine openRoutine;
+    private bool openStarted;
+    private bool isPrewarming;
 
     public override UILayer Layer => UILayer.Overlay;
 
@@ -102,13 +106,19 @@ public class Canvas_SongLoading : UIBase
     public bool IsShown => isShown;
 
     /// <summary>열기 연출(1.1초) 재생 중이면 true</summary>
-    public bool IsOpening => isShown && !isClosing && OpenElapsed < GameConstants.SongLoading.OpenSeconds;
+    public bool IsOpening => isShown && !isClosing && (!openStarted || OpenElapsed < GameConstants.SongLoading.OpenSeconds);
+
+    /// <summary>열기 연출 0초를 센 뒤면 true (Open한 다음 프레임부터)</summary>
+    public bool HasOpenStarted => isShown && openStarted;
+
+    /// <summary>Init의 미리 그려 두기(블러 RenderTexture · 폰트 글자 · 첫 그리기)가 끝났으면 true</summary>
+    public bool IsPrewarmed { get; private set; }
 
     /// <summary>닫기 연출 재생 중이면 true</summary>
     public bool IsClosing => isClosing;
 
     /// <summary>열기 시작부터 지난 시간 (초, unscaled 프레임 시각 = Time.unscaledDeltaTime을 더한 값과 같다). 닫기를 시작해도 계속 센다</summary>
-    public float OpenElapsed => isShown ? (float)(Time.unscaledTimeAsDouble - openStart) : 0f;
+    public float OpenElapsed => isShown && openStarted ? (float)(Time.unscaledTimeAsDouble - openStart) : 0f;
 
     /// <summary>마지막으로 적용한 모습 (확인용)</summary>
     public SongLoadingFrame Frame { get; private set; }
@@ -195,6 +205,67 @@ public class Canvas_SongLoading : UIBase
         ShowSd(sdImage != null ? sdImage.sprite : null);
 
         Hide();
+        StartCoroutine(PrewarmRoutine());
+    }
+
+    /// <summary>미리 채워 둘 글자 (숫자 · 영문 · 기호, 고정 문구는 따로 더한다)</summary>
+    private const string PrewarmCharacters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,:;/-+x×()[]'\"!?·—―…";
+
+    /// <summary>
+    /// 첫 Open 렉을 줄이려고 숨긴 채로 한 번 그려 둔다 (Init에서 한 번):
+    /// 쓰는 폰트에 글자(숫자 · 영문 · 고정 문구 · 곡 제목 · 아티스트)를 미리 채우고, 랭크 · FC 이미지를 읽고,
+    /// 첫 곡으로 카드와 배경 블러(RenderTexture)를 만든 뒤 모든 알파 0으로 Canvas를 한 프레임 그리고 끈다.
+    /// </summary>
+    private IEnumerator PrewarmRoutine()
+    {
+        isPrewarming = true;
+        System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        System.Text.StringBuilder chars = new System.Text.StringBuilder(PrewarmCharacters);
+        chars.Append(GameConstants.SongLoading.ScreenName).Append(GameConstants.SongLoading.ScreenNameKo).Append(GameConstants.SongLoading.Phrase)
+            .Append(GameConstants.SongLoading.SpeedLabel).Append(GameConstants.SongLoading.ChartLabel).Append(GameConstants.SongLoading.BestScoreLabel)
+            .Append(GameConstants.SongLoading.BestRankLabel).Append(GameConstants.SongLoading.MaxComboLabel).Append(GameConstants.SongLoading.Bubble)
+            .Append(GameConstants.SongLoading.Loading).Append(GameConstants.Play.ChartBadgeCustomText).Append(GameConstants.SongSelect.EmptyValue);
+        SongData first = null;
+        if (SongManager.HasInstance)
+        {
+            foreach (SongData song in GameManager.Songs.Songs)
+            {
+                if (song == null) continue;
+                if (first == null) first = song;
+                chars.Append(song.Title).Append(song.Artist);
+            }
+        }
+        string text = chars.ToString();
+        HashSet<TMP_FontAsset> fonts = new HashSet<TMP_FontAsset>();
+        foreach (TMP_Text t in GetComponentsInChildren<TMP_Text>(true))
+            if (t.font != null && fonts.Add(t.font)) t.font.TryAddCharacters(text, out string _);
+
+        foreach (PlayRank rank in System.Enum.GetValues(typeof(PlayRank))) RankSprites.Get(rank);
+        Sprite fullComboSprite = RankSprites.FullCombo;
+
+        if (first != null && !isShown)
+        {
+            SetContent(new SongLoadingInfo
+            {
+                Title = first.Title, Artist = first.Artist, BadgeText = GameConstants.Chart.DifficultyNormal, LevelText = "Lv. 0", SpeedText = "x0.0",
+                ChartName = string.Empty, Record = SongSelectRecordFormat.Build(null)
+            }, first);
+        }
+        double prepareMs = watch.Elapsed.TotalMilliseconds;
+
+        // 모든 알파 0으로 한 프레임 그린다 (보이지 않음, 입력도 막지 않음)
+        if (!isShown)
+        {
+            canvas.enabled = true;
+            Apply(new SongLoadingFrame());
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            if (!isShown) canvas.enabled = false;
+        }
+        isPrewarming = false;
+        IsPrewarmed = true;
+        Debug.Log($"[Canvas_SongLoading] 미리 그려 두기: 폰트 {fonts.Count}개에 글자 {text.Length}자, 랭크 · FC 이미지({(fullComboSprite != null ? "있음" : "없음")}) · 블러 · 카드 준비 {prepareMs:0.0}ms, 숨긴 채 한 프레임 그림", this);
     }
 
     /// <summary>SD 일러스트를 넣는다 (없으면 투명). 아직 일러스트가 없어 Init이 빈 채로 부른다</summary>
@@ -207,7 +278,8 @@ public class Canvas_SongLoading : UIBase
     }
 
     /// <summary>
-    /// 진입 데이터로 카드를 그리고 열기 연출을 시작한다 (Enter = 0초). 끝까지 기다리려면 OpenRoutine을 쓴다.
+    /// 진입 데이터로 카드(앨범 · 랭크 이미지 · 글자 · 배경 일러스트)를 먼저 채우고 알파 0으로 보이기 시작한다 (Enter 프레임).
+    /// 열기 연출 0초는 그다음 프레임부터 센다 (채우는 프레임의 시간이 연출에 섞이지 않게). 끝까지 기다리려면 OpenRoutine을 쓴다.
     /// </summary>
     public void Open(InGameEntryData entry)
     {
@@ -215,7 +287,7 @@ public class Canvas_SongLoading : UIBase
         SetContent(entry);
         isShown = true;
         isClosing = false;
-        openStart = Time.unscaledTimeAsDouble;
+        openStarted = false;
         canvas.enabled = true;
         if (inputBlocker != null) inputBlocker.raycastTarget = true;
         Apply(SongLoadingTimeline.EvaluateOpen(0f));
@@ -226,6 +298,10 @@ public class Canvas_SongLoading : UIBase
     /// <summary>열기 연출이 끝날 때까지 (1.1초) 기다린다</summary>
     public IEnumerator OpenRoutine()
     {
+        // 채운 프레임 다음부터 0초
+        yield return null;
+        openStart = Time.unscaledTimeAsDouble;
+        openStarted = true;
         while (isShown && !isClosing && OpenElapsed < GameConstants.SongLoading.OpenSeconds)
         {
             Apply(SongLoadingTimeline.EvaluateOpen(OpenElapsed));
@@ -267,6 +343,7 @@ public class Canvas_SongLoading : UIBase
         CacheComponents();
         isShown = false;
         isClosing = false;
+        openStarted = false;
         if (inputBlocker != null) inputBlocker.raycastTarget = false;
         Apply(new SongLoadingFrame());
         canvas.enabled = false;
