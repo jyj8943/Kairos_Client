@@ -43,6 +43,7 @@ public class Txt_Combo : MonoBehaviour
     private Vector2 basePosition;
     private Vector2 groupBasePosition;
     private Color baseColor;
+    private float alphaOverride = -1f;
 
     /// <summary>계산 상태 (확인용)</summary>
     public ComboMotion Motion => motion;
@@ -90,6 +91,7 @@ public class Txt_Combo : MonoBehaviour
 
         ApplySettings();
         motion.Reset();
+        alphaOverride = -1f;
         text.text = string.Empty;
         Apply();
     }
@@ -121,6 +123,21 @@ public class Txt_Combo : MonoBehaviour
         if (motion.Elapsed != before) Apply();
     }
 
+    /// <summary>
+    /// 곡 끝 FC/AP 연출(ClearBanner) 동안 Combo 그룹 알파를 고정한다 (쉬면 숨기기 대신 1 → 0.4). 음수면 고정을 풀고 원래 표시로 돌아간다.
+    /// Canvas_InGame.SetClearTime이 매 프레임 넘긴다.
+    /// </summary>
+    public void SetAlphaOverride(float alpha)
+    {
+        if (!hasBase) return;
+        if (Mathf.Approximately(alpha, alphaOverride)) return;
+        alphaOverride = alpha;
+        Apply();
+    }
+
+    /// <summary>연출 때문에 고정한 그룹 알파 (음수면 고정 없음, 확인용)</summary>
+    public float AlphaOverride => alphaOverride;
+
     /// <summary>Inspector 값을 계산 클래스로 옮긴다</summary>
     private void ApplySettings()
     {
@@ -144,8 +161,9 @@ public class Txt_Combo : MonoBehaviour
 
         if (comboGroup != null)
         {
-            comboGroup.alpha = motion.GroupAlpha;
-            groupRect.anchoredPosition = new Vector2(groupBasePosition.x, groupBasePosition.y - motion.GroupOffset);
+            bool held = alphaOverride >= 0f;
+            comboGroup.alpha = held ? alphaOverride : motion.GroupAlpha;
+            groupRect.anchoredPosition = new Vector2(groupBasePosition.x, groupBasePosition.y - (held ? 0f : motion.GroupOffset));
         }
     }
 

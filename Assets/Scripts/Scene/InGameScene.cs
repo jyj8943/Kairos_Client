@@ -9,7 +9,9 @@ using UnityEngine.InputSystem;
 /// - 곡 시간은 GameManager.Sound.SongTime(DSP 기준). 판정은 NoteJudge, 점수는 ScoreCalculator가 맡는다.
 /// - 모든 노트가 판정(친 판정 또는 놓침 MISS)되면 OnAllNotesJudged를 한 번 알리고, 그 곡 시간부터 3초(ResultDelaySeconds) 뒤
 ///   결과 씬으로 ResultData를 넘긴다. 그 3초 동안 노래는 계속 흐르고, 결과로 넘어가는 중이라 일시정지는 받지 않는다.
-///   그 사이 ALL PERFECT / FULL COMBO면 연출(ClearEffect, 2.8초)을 곡 시간 기준으로 띄운다 (자동 플레이 제외).
+///   그 사이 ALL PERFECT / FULL COMBO면 곡 끝 연출(ClearBanner, 정확히 3초)을 같은 타이머(판정 뒤 곡 시간)로 띄운다.
+///   판정 개수로 고른다 (ClearBannerRules: 전부 PERFECT면 AP, 아니고 MISS 0이면 FC). 테스트 플레이·자동 플레이는 연출 없이 지금 흐름 그대로.
+///   연출 중 ESC(OnBack)는 무시한다 (일시정지 팝업을 열지 않는다).
 /// - 테스트 플레이(진입 데이터에 TestPlayData)면 파일 대신 넘겨받은 채보를 쓰고, 시작 박 앞의 노트는 건너뛴다.
 ///   노래는 시작 위치 2초 전부터 들려준다.
 /// - ESC(팝업이 없을 때 UIManager가 OnBack을 부름)나 창 포커스를 잃으면 일시정지 메뉴(Popup_Pause)를 연다.
@@ -156,6 +158,8 @@ public class InGameScene : SceneBase
     private double allJudgedSongTime = -1;
     /// <summary>모든 노트가 판정돼 결과로 넘어가기를 기다리는 중이면 true</summary>
     private bool isWaitingResult;
+    /// <summary>결과로 넘어간 순간의 "모든 노트 판정 뒤 곡 시간" (초, 확인용 로그·테스트)</summary>
+    private double finishedAfterJudged = -1;
 #if UNITY_EDITOR
     // 싱크 진단 (Unity 에디터 전용): 곡 시간과 실제 음원 재생 위치의 차이
     private double maxSyncErrorSeconds;
@@ -465,10 +469,13 @@ public class InGameScene : SceneBase
         {
             isWaitingResult = true;
             allJudgedSongTime = songTime;
-            // FULL COMBO / ALL PERFECT 연출 (자동 플레이 제외, 테스트 플레이는 띄움). 결과로 가는 시간(3초)은 그대로
-            ClearKind clearKind = ClearEffectRules.Select(isAutoPlay, score.IsAllPerfect, score.IsFullCombo);
-            canvas.PlayClear(clearKind);
-            Debug.Log($"[InGameScene] 모든 노트 판정: 곡 시간 {songTime:0.###}초, {GameConstants.Play.ResultDelaySeconds}초 뒤 결과로, 연출 {clearKind}", this);
+            // 곡 끝 FULL COMBO / ALL PERFECT 연출 (테스트 플레이·자동 플레이 제외). 결과로 가는 시간(3초) 타이머를 연출도 같이 쓴다
+            ClearType clearType = ClearBannerRules.Select(IsTestPlay, isAutoPlay, score.PerfectCount, score.MissCount, score.JudgedCount, score.TotalNotes);
+            bool ap = clearType == ClearType.AllPerfect;
+            // AP: PERFECT 수 / 노트 수, FC: 최대 콤보 / 가능한 최대 콤보 (롱노트 유지 틱이 없으면 노트 수와 같다)
+            canvas.PlayClear(clearType, ap ? score.PerfectCount : score.MaxCombo, ap ? score.TotalNotes : score.MaxPossibleCombo);
+            Debug.Log($"[InGameScene] 모든 노트 판정: 곡 시간 {songTime:0.###}초, {GameConstants.Play.ResultDelaySeconds}초 뒤 결과로, 연출 {clearType}" +
+                      $"{(IsTestPlay ? " (테스트 플레이)" : "")}{(isAutoPlay ? " (자동 플레이)" : "")}", this);
             OnAllNotesJudged?.Invoke();
         }
 
@@ -782,6 +789,7 @@ public class InGameScene : SceneBase
         isPlaying = false;
         input.DisableInput();
         double finishSongTime = GameManager.Sound.SongTime;
+        finishedAfterJudged = finishSongTime - allJudgedSongTime;
         GameManager.Sound.StopMusic();
 
         Debug.Log($"[InGameScene] 결과 (모든 노트 판정 뒤 곡 시간 {finishSongTime - allJudgedSongTime:0.000}초): 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, FAST/SLOW {score.FastCount}/{score.SlowCount}, " +
@@ -867,6 +875,11 @@ public class InGameScene : SceneBase
     /// </summary>
     public override void OnBack()
     {
+        if (canvas != null && canvas.IsClearPlaying)
+        {
+            Debug.Log($"[InGameScene] 곡 끝 연출 중 ESC 무시 (연출 {canvas.Banner.Elapsed:0.00}초)", this);
+            return;
+        }
         RequestPause("ESC");
     }
 
@@ -876,6 +889,12 @@ public class InGameScene : SceneBase
     /// 테스트가 도는 동안 다른 창을 써도 판이 멈추지 않게 TestSpeedRunCallback이 켜고, 실행이 끝나면 끈다.
     /// </summary>
     public static bool IgnoreFocusPauseForTests;
+
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): null이 아니면 보통 플레이(테스트 플레이 아님)에서 파일 대신 이 채보를 쓴다.
+    /// 곡 끝 연출처럼 보통 플레이에서만 나오는 것을 노트 몇 개짜리 채보로 확인할 때 쓰고, 테스트가 끝나면 null로 되돌린다.
+    /// </summary>
+    public static ChartData TestNormalChart;
 
     private static bool IsFocusPauseIgnored => IgnoreFocusPauseForTests;
 #else
@@ -1247,6 +1266,13 @@ public class InGameScene : SceneBase
             chart = entry.testPlay.chart;
             if (chart == null) { error = "테스트 플레이 채보가 없습니다."; return false; }
         }
+#if UNITY_EDITOR
+        else if (TestNormalChart != null)
+        {
+            // 테스트 전용: 보통 플레이를 코드로 만든 작은 채보로 (chartId가 비어 결과 기록은 남지 않는다)
+            chart = TestNormalChart;
+        }
+#endif
         else
         {
             if (string.IsNullOrEmpty(entry.chartId))

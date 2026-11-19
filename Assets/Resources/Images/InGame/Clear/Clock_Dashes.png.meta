@@ -1,0 +1,2379 @@
+fileFormatVersion: 2
+guid: 1c63a22a82e824642b6bb592770fe842
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 3490581794086635142
+    second: Clock_Dashes_0
+  - first:
+      213: 235760308307799860
+    second: Clock_Dashes_1
+  - first:
+      213: 232278481757694507
+    second: Clock_Dashes_2
+  - first:
+      213: 3611242704300286838
+    second: Clock_Dashes_3
+  - first:
+      213: 3979180689751962406
+    second: Clock_Dashes_4
+  - first:
+      213: -3199667944032942249
+    second: Clock_Dashes_5
+  - first:
+      213: 5645864869528933347
+    second: Clock_Dashes_6
+  - first:
+      213: 5970509191683576912
+    second: Clock_Dashes_7
+  - first:
+      213: -9215380629370934283
+    second: Clock_Dashes_8
+  - first:
+      213: 8619652481295034614
+    second: Clock_Dashes_9
+  - first:
+      213: 533291192608285840
+    second: Clock_Dashes_10
+  - first:
+      213: -8833625711936281545
+    second: Clock_Dashes_11
+  - first:
+      213: 6279036695482666778
+    second: Clock_Dashes_12
+  - first:
+      213: 4905598432614953943
+    second: Clock_Dashes_13
+  - first:
+      213: 3122078799672115917
+    second: Clock_Dashes_14
+  - first:
+      213: 2918859952995341227
+    second: Clock_Dashes_15
+  - first:
+      213: -7848139173247218596
+    second: Clock_Dashes_16
+  - first:
+      213: 5268593008452143805
+    second: Clock_Dashes_17
+  - first:
+      213: -4120660624030892252
+    second: Clock_Dashes_18
+  - first:
+      213: -827781699454247821
+    second: Clock_Dashes_19
+  - first:
+      213: 4917519415926488577
+    second: Clock_Dashes_20
+  - first:
+      213: 5200133059881599833
+    second: Clock_Dashes_21
+  - first:
+      213: -4857041046941207004
+    second: Clock_Dashes_22
+  - first:
+      213: 7364333379683950664
+    second: Clock_Dashes_23
+  - first:
+      213: -5436751142067968907
+    second: Clock_Dashes_24
+  - first:
+      213: -2426151195969336585
+    second: Clock_Dashes_25
+  - first:
+      213: 7003031817161170
+    second: Clock_Dashes_26
+  - first:
+      213: -1776701661751181253
+    second: Clock_Dashes_27
+  - first:
+      213: -8827580739528931376
+    second: Clock_Dashes_28
+  - first:
+      213: 5199757889047775932
+    second: Clock_Dashes_29
+  - first:
+      213: -5230650978652013529
+    second: Clock_Dashes_30
+  - first:
+      213: -2497512200767055541
+    second: Clock_Dashes_31
+  - first:
+      213: 4419324442025582578
+    second: Clock_Dashes_32
+  - first:
+      213: 4378737596123205299
+    second: Clock_Dashes_33
+  - first:
+      213: 594061906142511104
+    second: Clock_Dashes_34
+  - first:
+      213: 6849146238180047935
+    second: Clock_Dashes_35
+  - first:
+      213: -6167379348190999371
+    second: Clock_Dashes_36
+  - first:
+      213: 7702991818274483097
+    second: Clock_Dashes_37
+  - first:
+      213: 8652295504228738267
+    second: Clock_Dashes_38
+  - first:
+      213: 2517338215289411239
+    second: Clock_Dashes_39
+  - first:
+      213: -1284601889253041376
+    second: Clock_Dashes_40
+  - first:
+      213: 6161020624687058761
+    second: Clock_Dashes_41
+  - first:
+      213: 7613687666394687767
+    second: Clock_Dashes_42
+  - first:
+      213: 3515535626576693327
+    second: Clock_Dashes_43
+  - first:
+      213: 410992779685304901
+    second: Clock_Dashes_44
+  - first:
+      213: 7006265670963664881
+    second: Clock_Dashes_45
+  - first:
+      213: -4665268459733875010
+    second: Clock_Dashes_46
+  - first:
+      213: -6639097727751821341
+    second: Clock_Dashes_47
+  - first:
+      213: -4747434684286517524
+    second: Clock_Dashes_48
+  - first:
+      213: -6557602632294931323
+    second: Clock_Dashes_49
+  - first:
+      213: -2894449414886332469
+    second: Clock_Dashes_50
+  - first:
+      213: -1952891854318148517
+    second: Clock_Dashes_51
+  - first:
+      213: -6440411623487506867
+    second: Clock_Dashes_52
+  - first:
+      213: -7812910233303711289
+    second: Clock_Dashes_53
+  - first:
+      213: -7189875672068048034
+    second: Clock_Dashes_54
+  - first:
+      213: 48212609854220166
+    second: Clock_Dashes_55
+  - first:
+      213: -4339301739621678565
+    second: Clock_Dashes_56
+  - first:
+      213: -7464072936805732197
+    second: Clock_Dashes_57
+  - first:
+      213: -7504641440160150960
+    second: Clock_Dashes_58
+  - first:
+      213: 1014641841974492085
+    second: Clock_Dashes_59
+  - first:
+      213: -2998707795036822810
+    second: Clock_Dashes_60
+  - first:
+      213: 3088146642056438133
+    second: Clock_Dashes_61
+  - first:
+      213: -8963091263938948656
+    second: Clock_Dashes_62
+  - first:
+      213: 949499679779874770
+    second: Clock_Dashes_63
+  - first:
+      213: -4153956908843277846
+    second: Clock_Dashes_64
+  - first:
+      213: -529932257449207475
+    second: Clock_Dashes_65
+  - first:
+      213: -8177911698951190232
+    second: Clock_Dashes_66
+  - first:
+      213: -2309930315203230137
+    second: Clock_Dashes_67
+  - first:
+      213: 5097350368666844579
+    second: Clock_Dashes_68
+  - first:
+      213: 6647483422215677506
+    second: Clock_Dashes_69
+  - first:
+      213: -7741307936086547194
+    second: Clock_Dashes_70
+  - first:
+      213: 9179155854478384735
+    second: Clock_Dashes_71
+  - first:
+      213: 8766266868494500056
+    second: Clock_Dashes_72
+  - first:
+      213: -8352402098721245667
+    second: Clock_Dashes_73
+  - first:
+      213: 6042735888952132150
+    second: Clock_Dashes_74
+  - first:
+      213: 7285519619872361453
+    second: Clock_Dashes_75
+  - first:
+      213: -3568971715296691861
+    second: Clock_Dashes_76
+  - first:
+      213: 3384305980103341310
+    second: Clock_Dashes_77
+  - first:
+      213: 7247730266271502535
+    second: Clock_Dashes_78
+  - first:
+      213: 6712973155454211146
+    second: Clock_Dashes_79
+  - first:
+      213: -3607160382221944152
+    second: Clock_Dashes_80
+  - first:
+      213: -7887412557694945985
+    second: Clock_Dashes_81
+  - first:
+      213: 2254222991545358445
+    second: Clock_Dashes_82
+  - first:
+      213: 3294173791274930000
+    second: Clock_Dashes_83
+  - first:
+      213: -3837675590719027350
+    second: Clock_Dashes_84
+  - first:
+      213: -3263673197504914934
+    second: Clock_Dashes_85
+  - first:
+      213: -7187412559751906364
+    second: Clock_Dashes_86
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Clock_Dashes_0
+      rect:
+        serializedVersion: 2
+        x: 314
+        y: 777
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 686caf7d5a9017030800000000000000
+      internalID: 3490581794086635142
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_1
+      rect:
+        serializedVersion: 2
+        x: 341
+        y: 782
+        width: 12
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 43fa2d450c6954300800000000000000
+      internalID: 235760308307799860
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_2
+      rect:
+        serializedVersion: 2
+        x: 369
+        y: 784
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2a622a6c08393300800000000000000
+      internalID: 232278481757694507
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_3
+      rect:
+        serializedVersion: 2
+        x: 397
+        y: 785
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6732a8b3b16bd1230800000000000000
+      internalID: 3611242704300286838
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_4
+      rect:
+        serializedVersion: 2
+        x: 425
+        y: 784
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62372c531c3e83730800000000000000
+      internalID: 3979180689751962406
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_5
+      rect:
+        serializedVersion: 2
+        x: 453
+        y: 781
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 75746bc15fe7893d0800000000000000
+      internalID: -3199667944032942249
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 776
+        width: 12
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3e3112e8f242a5e40800000000000000
+      internalID: 5645864869528933347
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_7
+      rect:
+        serializedVersion: 2
+        x: 260
+        y: 761
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 054118a0a728bd250800000000000000
+      internalID: 5970509191683576912
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_8
+      rect:
+        serializedVersion: 2
+        x: 287
+        y: 770
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5fb645c84246c1080800000000000000
+      internalID: -9215380629370934283
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_9
+      rect:
+        serializedVersion: 2
+        x: 507
+        y: 768
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f8a7ea43482f9770800000000000000
+      internalID: 8619652481295034614
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_10
+      rect:
+        serializedVersion: 2
+        x: 533
+        y: 759
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 094e241a381a66700800000000000000
+      internalID: 533291192608285840
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_11
+      rect:
+        serializedVersion: 2
+        x: 234
+        y: 751
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 734e741b738a86580800000000000000
+      internalID: -8833625711936281545
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_12
+      rect:
+        serializedVersion: 2
+        x: 559
+        y: 748
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a1f03e55b9e932750800000000000000
+      internalID: 6279036695482666778
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_13
+      rect:
+        serializedVersion: 2
+        x: 209
+        y: 738
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d33ab298cf241440800000000000000
+      internalID: 4905598432614953943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_14
+      rect:
+        serializedVersion: 2
+        x: 584
+        y: 736
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dc20c37702ad35b20800000000000000
+      internalID: 3122078799672115917
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_15
+      rect:
+        serializedVersion: 2
+        x: 185
+        y: 724
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba3966799afd18820800000000000000
+      internalID: 2918859952995341227
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_16
+      rect:
+        serializedVersion: 2
+        x: 608
+        y: 721
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c5c85cec00fc51390800000000000000
+      internalID: -7848139173247218596
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_17
+      rect:
+        serializedVersion: 2
+        x: 162
+        y: 708
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dba85ee4d6dcd1940800000000000000
+      internalID: 5268593008452143805
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_18
+      rect:
+        serializedVersion: 2
+        x: 631
+        y: 705
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42ff2b0aef870d6c0800000000000000
+      internalID: -4120660624030892252
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_19
+      rect:
+        serializedVersion: 2
+        x: 140
+        y: 691
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 37cd57c1ee02384f0800000000000000
+      internalID: -827781699454247821
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_20
+      rect:
+        serializedVersion: 2
+        x: 652
+        y: 687
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10e726acad98e3440800000000000000
+      internalID: 4917519415926488577
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_21
+      rect:
+        serializedVersion: 2
+        x: 120
+        y: 672
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 953020b67759a2840800000000000000
+      internalID: 5200133059881599833
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_22
+      rect:
+        serializedVersion: 2
+        x: 673
+        y: 668
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 426f399c6e2589cb0800000000000000
+      internalID: -4857041046941207004
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_23
+      rect:
+        serializedVersion: 2
+        x: 101
+        y: 652
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8402d9fd03e533660800000000000000
+      internalID: 7364333379683950664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_24
+      rect:
+        serializedVersion: 2
+        x: 691
+        y: 648
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 574e6d434a7cc84b0800000000000000
+      internalID: -5436751142067968907
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_25
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 630
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7facbd07754945ed0800000000000000
+      internalID: -2426151195969336585
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_26
+      rect:
+        serializedVersion: 2
+        x: 709
+        y: 626
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d900d76831e81000800000000000000
+      internalID: 7003031817161170
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_27
+      rect:
+        serializedVersion: 2
+        x: 67
+        y: 607
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b3089738043e757e0800000000000000
+      internalID: -1776701661751181253
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_28
+      rect:
+        serializedVersion: 2
+        x: 725
+        y: 603
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0d74c4286122e7580800000000000000
+      internalID: -8827580739528931376
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_29
+      rect:
+        serializedVersion: 2
+        x: 53
+        y: 583
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cba4ab62040492840800000000000000
+      internalID: 5199757889047775932
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_30
+      rect:
+        serializedVersion: 2
+        x: 739
+        y: 579
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 72cb569e5aef867b0800000000000000
+      internalID: -5230650978652013529
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_31
+      rect:
+        serializedVersion: 2
+        x: 40
+        y: 558
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b495313c2ed075dd0800000000000000
+      internalID: -2497512200767055541
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_32
+      rect:
+        serializedVersion: 2
+        x: 751
+        y: 554
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2ffd22a5a28945d30800000000000000
+      internalID: 4419324442025582578
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_33
+      rect:
+        serializedVersion: 2
+        x: 29
+        y: 533
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3be4295e4a664cc30800000000000000
+      internalID: 4378737596123205299
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_34
+      rect:
+        serializedVersion: 2
+        x: 762
+        y: 528
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 000473af7288e3800800000000000000
+      internalID: 594061906142511104
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_35
+      rect:
+        serializedVersion: 2
+        x: 21
+        y: 506
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3cbc6d173e0d0f50800000000000000
+      internalID: 6849146238180047935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_36
+      rect:
+        serializedVersion: 2
+        x: 770
+        y: 501
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5bccef3b821196aa0800000000000000
+      internalID: -6167379348190999371
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_37
+      rect:
+        serializedVersion: 2
+        x: 14
+        y: 480
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 99badfb1f3686ea60800000000000000
+      internalID: 7702991818274483097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_38
+      rect:
+        serializedVersion: 2
+        x: 777
+        y: 474
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd463455be0231870800000000000000
+      internalID: 8652295504228738267
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_39
+      rect:
+        serializedVersion: 2
+        x: 9
+        y: 452
+        width: 10
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a657d5f4c16fe220800000000000000
+      internalID: 2517338215289411239
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_40
+      rect:
+        serializedVersion: 2
+        x: 782
+        y: 447
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 02bd649436d2c2ee0800000000000000
+      internalID: -1284601889253041376
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_41
+      rect:
+        serializedVersion: 2
+        x: 5
+        y: 425
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 94fc35c9d97508550800000000000000
+      internalID: 6161020624687058761
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_42
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 397
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7196a32f79049a960800000000000000
+      internalID: 7613687666394687767
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_43
+      rect:
+        serializedVersion: 2
+        x: 786
+        y: 392
+        width: 10
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f488559b601b9c030800000000000000
+      internalID: 3515535626576693327
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_44
+      rect:
+        serializedVersion: 2
+        x: 5
+        y: 369
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 54a946e61c324b500800000000000000
+      internalID: 410992779685304901
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_45
+      rect:
+        serializedVersion: 2
+        x: 784
+        y: 364
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f79dc7c1814b3160800000000000000
+      internalID: 7006265670963664881
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_46
+      rect:
+        serializedVersion: 2
+        x: 8
+        y: 341
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb68ab3bd03a14fb0800000000000000
+      internalID: -4665268459733875010
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_47
+      rect:
+        serializedVersion: 2
+        x: 781
+        y: 336
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3e7ef34cacf2dd3a0800000000000000
+      internalID: -6639097727751821341
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_48
+      rect:
+        serializedVersion: 2
+        x: 13
+        y: 313
+        width: 10
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ceebbb0ce49bd1eb0800000000000000
+      internalID: -4747434684286517524
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_49
+      rect:
+        serializedVersion: 2
+        x: 776
+        y: 309
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 584e4eb4627bef4a0800000000000000
+      internalID: -6557602632294931323
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_50
+      rect:
+        serializedVersion: 2
+        x: 19
+        y: 286
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc7ec55b799d4d7d0800000000000000
+      internalID: -2894449414886332469
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_51
+      rect:
+        serializedVersion: 2
+        x: 769
+        y: 282
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b54ec92943fe5e4e0800000000000000
+      internalID: -1952891854318148517
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_52
+      rect:
+        serializedVersion: 2
+        x: 28
+        y: 260
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d46fabe40cf0f96a0800000000000000
+      internalID: -6440411623487506867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_53
+      rect:
+        serializedVersion: 2
+        x: 760
+        y: 256
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c10be19987f29390800000000000000
+      internalID: -7812910233303711289
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_54
+      rect:
+        serializedVersion: 2
+        x: 38
+        y: 234
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5b392b7b2e683c90800000000000000
+      internalID: -7189875672068048034
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_55
+      rect:
+        serializedVersion: 2
+        x: 749
+        y: 230
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6872e0cfc194ba000800000000000000
+      internalID: 48212609854220166
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_56
+      rect:
+        serializedVersion: 2
+        x: 50
+        y: 209
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b128d94fe04b7c3c0800000000000000
+      internalID: -4339301739621678565
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_57
+      rect:
+        serializedVersion: 2
+        x: 736
+        y: 205
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b907618d5394a6890800000000000000
+      internalID: -7464072936805732197
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_58
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 185
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 05a04981f582ad790800000000000000
+      internalID: -7504641440160150960
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_59
+      rect:
+        serializedVersion: 2
+        x: 722
+        y: 181
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5bb3325216bb41e00800000000000000
+      internalID: 1014641841974492085
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_60
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 162
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6e2a2a3f5237266d0800000000000000
+      internalID: -2998707795036822810
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_61
+      rect:
+        serializedVersion: 2
+        x: 706
+        y: 158
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 571e61e520d4bda20800000000000000
+      internalID: 3088146642056438133
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_62
+      rect:
+        serializedVersion: 2
+        x: 98
+        y: 140
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0d11383ebf3bc9380800000000000000
+      internalID: -8963091263938948656
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_63
+      rect:
+        serializedVersion: 2
+        x: 688
+        y: 137
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2d760a79dec4d2d00800000000000000
+      internalID: 949499679779874770
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_64
+      rect:
+        serializedVersion: 2
+        x: 116
+        y: 119
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae1ed14333e2a56c0800000000000000
+      internalID: -4153956908843277846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_65
+      rect:
+        serializedVersion: 2
+        x: 669
+        y: 116
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d4918b76b6d45a8f0800000000000000
+      internalID: -529932257449207475
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_66
+      rect:
+        serializedVersion: 2
+        x: 137
+        y: 100
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 829c08363a8328e80800000000000000
+      internalID: -8177911698951190232
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_67
+      rect:
+        serializedVersion: 2
+        x: 648
+        y: 97
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 746c76aed9a71ffd0800000000000000
+      internalID: -2309930315203230137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_68
+      rect:
+        serializedVersion: 2
+        x: 158
+        y: 83
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3adf714472d6db640800000000000000
+      internalID: 5097350368666844579
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_69
+      rect:
+        serializedVersion: 2
+        x: 627
+        y: 80
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 246a67fd3fa904c50800000000000000
+      internalID: 6647483422215677506
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_70
+      rect:
+        serializedVersion: 2
+        x: 181
+        y: 67
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 60526a48279519490800000000000000
+      internalID: -7741307936086547194
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_71
+      rect:
+        serializedVersion: 2
+        x: 604
+        y: 64
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5e912ccd99e26f70800000000000000
+      internalID: 9179155854478384735
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_72
+      rect:
+        serializedVersion: 2
+        x: 205
+        y: 52
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8d004ee654908a970800000000000000
+      internalID: 8766266868494500056
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_73
+      rect:
+        serializedVersion: 2
+        x: 579
+        y: 50
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d163e7c4b8e461c80800000000000000
+      internalID: -8352402098721245667
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_74
+      rect:
+        serializedVersion: 2
+        x: 230
+        y: 40
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6320f74764c1cd350800000000000000
+      internalID: 6042735888952132150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_75
+      rect:
+        serializedVersion: 2
+        x: 255
+        y: 29
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: deb81a27e7d5b1560800000000000000
+      internalID: 7285519619872361453
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_76
+      rect:
+        serializedVersion: 2
+        x: 554
+        y: 38
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b69f2585227787ec0800000000000000
+      internalID: -3568971715296691861
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_77
+      rect:
+        serializedVersion: 2
+        x: 282
+        y: 20
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef43a4bab5877fe20800000000000000
+      internalID: 3384305980103341310
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_78
+      rect:
+        serializedVersion: 2
+        x: 502
+        y: 19
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c0d5fce64c159460800000000000000
+      internalID: 7247730266271502535
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_79
+      rect:
+        serializedVersion: 2
+        x: 529
+        y: 27
+        width: 11
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a44d49d9485492d50800000000000000
+      internalID: 6712973155454211146
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_80
+      rect:
+        serializedVersion: 2
+        x: 309
+        y: 13
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8aa7cc17ebac0fdc0800000000000000
+      internalID: -3607160382221944152
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_81
+      rect:
+        serializedVersion: 2
+        x: 336
+        y: 8
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3533ad61184a8290800000000000000
+      internalID: -7887412557694945985
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_82
+      rect:
+        serializedVersion: 2
+        x: 364
+        y: 5
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d68549f0edb984f10800000000000000
+      internalID: 2254222991545358445
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_83
+      rect:
+        serializedVersion: 2
+        x: 392
+        y: 4
+        width: 12
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 05f08512c9147bd20800000000000000
+      internalID: 3294173791274930000
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_84
+      rect:
+        serializedVersion: 2
+        x: 420
+        y: 5
+        width: 12
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6741041266ddbac0800000000000000
+      internalID: -3837675590719027350
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_85
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 8
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a0a91cfb48a15b2d0800000000000000
+      internalID: -3263673197504914934
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Clock_Dashes_86
+      rect:
+        serializedVersion: 2
+        x: 475
+        y: 12
+        width: 12
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4cb7ec18b5e214c90800000000000000
+      internalID: -7187412559751906364
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Clock_Dashes_0: 3490581794086635142
+      Clock_Dashes_1: 235760308307799860
+      Clock_Dashes_10: 533291192608285840
+      Clock_Dashes_11: -8833625711936281545
+      Clock_Dashes_12: 6279036695482666778
+      Clock_Dashes_13: 4905598432614953943
+      Clock_Dashes_14: 3122078799672115917
+      Clock_Dashes_15: 2918859952995341227
+      Clock_Dashes_16: -7848139173247218596
+      Clock_Dashes_17: 5268593008452143805
+      Clock_Dashes_18: -4120660624030892252
+      Clock_Dashes_19: -827781699454247821
+      Clock_Dashes_2: 232278481757694507
+      Clock_Dashes_20: 4917519415926488577
+      Clock_Dashes_21: 5200133059881599833
+      Clock_Dashes_22: -4857041046941207004
+      Clock_Dashes_23: 7364333379683950664
+      Clock_Dashes_24: -5436751142067968907
+      Clock_Dashes_25: -2426151195969336585
+      Clock_Dashes_26: 7003031817161170
+      Clock_Dashes_27: -1776701661751181253
+      Clock_Dashes_28: -8827580739528931376
+      Clock_Dashes_29: 5199757889047775932
+      Clock_Dashes_3: 3611242704300286838
+      Clock_Dashes_30: -5230650978652013529
+      Clock_Dashes_31: -2497512200767055541
+      Clock_Dashes_32: 4419324442025582578
+      Clock_Dashes_33: 4378737596123205299
+      Clock_Dashes_34: 594061906142511104
+      Clock_Dashes_35: 6849146238180047935
+      Clock_Dashes_36: -6167379348190999371
+      Clock_Dashes_37: 7702991818274483097
+      Clock_Dashes_38: 8652295504228738267
+      Clock_Dashes_39: 2517338215289411239
+      Clock_Dashes_4: 3979180689751962406
+      Clock_Dashes_40: -1284601889253041376
+      Clock_Dashes_41: 6161020624687058761
+      Clock_Dashes_42: 7613687666394687767
+      Clock_Dashes_43: 3515535626576693327
+      Clock_Dashes_44: 410992779685304901
+      Clock_Dashes_45: 7006265670963664881
+      Clock_Dashes_46: -4665268459733875010
+      Clock_Dashes_47: -6639097727751821341
+      Clock_Dashes_48: -4747434684286517524
+      Clock_Dashes_49: -6557602632294931323
+      Clock_Dashes_5: -3199667944032942249
+      Clock_Dashes_50: -2894449414886332469
+      Clock_Dashes_51: -1952891854318148517
+      Clock_Dashes_52: -6440411623487506867
+      Clock_Dashes_53: -7812910233303711289
+      Clock_Dashes_54: -7189875672068048034
+      Clock_Dashes_55: 48212609854220166
+      Clock_Dashes_56: -4339301739621678565
+      Clock_Dashes_57: -7464072936805732197
+      Clock_Dashes_58: -7504641440160150960
+      Clock_Dashes_59: 1014641841974492085
+      Clock_Dashes_6: 5645864869528933347
+      Clock_Dashes_60: -2998707795036822810
+      Clock_Dashes_61: 3088146642056438133
+      Clock_Dashes_62: -8963091263938948656
+      Clock_Dashes_63: 949499679779874770
+      Clock_Dashes_64: -4153956908843277846
+      Clock_Dashes_65: -529932257449207475
+      Clock_Dashes_66: -8177911698951190232
+      Clock_Dashes_67: -2309930315203230137
+      Clock_Dashes_68: 5097350368666844579
+      Clock_Dashes_69: 6647483422215677506
+      Clock_Dashes_7: 5970509191683576912
+      Clock_Dashes_70: -7741307936086547194
+      Clock_Dashes_71: 9179155854478384735
+      Clock_Dashes_72: 8766266868494500056
+      Clock_Dashes_73: -8352402098721245667
+      Clock_Dashes_74: 6042735888952132150
+      Clock_Dashes_75: 7285519619872361453
+      Clock_Dashes_76: -3568971715296691861
+      Clock_Dashes_77: 3384305980103341310
+      Clock_Dashes_78: 7247730266271502535
+      Clock_Dashes_79: 6712973155454211146
+      Clock_Dashes_8: -9215380629370934283
+      Clock_Dashes_80: -3607160382221944152
+      Clock_Dashes_81: -7887412557694945985
+      Clock_Dashes_82: 2254222991545358445
+      Clock_Dashes_83: 3294173791274930000
+      Clock_Dashes_84: -3837675590719027350
+      Clock_Dashes_85: -3263673197504914934
+      Clock_Dashes_86: -7187412559751906364
+      Clock_Dashes_9: 8619652481295034614
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

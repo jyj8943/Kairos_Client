@@ -55,8 +55,8 @@ public class Canvas_InGame : UIBase
     [Tooltip("테스트 플레이 뱃지 글자 (Img_TestPlay/Txt_TestPlay)")]
     [SerializeField] private TMP_Text testPlayText;
 
-    [Header("FULL COMBO / ALL PERFECT 연출 (ClearEffect)")]
-    [SerializeField] private ClearEffect clearEffect;
+    [Header("곡 끝 FULL COMBO / ALL PERFECT 연출 (ClearBanner, 위쪽 맨 앞)")]
+    [SerializeField] private ClearBanner clearBanner;
 
     [Header("배속·밝기 카드 (Img_SpeedBrightnessCard, 왼쪽 아래)")]
     [SerializeField] private Img_SpeedBrightnessCard speedBrightnessCard;
@@ -157,7 +157,7 @@ public class Canvas_InGame : UIBase
         shownProgress = -1f;
         SetProgress(0f);
         judgeImage.ResetView();
-        if (clearEffect != null) clearEffect.ResetView();
+        if (clearBanner != null) clearBanner.Init();
         if (fastSlowImage != null) fastSlowImage.ResetView();
         shownJudge = JudgeType.Miss;
         shownFastSlow = FastSlow.None;
@@ -394,21 +394,27 @@ public class Canvas_InGame : UIBase
     }
 
     /// <summary>
-    /// FULL COMBO / ALL PERFECT 연출을 고른다 (모든 노트 판정 순간, InGameScene이 ClearEffectRules로 정해 넘긴다). None이면 띄우지 않는다.
+    /// 곡 끝 FULL COMBO / ALL PERFECT 연출을 시작한다 (모든 노트 판정 순간, InGameScene이 ClearBannerRules로 정해 넘긴다). None이면 띄우지 않는다.
+    /// count = AP면 PERFECT 수, FC면 최대 콤보, total = 캡슐의 전체.
     /// </summary>
-    public void PlayClear(ClearKind kind)
+    public void PlayClear(ClearType type, int count, int total)
     {
-        if (clearEffect != null) clearEffect.Play(kind);
+        if (clearBanner != null) clearBanner.Play(type, count, total);
     }
 
-    /// <summary>FULL COMBO / ALL PERFECT 연출 시간을 맞춘다 (모든 노트 판정 뒤 지난 곡 시간, 초)</summary>
+    /// <summary>곡 끝 연출 시간을 맞춘다 (모든 노트 판정 뒤 지난 곡 시간, 초 = 결과 대기 타이머). 연출 중에는 기어 위 콤보 알파도 연출이 정한다</summary>
     public void SetClearTime(float elapsed)
     {
-        if (clearEffect != null) clearEffect.SetTime(elapsed);
+        if (clearBanner == null) return;
+        clearBanner.SetTime(elapsed);
+        if (clearBanner.Type != ClearType.None) comboText.SetAlphaOverride(clearBanner.Frame.Visible ? clearBanner.Frame.ComboAlpha : -1f);
     }
 
-    /// <summary>FULL COMBO / ALL PERFECT 연출 (확인용)</summary>
-    public ClearEffect Clear => clearEffect;
+    /// <summary>곡 끝 연출이 재생 중이면 true (InGameScene.OnBack이 ESC를 무시한다)</summary>
+    public bool IsClearPlaying => clearBanner != null && clearBanner.IsPlaying;
+
+    /// <summary>곡 끝 FULL COMBO / ALL PERFECT 연출 (확인용)</summary>
+    public ClearBanner Banner => clearBanner;
 
     /// <summary>콤보 표시 (확인용)</summary>
     public Txt_Combo Combo => comboText;

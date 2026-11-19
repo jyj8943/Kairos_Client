@@ -180,6 +180,22 @@ public class UITheme : ScriptableObject
     [Tooltip("콤보 숫자 (흰색)")]
     public Color comboNumber = Color.white;
 
+    [Header("인게임 · 곡 끝 FC/AP 연출 (기획서 3-4 「FC/AP 연출 (11/19)」, ClearBanner. 흰색 이미지에 입히는 색)")]
+    [Tooltip("ALL PERFECT 색 묶음")]
+    public ClearColors clearAllPerfect = ClearColors.AllPerfectDefault();
+    [Tooltip("FULL COMBO 색 묶음")]
+    public ClearColors clearFullCombo = ClearColors.FullComboDefault();
+    [Tooltip("개수 캡슐 바탕 (#0C0A12, 94%, AP · FC 같음)")]
+    public Color clearCapsuleFill = new Color(0x0C / 255f, 0x0A / 255f, 0x12 / 255f, 0.94f);
+    [Tooltip("개수 숫자 (흰색)")]
+    public Color clearCountNumber = Color.white;
+    [Tooltip("개수 전체 \"/ 329\" (#C9C3D6)")]
+    public Color clearCountTotal = new Color32(0xC9, 0xC3, 0xD6, 0xFF);
+    [Tooltip("띠 바탕 · 글자 · 12시 강조 흰 테두리 (흰색 그대로, 이미지에 색이 들어 있음)")]
+    public Color clearImageTint = Color.white;
+    /// <summary>곡 끝 연출 종류에 맞는 색 묶음 (None이면 FULL COMBO)</summary>
+    public ClearColors ClearColorsOf(ClearType type) => type == ClearType.AllPerfect ? clearAllPerfect : clearFullCombo;
+
     [Header("에디터 (기획서 3-6 「에디터 라벤더 톤 개편 (11/19)」. 패널·글자·포인트색·위험·팝업은 위 공용 값을 쓴다)")]
     [Tooltip("자동 테스트 버튼 채움 (보라 #7B6BD8)")]
     public Color editorAutoTest = new Color32(0x7B, 0x6B, 0xD8, 0xFF);
@@ -382,4 +398,42 @@ public readonly struct JudgeColor
 
     /// <summary>TMP 가로 그라데이션 (왼쪽 위·아래 = Start, 오른쪽 위·아래 = End)</summary>
     public TMPro.VertexGradient ToVertexGradient() => new TMPro.VertexGradient(Start, End, Start, End);
+}
+
+/// <summary>
+/// 곡 끝 FC/AP 연출 색 한 벌 (README 2절 표). 흰색 이미지의 Image.color로 입힌다 (ClearBanner).
+/// </summary>
+[System.Serializable]
+public class ClearColors
+{
+    [Tooltip("시계 (Face · Dashes · 바늘 · 가운데 점 · 퍼지는 링), 알파 80%")]
+    public Color clock;
+    [Tooltip("개수 캡슐 테두리, 알파 55%")]
+    public Color capsuleLine;
+    [Tooltip("빛 알갱이 (흰색과 섞어 쓴다)")]
+    public Color mote;
+    [Tooltip("라인 빛 기둥")]
+    public Color pillar;
+    [Tooltip("화면 반짝임 (알파는 시간표가 정한다)")]
+    public Color flash;
+    [Tooltip("개수 라벨 가로 그라데이션 왼쪽")]
+    public Color labelStart;
+    [Tooltip("개수 라벨 가로 그라데이션 오른쪽")]
+    public Color labelEnd;
+
+    private static Color Hex(int rgb, float alpha) => new Color(((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f, (rgb & 0xFF) / 255f, alpha);
+
+    /// <summary>ALL PERFECT 기본값 (금 → 분홍)</summary>
+    public static ClearColors AllPerfectDefault() => new ClearColors
+    {
+        clock = Hex(0xFFC9A8, 0.8f), capsuleLine = Hex(0xFFAABE, 0.55f), mote = Hex(0xFFE3A3, 1f), pillar = Hex(0xFF8CC8, 0.32f),
+        flash = Hex(0xFFF3F9, 1f), labelStart = Hex(0xFFD36B, 1f), labelEnd = Hex(0xFF7AC6, 1f)
+    };
+
+    /// <summary>FULL COMBO 기본값 (연두)</summary>
+    public static ClearColors FullComboDefault() => new ClearColors
+    {
+        clock = Hex(0xCFF59A, 0.8f), capsuleLine = Hex(0xAAE66E, 0.55f), mote = Hex(0xE4FF9A, 1f), pillar = Hex(0x96E150, 0.28f),
+        flash = Hex(0xF4FFE8, 1f), labelStart = Hex(0xE4FF9A, 1f), labelEnd = Hex(0x8BD13A, 1f)
+    };
 }

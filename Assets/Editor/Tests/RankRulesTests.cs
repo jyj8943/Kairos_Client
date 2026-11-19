@@ -104,9 +104,9 @@ public class RankRulesTests
         Assert.IsFalse(miss.IsFullCombo, "MISS 1 → FC 아님");
 
         // 곡 끝 연출: AP면 ALL PERFECT만, 아니고 FC면 FULL COMBO
-        Assert.AreEqual(ClearKind.AllPerfect, ClearEffectRules.Select(false, ap.IsAllPerfect, ap.IsFullCombo));
-        Assert.AreEqual(ClearKind.FullCombo, ClearEffectRules.Select(false, noMiss.IsAllPerfect, noMiss.IsFullCombo));
-        Assert.AreEqual(ClearKind.None, ClearEffectRules.Select(false, miss.IsAllPerfect, miss.IsFullCombo));
+        Assert.AreEqual(ClearType.AllPerfect, ClearBannerRules.Select(false, false, ap.PerfectCount, ap.MissCount, ap.JudgedCount, ap.TotalNotes));
+        Assert.AreEqual(ClearType.FullCombo, ClearBannerRules.Select(false, false, noMiss.PerfectCount, noMiss.MissCount, noMiss.JudgedCount, noMiss.TotalNotes));
+        Assert.AreEqual(ClearType.None, ClearBannerRules.Select(false, false, miss.PerfectCount, miss.MissCount, miss.JudgedCount, miss.TotalNotes));
     }
 
     // ───── 4. 기록 ─────

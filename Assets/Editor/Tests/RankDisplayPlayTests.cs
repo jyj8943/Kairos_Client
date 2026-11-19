@@ -137,7 +137,7 @@ public class RankDisplayPlayTests
         Assert.LessOrEqual(canvas.RankImage.Size.x, 240f + SizeTolerance, "랭크 칸 240 안");
         Assert.IsTrue(canvas.FullComboImage.IsShown, "AP면 FC도");
         Assert.AreEqual(78f, canvas.FullComboImage.Size.x, SizeTolerance, "FC 폭 78");
-        Assert.AreEqual(ClearKind.AllPerfect, ClearEffectRules.Select(false, ap.IsAllPerfect, ap.IsFullCombo), "곡 끝 연출 ALL PERFECT");
+        Assert.AreEqual(ClearType.AllPerfect, ClearBannerRules.Select(false, false, ap.PerfectCount, ap.MissCount, ap.JudgedCount, ap.TotalNotes), "곡 끝 연출 ALL PERFECT");
         string apLog = $"AP {canvas.RankImage.Size.x:0.0}×{canvas.RankImage.Size.y:0.0}, FC {canvas.FullComboImage.Size.x:0.0}×{canvas.FullComboImage.Size.y:0.0}";
 
         // S · FC: 7개 중 GREAT 1개 = 957142 → Rank_S 150×150 + FC, 곡 끝 연출 FULL COMBO
@@ -148,7 +148,7 @@ public class RankDisplayPlayTests
         Assert.AreEqual(150f, canvas.RankImage.Size.x, SizeTolerance, "S는 정사각형");
         Assert.AreEqual(150f, canvas.RankImage.Size.y, SizeTolerance);
         Assert.IsTrue(canvas.FullComboImage.IsShown, "S · FC → FC 보임");
-        Assert.AreEqual(ClearKind.FullCombo, ClearEffectRules.Select(false, s.IsAllPerfect, s.IsFullCombo));
+        Assert.AreEqual(ClearType.FullCombo, ClearBannerRules.Select(false, false, s.PerfectCount, s.MissCount, s.JudgedCount, s.TotalNotes));
 
         // FC 아님 (MISS 1개) → FC 숨김
         ScoreCalculator miss = Judges(3, 0, 0, 1);

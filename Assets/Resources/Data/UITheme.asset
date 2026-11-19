@@ -82,6 +82,26 @@ MonoBehaviour:
   laneGlow: {r: 0.24313726, g: 0.60784316, b: 0.8784314, a: 0.55}
   comboTitle: {r: 0.6627451, g: 0.6392157, b: 0.72156864, a: 1}
   comboNumber: {r: 1, g: 1, b: 1, a: 1}
+  clearAllPerfect:
+    clock: {r: 1, g: 0.7882353, b: 0.65882355, a: 0.8}
+    capsuleLine: {r: 1, g: 0.6666667, b: 0.74509805, a: 0.55}
+    mote: {r: 1, g: 0.8901961, b: 0.6392157, a: 1}
+    pillar: {r: 1, g: 0.54901963, b: 0.78431374, a: 0.32}
+    flash: {r: 1, g: 0.9529412, b: 0.9764706, a: 1}
+    labelStart: {r: 1, g: 0.827451, b: 0.41960785, a: 1}
+    labelEnd: {r: 1, g: 0.47843137, b: 0.7764706, a: 1}
+  clearFullCombo:
+    clock: {r: 0.8117647, g: 0.9607843, b: 0.6039216, a: 0.8}
+    capsuleLine: {r: 0.6666667, g: 0.9019608, b: 0.43137255, a: 0.55}
+    mote: {r: 0.89411765, g: 1, b: 0.6039216, a: 1}
+    pillar: {r: 0.5882353, g: 0.88235295, b: 0.3137255, a: 0.28}
+    flash: {r: 0.95686275, g: 1, b: 0.9098039, a: 1}
+    labelStart: {r: 0.89411765, g: 1, b: 0.6039216, a: 1}
+    labelEnd: {r: 0.54509807, g: 0.81960785, b: 0.22745098, a: 1}
+  clearCapsuleFill: {r: 0.047058824, g: 0.039215688, b: 0.07058824, a: 0.94}
+  clearCountNumber: {r: 1, g: 1, b: 1, a: 1}
+  clearCountTotal: {r: 0.7882353, g: 0.7647059, b: 0.8392157, a: 1}
+  clearImageTint: {r: 1, g: 1, b: 1, a: 1}
   editorAutoTest: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 1}
   editorButtonBorder: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 0.16}
   editorButtonShadowAlpha: 0.3

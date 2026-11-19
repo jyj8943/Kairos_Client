@@ -101,6 +101,21 @@ public static class GameConstants
         /// </summary>
         public const double ResultDelaySeconds = 3.0;
 
+        /// <summary>곡 끝 FC/AP 연출 이미지 폴더 (Resources 안)</summary>
+        public const string ClearSpriteFolder = "Images/InGame/Clear/";
+
+        /// <summary>곡 끝 연출 개수 캡슐 라벨 (ALL PERFECT)</summary>
+        public const string ClearPerfectLabel = "PERFECT";
+
+        /// <summary>곡 끝 연출 개수 캡슐 라벨 (FULL COMBO)</summary>
+        public const string ClearComboLabel = "COMBO";
+
+        /// <summary>곡 끝 연출 개수 캡슐 전체 글자 형식 ("/ 329")</summary>
+        public const string ClearTotalFormat = "/ {0}";
+
+        /// <summary>곡 끝 연출 개수 칸의 자릿수당 폭 (px, NEXON Lv2 Gothic Bold 48 숫자 폭). 칸 폭 = 전체 자릿수 × 이 값</summary>
+        public const float ClearCountDigitWidth = 29f;
+
         /// <summary>
         /// 곡 시간(MusicClock)과 실제 음원 재생 위치의 차이가 이보다 크면 진단 경고를 남긴다 (초, 약 2프레임. Unity 에디터 전용 진단)
         /// </summary>
