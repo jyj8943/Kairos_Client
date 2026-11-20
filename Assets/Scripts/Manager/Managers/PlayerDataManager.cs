@@ -187,6 +187,25 @@ public class PlayerDataManager : MonoSingleton<PlayerDataManager>, IGameModule
         return Save();
     }
 
+    /// <summary>저장된 에디터 「테스트 후 결과 보기」 값. Init 전이거나 저장된 값이 없으면 처음 값(true)</summary>
+    public bool LastEditorShowTestResult => data != null && data.lastSelection != null
+        ? data.lastSelection.editorShowTestResult
+        : GameConstants.Editor.ShowTestResultDefaultOn;
+
+    /// <summary>
+    /// 에디터 「테스트 후 결과 보기」 값을 바꾸고 바로 저장한다 (에디터 왼쪽 패널 스위치). 값이 같으면 저장하지 않는다.
+    /// </summary>
+    /// <returns>저장했으면 true</returns>
+    public bool SetLastEditorShowTestResult(bool value)
+    {
+        if (data == null) return false;
+        if (data.lastSelection == null) data.lastSelection = new LastSelectionSaveData();
+        if (!PlayerDataRules.TrySetEditorShowTestResult(data.lastSelection, value)) return false;
+
+        Debug.Log($"{LogPrefix} 테스트 후 결과 보기 {(value ? "켜짐" : "꺼짐")} 저장", this);
+        return Save();
+    }
+
     /// <summary>저장된 마지막 인게임 배경 밝기 (%, 단계로 정리한 값). Init 전이거나 저장된 값이 없으면 기본값(100)</summary>
     public int LastBackgroundBrightness => data != null && data.lastSelection != null
         ? BackgroundBrightnessRules.Sanitize(data.lastSelection.backgroundBrightness)

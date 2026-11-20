@@ -752,6 +752,79 @@ public static class GameConstants
     }
 
     /// <summary>결과 화면 표시 문구 (기획서 3-5 결과 11/17). 색은 UITheme(메뉴 화면 톤)에 둔다</summary>
+    /// <summary>
+    /// 결과 화면 등장 연출 시간표 (기획서 3-5 「결과」 등장 연출 · 🔧, 11/20). OnEnter = 0초, 초 단위, 이징은 모두 easeOutCubic.
+    /// 계산은 ResultIntroTimeline. NEW RECORD · FC가 없으면 그 단계만 빠지고 뒤 시각은 그대로다.
+    /// </summary>
+    public static class ResultIntro
+    {
+        /// <summary>곡 정보 (앨범 알파 + 크기, 제목 · 아티스트 · 난이도 줄 알파 + 왼쪽에서)</summary>
+        public const float AlbumStart = 0f;
+        public const float TitleStart = 0.06f;
+        public const float ArtistStart = 0.14f;
+        public const float ChartLineStart = 0.22f;
+        public const float SongInfoDuration = 0.25f;
+        public const float AlbumStartScale = 0.85f;
+        public const float SongInfoOffsetPx = 30f;
+
+        /// <summary>SCORE (라벨 + 숫자): 알파 + 아래 16px에서</summary>
+        public const float ScoreStart = 0.45f;
+        public const float ScoreDuration = 0.25f;
+        public const float ScoreOffsetPx = 16f;
+        /// <summary>점수 숫자 올라감 0 → 점수</summary>
+        public const float ScoreCountStart = 0.50f;
+        public const float ScoreCountDuration = 0.75f;
+
+        /// <summary>NEW RECORD (점수) · BEST + 차이</summary>
+        public const float NewScoreStart = 1.25f;
+        public const float BestStart = 1.25f;
+        public const float BestDuration = 0.20f;
+
+        /// <summary>판정 줄: 1.45 + 0.12 × 줄 번호. 알파 + 왼쪽 24px, 개수 0.35초</summary>
+        public const float JudgeRowStart = 1.45f;
+        public const float JudgeRowInterval = 0.12f;
+        public const float JudgeRowDuration = 0.20f;
+        public const float JudgeRowOffsetPx = 24f;
+        public const float JudgeCountDuration = 0.35f;
+
+        /// <summary>FAST / SLOW: 알파 0.2초, 막대 폭 · 개수 0.35초</summary>
+        public const float FastSlowStart = 1.95f;
+        public const float FastSlowFadeDuration = 0.20f;
+        public const float FastSlowDuration = 0.35f;
+
+        /// <summary>RATE 칸 · MAX COMBO 칸: 알파 + 아래 12px (0.2초), 값 0.4초</summary>
+        public const float RateStart = 2.30f;
+        public const float ComboStart = 2.80f;
+        public const float CardDuration = 0.20f;
+        public const float CardOffsetPx = 12f;
+        public const float CardValueDuration = 0.40f;
+
+        /// <summary>NEW RECORD (RATE · 콤보) · FC: 톡 튀어나옴</summary>
+        public const float NewRateStart = 2.70f;
+        public const float FullComboStart = 3.20f;
+        public const float NewComboStart = 3.30f;
+        public const float PopDuration = 0.20f;
+        public const float FullComboDuration = 0.22f;
+        /// <summary>톡: 크기 0.6 → 1.15 (앞 절반) → 1, 알파는 앞 절반 동안 0 → 1</summary>
+        public const float PopStartScale = 0.6f;
+        public const float PopPeakScale = 1.15f;
+        public const float PopPeakAt = 0.5f;
+
+        /// <summary>랭크 도장: 크기 2.0 → 0.88 (0.55 지점) → 1.0, 알파는 처음 1/3 동안 0 → 1, 0.55 지점 전후로 밝기 +80%</summary>
+        public const float RankStart = 3.45f;
+        public const float RankDuration = 0.35f;
+        public const float RankStartScale = 2.0f;
+        public const float RankSquashScale = 0.88f;
+        public const float RankImpactAt = 0.55f;
+        public const float RankFadeFraction = 1f / 3f;
+        /// <summary>번쩍임 세기 (밝기 +80%)와 0.55 지점 앞뒤로 퍼지는 폭 (진행도)</summary>
+        public const float RankFlashBoost = 0.8f;
+        public const float RankFlashHalfWidth = 0.2f;
+
+        /// <summary>연출 끝 (일반 입력 받기)</summary>
+        public const float EndSeconds = 3.90f;
+    }
+
     public static class Result
     {
         /// <summary>화면 이름 (곡 선택 "SONG SELECT"와 같은 형식)</summary>
@@ -1304,6 +1377,13 @@ public static class GameConstants
 
         /// <summary>도구 패널 "테스트 플레이 배속" 칸(Txt_Speed): {0} 배속 (버튼으로만 바꾼다, 단축키 없음)</summary>
         public const string TestPlaySpeedFormat = "x{0:0.0}";
+
+        /// <summary>왼쪽 패널 「테스트 후 결과 보기」 스위치 (Toggle_ShowTestResult) 라벨 · 설명 (Txt_ShowTestResultHint, 11/20)</summary>
+        public const string ShowTestResultLabel = "테스트 후 결과 보기";
+        public const string ShowTestResultHintOn = "켜짐: 끝나면 결과(연출 없이) → Enter로 돌아와요";
+        public const string ShowTestResultHintOff = "꺼짐: 끝나면 바로 에디터로 돌아와요";
+        /// <summary>「테스트 후 결과 보기」 처음 값 (저장값이 없을 때)</summary>
+        public const bool ShowTestResultDefaultOn = true;
 
         /// <summary>박자 스냅 선택지 하나: 1박을 나누는 칸 수와 드롭다운 표시 이름</summary>
         public readonly struct SnapOption

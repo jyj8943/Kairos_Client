@@ -30,6 +30,12 @@ public class LastSelectionSaveData
     /// </summary>
     public float editorTestPlayMultiplier = GameConstants.Play.DefaultScrollMultiplier;
 
+    /// <summary>
+    /// 에디터 「테스트 후 결과 보기」 스위치 (11/20, 기획서 2-4 · 3-6). 에디터 왼쪽 패널에서 바꿀 때 저장하고, 에디터에 들어올 때 읽는다.
+    /// 예전 JSON(이 필드 없음)은 기본값 true가 남는다.
+    /// </summary>
+    public bool editorShowTestResult = GameConstants.Editor.ShowTestResultDefaultOn;
+
     /// <summary>공식 채보 탭의 마지막 선택</summary>
     public TabSelectionSaveData official = new TabSelectionSaveData();
 
@@ -51,6 +57,7 @@ public class LastSelectionSaveData
             scrollMultiplier = scrollMultiplier,
             backgroundBrightness = backgroundBrightness,
             editorTestPlayMultiplier = editorTestPlayMultiplier,
+            editorShowTestResult = editorShowTestResult,
             official = Get(ChartType.Official).Clone(),
             custom = Get(ChartType.Custom).Clone()
         };
@@ -63,6 +70,7 @@ public class LastSelectionSaveData
         scrollMultiplier = other.scrollMultiplier;
         backgroundBrightness = other.backgroundBrightness;
         editorTestPlayMultiplier = other.editorTestPlayMultiplier;
+        editorShowTestResult = other.editorShowTestResult;
         official = other.Get(ChartType.Official).Clone();
         custom = other.Get(ChartType.Custom).Clone();
     }

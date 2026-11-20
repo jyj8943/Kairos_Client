@@ -234,6 +234,16 @@ public static class PlayerDataRules
     }
 
     /// <summary>
+    /// 에디터 「테스트 후 결과 보기」 값을 바꾼다 (bool이라 정리할 범위는 없다). 바뀌었으면 true — 호출하는 쪽은 true일 때만 저장한다.
+    /// </summary>
+    public static bool TrySetEditorShowTestResult(LastSelectionSaveData s, bool value)
+    {
+        if (s.editorShowTestResult == value) return false;
+        s.editorShowTestResult = value;
+        return true;
+    }
+
+    /// <summary>
     /// 마지막 배경 밝기를 value로 바꾼다 (단계로 정리한 값). 바뀌었으면 true — 호출하는 쪽은 true일 때만 파일에 저장한다.
     /// </summary>
     public static bool TrySetLastBackgroundBrightness(LastSelectionSaveData s, int value)

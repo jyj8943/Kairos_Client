@@ -18,6 +18,8 @@ using UnityEngine.UI;
 ///   고른 도구는 하늘 14% 바탕 · 하늘 1.5px 테두리 · 선택 링(흰 3 + 하늘 6) · 글자 #2F7FC8, 나머지는 흰 바탕 · 흐린 테두리 · 기본 글자 (UITheme 에디터 묶음).
 ///   아래에 고른 도구 사용법 한 줄. 키 칩 [1][2][3]은 입력 에셋 바인딩에서 읽는다.
 /// - 테스트 플레이 배속: 마지막으로 쓴 값을 PlayerData(lastSelection.editorTestPlayMultiplier)에 저장하고, 들어올 때 그 값으로 시작한다 (처음 1.0, 인게임 배속과 따로).
+/// - 「테스트 후 결과 보기」 스위치 (Toggle_ShowTestResult, 11/20): 테스트 플레이 배속 아래. 켜짐이면 테스트 끝 → 결과(연출 없음) → 에디터, 꺼짐이면 바로 에디터.
+///   값은 PlayerData(lastSelection.editorShowTestResult, 처음 true)에 저장하고 Init에서 읽는다. 설명 줄(Txt_ShowTestResultHint)은 값에 따라 바뀐다.
 /// - 저장 상태 글자(Txt_SaveStatus): 저장하지 않은 변경이 있으면 "● 저장 안 됨"(호박), 저장된 상태면 숨김.
 ///   잠깐 띄우는 안내(테스트 플레이 안내·BPM 구간 결과 등)와 저장 실패도 같은 자리에 띄우고, 시간이 지나면(EditorScene) 저장 상태로 되돌린다. 저장 성공은 "● 저장 안 됨"이 사라지는 것으로 알린다.
 ///   도구 단축키 1 · 2 · 3(ChartEditor/ToolShortNote·ToolLongNote·ToolBpmSection)은 이벤트로 알린다 (롱노트 드래그 중 확인은 EditorScene).
@@ -172,6 +174,14 @@ public class Canvas_Editor : UIBase
     [SerializeField] private Image keySoundTrack;
     [SerializeField] private RectTransform keySoundKnob;
 
+    [Header("테스트 후 결과 보기 (왼쪽 패널, 메트로놈 · 키음과 같은 스위치 52×30)")]
+    [SerializeField] private Toggle showTestResultToggle;
+    [SerializeField] private TMP_Text showTestResultLabel;
+    [SerializeField] private Image showTestResultTrack;
+    [SerializeField] private RectTransform showTestResultKnob;
+    [Tooltip("설명 한 줄 (켜짐 / 꺼짐 문구, GameConstants.Editor.ShowTestResultHintOn · Off)")]
+    [SerializeField] private TMP_Text showTestResultHint;
+
     [Header("입력")]
     [Tooltip("입력 에셋의 ChartEditor/Scroll (마우스 휠 y)")]
     [SerializeField] private InputActionReference scrollAction;
@@ -271,6 +281,13 @@ public class Canvas_Editor : UIBase
     /// <summary>테스트 플레이·자동 테스트 플레이에 넘길 배속 (1.0 ~ 8.0)</summary>
     public float TestPlayScrollMultiplier => ScrollSpeedRules.FromSteps(testPlaySpeedSteps);
 
+    /// <summary>「테스트 후 결과 보기」 스위치 값 (켜짐이면 테스트 끝 → 결과 → 에디터)</summary>
+    public bool ShowTestResult => showTestResultToggle == null ? GameConstants.Editor.ShowTestResultDefaultOn : showTestResultToggle.isOn;
+
+    /// <summary>「테스트 후 결과 보기」 스위치 · 설명 (확인용)</summary>
+    public Toggle ShowTestResultToggle => showTestResultToggle;
+    public TMP_Text ShowTestResultHint => showTestResultHint;
+
     public EditorTool CurrentTool
     {
         get
@@ -333,6 +350,19 @@ public class Canvas_Editor : UIBase
             Debug.LogWarning("[Canvas_Editor] 테스트 플레이 배속 버튼·글자가 연결되지 않았습니다.", this);
         }
         SetTestPlaySpeed(PlayerDataManager.HasInstance ? GameManager.PlayerData.LastEditorTestPlayMultiplier : GameConstants.Play.DefaultScrollMultiplier);
+
+        // 테스트 후 결과 보기: 저장값으로 시작하고, 바꿀 때 저장한다
+        if (showTestResultToggle != null)
+        {
+            if (showTestResultLabel != null) showTestResultLabel.text = GameConstants.Editor.ShowTestResultLabel;
+            showTestResultToggle.onValueChanged.RemoveListener(OnShowTestResultToggled);
+            showTestResultToggle.SetIsOnWithoutNotify(PlayerDataManager.HasInstance ? GameManager.PlayerData.LastEditorShowTestResult : GameConstants.Editor.ShowTestResultDefaultOn);
+            showTestResultToggle.onValueChanged.AddListener(OnShowTestResultToggled);
+        }
+        else
+        {
+            Debug.LogWarning("[Canvas_Editor] showTestResultToggle(Toggle_ShowTestResult)이 연결되지 않았습니다.", this);
+        }
 
         InitTheme(song, session);
         RefreshSaveStatus();
@@ -767,6 +797,9 @@ public class Canvas_Editor : UIBase
     {
         PaintSwitch(metronomeToggle, metronomeTrack, metronomeKnob);
         PaintSwitch(keySoundToggle, keySoundTrack, keySoundKnob);
+        PaintSwitch(showTestResultToggle, showTestResultTrack, showTestResultKnob);
+        if (showTestResultHint != null)
+            showTestResultHint.text = ShowTestResult ? GameConstants.Editor.ShowTestResultHintOn : GameConstants.Editor.ShowTestResultHintOff;
     }
 
     private static void PaintSwitch(Toggle toggle, Image track, RectTransform knob)
@@ -820,6 +853,7 @@ public class Canvas_Editor : UIBase
         if (playButton != null) playButton.onClick.RemoveListener(RequestPlayToggle);
         if (metronomeToggle != null) metronomeToggle.onValueChanged.RemoveListener(OnMetronomeToggled);
         if (keySoundToggle != null) keySoundToggle.onValueChanged.RemoveListener(OnKeySoundToggled);
+        if (showTestResultToggle != null) showTestResultToggle.onValueChanged.RemoveListener(OnShowTestResultToggled);
         if (speedDownButton != null) speedDownButton.onClick.RemoveListener(OnSpeedDownClicked);
         if (speedUpButton != null) speedUpButton.onClick.RemoveListener(OnSpeedUpClicked);
         if (data != null) data.OnChanged -= RefreshNoteCountText;
@@ -902,6 +936,13 @@ public class Canvas_Editor : UIBase
     {
         if (IsShortcutBlocked()) return;
         ToolShortcutRequested?.Invoke(tool);
+    }
+
+    /// <summary>「테스트 후 결과 보기」를 바꾸면 모양 · 설명을 고치고 바로 저장한다</summary>
+    private void OnShowTestResultToggled(bool on)
+    {
+        RefreshSwitches();
+        if (PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastEditorShowTestResult(on);
     }
 
     private void OnMetronomeToggled(bool on)

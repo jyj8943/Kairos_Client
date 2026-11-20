@@ -15,6 +15,13 @@ public class TestPlayData
     /// <summary>자동 플레이로 시작하면 true (에디터의 자동 테스트). 재시작·다시 하기도 같은 값으로 시작한다</summary>
     public bool autoPlay;
 
+    /// <summary>
+    /// 끝나면 결과를 보여 줄지 (에디터 「테스트 후 결과 보기」 스위치, 11/20). true = 암전 로딩 → 결과(연출 없음) → Enter · Esc로 에디터,
+    /// false = 암전 로딩 → 바로 에디터 (결과 씬을 거치지 않는다). 일시정지 → 나가기는 이 값과 상관없이 바로 에디터.
+    /// 재시작 · 다시 하기도 같은 데이터를 쓴다.
+    /// </summary>
+    public bool showResult = GameConstants.Editor.ShowTestResultDefaultOn;
+
     /// <summary>에디터로 돌아갈 때 되돌릴 편집 상태</summary>
     public EditorRestoreState editorState;
 

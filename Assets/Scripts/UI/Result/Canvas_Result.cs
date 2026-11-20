@@ -21,6 +21,13 @@ using UnityEngine.UI;
 /// - 하단 바: 키 안내 "F5 다시 하기 · Enter ESC 곡 선택으로"(테스트 플레이면 "에디터로") + 오른쪽 끝 버튼 2개 (다시 하기 · 곡 선택으로/에디터로).
 /// - 키 (기획서 2-6): F5 다시 하기(Result/Retry), Enter 돌아가기(Result/Return), ESC 돌아가기(UIManager → ResultScene.OnBack). 팝업이 열려 있으면 무시.
 ///   Enter가 선택된 버튼에 따라 바뀌지 않게 버튼은 키보드 선택을 받지 않는다 (Navigation None, 처음 선택 없음).
+/// - 등장 연출 (11/20, 기획서 3-5 「결과」 등장 연출 · 🔧, 시간표 ResultIntroTimeline): 일반 플레이 결과만. 화면 이름 · 패널 바탕 · 카이로스 자리 · 하단 바는 처음부터 보이고
+///   패널 안의 값만 차례로 나타난다. ResultScene이 Init에서 PrepareIntro로 0초 상태(또는 테스트 플레이면 끝 상태)를 만들고, OnEnter에서 PlayIntro를 부른다.
+///   알파는 요소마다 CanvasGroup, 위치는 패널 바로 아래 자식의 anchoredPosition(레이아웃 그룹 안의 뱃지는 크기 · 알파만), 숫자는 지금 표시 형식 그대로 올라간다.
+///   숫자가 늘어나며 옆 뱃지가 밀리지 않게 점수 · RATE · MAX COMBO 칸 폭을 최종 글자 폭으로 고정한다 (LayoutElement.preferredWidth).
+///   랭크 번쩍임: 랭크 이미지와 같은 스프라이트를 겹친 Img_RankFlash(Additive UI 머티리얼 Kairos/UIAdditive, 색 = 흰색 × 밝기 더할 양)로 밝기를 더한다.
+///   AP면 Img_Rank가 Clear_AP 이미지를 쓰므로 번쩍임도 같은 이미지다.
+/// - 건너뛰기: 버튼 클릭 · F5 · Enter는 먼저 consumeSkip(ResultScene.TryConsumeSkip)을 거친다. 연출 중이면 끝 상태로 두고 이동하지 않는다.
 /// </summary>
 public class Canvas_Result : UIBase
 {
@@ -105,10 +112,57 @@ public class Canvas_Result : UIBase
     [Tooltip("화면 아래쪽 키 안내 줄 (KeyGuideBar 프리팹)")]
     [SerializeField] private KeyGuideBar keyGuideBar;
 
+    [Header("등장 연출 (11/20)")]
+    [Tooltip("SCORE 라벨 (Txt_ScoreLabel). 점수 숫자 줄과 함께 나타난다")]
+    [SerializeField] private TMP_Text scoreLabelText;
+    [Tooltip("랭크 번쩍임 (Img_Rank/Img_RankFlash, 같은 스프라이트 · Additive UI 머티리얼)")]
+    [SerializeField] private Image rankFlashImage;
+
     private Action onRetry;
     private Action onReturn;
+    private Func<bool> consumeSkip;
     private bool isInputEnabled;
     private bool isLeaving;
+
+    // 등장 연출
+    private ResultData shownResult;
+    private bool isIntroPlaying;
+    private bool isIntroPending;
+    private float introTime;
+    private readonly List<IntroPart> introParts = new List<IntroPart>();
+    private RectTransform rankRect;
+    private readonly List<string> introStageLog = new List<string>();
+    private readonly Dictionary<string, float> introStageTimes = new Dictionary<string, float>();
+    private bool scoreCueDone;
+    private bool rankCueDone;
+
+    /// <summary>등장 연출 요소 하나 (CanvasGroup 알파 · 제자리 · 위치 이동 가능 여부)</summary>
+    private class IntroPart
+    {
+        public RectTransform Rect;
+        public CanvasGroup Group;
+        public Vector2 BasePosition;
+        public bool CanMove;
+        public Func<ResultIntroFrame, ResultIntroElement> Pick;
+    }
+
+    /// <summary>등장 연출이 재생 중이면 true (0 ~ 3.9초)</summary>
+    public bool IsIntroPlaying => isIntroPlaying;
+
+    /// <summary>등장 연출을 OnEnter에서 시작할 차례면 true (Init에서 0초 상태를 만들어 둠)</summary>
+    public bool IsIntroPending => isIntroPending;
+
+    /// <summary>지금 등장 연출 시간 (초, 끝났으면 EndSeconds)</summary>
+    public float IntroTime => introTime;
+
+    /// <summary>마지막으로 적용한 등장 연출 값 (확인용)</summary>
+    public ResultIntroFrame IntroFrame { get; private set; }
+
+    /// <summary>단계별 실제 시작 시각 (OnEnter부터 unscaled 초, 확인용. 건너뛰면 남은 단계는 없다)</summary>
+    public IReadOnlyDictionary<string, float> IntroStageTimes => introStageTimes;
+
+    /// <summary>등장 연출 소리 자리 (숫자 올라감 · 랭크 찍힘). 효과음은 나중에 정한다 (확인용 이벤트)</summary>
+    public event Action<ResultIntroCue> IntroCue;
 
     /// <summary>키 안내 줄 (확인용)</summary>
     public KeyGuideBar KeyGuide => keyGuideBar;
@@ -116,11 +170,14 @@ public class Canvas_Result : UIBase
     /// <summary>
     /// 결과를 표시하고 버튼·키 안내 줄을 연결한다. 버튼은 키보드 선택을 받지 않는다 (Enter는 항상 Result/Return).
     /// </summary>
-    public void Init(ResultData result, Action onRetry, Action onReturn)
+    /// <param name="consumeSkip">버튼 · 키를 처리하기 전에 부른다. true면 (등장 연출 건너뛰기에 썼으므로) 이동하지 않는다</param>
+    public void Init(ResultData result, Action onRetry, Action onReturn, Func<bool> consumeSkip = null)
     {
         this.onRetry = onRetry;
         this.onReturn = onReturn;
+        this.consumeSkip = consumeSkip;
         isLeaving = false;
+        shownResult = result;
 
         UIThemeColor.ApplyAll(gameObject);
         if (menuBackground != null)
@@ -143,7 +200,206 @@ public class Canvas_Result : UIBase
         ShowRateAndCombo(result);
         InitButtons(result.isTestPlay);
         InitKeyGuide(result.isTestPlay);
+        BuildIntroParts();
     }
+
+    // ───── 등장 연출 ─────
+
+    /// <summary>
+    /// 연출로 움직일 요소를 모은다 (요소마다 CanvasGroup, 제자리 위치는 지금 위치). 숫자 칸 폭은 최종 글자 폭으로 고정한다.
+    /// </summary>
+    private void BuildIntroParts()
+    {
+        introParts.Clear();
+        AddPart(coverImage, f => f.Album, false);
+        AddPart(songTitleText, f => f.Title, true);
+        AddPart(artistText, f => f.Artist, true);
+        AddPart(chartBadge != null ? chartBadge.transform.parent : null, f => f.ChartLine, true);
+        AddPart(scoreLabelText, f => f.Score, true);
+        AddPart(scoreText != null ? scoreText.transform.parent : null, f => f.Score, true);
+        AddPart(newScoreBadge != null ? newScoreBadge.transform : null, f => f.NewScore, false);
+        AddPart(bestText, f => f.Best, false);
+        JudgeRow[] rows = { perfectRow, greatRow, goodRow, missRow };
+        for (int i = 0; i < rows.Length; i++)
+        {
+            int row = i;
+            AddPart(rows[i] != null && rows[i].nameImage != null ? rows[i].nameImage.transform.parent : null, f => f.GetJudge(row), true);
+        }
+        AddPart(fastTitle != null ? fastTitle.transform.parent : null, f => f.FastSlow, false);
+        AddPart(rateText != null ? CardOf(rateText.transform) : null, f => f.Rate, true);
+        AddPart(newRateBadge != null ? newRateBadge.transform : null, f => f.NewRate, false);
+        AddPart(maxComboText != null ? CardOf(maxComboText.transform) : null, f => f.Combo, true);
+        AddPart(fullComboImage != null ? fullComboImage.transform : null, f => f.FullCombo, false);
+        AddPart(newComboBadge != null ? newComboBadge.transform : null, f => f.NewCombo, false);
+        rankRect = rankImage != null ? (RectTransform)rankImage.transform : null;
+        AddPart(rankRect, f => f.Rank, false);
+
+        // 숫자 칸 폭 고정 (최종 글자 기준): 올라가는 동안 옆 NEW RECORD · "/ 전체"가 밀리지 않게
+        FixWidth(scoreText);
+        FixWidth(rateText);
+        FixWidth(maxComboText);
+
+        if (rankFlashImage != null)
+        {
+            rankFlashImage.raycastTarget = false;
+            rankFlashImage.enabled = false;
+        }
+    }
+
+    /// <summary>RATE · MAX COMBO 칸 (값 글자 → 줄 → 카드)</summary>
+    private static Transform CardOf(Transform valueText)
+    {
+        Transform row = valueText.parent;
+        return row != null ? row.parent : null;
+    }
+
+    private void AddPart(Component target, Func<ResultIntroFrame, ResultIntroElement> pick, bool canMove)
+    {
+        if (target == null) return;
+        RectTransform rect = target.transform as RectTransform;
+        if (rect == null) return;
+        CanvasGroup group = rect.GetComponent<CanvasGroup>();
+        if (group == null) group = rect.gameObject.AddComponent<CanvasGroup>();
+        group.interactable = false;
+        group.blocksRaycasts = false;
+        introParts.Add(new IntroPart { Rect = rect, Group = group, BasePosition = rect.anchoredPosition, CanMove = canMove, Pick = pick });
+    }
+
+    private static void FixWidth(TMP_Text text)
+    {
+        if (text == null) return;
+        LayoutElement layout = text.GetComponent<LayoutElement>();
+        if (layout == null) layout = text.gameObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = text.GetPreferredValues(text.text).x;
+    }
+
+    /// <summary>
+    /// 등장 연출을 준비한다 (ResultScene.Init). play면 0초 상태(값 요소 숨김)로 두고 OnEnter에서 PlayIntro를 기다린다.
+    /// 아니면(테스트 플레이 · 자동 테스트 · 테스트용 건너뛰기) 바로 끝 상태다. 암전 로딩이 걷히는 동안 끝 상태가 먼저 보이지 않는다.
+    /// </summary>
+    public void PrepareIntro(bool play)
+    {
+        isIntroPlaying = false;
+        introStageLog.Clear();
+        introStageTimes.Clear();
+        scoreCueDone = false;
+        rankCueDone = false;
+        if (play)
+        {
+            isIntroPending = true;
+            introTime = 0f;
+            ApplyIntro(ResultIntroTimeline.Evaluate(0f));
+        }
+        else
+        {
+            isIntroPending = false;
+            introTime = GameConstants.ResultIntro.EndSeconds;
+            ApplyIntro(ResultIntroTimeline.Finished);
+        }
+    }
+
+    /// <summary>등장 연출을 0초부터 재생한다 (ResultScene.OnEnter, 암전 로딩이 다 걷힌 뒤)</summary>
+    public void PlayIntro()
+    {
+        if (!isIntroPending) return;
+        isIntroPending = false;
+        isIntroPlaying = true;
+        introTime = 0f;
+        StepIntro(0f);
+    }
+
+    /// <summary>건너뛰기: 모든 값을 끝 상태(최종값 · 크기 1 · 번쩍임 없음)로 바로 두고 연출을 끝낸다</summary>
+    public void SkipIntro()
+    {
+        if (!isIntroPlaying && !isIntroPending) return;
+        isIntroPending = false;
+        isIntroPlaying = false;
+        Debug.Log($"[Canvas_Result] 등장 연출 건너뜀: {introTime:0.000}초에 끝 상태로 (지나온 단계 {introStageLog.Count}개)", this);
+        introTime = GameConstants.ResultIntro.EndSeconds;
+        ApplyIntro(ResultIntroTimeline.Finished);
+    }
+
+    private void StepIntro(float time)
+    {
+        introTime = time;
+        foreach ((string name, float start) in ResultIntroTimeline.Stages)
+        {
+            if (time + 1e-6f < start || introStageTimes.ContainsKey(name)) continue;
+            introStageTimes[name] = time;
+            introStageLog.Add($"{name} {start:0.00}→{time:0.000}");
+        }
+        if (!scoreCueDone && time >= GameConstants.ResultIntro.ScoreCountStart) { scoreCueDone = true; PlayIntroSound(ResultIntroCue.ScoreCount); }
+        if (!rankCueDone && time >= GameConstants.ResultIntro.RankStart + GameConstants.ResultIntro.RankDuration * GameConstants.ResultIntro.RankImpactAt)
+        {
+            rankCueDone = true;
+            PlayIntroSound(ResultIntroCue.RankStamp);
+        }
+
+        ResultIntroFrame frame = ResultIntroTimeline.Evaluate(time);
+        ApplyIntro(frame);
+        if (!frame.IsFinished) return;
+
+        isIntroPlaying = false;
+        Debug.Log($"[Canvas_Result] 등장 연출 끝 {time:0.000}초 — 단계 (표 시작→실제): {string.Join(" / ", introStageLog)}", this);
+    }
+
+    /// <summary>
+    /// 효과음 자리 (숫자 올라감 시작 · 랭크 찍힘). 효과음은 나중에 정한다 — 지금은 알림만 보낸다.
+    /// </summary>
+    private void PlayIntroSound(ResultIntroCue cue)
+    {
+        IntroCue?.Invoke(cue);
+    }
+
+    /// <summary>한 프레임 값을 화면에 옮긴다 (알파 · 위치 · 크기 · 숫자 · 막대 · 번쩍임)</summary>
+    private void ApplyIntro(ResultIntroFrame f)
+    {
+        IntroFrame = f;
+        foreach (IntroPart part in introParts)
+        {
+            ResultIntroElement e = part.Pick(f);
+            part.Group.alpha = e.Alpha;
+            part.Rect.localScale = new Vector3(e.Scale, e.Scale, 1f);
+            if (part.CanMove) part.Rect.anchoredPosition = part.BasePosition + e.Offset;
+        }
+
+        ResultData r = shownResult;
+        if (r == null) return;
+        if (scoreText != null) scoreText.text = SongSelectRecordFormat.FormatScore(ResultIntroTimeline.CountInt(r.score, f.ScoreCount));
+        SetCount(perfectRow, r.perfectCount, f.JudgeCount0);
+        SetCount(greatRow, r.greatCount, f.JudgeCount1);
+        SetCount(goodRow, r.goodCount, f.JudgeCount2);
+        SetCount(missRow, r.missCount, f.JudgeCount3);
+        if (fastCountText != null) fastCountText.text = ResultFormat.FormatCount(ResultIntroTimeline.CountInt(r.fastCount, f.FastSlowProgress));
+        if (slowCountText != null) slowCountText.text = ResultFormat.FormatCount(ResultIntroTimeline.CountInt(r.slowCount, f.FastSlowProgress));
+        if (ResultFormat.TryGetFastRatio(r.fastCount, r.slowCount, out float ratio))
+        {
+            float p = f.FastSlowProgress;
+            if (fastFill != null) SetHorizontalRange(fastFill.rectTransform, 0f, ratio * p);
+            if (slowFill != null) SetHorizontalRange(slowFill.rectTransform, 1f - (1f - ratio) * p, 1f);
+        }
+        if (rateText != null) rateText.text = SongSelectRecordFormat.FormatRate(ResultIntroTimeline.CountDouble(r.accuracy, f.RateValue));
+        if (maxComboText != null) maxComboText.text = SongSelectRecordFormat.FormatCombo(ResultIntroTimeline.CountInt(r.maxCombo, f.ComboValue));
+
+        if (rankFlashImage != null && rankImage != null)
+        {
+            Image rank = rankImage.GetComponent<Image>();
+            bool flash = f.RankFlash > 0f && rank != null && rank.sprite != null && rank.enabled;
+            rankFlashImage.enabled = flash;
+            if (flash)
+            {
+                rankFlashImage.sprite = rank.sprite;
+                rankFlashImage.preserveAspect = rank.preserveAspect;
+                rankFlashImage.color = new Color(1f, 1f, 1f, f.RankFlash); // 랭크 알파 · 크기는 부모 Img_Rank의 CanvasGroup · scale을 따른다
+            }
+        }
+    }
+
+    private static void SetCount(JudgeRow row, int count, float progress)
+    {
+        if (row != null && row.countText != null) row.countText.text = ResultFormat.FormatCount(ResultIntroTimeline.CountInt(count, progress));
+    }
+
 
     // ───── 표시 ─────
 
@@ -361,7 +617,7 @@ public class Canvas_Result : UIBase
         isInputEnabled = false;
     }
 
-    /// <summary>ESC (ResultScene.OnBack): 돌아가기 버튼과 같다</summary>
+    /// <summary>ESC (ResultScene.OnBack, 건너뛰기 판단은 OnBack이 먼저 한다): 돌아가기 버튼과 같다</summary>
     public void RequestReturn()
     {
         OnClickReturn();
@@ -376,11 +632,14 @@ public class Canvas_Result : UIBase
     }
 
     /// <summary>
+    /// 등장 연출을 unscaled 프레임 시간으로 진행한다.
     /// 다른 코드가 버튼을 선택해 두었어도 다음 프레임에 풀어, Enter가 Submit으로 그 버튼까지 누르지 않게 한다
     /// (Enter는 항상 Result/Return 하나만 실행).
     /// </summary>
     private void Update()
     {
+        if (isIntroPlaying) StepIntro(introTime + Time.unscaledDeltaTime);
+
         EventSystem eventSystem = EventSystem.current;
         if (eventSystem == null) return;
 
@@ -419,6 +678,7 @@ public class Canvas_Result : UIBase
 
     private void OnClickRetry()
     {
+        if (consumeSkip != null && consumeSkip()) return;
         if (isLeaving) return;
 #if UNITY_EDITOR
         TestRetryCount++;
@@ -428,10 +688,21 @@ public class Canvas_Result : UIBase
 
     private void OnClickReturn()
     {
+        if (consumeSkip != null && consumeSkip()) return;
         if (isLeaving) return;
 #if UNITY_EDITOR
         TestReturnCount++;
 #endif
         onReturn?.Invoke();
     }
+}
+
+/// <summary>결과 등장 연출의 소리 자리 (효과음은 나중에 정한다)</summary>
+public enum ResultIntroCue
+{
+    /// <summary>점수 숫자 올라감 시작 (0.50초)</summary>
+    ScoreCount,
+
+    /// <summary>랭크 찍힘 (3.45 + 0.35 × 0.55초)</summary>
+    RankStamp
 }

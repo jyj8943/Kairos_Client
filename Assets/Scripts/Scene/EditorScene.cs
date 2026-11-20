@@ -538,6 +538,8 @@ public class EditorScene : SceneBase
         // 도구 패널의 테스트 플레이 배속으로 시작하고, 돌아올 때 되돌릴 수 있게 편집 상태에도 남긴다
         float scrollMultiplier = canvas.TestPlayScrollMultiplier;
         testPlay.editorState.scrollMultiplier = scrollMultiplier;
+        // 「테스트 후 결과 보기」 스위치: 끝나면 결과를 보여 줄지 (진입 데이터로 넘긴다)
+        testPlay.showResult = canvas.ShowTestResult;
         InGameEntryData data = new InGameEntryData
         {
             songId = session.SongId,
@@ -549,7 +551,7 @@ public class EditorScene : SceneBase
         };
 
         Debug.Log($"[EditorScene] 테스트 플레이{(autoPlay ? " (자동 플레이)" : "")}: songId={session.SongId}, 시작 {grid.CurrentBeat}박 (마디 {grid.CurrentMeasure}), " +
-                  $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}, 배속 x{scrollMultiplier:0.0}", this);
+                  $"노트 {session.Data.Notes.Count}개, 수정 여부 {session.IsDirty}, 배속 x{scrollMultiplier:0.0}, 끝나면 {(testPlay.showResult ? "결과" : "바로 에디터")}", this);
 
         if (GameManager.Scene.LoadWithLoading(GameConstants.Scenes.InGame, data))
             isLeaving = true;

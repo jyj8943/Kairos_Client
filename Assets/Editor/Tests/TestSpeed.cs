@@ -70,6 +70,7 @@ public class TestSpeedRunCallback : ITestRunCallback
         SoundManager.SetPlaybackRateForTests(TestSpeed.PlaybackRate);
         InGameScene.IgnoreFocusPauseForTests = true;
         GameSceneManager.SkipLoadingOverlayForTests = true;
+        ResultScene.SkipResultIntroForTests = true;
         EditorApplication.playModeStateChanged += OnPlayModeChanged;
         Debug.Log($"[TestSpeed] 테스트 실행 시작: 재생 배율 x{TestSpeed.PlaybackRate}, 음량 {TestSpeed.Volume} (원래 {originalVolume})");
     }
@@ -82,6 +83,7 @@ public class TestSpeedRunCallback : ITestRunCallback
         SoundManager.SetPlaybackRateForTests(1.0);
         InGameScene.IgnoreFocusPauseForTests = false;
         GameSceneManager.SkipLoadingOverlayForTests = false;
+        ResultScene.SkipResultIntroForTests = false;
         AudioListener.volume = originalVolume;
         Debug.Log($"[TestSpeed] 테스트 실행 끝: 재생 배율 x1.0, 음량 {originalVolume}으로 되돌림");
     }

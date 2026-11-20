@@ -874,7 +874,8 @@ public class InGameScene : SceneBase
         isFadeTried = true;
         double nowSongTime = GameManager.Sound.SongTime;
         ResultData result = BuildResult(nowSongTime);
-        if (!GameManager.Scene.LoadWithFadeLoading(GameConstants.Scenes.Result, result, allJudgedRealtime, "마지막 판정")) return;
+        GetFinishTarget(result, out string targetScene, out object targetData);
+        if (!GameManager.Scene.LoadWithFadeLoading(targetScene, targetData, allJudgedRealtime, "마지막 판정")) return;
 
         isFinished = true;
         isFadingToResult = true;
@@ -900,7 +901,25 @@ public class InGameScene : SceneBase
 
         ResultData result = BuildResult(finishSongTime);
         SaveLastScrollMultiplier();
-        GameManager.Scene.Load(GameConstants.Scenes.Result, result);
+        GetFinishTarget(result, out string targetScene, out object targetData);
+        GameManager.Scene.Load(targetScene, targetData);
+    }
+
+    /// <summary>
+    /// 곡 끝에 갈 곳: 보통은 결과. 테스트 플레이(자동 테스트 포함)에서 「테스트 후 결과 보기」가 꺼져 있으면 결과를 거치지 않고 바로 에디터
+    /// (일시정지 → 나가기와 같은 돌아갈 곳 · 테스트 시작 위치, CreateReturnTarget). 결과 씬을 거치지 않으므로 기록도 없다 (테스트 플레이는 원래 기록하지 않는다).
+    /// </summary>
+    private void GetFinishTarget(ResultData result, out string sceneName, out object data)
+    {
+        if (IsTestPlay && !entry.testPlay.showResult)
+        {
+            sceneName = result.returnTarget.sceneName;
+            data = result.returnTarget.sceneData;
+            Debug.Log($"[InGameScene] 테스트 후 결과 보기 꺼짐 → 바로 {sceneName}", this);
+            return;
+        }
+        sceneName = GameConstants.Scenes.Result;
+        data = result;
     }
 
     /// <summary>
