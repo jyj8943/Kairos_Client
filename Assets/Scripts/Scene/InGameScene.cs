@@ -46,7 +46,7 @@ using UnityEngine.InputSystem;
 /// - 판정 이펙트 R2 (11/20, HitFxPool): 판정 결과마다 HitFxRules로 터뜨릴지 고른다 (MISS 없음, 롱노트는 머리 · 유지 틱 · 꼬리).
 ///   곡 시간으로 Tick하므로 일시정지 중에는 멈춘다.
 /// - 시작 키 글자 안내 (11/20 수정, KeyLabelHintRules): 글자 → 마름모로 차례로 바꾼다 (메트로놈 −4 ~ 0박, 중간 시작 0 ~ 1.5초, 같이 보이지 않음).
-///   다시 하기(entry.isRetry)와 일시정지 후 이어 하기는 처음부터 마름모만 (일시정지하는 순간 안내를 끝낸다).
+///   다시 하기도 새 판이라 같은 안내를 보여 준다. 일시정지 후 이어 하기는 마름모만 (일시정지하는 순간 안내를 끝낸다).
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -281,7 +281,7 @@ public class InGameScene : SceneBase
         countInClickTimes = usesCountIn ? CountInRules.GetClickTimes(songTiming) : new double[0];
         if (usesCountIn) keyHintBeats = KeyLabelHintRules.BeatTimes.From(songTiming);
         hasKeyHintStart = false;
-        isKeyHintOver = entry.isRetry;
+        isKeyHintOver = false;
         if (IsTestPlay)
         {
             double startTime = timing.BeatToSeconds(entry.testPlay.startBeat);
@@ -314,8 +314,8 @@ public class InGameScene : SceneBase
         backgroundBrightness = PlayerDataManager.HasInstance ? GameManager.PlayerData.LastBackgroundBrightness : BackgroundBrightnessRules.Default;
         if (background != null) background.Init(song, backgroundBrightness);
         gear.Init();
-        // 첫 Update 전 모습: 메트로놈 판은 −4박 전이라 둘 다 숨김, 중간 시작은 글자만, 다시 하기는 마름모만
-        gear.SetKeyHint(KeyLabelHintRules.Initial(usesCountIn, entry.isRetry));
+        // 첫 Update 전 모습: 메트로놈 판은 −4박 전이라 둘 다 숨김, 중간 시작은 글자만 (다시 하기도 같다)
+        gear.SetKeyHint(KeyLabelHintRules.Initial(usesCountIn));
         if (hitFx != null) hitFx.Init(gear);
         else Debug.LogWarning("[InGameScene] hitFx(HitFxPool)가 연결되지 않아 판정 이펙트가 없습니다.", this);
 #if UNITY_EDITOR
@@ -850,9 +850,8 @@ public class InGameScene : SceneBase
         }
 
         double elapsed = songTime - keyHintStartSongTime;
-        bool isRetry = entry.isRetry;
-        gear.SetKeyHint(KeyLabelHintRules.GetAlpha(usesCountIn, isRetry, songTime, keyHintBeats, elapsed));
-        if (KeyLabelHintRules.IsOver(usesCountIn, isRetry, songTime, keyHintBeats, elapsed)) EndKeyLabelHint();
+        gear.SetKeyHint(KeyLabelHintRules.GetAlpha(usesCountIn, songTime, keyHintBeats, elapsed));
+        if (KeyLabelHintRules.IsOver(usesCountIn, songTime, keyHintBeats, elapsed)) EndKeyLabelHint();
     }
 
     /// <summary>시작 키 글자 안내를 끝내고 평소 모습(마름모만)으로 둔다 (끝 시각 · 일시정지)</summary>

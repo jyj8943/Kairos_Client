@@ -10,7 +10,7 @@ public readonly struct KeyHintAlpha
         Diamond = diamond;
     }
 
-    /// <summary>평소 (글자 없음, 마름모만): 안내가 끝난 뒤 · 다시 하기 · 이어 하기</summary>
+    /// <summary>평소 (글자 없음, 마름모만): 안내가 끝난 뒤 · 일시정지 후 이어 하기</summary>
     public static readonly KeyHintAlpha DiamondOnly = new KeyHintAlpha(0f, 1f);
 
     /// <summary>둘 다 숨김 (메트로놈 판 시작 ~ −4박 전)</summary>
@@ -32,7 +32,8 @@ public readonly struct KeyHintAlpha
 ///   −4박 전 둘 다 0 / −4 ~ −1박 글자 1 / −1 ~ −0.5박 글자 1 → 0 / −0.5 ~ 0박 마름모 0 → 1 / 0박 뒤 마름모 1.
 /// - 메트로놈이 없을 때(중간부터 테스트 플레이, 판 시작 = 0초):
 ///   0 ~ 1.0초 글자 1 / 1.0 ~ 1.25초 글자 1 → 0 / 1.25 ~ 1.5초 마름모 0 → 1 / 1.5초 뒤 마름모 1.
-/// - 다시 하기(F5 · 일시정지 재시작 · 결과의 다시 하기, InGameEntryData.isRetry)와 일시정지 후 이어 하기: 처음부터 글자 0 · 마름모 1.
+/// - 다시 하기(F5 · 일시정지 재시작 · 결과의 다시 하기)도 새로 시작하는 판이라 같은 안내를 보여 준다 (11/20 변경).
+/// - 일시정지 후 이어 하기: 판 시작이 아니므로 안내를 끝내고 마름모만 (InGameScene이 일시정지할 때 EndKeyLabelHint).
 /// 시간 상수는 GameConstants.Play.KeyHint….
 /// </summary>
 public static class KeyLabelHintRules
@@ -41,20 +42,17 @@ public static class KeyLabelHintRules
     /// 지금 글자 · 마름모 알파.
     /// </summary>
     /// <param name="usesCountIn">시작 메트로놈이 있는지</param>
-    /// <param name="isRetry">다시 하기로 들어온 판인지</param>
     /// <param name="songTime">지금 곡 시간 (초, 메트로놈이 있을 때 쓴다)</param>
     /// <param name="beats">메트로놈 박 시각 (곡 시간, BeatTimes)</param>
     /// <param name="elapsedSeconds">판 시작 후 지난 곡 시간 (초, 메트로놈이 없을 때 쓴다)</param>
-    public static KeyHintAlpha GetAlpha(bool usesCountIn, bool isRetry, double songTime, BeatTimes beats, double elapsedSeconds)
+    public static KeyHintAlpha GetAlpha(bool usesCountIn, double songTime, BeatTimes beats, double elapsedSeconds)
     {
-        if (isRetry) return KeyHintAlpha.DiamondOnly;
         return usesCountIn ? WithCountIn(songTime, beats) : WithoutCountIn(elapsedSeconds);
     }
 
-    /// <summary>판 시작(첫 Update 전)에 둘 모습: 다시 하기면 마름모만, 메트로놈 판이면 둘 다 숨김, 중간 시작이면 글자만</summary>
-    public static KeyHintAlpha Initial(bool usesCountIn, bool isRetry)
+    /// <summary>판 시작(첫 Update 전)에 둘 모습: 메트로놈 판이면 둘 다 숨김, 중간 시작이면 글자만 (다시 하기도 같다)</summary>
+    public static KeyHintAlpha Initial(bool usesCountIn)
     {
-        if (isRetry) return KeyHintAlpha.DiamondOnly;
         return usesCountIn ? KeyHintAlpha.Hidden : KeyHintAlpha.LabelOnly;
     }
 
@@ -90,9 +88,8 @@ public static class KeyLabelHintRules
     }
 
     /// <summary>안내가 끝났는지 (이후로는 늘 마름모만)</summary>
-    public static bool IsOver(bool usesCountIn, bool isRetry, double songTime, BeatTimes beats, double elapsedSeconds)
+    public static bool IsOver(bool usesCountIn, double songTime, BeatTimes beats, double elapsedSeconds)
     {
-        if (isRetry) return true;
         return usesCountIn ? songTime >= beats.End : elapsedSeconds >= GameConstants.Play.KeyHintEndSeconds;
     }
 

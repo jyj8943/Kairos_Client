@@ -246,7 +246,7 @@ public class NoteFxTests
     public void KeyHint_WithCountIn(double beat, float label, float diamond)
     {
         double t = TimingMap.Single(120f, 0).BeatToSeconds(beat);
-        KeyHintAlpha a = KeyLabelHintRules.GetAlpha(true, false, t, Beats120, 99);
+        KeyHintAlpha a = KeyLabelHintRules.GetAlpha(true, t, Beats120, 99);
         Assert.AreEqual(label, a.Label, 1e-4f, beat + "박 글자");
         Assert.AreEqual(diamond, a.Diamond, 1e-4f, beat + "박 마름모");
         Assert.IsFalse(a.IsOverlapping, beat + "박 겹침 없음");
@@ -262,27 +262,18 @@ public class NoteFxTests
     [TestCase(2.0, 0f, 1f)]
     public void KeyHint_WithoutCountIn(double elapsed, float label, float diamond)
     {
-        KeyHintAlpha a = KeyLabelHintRules.GetAlpha(false, false, 0, default, elapsed);
+        KeyHintAlpha a = KeyLabelHintRules.GetAlpha(false, 0, default, elapsed);
         Assert.AreEqual(label, a.Label, 1e-4f, elapsed + "초 글자");
         Assert.AreEqual(diamond, a.Diamond, 1e-4f, elapsed + "초 마름모");
     }
 
     [Test]
-    public void KeyHint_Retry_DiamondOnlyFromStart()
+    public void KeyHint_Initial()
     {
-        foreach (bool countIn in new[] { true, false })
-        {
-            foreach (double t in new[] { 0.0, 1.0 })
-            {
-                KeyHintAlpha a = KeyLabelHintRules.GetAlpha(countIn, true, Beats120.Show + t, Beats120, t);
-                Assert.AreEqual(0f, a.Label, "다시 하기 글자 0");
-                Assert.AreEqual(1f, a.Diamond, "다시 하기 마름모 1");
-            }
-        }
-        Assert.AreEqual(KeyHintAlpha.DiamondOnly.Diamond, KeyLabelHintRules.Initial(true, true).Diamond);
-        Assert.AreEqual(0f, KeyLabelHintRules.Initial(true, false).Diamond, "메트로놈 판 시작: 둘 다 숨김");
-        Assert.AreEqual(0f, KeyLabelHintRules.Initial(true, false).Label);
-        Assert.AreEqual(1f, KeyLabelHintRules.Initial(false, false).Label, "중간 시작: 글자만");
+        Assert.AreEqual(0f, KeyLabelHintRules.Initial(true).Diamond, "메트로놈 판 시작: 둘 다 숨김");
+        Assert.AreEqual(0f, KeyLabelHintRules.Initial(true).Label);
+        Assert.AreEqual(1f, KeyLabelHintRules.Initial(false).Label, "중간 시작: 글자만 (다시 하기도 같다)");
+        Assert.AreEqual(0f, KeyLabelHintRules.Initial(false).Diamond);
     }
 
     /// <summary>어느 시점에도 글자 &gt; 0 이면서 마름모 &gt; 0인 순간이 없다 (1ms 간격으로 훑음)</summary>
@@ -302,11 +293,10 @@ public class NoteFxTests
     public void KeyHint_IsOver()
     {
         KeyLabelHintRules.BeatTimes b = Beats120;
-        Assert.IsTrue(KeyLabelHintRules.IsOver(true, true, -10, b, 0), "다시 하기는 처음부터 끝");
-        Assert.IsFalse(KeyLabelHintRules.IsOver(true, false, -0.1, b, 0));
-        Assert.IsTrue(KeyLabelHintRules.IsOver(true, false, 0, b, 0));
-        Assert.IsFalse(KeyLabelHintRules.IsOver(false, false, 0, b, 1.49));
-        Assert.IsTrue(KeyLabelHintRules.IsOver(false, false, 0, b, 1.5));
+        Assert.IsFalse(KeyLabelHintRules.IsOver(true, -0.1, b, 0));
+        Assert.IsTrue(KeyLabelHintRules.IsOver(true, 0, b, 0));
+        Assert.IsFalse(KeyLabelHintRules.IsOver(false, 0, b, 1.49));
+        Assert.IsTrue(KeyLabelHintRules.IsOver(false, 0, b, 1.5));
     }
 
     // ───── 5. JudgeSprites 세트 ─────

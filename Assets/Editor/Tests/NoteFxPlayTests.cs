@@ -15,7 +15,7 @@ using UnityEngine.TestTools;
 ///     - 이펙트 풀: 판 도중 생성 0, 라인별 최대 동시 사용 수
 /// F3. 롱노트 모양 상태별 (11/20 정정): 내려오는 중 · 누르는 동안 · 떼기 직전 · 시작 MISS.
 /// F2. 8박부터 테스트 플레이(메트로놈 없음): 키 글자 0.5초 1, 1.25초 약 0.5, 1.5초 0.
-///     일시정지 → 이어 하기 뒤에도 0. F5 다시 하기 → isRetry, 키 글자 0.
+///     일시정지 → 이어 하기 뒤에는 0. F5 다시 하기 → isRetry여도 새 판이라 같은 안내 (글자 1 → 1.5초에 마름모 1).
 /// </summary>
 public class NoteFxPlayTests
 {
@@ -561,16 +561,19 @@ public class NoteFxPlayTests
         double retryStart = SongTime;
         KeyHintAlpha retryStartHint = scene.Gear.KeyHint;
         float maxRetry = 0f;
-        float minRetryDiamond = 1f;
+        int retryOverlap = 0;
         while (SongTime < retryStart + 1.6)
         {
             maxRetry = Mathf.Max(maxRetry, scene.Gear.KeyHint.Label);
-            minRetryDiamond = Mathf.Min(minRetryDiamond, scene.Gear.KeyHint.Diamond);
+            if (scene.Gear.KeyHint.IsOverlapping) retryOverlap++;
             yield return null;
         }
-        Assert.AreEqual(0f, maxRetry, "F5 다시 하기 글자 0");
-        Assert.AreEqual(1f, minRetryDiamond, "F5 다시 하기 마름모 1");
+        KeyHintAlpha retryEnd = scene.Gear.KeyHint;
+        Assert.AreEqual(1f, maxRetry, 1e-3f, "F5 다시 하기도 키 글자 안내");
+        Assert.AreEqual(0, retryOverlap, "F5 다시 하기 겹침 없음");
+        Assert.AreEqual(0f, retryEnd.Label, "1.6초 뒤 글자 0");
+        Assert.AreEqual(1f, retryEnd.Diamond, "1.6초 뒤 마름모 1");
         Debug.Log($"[NoteFxPlayTest] F2 키 글자 안내(중간 시작): {midLog}프레임 {midFrames}개 중 겹침 {midOverlap} | 이어 하기 직후 {resumeStart} · 1초 뒤 {resume1s} | " +
-                  $"F5 다시 하기 직후 {retryStartHint} · 1.6초 동안 글자 최대 {maxRetry:0.00} 마름모 최소 {minRetryDiamond:0.00}");
+                  $"F5 다시 하기 직후 {retryStartHint} · 1.6초 동안 글자 최대 {maxRetry:0.00} · 겹침 {retryOverlap} · 끝 {retryEnd}");
     }
 }

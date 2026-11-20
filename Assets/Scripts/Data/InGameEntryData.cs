@@ -16,7 +16,7 @@ public class InGameEntryData
     public TestPlayData testPlay;
 
     /// <summary>
-    /// 다시 하기(F5 · 일시정지 재시작 · 결과의 다시 하기)로 만든 진입이면 true (11/20). 시작 키 글자 안내 없이 처음부터 마름모만 보인다 (KeyLabelHintRules).
+    /// 다시 하기(F5 · 일시정지 재시작 · 결과의 다시 하기)로 만든 진입이면 true (11/20). 다시 하기도 시작 키 글자 안내를 보여 준다 (11/20 변경, 테스트 · 로그 확인용 구분 값).
     /// 곡 선택·에디터에서 새로 들어오면 false. 싱글톤에 남기지 않고 이 진입 데이터로만 넘긴다.
     /// </summary>
     public bool isRetry;
