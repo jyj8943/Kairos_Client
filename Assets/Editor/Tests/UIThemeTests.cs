@@ -117,7 +117,6 @@ public class UIThemeTests
             AssertRgb(44, 40, 56, 1f, target.keyCell, who + " 키 칸 평소 불투명 (11/19)");
             AssertHex("FFFFFF", 0.12f, target.keyCellFrame, who + " 키 칸 테두리");
             AssertHex("FFFFFF", 1f, target.keyLabel, who + " 시작 키 글자 흰색 (11/20)");
-            AssertHex("17141F", 0.88f, target.keyLabelPlate, who + " 시작 키 글자 판 (11/20)");
             AssertHex("3E9BE0", 1f, target.keyCellPressed, who + " 키 칸 누름");
             AssertHex("FFFFFF", 1f, target.keyDiamondPressed, who + " 키 칸 마름모 누름 흰색 (11/20)");
             AssertHex("A9A3B8", 1f, target.comboTitle, who + " 콤보 라벨");

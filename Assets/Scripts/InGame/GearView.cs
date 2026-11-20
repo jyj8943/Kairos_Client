@@ -6,7 +6,8 @@ using UnityEngine;
 /// - 라인 위치·판정선 높이·화면 위아래 끝(월드 y)을 노트 표시에 알려준다.
 /// - 키를 누르는 동안 그 라인을 빛나게 하고, 아래 키 칸을 포인트색으로 채운다.
 /// - 키 칸 가운데(y 1020)에는 라인 색 마름모(11/20): 평소 Key_DiamondLine(반대각 16, 선 3) + 가운데 Key_Diamond 0.375배, 누를 때 Key_Diamond(반대각 16) 흰색 채움.
-///   키 칸 글자(keyLabels)는 평소에 끄고, 판 시작 때만 어두운 판(Key_LabelPlate 56×56) 위에 보여 준다 (SetKeyLabelHintAlpha, 규칙은 KeyLabelHintRules).
+///   키 칸 글자(keyLabels)는 평소에 끄고, 판 시작 때만 보여 준다 (SetKeyHint, 규칙은 KeyLabelHintRules, 11/20 수정).
+///   글자가 보이는 동안은 마름모(테두리 · 가운데 점 · 누를 때 흰 채움)를 숨기고, 글자가 사라진 뒤 마름모가 나타난다 (둘이 같이 보이지 않아 뒤 판은 없다).
 ///   스프라이트는 Resources/Images/InGame/KeyCell/에서 Init 때 읽는다. 그리는 순서는 GameConstants.InGameSort.
 /// - 키 칸(KeyCells)은 화면 아래 끝에 붙인다. 크기·위치는 Init에서 카메라 높이로 계산한다 (1080 화면 기준 px → 월드, 해상도가 바뀌어도 같은 비율).
 ///   노트보다 위에 그려(sortingOrder) 놓친 노트가 판정선 아래를 지나 키 칸 뒤로 사라진다.
@@ -44,8 +45,6 @@ public class GearView : MonoBehaviour
     [SerializeField] private SpriteRenderer[] keyDiamondLines;
     [Tooltip("키 칸 가운데 마름모 (KeyCell_n/KeyDiamond_n, Key_Diamond 스프라이트). 평소 0.375배 라인 색, 누를 때 1배 흰색")]
     [SerializeField] private SpriteRenderer[] keyDiamonds;
-    [Tooltip("시작 키 글자 뒤 판 (KeyCell_n/KeyLabelPlate_n, Key_LabelPlate 스프라이트)")]
-    [SerializeField] private SpriteRenderer[] keyLabelPlates;
 
     public float LaneWidth => laneWidth;
 
@@ -75,17 +74,14 @@ public class GearView : MonoBehaviour
 
     private bool[] keyPressed;
 
-    /// <summary>지금 시작 키 글자 알파 (확인용)</summary>
-    public float KeyLabelHintAlpha { get; private set; }
+    /// <summary>지금 시작 키 글자 안내 알파 (글자 · 마름모, 확인용)</summary>
+    public KeyHintAlpha KeyHint { get; private set; } = KeyHintAlpha.DiamondOnly;
 
     /// <summary>키 칸 마름모 (확인용)</summary>
     public SpriteRenderer GetKeyDiamond(int lane) => Pick(keyDiamonds, lane);
 
     /// <summary>키 칸 마름모 테두리 (확인용)</summary>
     public SpriteRenderer GetKeyDiamondLine(int lane) => Pick(keyDiamondLines, lane);
-
-    /// <summary>시작 키 글자 뒤 판 (확인용)</summary>
-    public SpriteRenderer GetKeyLabelPlate(int lane) => Pick(keyLabelPlates, lane);
 
     /// <summary>키 칸 글자 (확인용)</summary>
     public TMP_Text GetKeyLabel(int lane) => keyLabels != null && lane >= 0 && lane < keyLabels.Length ? keyLabels[lane] : null;
@@ -109,20 +105,20 @@ public class GearView : MonoBehaviour
         ApplyTheme(UITheme.Current);
         LayoutKeyMarks();
 
+        KeyHint = KeyHintAlpha.DiamondOnly;
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
             SetPressed(lane, false);
-        SetKeyLabelHintAlpha(0f);
+        SetKeyHint(KeyHintAlpha.DiamondOnly);
     }
 
     /// <summary>
-    /// 키 칸 마름모 · 키 글자 판 · 키 글자를 키 칸 가운데(y 1020)에 놓고 스프라이트 · 크기 · 그리는 순서를 정한다.
-    /// 크기는 표시 px(반대각 16, 판 56)를 원본 px와 PPU로 나눈 배율로 맞춘다 (판은 원본 112px 9-slice 모서리 20 → 표시 56px 모서리 10).
+    /// 키 칸 마름모 · 키 글자를 키 칸 가운데(y 1020)에 놓고 스프라이트 · 크기 · 그리는 순서를 정한다.
+    /// 크기는 표시 px(반대각 16)를 원본 px와 PPU로 나눈 배율로 맞춘다.
     /// </summary>
     private void LayoutKeyMarks()
     {
         Sprite diamondLine = LoadKeyCellSprite("Key_DiamondLine");
         Sprite diamond = LoadKeyCellSprite("Key_Diamond");
-        Sprite plate = LoadKeyCellSprite("Key_LabelPlate");
         float centerY = ScreenTopY - GameConstants.Play.KeyDiamondCenterYPx * UnitsPerReferencePx;
         float fontSize = KeyLabelFontSize(UnitsPerReferencePx);
 
@@ -131,7 +127,6 @@ public class GearView : MonoBehaviour
             Vector3 center = new Vector3(GetLaneX(lane), centerY, 0f);
             Place(Pick(keyDiamondLines, lane), diamondLine, center, KeyDiamondScale(diamondLine, 1f), GameConstants.InGameSort.KeyDiamond);
             Place(Pick(keyDiamonds, lane), diamond, center, KeyDiamondScale(diamond, GameConstants.Play.KeyDiamondDotScale), GameConstants.InGameSort.KeyDiamond);
-            Place(Pick(keyLabelPlates, lane), plate, center, HitFxRules.SpriteScale(GameConstants.Play.KeyLabelPlateSizePx, plate, UnitsPerReferencePx), GameConstants.InGameSort.KeyLabelPlate);
 
             TMP_Text label = GetKeyLabel(lane);
             if (label == null) continue;
@@ -172,28 +167,47 @@ public class GearView : MonoBehaviour
     }
 
     /// <summary>
-    /// 시작 키 글자 안내의 알파 (판과 글자를 함께). 0이면 끈다. 규칙은 KeyLabelHintRules (InGameScene이 매 프레임 부른다).
+    /// 시작 키 글자 안내: 글자 알파와 마름모 알파 (KeyLabelHintRules, InGameScene이 매 프레임 부른다). 글자는 0이면 끈다.
+    /// 마름모 알파는 테두리 · 가운데 점 · 누를 때 흰 채움에 모두 곱한다 (색은 그대로). 키 칸 채움 · 라인 빛은 이 값과 상관없다.
     /// </summary>
-    public void SetKeyLabelHintAlpha(float alpha)
+    public void SetKeyHint(KeyHintAlpha hint)
     {
-        alpha = Mathf.Clamp01(alpha);
-        KeyLabelHintAlpha = alpha;
-        bool visible = alpha > 0f;
+        KeyHint = hint;
         UITheme theme = UITheme.Current;
+        float labelAlpha = Mathf.Clamp01(hint.Label);
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
         {
-            SpriteRenderer plate = Pick(keyLabelPlates, lane);
-            if (plate != null)
-            {
-                plate.enabled = visible;
-                plate.color = UITheme.WithAlpha(theme.keyLabelPlate, theme.keyLabelPlate.a * alpha);
-            }
             TMP_Text label = GetKeyLabel(lane);
             if (label != null)
             {
-                label.enabled = visible;
-                label.color = UITheme.WithAlpha(theme.keyLabel, theme.keyLabel.a * alpha);
+                label.enabled = labelAlpha > 0f;
+                label.color = UITheme.WithAlpha(theme.keyLabel, theme.keyLabel.a * labelAlpha);
             }
+            PaintDiamond(lane);
+        }
+    }
+
+    /// <summary>라인 마름모를 눌림 상태와 마름모 알파로 칠한다 (평소: 테두리 + 0.375배 점 라인 색, 누를 때: 테두리 끔 + 1배 흰색)</summary>
+    private void PaintDiamond(int lane)
+    {
+        UITheme theme = UITheme.Current;
+        bool pressed = IsKeyCellPressed(lane);
+        float alpha = Mathf.Clamp01(KeyHint.Diamond);
+        SpriteRenderer line = Pick(keyDiamondLines, lane);
+        if (line != null)
+        {
+            Color c = theme.NoteColor(lane);
+            line.color = UITheme.WithAlpha(c, c.a * alpha);
+            line.enabled = !pressed && alpha > 0f;
+        }
+        SpriteRenderer diamond = Pick(keyDiamonds, lane);
+        if (diamond != null)
+        {
+            Color c = pressed ? theme.keyDiamondPressed : theme.NoteColor(lane);
+            diamond.color = UITheme.WithAlpha(c, c.a * alpha);
+            diamond.enabled = alpha > 0f;
+            float scale = KeyDiamondScale(diamond.sprite, pressed ? 1f : GameConstants.Play.KeyDiamondDotScale);
+            diamond.transform.localScale = new Vector3(scale, scale, 1f);
         }
     }
 
@@ -299,18 +313,6 @@ public class GearView : MonoBehaviour
             keyCells[lane].color = pressed ? theme.keyCellPressed : theme.keyCell;
         if (keyCellFrames != null && lane < keyCellFrames.Length && keyCellFrames[lane] != null)
             keyCellFrames[lane].color = pressed ? theme.keyCellFramePressed : theme.keyCellFrame;
-        SpriteRenderer line = Pick(keyDiamondLines, lane);
-        if (line != null)
-        {
-            line.enabled = !pressed;
-            line.color = theme.NoteColor(lane);
-        }
-        SpriteRenderer diamond = Pick(keyDiamonds, lane);
-        if (diamond != null)
-        {
-            diamond.color = pressed ? theme.keyDiamondPressed : theme.NoteColor(lane);
-            float scale = KeyDiamondScale(diamond.sprite, pressed ? 1f : GameConstants.Play.KeyDiamondDotScale);
-            diamond.transform.localScale = new Vector3(scale, scale, 1f);
-        }
+        PaintDiamond(lane);
     }
 }

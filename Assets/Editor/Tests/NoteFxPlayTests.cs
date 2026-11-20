@@ -191,7 +191,7 @@ public class NoteFxPlayTests
         Assert.AreEqual(GameConstants.InGameSort.KeyCellFrame, orders["Frame"]);
         Assert.AreEqual(GameConstants.InGameSort.KeyDiamond, orders["KeyDiamondLine_n"]);
         Assert.AreEqual(GameConstants.InGameSort.KeyDiamond, orders["KeyDiamond_n"]);
-        Assert.AreEqual(GameConstants.InGameSort.KeyLabelPlate, orders["KeyLabelPlate_n"]);
+        Assert.IsFalse(orders.ContainsKey("KeyLabelPlate_n"), "글자 뒤 판 없음 (11/20 수정)");
         Assert.AreEqual(GameConstants.InGameSort.KeyLabel, orders["KeyLabel"]);
         Assert.Greater(orders["HitFx(SortingGroup)"], orders["Note/Shine"], "이펙트는 노트 위");
         Assert.Less(orders["HitFx(SortingGroup)"], orders["KeyCell_n"], "이펙트는 키 칸 아래");
@@ -199,8 +199,51 @@ public class NoteFxPlayTests
         Debug.Log("[NoteFxPlayTest] 정렬 순서: " + log);
         log.Clear();
 
-        // ── 키 칸 마름모 (평소 · 누름) ──
+        // ── 시작 키 글자 안내 (메트로놈): 글자 → 마름모, 같이 보이는 프레임 0 ──
         float px = gear.UnitsPerReferencePx;
+        TimingMap songTiming = TimingMap.FromChart(Get<ChartData>(scene, "chart"), Get<SongData>(scene, "song").OffsetMs);
+        double[] sampleBeats = { -4, -2, -1, -0.75, -0.5, -0.25, 0, 1 };
+        StringBuilder hintLog = new StringBuilder();
+        int overlapFrames = 0, frames = 0, next = 0;
+        string beforeShow = $"판 시작 곡 시간 {SongTime:0.000}초 (−4박 {songTiming.BeatToSeconds(-4):0.000}초): {gear.KeyHint}";
+        bool pressChecked = false;
+        while (next < sampleBeats.Length)
+        {
+            double now = SongTime;
+            KeyHintAlpha hint = gear.KeyHint;
+            frames++;
+            if (hint.IsOverlapping) overlapFrames++;
+            // 레인 · 마름모 실제 렌더러도 같이 본다
+            if (hint.Label > 0f && (gear.GetKeyDiamond(0).enabled || gear.GetKeyDiamondLine(0).enabled)) overlapFrames++;
+            if (now >= songTiming.BeatToSeconds(sampleBeats[next]))
+            {
+                KeyHintAlpha expected = KeyLabelHintRules.WithCountIn(now, KeyLabelHintRules.BeatTimes.From(songTiming));
+                Assert.AreEqual(expected.Label, hint.Label, 0.12f, sampleBeats[next] + "박 글자");
+                Assert.AreEqual(expected.Diamond, hint.Diamond, 0.12f, sampleBeats[next] + "박 마름모");
+                hintLog.Append($"{sampleBeats[next]:+0.##;-0.##;0}박 {hint} / ");
+                next++;
+            }
+            // 글자 구간에 키를 누르면: 칸 채움은 켜지고 흰 마름모는 보이지 않는다
+            if (!pressChecked && hint.Label >= 1f && now >= songTiming.BeatToSeconds(-2))
+            {
+                pressChecked = true;
+                gear.SetPressed(0, true);
+                AssertColor(theme.keyCellPressed, gear.GetKeyCellColor(0), "글자 구간 누름: 칸 채움 #3E9BE0");
+                SpriteRenderer white = gear.GetKeyDiamond(0);
+                Assert.IsFalse(white.enabled, "글자 구간 누름: 흰 마름모 숨김");
+                Assert.AreEqual(0f, white.color.a, 1e-5f, "흰 마름모 알파 0");
+                hintLog.Append($"[글자 구간 누름: 칸 {Hex(gear.GetKeyCellColor(0))}, 흰 마름모 알파 {white.color.a:0.00} 켜짐 {white.enabled}] / ");
+                gear.SetPressed(0, false);
+            }
+            yield return null;
+        }
+        Assert.AreEqual(0, overlapFrames, "글자 · 마름모가 같이 보인 프레임 0");
+        Assert.IsTrue(pressChecked);
+        Assert.AreEqual(GearView.KeyLabelFontSize(px), gear.GetKeyLabel(0).fontSize, 1e-4f, "글자 34px");
+        Assert.IsFalse(gear.GetKeyLabel(0).enabled, "0박 뒤 글자 끔");
+        Debug.Log($"[NoteFxPlayTest] F1 키 글자 안내(메트로놈): {beforeShow} | {hintLog}프레임 {frames}개 중 겹침 {overlapFrames}");
+
+        // ── 키 칸 마름모 (안내가 끝난 뒤 평소 · 누름) ──
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
         {
             SpriteRenderer line = gear.GetKeyDiamondLine(lane);
@@ -209,7 +252,7 @@ public class NoteFxPlayTests
             Assert.AreEqual("Key_Diamond", dot.sprite.name);
             AssertColor(theme.NoteColor(lane), line.color, lane + " 마름모 테두리 라인 색");
             AssertColor(theme.NoteColor(lane), dot.color, lane + " 가운데 점 라인 색");
-            Assert.IsTrue(line.enabled);
+            Assert.IsTrue(line.enabled && dot.enabled);
             float lineHalf = line.bounds.extents.y / px * 32f / 38f; // 이미지 76px 중 반대각 32px
             Assert.AreEqual(16f, lineHalf, 0.2f, lane + " 반대각 16px");
             Assert.AreEqual(6f, dot.bounds.extents.y / px * 32f / 38f, 0.2f, lane + " 가운데 점 반대각 6px");
@@ -225,24 +268,6 @@ public class NoteFxPlayTests
             gear.SetPressed(lane, false);
             Assert.IsTrue(line.enabled);
         }
-
-        // ── 키 글자 안내 (메트로놈 −4박 ~ 0박) ──
-        TimingMap songTiming = TimingMap.FromChart(Get<ChartData>(scene, "chart"), Get<SongData>(scene, "song").OffsetMs);
-        double beatSeconds = songTiming.BeatToSeconds(1) - songTiming.BeatToSeconds(0);
-        yield return WaitSongTime(songTiming.BeatToSeconds(-2));
-        float alphaM2 = gear.KeyLabelHintAlpha;
-        Assert.AreEqual(1f, alphaM2, 1e-4f, "−2박 1");
-        Assert.IsTrue(gear.GetKeyLabel(0).enabled && gear.GetKeyLabelPlate(0).enabled, "판과 글자가 보인다");
-        AssertColor(theme.keyLabelPlate, gear.GetKeyLabelPlate(0).color, "판 #17141F 88%");
-        Assert.AreEqual(GearView.KeyLabelFontSize(px), gear.GetKeyLabel(0).fontSize, 1e-4f, "글자 34px");
-        yield return WaitSongTime(songTiming.BeatToSeconds(-0.5));
-        float alphaM05 = gear.KeyLabelHintAlpha;
-        double hintSongTime = Get<double>(scene, "keyHintFadeStartTime");
-        Assert.AreEqual(0.5f, alphaM05, 0.15f, "−0.5박 약 0.5 (프레임 차이)");
-        yield return WaitSongTime(songTiming.BeatToSeconds(0) + 0.01);
-        Assert.AreEqual(0f, gear.KeyLabelHintAlpha, "0박 뒤 0");
-        Assert.IsFalse(gear.GetKeyLabel(0).enabled, "글자 끔");
-        Debug.Log($"[NoteFxPlayTest] F1 키 글자: −2박 {alphaM2:0.00}, −0.5박 {alphaM05:0.00}, 0박 뒤 {gear.KeyLabelHintAlpha:0.00} (1박 {beatSeconds:0.000}초, −1박 {hintSongTime:0.000}초)");
 
         // ── 노트 색 · 광택 (화면에 있는 숏노트 4개) ──
         yield return WaitSongTime(timing.BeatToSeconds(1.2));
@@ -479,16 +504,27 @@ public class NoteFxPlayTests
 
         yield return null; // 첫 Update에서 시작 시각을 잡는다
         double start = Get<double>(scene, "keyHintStartSongTime");
-        yield return WaitSongTime(start + 0.5);
-        float a05 = gear.KeyLabelHintAlpha;
-        Assert.AreEqual(1f, a05, 1e-4f, "0.5초 1");
-        yield return WaitSongTime(start + 1.25);
-        float a125 = gear.KeyLabelHintAlpha;
-        Assert.AreEqual(0.5f, a125, 0.15f, "1.25초 약 0.5");
-        yield return WaitSongTime(start + 1.5);
-        yield return null;
-        float a15 = gear.KeyLabelHintAlpha;
-        Assert.AreEqual(0f, a15, "1.5초 0");
+        double[] samples = { 0, 0.5, 1.0, 1.125, 1.25, 1.375, 1.5, 2.0 };
+        StringBuilder midLog = new StringBuilder();
+        int midOverlap = 0, midFrames = 0, si = 0;
+        while (si < samples.Length)
+        {
+            double elapsed = SongTime - start;
+            KeyHintAlpha hint = gear.KeyHint;
+            midFrames++;
+            if (hint.IsOverlapping || (hint.Label > 0f && gear.GetKeyDiamondLine(0).enabled)) midOverlap++;
+            if (elapsed >= samples[si])
+            {
+                KeyHintAlpha expected = KeyLabelHintRules.WithoutCountIn(elapsed);
+                Assert.AreEqual(expected.Label, hint.Label, 0.12f, samples[si] + "초 글자");
+                Assert.AreEqual(expected.Diamond, hint.Diamond, 0.12f, samples[si] + "초 마름모");
+                midLog.Append($"{samples[si]:0.###}초({elapsed:0.000}) {hint} / ");
+                si++;
+            }
+            yield return null;
+        }
+        Assert.AreEqual(0, midOverlap, "중간 시작: 겹친 프레임 0");
+        Assert.AreEqual(KeyHintAlpha.DiamondOnly.Diamond, gear.KeyHint.Diamond, "1.5초 뒤 마름모만");
 
         // 일시정지 → 이어 하기: 판 시작이 아니므로 다시 보이지 않는다
         MethodInfo pause = typeof(InGameScene).GetMethod("RequestPause", Private);
@@ -498,32 +534,43 @@ public class NoteFxPlayTests
         resume.Invoke(scene, null);
         float deadline = Time.realtimeSinceStartup + 6f;
         float maxAfterResume = 0f;
+        float minDiamondAfterResume = 1f;
         while (Get<bool>(scene, "isPaused"))
         {
             Assert.Less(Time.realtimeSinceStartup, deadline, "이어 하기 대기 시간 초과");
-            maxAfterResume = Mathf.Max(maxAfterResume, gear.KeyLabelHintAlpha);
+            maxAfterResume = Mathf.Max(maxAfterResume, gear.KeyHint.Label);
+            minDiamondAfterResume = Mathf.Min(minDiamondAfterResume, gear.KeyHint.Diamond);
             yield return null;
         }
         double resumed = SongTime;
-        while (SongTime < resumed + 0.5)
+        KeyHintAlpha resumeStart = gear.KeyHint;
+        while (SongTime < resumed + 1.0)
         {
-            maxAfterResume = Mathf.Max(maxAfterResume, gear.KeyLabelHintAlpha);
+            maxAfterResume = Mathf.Max(maxAfterResume, gear.KeyHint.Label);
+            minDiamondAfterResume = Mathf.Min(minDiamondAfterResume, gear.KeyHint.Diamond);
             yield return null;
         }
-        Assert.AreEqual(0f, maxAfterResume, "이어 하기 뒤 표시 0");
+        KeyHintAlpha resume1s = gear.KeyHint;
+        Assert.AreEqual(0f, maxAfterResume, "이어 하기 뒤 글자 0");
+        Assert.AreEqual(1f, minDiamondAfterResume, "이어 하기 뒤 마름모 1");
 
         // F5 다시 하기
         Assert.IsTrue(scene.TestPressRestartKey(), "F5 받음");
         yield return WaitPlaying(TestSpeed.Deadline(20f));
         Assert.IsTrue(scene.IsRetryEntry, "다시 하기 진입 데이터");
         double retryStart = SongTime;
+        KeyHintAlpha retryStartHint = scene.Gear.KeyHint;
         float maxRetry = 0f;
+        float minRetryDiamond = 1f;
         while (SongTime < retryStart + 1.6)
         {
-            maxRetry = Mathf.Max(maxRetry, scene.Gear.KeyLabelHintAlpha);
+            maxRetry = Mathf.Max(maxRetry, scene.Gear.KeyHint.Label);
+            minRetryDiamond = Mathf.Min(minRetryDiamond, scene.Gear.KeyHint.Diamond);
             yield return null;
         }
-        Assert.AreEqual(0f, maxRetry, "F5 다시 하기 표시 0");
-        Debug.Log($"[NoteFxPlayTest] F2 키 글자(중간 시작): 0.5초 {a05:0.00}, 1.25초 {a125:0.00}, 1.5초 {a15:0.00} / 이어 하기 뒤 최대 {maxAfterResume:0.00} / F5 다시 하기 최대 {maxRetry:0.00}");
+        Assert.AreEqual(0f, maxRetry, "F5 다시 하기 글자 0");
+        Assert.AreEqual(1f, minRetryDiamond, "F5 다시 하기 마름모 1");
+        Debug.Log($"[NoteFxPlayTest] F2 키 글자 안내(중간 시작): {midLog}프레임 {midFrames}개 중 겹침 {midOverlap} | 이어 하기 직후 {resumeStart} · 1초 뒤 {resume1s} | " +
+                  $"F5 다시 하기 직후 {retryStartHint} · 1.6초 동안 글자 최대 {maxRetry:0.00} 마름모 최소 {minRetryDiamond:0.00}");
     }
 }

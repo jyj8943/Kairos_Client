@@ -49,10 +49,8 @@ public static class GameConstants
         public const int KeyCellFrame = 11;
         /// <summary>키 칸 마름모 (Key_DiamondLine · Key_Diamond)</summary>
         public const int KeyDiamond = 12;
-        /// <summary>시작 키 글자 뒤 판 (Key_LabelPlate)</summary>
-        public const int KeyLabelPlate = 13;
-        /// <summary>시작 키 글자 (TMP)</summary>
-        public const int KeyLabel = 14;
+        /// <summary>시작 키 글자 (TMP). 마름모와 같이 보이지 않으므로 뒤 판은 없다 (11/20)</summary>
+        public const int KeyLabel = 13;
     }
 
     /// <summary>인게임 플레이 규칙 (기획서 2-1). 판정 범위 기본값은 잠정치이며 InGameScene 인스펙터에서 조정한다</summary>
@@ -296,16 +294,19 @@ public static class GameConstants
         public const float KeyDiamondSourceHalfDiagonalPx = 32f;
         /// <summary>평소 가운데 점(Key_Diamond) 배율 (반대각 16 × 0.375 = 6)</summary>
         public const float KeyDiamondDotScale = 0.375f;
-        /// <summary>시작 키 글자 뒤 판(Key_LabelPlate) 크기 (px)</summary>
-        public const float KeyLabelPlateSizePx = 56f;
         /// <summary>시작 키 글자 크기 (px, 굵게)</summary>
         public const float KeyLabelHintFontPx = 34f;
-        /// <summary>메트로놈이 없을 때(중간부터 테스트 플레이) 키 글자를 보여 주는 시간 (초, 곡 시간)</summary>
-        public const double KeyLabelHintSeconds = 1.5;
-        /// <summary>메트로놈이 없을 때 끝에서 사라지는 시간 (초)</summary>
-        public const double KeyLabelHintFadeSeconds = 0.5;
-        /// <summary>메트로놈이 있을 때 사라지기 시작하는 박 (−1박 ~ 0박 동안 1 → 0)</summary>
-        public const int KeyLabelHintFadeStartBeat = -1;
+
+        // 시작 키 글자 안내 (11/20 수정, KeyLabelHintRules): 글자와 마름모를 차례로 바꾼다 (같이 보이지 않음)
+        /// <summary>메트로놈이 있을 때 (박): −4박 글자 보임 · −1박 글자 사라지기 시작 · −0.5박 마름모 나타나기 시작 · 0박 마름모만</summary>
+        public const double KeyHintShowBeat = -4;
+        public const double KeyHintLabelFadeBeat = -1;
+        public const double KeyHintDiamondFadeBeat = -0.5;
+        public const double KeyHintEndBeat = 0;
+        /// <summary>메트로놈이 없을 때 (판 시작 후 초): 1.0초 글자 사라지기 시작 · 1.25초 마름모 나타나기 시작 · 1.5초 마름모만</summary>
+        public const double KeyHintLabelFadeSeconds = 1.0;
+        public const double KeyHintDiamondFadeSeconds = 1.25;
+        public const double KeyHintEndSeconds = 1.5;
 
         /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
         public const double TestPlayLeadInSeconds = 2.0;

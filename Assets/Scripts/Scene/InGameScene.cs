@@ -45,7 +45,8 @@ using UnityEngine.InputSystem;
 ///   판 시작·재시작(일시정지 메뉴, F5)·자동 플레이에서 울리고, 일시정지·재시작·나가기 때 아직 안 울린 클릭은 취소한다 (재개해도 다시 예약하지 않는다).
 /// - 판정 이펙트 R2 (11/20, HitFxPool): 판정 결과마다 HitFxRules로 터뜨릴지 고른다 (MISS 없음, 롱노트는 머리 · 유지 틱 · 꼬리).
 ///   곡 시간으로 Tick하므로 일시정지 중에는 멈춘다.
-/// - 시작 키 글자 안내 (11/20, KeyLabelHintRules): 메트로놈 −4박 ~ 0박 또는 중간 시작 1.5초. 다시 하기(entry.isRetry)면 없음.
+/// - 시작 키 글자 안내 (11/20 수정, KeyLabelHintRules): 글자 → 마름모로 차례로 바꾼다 (메트로놈 −4 ~ 0박, 중간 시작 0 ~ 1.5초, 같이 보이지 않음).
+///   다시 하기(entry.isRetry)와 일시정지 후 이어 하기는 처음부터 마름모만 (일시정지하는 순간 안내를 끝낸다).
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -192,9 +193,7 @@ public class InGameScene : SceneBase
     public event System.Action OnAllNotesJudged;
 
     // 시작 키 글자 안내 (KeyLabelHintRules). 박 시각은 카운트인 클릭과 같은 곡 시간
-    private double keyHintShowTime;
-    private double keyHintFadeStartTime;
-    private double keyHintFadeEndTime;
+    private KeyLabelHintRules.BeatTimes keyHintBeats;
     /// <summary>판 시작 곡 시간 (메트로놈이 없을 때 경과 시간 기준). 첫 Update에서 정한다</summary>
     private double keyHintStartSongTime;
     private bool hasKeyHintStart;
@@ -280,12 +279,7 @@ public class InGameScene : SceneBase
         usesCountIn = CountInRules.UsesCountIn(entry);
         TimingMap songTiming = usesCountIn ? TimingMap.FromChart(chart, song.OffsetMs) : null;
         countInClickTimes = usesCountIn ? CountInRules.GetClickTimes(songTiming) : new double[0];
-        if (usesCountIn)
-        {
-            keyHintShowTime = songTiming.BeatToSeconds(-GameConstants.Play.CountInBeats);
-            keyHintFadeStartTime = songTiming.BeatToSeconds(GameConstants.Play.KeyLabelHintFadeStartBeat);
-            keyHintFadeEndTime = songTiming.BeatToSeconds(0);
-        }
+        if (usesCountIn) keyHintBeats = KeyLabelHintRules.BeatTimes.From(songTiming);
         hasKeyHintStart = false;
         isKeyHintOver = entry.isRetry;
         if (IsTestPlay)
@@ -320,6 +314,8 @@ public class InGameScene : SceneBase
         backgroundBrightness = PlayerDataManager.HasInstance ? GameManager.PlayerData.LastBackgroundBrightness : BackgroundBrightnessRules.Default;
         if (background != null) background.Init(song, backgroundBrightness);
         gear.Init();
+        // 첫 Update 전 모습: 메트로놈 판은 −4박 전이라 둘 다 숨김, 중간 시작은 글자만, 다시 하기는 마름모만
+        gear.SetKeyHint(KeyLabelHintRules.Initial(usesCountIn, entry.isRetry));
         if (hitFx != null) hitFx.Init(gear);
         else Debug.LogWarning("[InGameScene] hitFx(HitFxPool)가 연결되지 않아 판정 이펙트가 없습니다.", this);
 #if UNITY_EDITOR
@@ -855,12 +851,15 @@ public class InGameScene : SceneBase
 
         double elapsed = songTime - keyHintStartSongTime;
         bool isRetry = entry.isRetry;
-        gear.SetKeyLabelHintAlpha(KeyLabelHintRules.GetAlpha(usesCountIn, isRetry, songTime, keyHintShowTime, keyHintFadeStartTime, keyHintFadeEndTime, elapsed));
-        if (KeyLabelHintRules.IsOver(usesCountIn, isRetry, songTime, keyHintFadeEndTime, elapsed))
-        {
-            isKeyHintOver = true;
-            gear.SetKeyLabelHintAlpha(0f);
-        }
+        gear.SetKeyHint(KeyLabelHintRules.GetAlpha(usesCountIn, isRetry, songTime, keyHintBeats, elapsed));
+        if (KeyLabelHintRules.IsOver(usesCountIn, isRetry, songTime, keyHintBeats, elapsed)) EndKeyLabelHint();
+    }
+
+    /// <summary>시작 키 글자 안내를 끝내고 평소 모습(마름모만)으로 둔다 (끝 시각 · 일시정지)</summary>
+    private void EndKeyLabelHint()
+    {
+        isKeyHintOver = true;
+        gear.SetKeyHint(KeyHintAlpha.DiamondOnly);
     }
 
     /// <summary>
@@ -1060,6 +1059,8 @@ public class InGameScene : SceneBase
 
         bool wasCountingDown = countdownRoutine != null;
         StopCountdown();
+        // 이어 하기는 판 시작이 아니므로 안내를 끝내고 마름모만 보인다
+        if (!isKeyHintOver) EndKeyLabelHint();
         if (isAutoPlay) UpdateAutoGlows(true);
 
         if (!isPaused)

@@ -134,12 +134,22 @@ public class ScrollSpeedPlayTests
         }
     }
 
-    /// <summary>배속 키를 한 번씩 눌러 목표 배속까지 바꾼다 (같은 프레임).</summary>
-    private void TapTo(float target)
+    /// <summary>한 프레임에 누르는 배속 키 수 (한 번 누를 때마다 배속 로그 · 카드 갱신이 있어, 한 프레임에 수십 번 누르면 그 프레임이 길어진다)</summary>
+    private const int TapsPerFrame = 4;
+
+    /// <summary>
+    /// 배속 키를 한 번씩 눌러 목표 배속까지 바꾼다. perFrame번마다 한 프레임을 넘긴다 (기본 TapsPerFrame).
+    /// 자동 플레이 판정을 보는 테스트(S1·S2)는 나눠 누른다: 한 프레임에 최대 70번 누르면 그 프레임이 약 60ms로 길어져
+    /// 바로 뒤 자동 플레이 노트가 GREAT가 되는 일이 있었다. 노트 위치만 보는 테스트는 int.MaxValue로 한 프레임에 누른다.
+    /// </summary>
+    private IEnumerator TapTo(float target, int perFrame = TapsPerFrame)
     {
         int guard = 0;
         while (Mathf.Abs(layer.ScrollMultiplier - target) > 0.001f && guard++ < 100)
+        {
             scene.TestTapSpeedKey(target > layer.ScrollMultiplier);
+            if (guard % perFrame == 0) yield return null;
+        }
     }
 
     private float ExpectedSpeed(float multiplier) => ScrollSpeedRules.ScrollSpeed(gear.ScreenTopY - gear.JudgeLineY, multiplier);
@@ -160,7 +170,7 @@ public class ScrollSpeedPlayTests
         for (int i = 0; i < targets.Length; i++)
         {
             yield return WaitSongTime(firstNote + i * 1.0);
-            TapTo(targets[i]);
+            yield return TapTo(targets[i]);
             Assert.AreEqual(targets[i], layer.ScrollMultiplier, 1e-4f, "배속 바뀜");
             yield return null; // 다음 프레임 Refresh
 
@@ -209,7 +219,7 @@ public class ScrollSpeedPlayTests
         foreach (float target in new[] { 6f, 2f, 7.5f })
         {
             yield return WaitSongTime(SongTime + 0.25);
-            TapTo(target);
+            yield return TapTo(target, int.MaxValue); // 롱노트를 누르는 동안 끝나지 않게 한 프레임에
             yield return null;
             view = Get<LongNoteView[]>(layer, "longViewByNote")[0];
             float headCenter = view.HeadY; // 11/20: 몸통 아래 끝 = 머리 가운데
@@ -265,7 +275,7 @@ public class ScrollSpeedPlayTests
         yield return LoadInGame(normal);
         Img_JudgePanel panel = Get<Img_JudgePanel>(Get<Canvas_InGame>(scene, "canvas"), "judgePanel");
         Assert.AreEqual("0.00%", Get<TMPro.TMP_Text>(panel, "rate").text, "일반 플레이 시작: 판정 전 RATE 0%");
-        TapTo(3f);
+        yield return TapTo(3f, int.MaxValue);
         scene.GetType().GetMethod("Restart", Private).Invoke(scene, null);
         yield return null;
         yield return WaitInGameStarted();
@@ -275,7 +285,7 @@ public class ScrollSpeedPlayTests
         // ② 4.2로 바꾸고 결과로 → 다시 하기 데이터·곡 선택 데이터.
         // 자동 플레이로 켜서(기록·마지막 배속을 저장하지 않게) 곡이 끝날 때와 같은 Finish를 바로 부른다.
         // 테스트용 공식 채보(Critical Velocity EASY)는 곡 전체를 기다리면 약 2.5분이 걸린다.
-        TapTo(4.2f);
+        yield return TapTo(4.2f, int.MaxValue);
         Set(scene, "isAutoPlay", true);
         scene.GetType().GetMethod("Finish", Private).Invoke(scene, null);
         ResultScene resultScene = null;
@@ -314,7 +324,7 @@ public class ScrollSpeedPlayTests
         // ③ 테스트 플레이 (편집 상태 x1.0) → 6.6으로 바꿈 → 나가기(에디터) → 에디터 테스트 플레이 배속 칸
         EditorRestoreState restore = new EditorRestoreState { chart = DenseChart(), currentBeat = 0f, snapDivision = 4, gridHeightScale = 1f, tool = EditorTool.ShortNote };
         yield return LoadInGame(TestPlayEntry(restore.chart, false, 1f, restore));
-        TapTo(6.6f);
+        yield return TapTo(6.6f, int.MaxValue);
         scene.GetType().GetMethod("OnClickExit", Private).Invoke(scene, null);
         Canvas_Editor editorCanvas = null;
         deadline = TestSpeed.Deadline(20f);

@@ -7,7 +7,7 @@ using UnityEngine;
 /// 1. 판정 이펙트 R2 타이밍 값 (u = 0 / 0.05 / 0.10 / 0.20 / 0.38)
 /// 2. 이펙트를 터뜨릴 판정과 색 판정 (MISS 없음, 틱은 머리 판정, 꼬리는 꼬리 판정)
 /// 3. 2박 롱노트 하나의 이펙트 횟수 (틱 7 + 머리 + 꼬리 = 9), 중간에 떼면 틱 이펙트가 멈춤
-/// 4. 시작 키 글자 알파 (메트로놈 −4 / −2 / −1 / −0.5 / 0박, 중간 시작 0 / 1.0 / 1.25 / 1.5초, 다시 하기 0)
+/// 4. 시작 키 글자 안내 (11/20 수정): 글자 · 마름모 알파 표 (메트로놈 · 중간 시작 · 다시 하기), 둘이 같이 보이는 순간 0
 /// 5. JudgeSprites 세트 선택 (기어 Judge / 메뉴 JudgeMenu, 캐시 따로)
 /// 6. 노트 광택 · 꼬리 크기 (1080 기준 px)
 /// 7. 다시 하기 진입 데이터 (CloneForRetry)
@@ -229,43 +229,84 @@ public class NoteFxTests
         Debug.Log($"[NoteFxTest] 2박 롱노트 1.9초(0.9박)에 뗌: 이펙트 {fx}번, 뗀 뒤 {afterRelease}번");
     }
 
-    // ───── 4. 시작 키 글자 ─────
+    // ───── 4. 시작 키 글자 안내 ─────
 
-    /// <summary>120 BPM: −4박 = −2초, −1박 = −0.5초, 0박 = 0초</summary>
-    [TestCase(-4.0, 1f)]
-    [TestCase(-2.0, 1f)]
-    [TestCase(-1.0, 1f)]
-    [TestCase(-0.5, 0.5f)]
-    [TestCase(0.0, 0f)]
-    [TestCase(-4.2, 0f)]
-    public void KeyHint_WithCountIn(double beat, float expected)
+    /// <summary>120 BPM: −4박 = −2초, −1박 = −0.5초, −0.5박 = −0.25초, 0박 = 0초</summary>
+    private static KeyLabelHintRules.BeatTimes Beats120 => KeyLabelHintRules.BeatTimes.From(TimingMap.Single(120f, 0));
+
+    [TestCase(-4.5, 0f, 0f)]
+    [TestCase(-4.0, 1f, 0f)]
+    [TestCase(-2.0, 1f, 0f)]
+    [TestCase(-1.0, 1f, 0f)]
+    [TestCase(-0.75, 0.5f, 0f)]
+    [TestCase(-0.5, 0f, 0f)]
+    [TestCase(-0.25, 0f, 0.5f)]
+    [TestCase(0.0, 0f, 1f)]
+    [TestCase(1.0, 0f, 1f)]
+    public void KeyHint_WithCountIn(double beat, float label, float diamond)
     {
-        TimingMap timing = TimingMap.Single(120f, 0);
-        double t = timing.BeatToSeconds(beat);
-        float alpha = KeyLabelHintRules.GetAlpha(true, false, t, timing.BeatToSeconds(-4), timing.BeatToSeconds(-1), timing.BeatToSeconds(0), 99);
-        Assert.AreEqual(expected, alpha, 1e-4f, beat + "박");
-        Assert.AreEqual(0f, KeyLabelHintRules.GetAlpha(true, true, t, timing.BeatToSeconds(-4), timing.BeatToSeconds(-1), timing.BeatToSeconds(0), 99), "다시 하기는 0");
+        double t = TimingMap.Single(120f, 0).BeatToSeconds(beat);
+        KeyHintAlpha a = KeyLabelHintRules.GetAlpha(true, false, t, Beats120, 99);
+        Assert.AreEqual(label, a.Label, 1e-4f, beat + "박 글자");
+        Assert.AreEqual(diamond, a.Diamond, 1e-4f, beat + "박 마름모");
+        Assert.IsFalse(a.IsOverlapping, beat + "박 겹침 없음");
     }
 
-    [TestCase(0.0, 1f)]
-    [TestCase(1.0, 1f)]
-    [TestCase(1.25, 0.5f)]
-    [TestCase(1.5, 0f)]
-    [TestCase(3.0, 0f)]
-    public void KeyHint_WithoutCountIn(double elapsed, float expected)
+    [TestCase(0.0, 1f, 0f)]
+    [TestCase(0.5, 1f, 0f)]
+    [TestCase(1.0, 1f, 0f)]
+    [TestCase(1.125, 0.5f, 0f)]
+    [TestCase(1.25, 0f, 0f)]
+    [TestCase(1.375, 0f, 0.5f)]
+    [TestCase(1.5, 0f, 1f)]
+    [TestCase(2.0, 0f, 1f)]
+    public void KeyHint_WithoutCountIn(double elapsed, float label, float diamond)
     {
-        Assert.AreEqual(expected, KeyLabelHintRules.GetAlpha(false, false, 0, 0, 0, 0, elapsed), 1e-4f, elapsed + "초");
-        Assert.AreEqual(0f, KeyLabelHintRules.GetAlpha(false, true, 0, 0, 0, 0, elapsed), "다시 하기는 0");
+        KeyHintAlpha a = KeyLabelHintRules.GetAlpha(false, false, 0, default, elapsed);
+        Assert.AreEqual(label, a.Label, 1e-4f, elapsed + "초 글자");
+        Assert.AreEqual(diamond, a.Diamond, 1e-4f, elapsed + "초 마름모");
+    }
+
+    [Test]
+    public void KeyHint_Retry_DiamondOnlyFromStart()
+    {
+        foreach (bool countIn in new[] { true, false })
+        {
+            foreach (double t in new[] { 0.0, 1.0 })
+            {
+                KeyHintAlpha a = KeyLabelHintRules.GetAlpha(countIn, true, Beats120.Show + t, Beats120, t);
+                Assert.AreEqual(0f, a.Label, "다시 하기 글자 0");
+                Assert.AreEqual(1f, a.Diamond, "다시 하기 마름모 1");
+            }
+        }
+        Assert.AreEqual(KeyHintAlpha.DiamondOnly.Diamond, KeyLabelHintRules.Initial(true, true).Diamond);
+        Assert.AreEqual(0f, KeyLabelHintRules.Initial(true, false).Diamond, "메트로놈 판 시작: 둘 다 숨김");
+        Assert.AreEqual(0f, KeyLabelHintRules.Initial(true, false).Label);
+        Assert.AreEqual(1f, KeyLabelHintRules.Initial(false, false).Label, "중간 시작: 글자만");
+    }
+
+    /// <summary>어느 시점에도 글자 &gt; 0 이면서 마름모 &gt; 0인 순간이 없다 (1ms 간격으로 훑음)</summary>
+    [Test]
+    public void KeyHint_NeverOverlaps()
+    {
+        KeyLabelHintRules.BeatTimes beats = Beats120;
+        int checkedCount = 0;
+        for (double t = beats.Show - 1.0; t <= beats.End + 1.0; t += 0.001, checkedCount++)
+            Assert.IsFalse(KeyLabelHintRules.WithCountIn(t, beats).IsOverlapping, $"메트로놈 {t:0.000}초");
+        for (double e = -0.5; e <= 3.0; e += 0.001, checkedCount++)
+            Assert.IsFalse(KeyLabelHintRules.WithoutCountIn(e).IsOverlapping, $"중간 시작 {e:0.000}초");
+        Debug.Log($"[NoteFxTest] 키 글자 안내 겹침 검사 {checkedCount}개 시점: 0");
     }
 
     [Test]
     public void KeyHint_IsOver()
     {
-        Assert.IsTrue(KeyLabelHintRules.IsOver(true, true, -10, 0, 0), "다시 하기는 처음부터 끝");
-        Assert.IsFalse(KeyLabelHintRules.IsOver(true, false, -0.1, 0, 0));
-        Assert.IsTrue(KeyLabelHintRules.IsOver(true, false, 0, 0, 0));
-        Assert.IsFalse(KeyLabelHintRules.IsOver(false, false, 0, 0, 1.49));
-        Assert.IsTrue(KeyLabelHintRules.IsOver(false, false, 0, 0, 1.5));
+        KeyLabelHintRules.BeatTimes b = Beats120;
+        Assert.IsTrue(KeyLabelHintRules.IsOver(true, true, -10, b, 0), "다시 하기는 처음부터 끝");
+        Assert.IsFalse(KeyLabelHintRules.IsOver(true, false, -0.1, b, 0));
+        Assert.IsTrue(KeyLabelHintRules.IsOver(true, false, 0, b, 0));
+        Assert.IsFalse(KeyLabelHintRules.IsOver(false, false, 0, b, 1.49));
+        Assert.IsTrue(KeyLabelHintRules.IsOver(false, false, 0, b, 1.5));
     }
 
     // ───── 5. JudgeSprites 세트 ─────

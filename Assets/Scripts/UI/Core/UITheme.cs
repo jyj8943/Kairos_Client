@@ -201,8 +201,6 @@ public class UITheme : ScriptableObject
     public Color keyCellFramePressed = new Color32(0x3E, 0x9B, 0xE0, 0xFF);
     [Tooltip("키 칸 마름모 누를 때 채움 Key_Diamond (흰색, 평소는 라인 색 NoteColor)")]
     public Color keyDiamondPressed = Color.white;
-    [Tooltip("시작 키 글자 뒤 판 Key_LabelPlate (#17141F 88%)")]
-    public Color keyLabelPlate = new Color(0x17 / 255f, 0x14 / 255f, 0x1F / 255f, 0.88f);
     [Tooltip("누른 라인 빛 LaneGlow (하늘색, 알파 = 판정선 쪽 가장 진한 곳)")]
     public Color laneGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.55f);
 
