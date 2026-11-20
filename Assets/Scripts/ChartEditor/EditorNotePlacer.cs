@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 그리드 클릭·드래그로 노트를 추가·삭제한다. EditorScene.unity의 GridArea에 붙이고, EditorScene이 Init()을 호출한다.
@@ -14,6 +15,9 @@ using UnityEngine.EventSystems;
 /// - BPM 구간 도구: 노트를 찍지 않는다. 왼쪽 클릭 = 구간선 근처(bpmSectionPickPixels 안)면 그 구간, 아니면 스냅 위치로 추가·수정 요청,
 ///   오른쪽 클릭 = 구간선 근처면 삭제 요청. 실제 처리(창·확인 팝업)는 EditorScene이 맡는다.
 /// - 배치가 실패하면(너무 짧음, 겹침) 이유를 상태 표시줄에 잠깐 보여준다.
+/// - 마우스 미리 보기 (숏노트 · 롱노트 도구, 11/20): 매 프레임 커서 위치를 다시 보고(스크롤 · 줌으로 노트가 움직여도 맞게)
+///   노트 위면 흰 테두리, 빈 칸이면 놓을 자리 미리 보기를 EditorNoteLayer에 보여 달라고 한다. 노트 판정은 우클릭 삭제와 같은 TryFindNoteAt이다.
+///   그리드 밖 · BPM 구간 도구 · 재생 중 · 팝업 열림 · 드래그 중에는 둘 다 숨긴다.
 /// </summary>
 public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IPointerClickHandler
 {
@@ -28,6 +32,7 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     private EditorNoteLayer noteLayer;
     private Func<EditorTool> getCurrentTool;
     private Action<string> showMessage;
+    private Func<bool> isPlaying;
 
     // 왼쪽 버튼으로 누르고 있는 동안의 상태 (숏노트·롱노트 도구)
     private bool isPressing;
@@ -42,9 +47,11 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     /// <param name="showMessage">배치 실패 이유를 상태 표시줄에 잠깐 보여주는 함수</param>
     /// <param name="onBpmSectionClicked">BPM 구간 도구 왼쪽 클릭: 구간 tick(구간선 위) 또는 스냅 tick(빈 곳)</param>
     /// <param name="onBpmSectionRemoveRequested">BPM 구간 도구 오른쪽 클릭: 구간선 위면 그 구간 tick</param>
+    /// <param name="isPlaying">재생 중이면 true (마우스 미리 보기를 숨긴다)</param>
     public void Init(ChartGridView grid, ChartEditSession session, EditorNoteLayer noteLayer, Func<EditorTool> getCurrentTool, Action<string> showMessage,
-                     Action<int> onBpmSectionClicked, Action<int> onBpmSectionRemoveRequested)
+                     Action<int> onBpmSectionClicked, Action<int> onBpmSectionRemoveRequested, Func<bool> isPlaying)
     {
+        this.isPlaying = isPlaying;
         this.onBpmSectionClicked = onBpmSectionClicked;
         this.onBpmSectionRemoveRequested = onBpmSectionRemoveRequested;
         this.grid = grid;
@@ -59,6 +66,103 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
 
     /// <summary>왼쪽 버튼으로 누르고(드래그하고) 있는 중이면 true. 그동안은 실행 취소·다시 실행을 하지 않는다</summary>
     public bool IsPressing => isPressing;
+
+    /// <summary>테스트용 커서 화면 좌표. 값이 있으면 실제 마우스 대신 이 좌표로 마우스 미리 보기를 갱신한다.</summary>
+    public Vector2? PointerScreenOverride { get; set; }
+
+    /// <summary>지금 마우스 미리 보기 상태 (확인용)</summary>
+    public CursorPreviewState CursorState { get; private set; }
+
+    /// <summary>마우스 미리 보기 상태</summary>
+    public enum CursorPreviewState
+    {
+        /// <summary>아무것도 안 보임</summary>
+        Hidden,
+        /// <summary>빈 칸: 놓을 자리 미리 보기</summary>
+        Place,
+        /// <summary>노트 위: 흰 테두리</summary>
+        NoteHover
+    }
+
+    private void Update()
+    {
+        if (!IsReady || noteLayer == null) return;
+
+        Vector2? pointer = PointerScreenOverride;
+        if (!pointer.HasValue && Mouse.current != null) pointer = Mouse.current.position.ReadValue();
+        RefreshCursorPreview(pointer);
+    }
+
+    /// <summary>
+    /// 커서 화면 좌표로 마우스 미리 보기를 정한다 (매 프레임). 노트 위면 흰 테두리, 빈 칸이면 놓을 자리, 숨길 때는 둘 다 숨긴다.
+    /// </summary>
+    private void RefreshCursorPreview(Vector2? screenPoint)
+    {
+        EditorTool tool = getCurrentTool();
+        bool blocked = (tool != EditorTool.ShortNote && tool != EditorTool.LongNote)
+                       || isPressing
+                       || (isPlaying != null && isPlaying())
+                       || (UIManager.HasInstance && GameManager.UI.HasOpenPopup)
+                       || !screenPoint.HasValue;
+
+        if (!blocked && TryScreenToLocal(screenPoint.Value, out float x, out float y) && IsInsideGrid(x, y))
+        {
+            if (TryFindNoteAt(x, y, out EditorNote note))
+            {
+                noteLayer.ShowNoteHover(note);
+                CursorState = CursorPreviewState.NoteHover;
+                return;
+            }
+
+            int tick = BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision);
+            if (IsTickInSong(tick))
+            {
+                noteLayer.ShowPlacePreview(LaneAt(x), tick);
+                CursorState = CursorPreviewState.Place;
+                return;
+            }
+        }
+
+        noteLayer.HideCursorPreview();
+        CursorState = CursorPreviewState.Hidden;
+    }
+
+    /// <summary>
+    /// 그리드 로컬 좌표(왼쪽 아래 기준)에 있는 노트를 찾는다. 우클릭 삭제와 마우스 흰 테두리가 같이 쓴다 (테두리가 보이는 노트 = 우클릭하면 지워지는 노트).
+    /// 순서: 화면에 그려진 노트(EditorNoteLayer.TryFindNoteAtLocalY, 노트가 스냅 선 간격보다 커도 가장자리에서 찾게)
+    /// → 스냅 선 위치(숏노트를 누른 자리) → 가리킨 tick 그대로(롱노트 몸통 중간).
+    /// </summary>
+    public bool TryFindNoteAt(float x, float y, out EditorNote note)
+    {
+        note = default;
+        if (!IsReady || x < 0f || x >= grid.GridRect.rect.width) return false;
+
+        int lane = LaneAt(x);
+        if (noteLayer != null && noteLayer.TryFindNoteAtLocalY(lane, y, out note)) return true;
+
+        int snappedTick = BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision);
+        if (IsTickInSong(snappedTick) && session.Data.TryFindAt(lane, snappedTick, out note)) return true;
+
+        int rawTick = BeatGridMath.BeatToTick(grid.LocalYToBeat(y));
+        return IsTickInSong(rawTick) && session.Data.TryFindAt(lane, rawTick, out note);
+    }
+
+    /// <summary>화면 좌표로 TryFindNoteAt을 부른다 (확인용 · 테스트용)</summary>
+    public bool TryFindNoteAtScreen(Vector2 screenPoint, out EditorNote note)
+    {
+        note = default;
+        return IsReady && TryScreenToLocal(screenPoint, out float x, out float y) && TryFindNoteAt(x, y, out note);
+    }
+
+    private bool IsTickInSong(int tick) => tick >= 0 && tick <= session.Data.TotalTicks;
+
+    private int LaneAt(float x) => Mathf.Clamp(Mathf.FloorToInt(x / grid.LaneWidth), 0, GameConstants.Editor.LaneCount - 1);
+
+    private bool IsInsideGrid(float x, float y)
+    {
+        Rect rect = grid.GridRect.rect;
+        return x >= 0f && x < rect.width && y >= 0f && y < rect.height;
+    }
 
     public void OnPointerDown(PointerEventData eventData)
     {
@@ -129,16 +233,9 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
 
         if (eventData.button != PointerEventData.InputButton.Right) return;
 
-        // 화면에 그려진 노트를 먼저 본다 (노트가 스냅 선 간격보다 커도 가장자리를 누르면 그 노트가 지워지게)
-        if (noteLayer != null && TryGetLocalPoint(eventData, out float x, out float y) && x >= 0f && x < grid.GridRect.rect.width)
-        {
-            int pointLane = Mathf.Clamp(Mathf.FloorToInt(x / grid.LaneWidth), 0, GameConstants.Editor.LaneCount - 1);
-            if (noteLayer.TryFindNoteAtLocalY(pointLane, y, out EditorNote drawn) && session.RemoveNote(pointLane, drawn.Tick)) return;
-        }
-
-        // 그 밖에는 스냅 선 위치(숏노트를 누른 자리)를 보고, 없으면 가리킨 tick 그대로(롱노트 몸통 중간) 본다
-        if (TryGetGridPosition(eventData, out int lane, out int snappedTick) && session.RemoveNote(lane, snappedTick)) return;
-        if (TryGetGridPosition(eventData, out lane, out int rawTick, false)) session.RemoveNote(lane, rawTick);
+        // 마우스 흰 테두리와 같은 함수로 찾는다 (그려진 노트 → 스냅 선 → 가리킨 tick)
+        if (TryGetLocalPoint(eventData, out float x, out float y) && TryFindNoteAt(x, y, out EditorNote note))
+            session.RemoveNote(note.Lane, note.Tick);
     }
 
     /// <summary>
@@ -184,6 +281,8 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     private void OnDisable()
     {
         CancelPress();
+        if (noteLayer != null) noteLayer.HideCursorPreview();
+        CursorState = CursorPreviewState.Hidden;
     }
 
     /// <summary>누르고 있던 상태와 미리보기를 지운다.</summary>
@@ -236,14 +335,28 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
         return true;
     }
 
-    /// <summary>화면 좌표를 그리드 왼쪽 아래 기준 좌표로 바꾼다.</summary>
+    /// <summary>포인터 이벤트 위치를 그리드 왼쪽 아래 기준 좌표로 바꾼다.</summary>
     private bool TryGetLocalPoint(PointerEventData eventData, out float x, out float y)
+    {
+        Camera eventCamera = eventData.pressEventCamera != null ? eventData.pressEventCamera : eventData.enterEventCamera;
+        return TryScreenToLocal(eventData.position, eventCamera, out x, out y);
+    }
+
+    /// <summary>화면 좌표를 그리드 왼쪽 아래 기준 좌표로 바꾼다 (카메라는 그리드가 속한 Canvas에서 고른다).</summary>
+    private bool TryScreenToLocal(Vector2 screenPoint, out float x, out float y)
+    {
+        Canvas canvas = grid.GridRect.GetComponentInParent<Canvas>();
+        Canvas root = canvas != null ? canvas.rootCanvas : null;
+        Camera eventCamera = root != null && root.renderMode != RenderMode.ScreenSpaceOverlay ? root.worldCamera : null;
+        return TryScreenToLocal(screenPoint, eventCamera, out x, out y);
+    }
+
+    private bool TryScreenToLocal(Vector2 screenPoint, Camera eventCamera, out float x, out float y)
     {
         x = 0f;
         y = 0f;
         RectTransform gridRect = grid.GridRect;
-        Camera eventCamera = eventData.pressEventCamera != null ? eventData.pressEventCamera : eventData.enterEventCamera;
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(gridRect, eventData.position, eventCamera, out Vector2 local))
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(gridRect, screenPoint, eventCamera, out Vector2 local))
             return false;
 
         // 피벗 기준 좌표를 그리드 왼쪽 아래 기준으로 바꾼다

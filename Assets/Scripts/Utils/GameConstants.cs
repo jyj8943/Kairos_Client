@@ -351,17 +351,6 @@ public static class GameConstants
 
         /// <summary>결과 화면 신기록 표시 (기획서 3-5 ③, SCORE · RATE · MAX COMBO 각각 옆)</summary>
         public const string NewRecordText = "NEW RECORD";
-
-        /// <summary>
-        /// 에디터 노트의 라인별 색 (A · S · ; · ' 순서, Img_ShortNote·Img_LongNote). 인게임 노트 색은 UITheme 인게임 묶음.
-        /// </summary>
-        public static readonly Color32[] LaneColors =
-        {
-            new Color32(0x6E, 0xC8, 0xF5, 0xFF),
-            new Color32(0xFF, 0xFF, 0xFF, 0xFF),
-            new Color32(0xFF, 0xFF, 0xFF, 0xFF),
-            new Color32(0x6E, 0xC8, 0xF5, 0xFF)
-        };
     }
 
     /// <summary>타이틀 화면 (기획서 3-2, 11/17 개편)</summary>
@@ -1370,11 +1359,30 @@ public static class GameConstants
         public const string BpmResetDoneMessage = "곡 기본 BPM으로 되돌렸습니다";
 
 
-        /// <summary>롱노트 드래그 미리보기의 불투명도 (0~1)</summary>
-        public const float LongNotePreviewAlpha = 0.45f;
+        /// <summary>에디터 롱노트 몸통 폭 = 라인 폭 × 이 비율 (인게임 몸통 76px ÷ 라인 108px ≈ 0.70, 11/20)</summary>
+        public const float EditorLongBodyWidthRatio = 0.70f;
 
-        /// <summary>에디터 롱노트 몸통 불투명도 (라인 색에 곱한다). 머리·꼬리는 불투명, 몸통은 뒤 그리드 선이 비쳐 보이게 한다</summary>
-        public const float LongNoteBodyAlpha = 0.45f;
+        /// <summary>에디터 롱노트 꼬리 끝 막대 (에디터만): 몸통 폭 × 높이 6px, 모서리 3px, 끝 틱에 가운데</summary>
+        public const float EditorLongTailBarHeightPx = 6f;
+        public const float EditorLongTailBarRadiusPx = 3f;
+
+        /// <summary>
+        /// 커서가 올라간 노트 흰 테두리 Img_NoteHover: 노트 둘레 3px 바깥에 2px 선, 모서리 6px.
+        /// 테두리 스프라이트 RoundedRect8Frame(선 2px · 모서리 8px)를 배율 1로 쓰므로 실제 모서리는 8px다 (모서리 6px 스프라이트가 없음).
+        /// </summary>
+        public const float NoteHoverPaddingPx = 3f;
+        public const float NoteHoverBorderPx = 2f;
+        public const float NoteHoverRadiusPx = 6f;
+
+        /// <summary>
+        /// 에디터 노트 스프라이트(ShortNote · ShortNote_Shine, 128 PPU)의 Image.pixelsPerUnitMultiplier.
+        /// 1이면 9-slice 위아래 테두리가 노트 높이에서 차지하는 비율이 인게임과 같다:
+        /// 인게임 10px ÷ 128 PPU ÷ (10 ÷ 1080) = 8.44px / 노트 23.76px = 0.355, 에디터 10px × 100 ÷ 128 = 7.81px / 노트 22px = 0.355.
+        /// </summary>
+        public const float NoteSpritePixelsPerUnitMultiplier = 1f;
+
+        /// <summary>놓을 자리 미리 보기 점선(DashedRect12, 모서리 12px)의 pixelsPerUnitMultiplier. 2면 모서리 6px로 노트 높이 안에 들어간다</summary>
+        public const float PlacePreviewDashPixelsPerUnitMultiplier = 2f;
 
         /// <summary>도구 패널 "테스트 플레이 배속" 칸(Txt_Speed): {0} 배속 (버튼으로만 바꾼다, 단축키 없음)</summary>
         public const string TestPlaySpeedFormat = "x{0:0.0}";

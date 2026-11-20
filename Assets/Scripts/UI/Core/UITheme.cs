@@ -284,12 +284,17 @@ public class UITheme : ScriptableObject
     public Color editorGridBackground = new Color32(0x17, 0x14, 0x1F, 0xFF);
     [Tooltip("곡 시작 전(마디 1 아래) 빗금 (흰 4%)")]
     public Color editorGridHatch = new Color(1f, 1f, 1f, 0.04f);
-    [Tooltip("숏노트 · 롱노트 머리 (인게임 노트와 같은 #F4F1F9)")]
-    public Color editorNote = new Color32(0xF4, 0xF1, 0xF9, 0xFF);
-    [Tooltip("롱노트 몸통 불투명도 (노트 색 × 이 알파, 35%)")]
-    [Range(0f, 1f)] public float editorLongNoteBodyAlpha = 0.35f;
-    [Tooltip("놓을 자리 미리 보기 테두리 (하늘)")]
+    // 에디터 노트 색은 인게임 노트 색(NoteColor(lane) · noteShine · longNote*)을 같이 쓴다 (11/20)
+    [Tooltip("놓을 자리 미리 보기 · 롱노트 드래그 미리 보기 (하늘)")]
     public Color editorPreview = new Color32(0x7D, 0xD3, 0xFC, 0xFF);
+    [Tooltip("놓을 자리 미리 보기 채움 불투명도 (하늘 × 15%, 테두리는 하늘 점선)")]
+    [Range(0f, 1f)] public float editorPlaceFillAlpha = 0.15f;
+    [Tooltip("롱노트 드래그 미리 보기 몸통 채움 불투명도 (하늘 × 22%, 테두리는 하늘 2px)")]
+    [Range(0f, 1f)] public float editorPreviewFillAlpha = 0.22f;
+    [Tooltip("롱노트 드래그 미리 보기 머리 · 꼬리 끝 막대 불투명도 (하늘 × 55%)")]
+    [Range(0f, 1f)] public float editorPreviewPartAlpha = 0.55f;
+    [Tooltip("커서가 올라간 노트 흰 테두리 Img_NoteHover (흰색)")]
+    public Color editorNoteHover = Color.white;
     public GridLineStyle editorLineMeasure = new GridLineStyle(new Color(1f, 1f, 1f, 0.70f), 2f);
     public GridLineStyle editorLineBeat = new GridLineStyle(new Color(0xFF / 255f, 0x7A / 255f, 0xC6 / 255f, 0.50f), 1f);
     [Tooltip("8분 (1박의 1/2)")]

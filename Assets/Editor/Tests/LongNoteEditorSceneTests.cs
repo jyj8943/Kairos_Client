@@ -321,7 +321,7 @@ public class LongNoteEditorSceneTests
         Assert.Less(maxErrorMs, 1.0);
     }
 
-    /// <summary>E7: 롱노트 머리·꼬리 아래·위 y = 시작·끝 틱 숏노트 아래·위 y</summary>
+    /// <summary>E7: 롱노트 머리 가운데 = 시작 틱 y (숏노트와 같은 자리), 꼬리 끝 막대 가운데 = 끝 틱 y (높이 6, 폭 = 몸통 폭), 몸통 = 시작 y ~ 끝 y</summary>
     [UnityTest]
     public IEnumerator E7_HeadTailPosition()
     {
@@ -341,20 +341,269 @@ public class LongNoteEditorSceneTests
             float endY = grid.BeatToLocalY(BeatGridMath.TickToBeat(note.EndTick));
             Vector2 head = Edges(view.HeadRect, view.RectTransform);
             Vector2 tail = Edges(view.TailRect, view.RectTransform);
+            float barHalf = GameConstants.Editor.EditorLongTailBarHeightPx * 0.5f;
             Debug.Log($"[LongNoteEditorTest] E7 라인{note.Lane} {note.Tick / (float)T}~{note.EndTick / (float)T}박: 머리 {head.x:0.00}~{head.y:0.00} / 시작 숏노트 {startY - half:0.00}~{startY + half:0.00}, " +
-                      $"꼬리 {tail.x:0.00}~{tail.y:0.00} / 끝 숏노트 {endY - half:0.00}~{endY + half:0.00}");
+                      $"꼬리 막대 {tail.x:0.00}~{tail.y:0.00} / 끝 y {endY:0.00} ± {barHalf}, 몸통 {view.RectTransform.anchoredPosition.y:0.00} + {view.RectTransform.rect.height:0.00}");
 
-            Assert.AreEqual(startY - half, head.x, 0.01);
-            Assert.AreEqual(startY + half, head.y, 0.01);
-            Assert.AreEqual(endY - half, tail.x, 0.01);
-            Assert.AreEqual(endY + half, tail.y, 0.01);
+            Assert.AreEqual(startY - half, head.x, 0.01, "머리 아래 = 시작 숏노트 아래");
+            Assert.AreEqual(startY + half, head.y, 0.01, "머리 위 = 시작 숏노트 위");
+            Assert.AreEqual(endY - barHalf, tail.x, 0.01, "막대 아래");
+            Assert.AreEqual(endY + barHalf, tail.y, 0.01, "막대 위");
+            Assert.AreEqual(startY, view.RectTransform.anchoredPosition.y, 0.01, "몸통 아래 = 머리 가운데");
+            Assert.AreEqual(endY - startY, view.RectTransform.rect.height, 0.01, "몸통 위 = 끝 틱");
+            Assert.AreEqual(view.RectTransform.rect.width, view.TailRect.rect.width, 0.01, "막대 폭 = 몸통 폭");
         }
+    }
+
+    /// <summary>
+    /// E8: 라인 0~3 숏노트 · 롱노트 색이 인게임 라인 색과 같다 (바깥 라벤더, 안쪽 하늘). 광택 · 가운데 선 · 몸통 알파 · 몸통 폭 · 9-slice 배율도 본다.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator E8_NoteLooksLikeInGame()
+    {
+        canvas.SetTool(EditorTool.ShortNote);
+        for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++) Click(lane, 4f);
+        canvas.SetTool(EditorTool.LongNote);
+        for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++) Drag(lane, 5f, 7f);
+        yield return null;
+        grid.SetCurrentBeat(4f);
+        yield return null;
+
+        UITheme theme = UITheme.Current;
+        System.Text.StringBuilder log = new System.Text.StringBuilder("[LongNoteEditorTest] E8 라인별 색\n| 라인 | 숏노트 | 롱노트 머리 | 몸통 | 꼬리 막대 |\n|---|---|---|---|---|\n");
+        foreach (Img_ShortNote view in noteLayer.GetComponentsInChildren<Img_ShortNote>(false))
+        {
+            int lane = Mathf.FloorToInt(view.RectTransform.anchoredPosition.x / grid.LaneWidth);
+            Assert.AreEqual(theme.NoteColor(lane), view.Body.color, "숏노트 라인 색 " + lane);
+            Assert.AreEqual(theme.noteShine, view.Shine.color, "광택 흰색");
+            Assert.AreEqual(GameConstants.Editor.NoteSpritePixelsPerUnitMultiplier, view.Body.pixelsPerUnitMultiplier);
+            Vector2 size = view.RectTransform.sizeDelta;
+            Assert.AreEqual(size.x - 6f, view.Shine.rectTransform.rect.width, 0.01, "광택 폭 = 노트 폭 − 6");
+            Assert.AreEqual(4f, view.Shine.rectTransform.rect.height, 0.01, "광택 두께 4");
+            Assert.AreEqual(size.y * 0.5f - 2f, view.Shine.rectTransform.anchoredPosition.y + 2f, 0.01, "광택 위 끝 = 노트 위 끝 − 2");
+        }
+
+        float expectedBody = grid.LaneWidth * GameConstants.Editor.EditorLongBodyWidthRatio;
+        string[] rows = new string[GameConstants.Editor.LaneCount];
+        foreach (EditorNote note in session.Data.Notes)
+        {
+            if (!note.IsLong) continue;
+            Img_LongNote view = FindView(note);
+            Assert.IsNotNull(view);
+            Color line = theme.NoteColor(note.Lane);
+            Assert.AreEqual(line, view.HeadColor, "머리 라인 색");
+            Assert.AreEqual(line, view.TailColor, "꼬리 막대 라인 색 100%");
+            Assert.AreEqual(line, view.BodyColor, "몸통 라인 색 (알파는 효과)");
+            view.BodyAlpha.GetEdgeAlphas(out float bottom, out float top);
+            Assert.AreEqual(0.70f, bottom, 1e-4f, "몸통 아래 70%");
+            Assert.AreEqual(0.45f, top, 1e-4f, "몸통 위 45%");
+            Assert.AreEqual(expectedBody, view.RectTransform.rect.width, 0.01, "몸통 폭 = W × 0.70");
+            Assert.AreEqual(2f, view.CenterLine.rectTransform.rect.width, 0.01, "가운데 선 2px");
+            Assert.AreEqual(view.RectTransform.rect.height, view.CenterLine.rectTransform.rect.height, 0.01, "가운데 선 = 몸통 길이");
+            Assert.AreEqual(theme.longNoteCenterLine, view.CenterLine.color);
+            Assert.IsFalse(view.BodyFrame.enabled, "미리 보기 테두리는 꺼짐");
+            Assert.IsNull(view.GetComponent<Outline>(), "몸통 Outline 없음");
+            Assert.AreEqual(theme.noteShine, view.HeadShine.color, "머리 광택 흰색");
+            rows[note.Lane] = $"머리 {Hex(view.HeadColor)} | 몸통 {Hex(view.BodyColor)} 위 {top:0.00}/아래 {bottom:0.00} 폭 {view.RectTransform.rect.width:0.0} | 막대 {Hex(view.TailColor)} {view.TailRect.rect.width:0.0}×{view.TailRect.rect.height:0.0}";
+        }
+        for (int lane = 0; lane < rows.Length; lane++) log.Append($"| {lane} | {Hex(theme.NoteColor(lane))} | {rows[lane]} |\n");
+        Debug.Log(log.ToString());
+    }
+
+    private static string Hex(Color c) => "#" + ColorUtility.ToHtmlStringRGBA(c);
+
+    /// <summary>
+    /// E9: 마우스 미리 보기. 빈 칸 = 놓을 자리(점선), 숏노트 · 롱노트 머리 · 몸통 · 꼬리 막대 위 = 흰 테두리(롱노트는 전체).
+    /// 흰 테두리 노트 = 같은 자리 우클릭으로 지워지는 노트, 흰 테두리와 점선이 같이 보이는 프레임 0.
+    /// BPM 구간 도구 · 드래그 중 · 팝업 · 재생 중에는 둘 다 숨김.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator E9_MouseHover()
+    {
+        canvas.SetTool(EditorTool.ShortNote);
+        Click(1, 4f);
+        canvas.SetTool(EditorTool.LongNote);
+        Drag(2, 4f, 6f);
+        canvas.SetTool(EditorTool.ShortNote);
+        yield return null;
+        grid.SetCurrentBeat(3f);
+        yield return null;
+
+        float barTopBeat = 6f;
+        var cases = new (string name, int lane, float beat, float yOffset, bool expectNote, int expectLane)[]
+        {
+            ("빈 칸", 0, 8f, 0f, false, -1),
+            ("숏노트", 1, 4f, 0f, true, 1),
+            ("롱노트 머리", 2, 4f, -5f, true, 2),
+            ("롱노트 몸통", 2, 5f, 0f, true, 2),
+            ("롱노트 꼬리 막대", 2, barTopBeat, 2f, true, 2),
+        };
+
+        int bothVisibleFrames = 0;
+        System.Text.StringBuilder log = new System.Text.StringBuilder("[LongNoteEditorTest] E9 마우스 미리 보기\n| 커서 | 상태 | 점선 | 흰 테두리 | 테두리 Rect | 같은 자리 우클릭 노트 |\n|---|---|---|---|---|---|\n");
+        foreach (var c in cases)
+        {
+            Vector2 screen = ScreenPoint(c.lane, c.beat) + new Vector2(0f, c.yOffset * ScreenPerLocal());
+            placer.PointerScreenOverride = screen;
+            yield return null;
+            if (noteLayer.IsNoteHoverVisible && noteLayer.IsPlacePreviewVisible) bothVisibleFrames++;
+
+            bool deletable = placer.TryFindNoteAtScreen(screen, out EditorNote deleteTarget);
+            bool hovering = noteLayer.TryGetHoverNote(out EditorNote hoverNote);
+            Rect hoverRect = noteLayer.NoteHover.rectTransform.rect;
+            Vector2 hoverPos = noteLayer.NoteHover.rectTransform.anchoredPosition;
+            log.Append($"| {c.name} | {placer.CursorState} | {noteLayer.IsPlacePreviewVisible} | {noteLayer.IsNoteHoverVisible} | " +
+                       (hovering ? $"x {hoverPos.x:0.0} y {hoverPos.y:0.0} {hoverRect.width:0.0}×{hoverRect.height:0.0}" : "-") +
+                       $" | {(deletable ? $"라인{deleteTarget.Lane} tick {deleteTarget.Tick}" : "없음")} |\n");
+
+            Assert.AreEqual(c.expectNote, noteLayer.IsNoteHoverVisible, c.name + " 흰 테두리");
+            Assert.AreEqual(!c.expectNote, noteLayer.IsPlacePreviewVisible, c.name + " 점선");
+            Assert.AreEqual(deletable, hovering, c.name + " 흰 테두리 유무 = 우클릭 대상 유무");
+            if (!c.expectNote) continue;
+
+            Assert.AreEqual(c.expectLane, hoverNote.Lane);
+            Assert.AreEqual(deleteTarget.Tick, hoverNote.Tick, c.name + " 흰 테두리 노트 = 우클릭 대상");
+            Rect expected = EditorNoteLayer.HoverRect(noteLayer.GetNoteRect(hoverNote));
+            Assert.AreEqual(expected.position.x, hoverPos.x, 0.01);
+            Assert.AreEqual(expected.position.y, hoverPos.y, 0.01);
+            Assert.AreEqual(expected.height, hoverRect.height, 0.01, c.name + " 테두리가 노트 전체를 감쌈");
+        }
+
+        // 스크롤로 노트가 커서 밑으로 와도 갱신된다 (커서 고정)
+        grid.SetCurrentBeat(7f);
+        yield return null;
+        Vector2 fixedPoint = ScreenPoint(1, 8f);
+        placer.PointerScreenOverride = fixedPoint;
+        yield return null;
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.Place, placer.CursorState, "스크롤 전: 8박 빈 칸");
+        grid.SetCurrentBeat(3f);
+        yield return null;
+        log.Append($"커서 고정, 현재 위치 7박 → 3박 스크롤: 상태 {placer.CursorState} (4박 숏노트가 커서 밑으로)\n");
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.NoteHover, placer.CursorState, "스크롤 뒤 커서 밑 노트를 다시 찾음");
+        Assert.IsTrue(noteLayer.TryGetHoverNote(out EditorNote scrolled) && scrolled.Lane == 1 && scrolled.Tick == T * 4);
+
+        // 우클릭으로 지운 노트 = 흰 테두리 노트 (롱노트 몸통)
+        Vector2 bodyPoint = ScreenPoint(2, 5f);
+        placer.PointerScreenOverride = bodyPoint;
+        yield return null;
+        Assert.IsTrue(noteLayer.TryGetHoverNote(out EditorNote before));
+        ExecuteEvents.Execute(placer.gameObject, Pointer(bodyPoint, PointerEventData.InputButton.Right), ExecuteEvents.pointerClickHandler);
+        Assert.IsFalse(session.Data.TryFindAt(before.Lane, before.Tick, out _), "흰 테두리 롱노트가 지워짐");
+        Assert.IsTrue(TryFind(1, T * 4, out _), "다른 노트는 남음");
+        session.Undo();
+        yield return null;
+
+        // 숨기는 경우
+        placer.PointerScreenOverride = ScreenPoint(1, 4f);
+        canvas.SetTool(EditorTool.BpmSection);
+        yield return null;
+        log.Append($"BPM 구간 도구: {placer.CursorState}\n");
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.Hidden, placer.CursorState, "BPM 구간 도구");
+        Assert.IsFalse(noteLayer.IsNoteHoverVisible || noteLayer.IsPlacePreviewVisible);
+        canvas.SetTool(EditorTool.ShortNote);
+        yield return null;
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.NoteHover, placer.CursorState);
+
+        ExecuteEvents.Execute(placer.gameObject, Pointer(ScreenPoint(0, 8f), PointerEventData.InputButton.Left), ExecuteEvents.pointerDownHandler);
+        yield return null;
+        log.Append($"드래그 중: {placer.CursorState}\n");
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.Hidden, placer.CursorState, "드래그 중");
+        Assert.IsFalse(noteLayer.IsNoteHoverVisible || noteLayer.IsPlacePreviewVisible);
+        ExecuteEvents.Execute(placer.gameObject, Pointer(ScreenPoint(0, 8f), PointerEventData.InputButton.Left), ExecuteEvents.pointerUpHandler);
+        session.Undo();
+        yield return null;
+
+        Assert.IsTrue(GameManager.UI.Confirm("테스트", "확인", () => { }));
+        yield return null;
+        log.Append($"팝업 열림: {placer.CursorState}\n");
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.Hidden, placer.CursorState, "팝업 열림");
+        Assert.IsFalse(noteLayer.IsNoteHoverVisible || noteLayer.IsPlacePreviewVisible);
+        GameManager.UI.CloseAllPopups();
+        yield return null;
+
+        EditorPlayback playback = Object.FindFirstObjectByType<EditorPlayback>();
+        playback.Play();
+        yield return null;
+        log.Append($"재생 중: {placer.CursorState}\n");
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.Hidden, placer.CursorState, "재생 중");
+        Assert.IsFalse(noteLayer.IsNoteHoverVisible || noteLayer.IsPlacePreviewVisible);
+        playback.Stop(false);
+        yield return null;
+
+        placer.PointerScreenOverride = new Vector2(-1000f, -1000f);
+        yield return null;
+        Assert.AreEqual(EditorNotePlacer.CursorPreviewState.Hidden, placer.CursorState, "그리드 밖");
+        placer.PointerScreenOverride = null;
+
+        log.Append($"흰 테두리 · 점선 동시 프레임 {bothVisibleFrames}");
+        Debug.Log(log.ToString());
+        Assert.AreEqual(0, bothVisibleFrames);
+    }
+
+    /// <summary>
+    /// E10: 롱노트 드래그 미리 보기 모양 · 알파 (몸통 W × 0.70, 하늘 22% + 하늘 테두리 2px, 머리 · 꼬리 막대 하늘 55%).
+    /// 시작 = 끝(롱노트 도구에서 누르기만 함)이면 몸통 높이 0, 막대는 머리 뒤.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator E10_DragPreview()
+    {
+        canvas.SetTool(EditorTool.LongNote);
+        grid.SetCurrentBeat(3f);
+        yield return null;
+        GameObject target = placer.gameObject;
+        ExecuteEvents.Execute(target, Pointer(ScreenPoint(3, 4f), PointerEventData.InputButton.Left), ExecuteEvents.pointerDownHandler);
+        yield return null;
+
+        UITheme theme = UITheme.Current;
+        Img_LongNote preview = noteLayer.Preview;
+        Assert.IsTrue(preview.gameObject.activeSelf);
+        float zeroHeight = preview.RectTransform.rect.height;
+        Vector2 head0 = Edges(preview.HeadRect, preview.RectTransform);
+        Vector2 tail0 = Edges(preview.TailRect, preview.RectTransform);
+        Debug.Log($"[LongNoteEditorTest] E10 길이 0 미리 보기: 몸통 높이 {zeroHeight:0.00}, 머리 {head0.x:0.00}~{head0.y:0.00}, 막대 {tail0.x:0.00}~{tail0.y:0.00} (막대가 머리 안, 머리가 뒤 형제라 앞에 그림)");
+        Assert.AreEqual(0f, zeroHeight, 0.01);
+        Assert.Greater(preview.HeadRect.GetSiblingIndex(), preview.TailRect.GetSiblingIndex(), "머리가 막대보다 앞");
+
+        ExecuteEvents.Execute(target, Pointer(ScreenPoint(3, 6f), PointerEventData.InputButton.Left), ExecuteEvents.dragHandler);
+        yield return null;
+
+        preview.BodyAlpha.GetEdgeAlphas(out float bottom, out float top);
+        Color part = UITheme.WithAlpha(theme.editorPreview, 0.55f);
+        string info = $"몸통 폭 {preview.RectTransform.rect.width:0.0} (W×0.70 = {grid.LaneWidth * 0.7f:0.0}), 높이 {preview.RectTransform.rect.height:0.0}, " +
+                      $"채움 {Hex(preview.BodyColor)} 알파 위 {top:0.00}/아래 {bottom:0.00}, 테두리 {Hex(preview.BodyFrame.color)} {preview.BodyFrame.Thickness}px, " +
+                      $"머리 {Hex(preview.HeadColor)}, 막대 {Hex(preview.TailColor)}, 가운데 선 {(preview.CenterLine.enabled ? "보임" : "없음")}";
+        Debug.Log("[LongNoteEditorTest] E10 드래그 미리 보기: " + info);
+
+        Assert.AreEqual(grid.LaneWidth * 0.7f, preview.RectTransform.rect.width, 0.01);
+        Assert.AreEqual(grid.BeatToLocalY(6f) - grid.BeatToLocalY(4f), preview.RectTransform.rect.height, 0.01, "머리 가운데 ~ 끝");
+        Assert.AreEqual(theme.editorPreview, preview.BodyColor);
+        Assert.AreEqual(0.22f, bottom, 1e-4f);
+        Assert.AreEqual(0.22f, top, 1e-4f);
+        Assert.IsTrue(preview.BodyFrame.enabled);
+        Assert.AreEqual(2f, preview.BodyFrame.Thickness);
+        Assert.AreEqual(theme.editorPreview, preview.BodyFrame.color);
+        Assert.AreEqual(part, preview.HeadColor, "머리 하늘 55%");
+        Assert.AreEqual(part, preview.TailColor, "막대 하늘 55%");
+        Assert.IsFalse(noteLayer.IsNoteHoverVisible, "드래그 중 흰 테두리 없음");
+
+        PointerEventData up = Pointer(ScreenPoint(3, 6f), PointerEventData.InputButton.Left);
+        ExecuteEvents.Execute(target, up, ExecuteEvents.pointerUpHandler);
+        yield return null;
+        Img_LongNote placed = FindView(new EditorNote(3, T * 4, T * 6));
+        Assert.IsNotNull(placed);
+        Assert.AreEqual(theme.NoteColor(3), placed.HeadColor, "놓은 뒤 라인 색");
+    }
+
+    /// <summary>그리드 로컬 1px의 화면 px</summary>
+    private float ScreenPerLocal()
+    {
+        return Mathf.Abs(ScreenPoint(0, 1f).y - ScreenPoint(0, 0f).y) / Mathf.Abs(grid.BeatToLocalY(1f) - grid.BeatToLocalY(0f));
     }
 
     private Img_LongNote FindView(EditorNote note)
     {
         float x = (note.Lane + 0.5f) * grid.LaneWidth;
-        float bottom = grid.BeatToLocalY(BeatGridMath.TickToBeat(note.Tick)) - noteLayer.NoteHeight * 0.5f;
+        float bottom = grid.BeatToLocalY(BeatGridMath.TickToBeat(note.Tick));
         foreach (Img_LongNote view in noteLayer.GetComponentsInChildren<Img_LongNote>(false))
         {
             RectTransform rect = view.RectTransform;

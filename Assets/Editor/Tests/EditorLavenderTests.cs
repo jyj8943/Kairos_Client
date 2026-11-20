@@ -71,7 +71,12 @@ public class EditorLavenderTests
             AssertRgba(Hex("FFB45C", 1f), target.editorAmberLight, who + " 밝은 호박");
             AssertRgba(Hex("17141F", 1f), target.editorGridBackground, who + " 그리드 바탕");
             AssertRgba(new Color(1f, 1f, 1f, 0.04f), target.editorGridHatch, who + " 곡 시작 전 빗금");
-            AssertRgba(Hex("F4F1F9", 1f), target.editorNote, who + " 노트");
+            // 에디터 노트 색은 인게임 노트 색(NoteColor)을 같이 쓴다 (11/20). 미리 보기 · 흰 테두리 값만 에디터 묶음에 있다
+            AssertRgba(Hex("7DD3FC", 1f), target.editorPreview, who + " 미리 보기 하늘");
+            Assert.AreEqual(0.15f, target.editorPlaceFillAlpha, 1e-4f, who + " 놓을 자리 채움 15%");
+            Assert.AreEqual(0.22f, target.editorPreviewFillAlpha, 1e-4f, who + " 드래그 미리 보기 채움 22%");
+            Assert.AreEqual(0.55f, target.editorPreviewPartAlpha, 1e-4f, who + " 드래그 미리 보기 머리 · 꼬리 55%");
+            AssertRgba(Color.white, target.editorNoteHover, who + " 흰 테두리");
             AssertRgba(Hex("FF5FB4", 1f), target.editorCurrentLineStart, who + " 현재 위치 선 왼쪽");
             AssertRgba(Hex("9B6BFF", 1f), target.editorCurrentLineEnd, who + " 현재 위치 선 오른쪽");
             AssertRgba(Color.white, target.editorCurrentLineFlash, who + " 반짝임 흰색");

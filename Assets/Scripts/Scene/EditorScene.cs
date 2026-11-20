@@ -114,7 +114,8 @@ public class EditorScene : SceneBase
 
         noteLayer.Init(grid, session);
         bpmSectionLayer.Init(grid, session);
-        notePlacer.Init(grid, session, noteLayer, () => canvas.CurrentTool, ShowTimedStatus, OnBpmSectionClicked, OnBpmSectionRemoveRequested);
+        notePlacer.Init(grid, session, noteLayer, () => canvas.CurrentTool, ShowTimedStatus, OnBpmSectionClicked, OnBpmSectionRemoveRequested,
+                        () => playback.IsPlaying);
         canvas.Init(grid, session, song, OnSaveRequested, OnExitRequested, OnTestPlayRequested, OnAutoTestPlayRequested);
 
         // 재생은 정지 상태로 시작한다 (테스트 플레이에서 돌아온 경우도)
