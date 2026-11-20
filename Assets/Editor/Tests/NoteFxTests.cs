@@ -298,7 +298,7 @@ public class NoteFxTests
     // ───── 6. 노트 모양 ─────
 
     [Test]
-    public void NoteShape_ShineAndTail()
+    public void NoteShape_Shine()
     {
         float px = 10f / 1080f;
         Vector2 note = new Vector2(0.94f, 0.22f);
@@ -307,8 +307,47 @@ public class NoteFxTests
         Assert.AreEqual(4f * px, shine.y, 1e-6f, "두께 4px");
         float shineTop = NoteShape.ShineLocalY(note, px) + shine.y * 0.5f;
         Assert.AreEqual(0.11f - 2f * px, shineTop, 1e-6f, "광택 위 끝 = 노트 위 끝 − 2px");
-        Assert.AreEqual(new Vector2(76f, 10f) * px, NoteShape.TailSize(px), "꼬리 76 × 10px");
-        Assert.AreEqual(2f * px, NoteShape.CenterLineWidth(px), 1e-6f, "가운데 선 2px");
+    }
+
+    /// <summary>11/20 정정: 몸통 폭 76px · 가운데 선 2px, 세로 = 머리 가운데 ~ 꼬리 (꼬리 따로 없음)</summary>
+    [Test]
+    public void LongNote_BodyWidthAndRange()
+    {
+        float px = 10f / 1080f;
+        Assert.AreEqual(76f * px, NoteShape.LongNoteBodyWidth(px), 1e-6f, "몸통 폭 76px (x+16 ~ x+92)");
+        Assert.AreEqual(2f * px, NoteShape.CenterLineWidth(px), 1e-6f, "가운데 선 2px (x+53 ~ x+55)");
+        // 라인 폭 108: 몸통 왼쪽 = 가운데 54 − 38 = 16, 오른쪽 = 92 / 선 53 ~ 55
+        Assert.AreEqual(16f, 54f - GameConstants.Play.LongNoteBodyWidthPx * 0.5f, 1e-6f);
+        Assert.AreEqual(53f, 54f - GameConstants.Play.LongNoteCenterLineWidthPx * 0.5f, 1e-6f);
+
+        NoteShape.LongNoteBodyRange(-3f, 1f, out float bottom, out float top);
+        Assert.AreEqual(-3f, bottom, "아래 끝 = 머리 가운데");
+        Assert.AreEqual(1f, top, "위 끝 = 꼬리 y");
+        NoteShape.LongNoteBodyRange(-3f, -3.5f, out bottom, out top);
+        Assert.AreEqual(0f, top - bottom, "꼬리가 머리보다 아래면 높이 0");
+    }
+
+    /// <summary>누르는 동안 머리 고정 · 위 끝만 내려옴, 판정 전 · 시작 MISS는 시간대로 지나감</summary>
+    [Test]
+    public void LongNote_HeldHeadFixed_MissedPassesThrough()
+    {
+        const float judgeLine = -3.33f;
+        float head = -4f, tail = 0.5f;
+        NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, ref head, ref tail);
+        Assert.AreEqual(judgeLine, head, "누르는 동안 머리는 판정선");
+        Assert.AreEqual(0.5f, tail, "꼬리는 그대로 내려옴");
+
+        head = -2f; tail = -3.6f;
+        NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, ref head, ref tail);
+        Assert.AreEqual(judgeLine, tail, "늦게 떼는 중: 꼬리는 판정선 아래로 안 내려감");
+
+        foreach (LongNoteState state in new[] { LongNoteState.Waiting, LongNoteState.Missed })
+        {
+            head = -4f; tail = -3.8f;
+            NoteShape.ResolveLongNoteY(state, judgeLine, ref head, ref tail);
+            Assert.AreEqual(-4f, head, state + " 머리는 판정선에 고정하지 않음");
+            Assert.AreEqual(-3.8f, tail, state + " 꼬리 그대로");
+        }
     }
 
     // ───── 7. 다시 하기 진입 데이터 ─────

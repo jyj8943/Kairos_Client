@@ -4,7 +4,7 @@ using UnityEngine;
 /// 판정 이펙트 R2 풀 (InGameScene.unity의 "Gear/HitFx"에 붙이고, InGameScene이 Init() · Play() · Tick()을 호출한다).
 /// - 라인마다 GameConstants.Play.HitFxPoolPerLane(6)개를 Init에서 미리 만든다 (자식 Lane_n/HitFx_0 ~ 5). 판 도중에는 만들지 않는다.
 ///   다 쓰고 있으면 가장 오래 전에 터진 것을 다시 쓴다 (롱노트 유지 틱마다 겹쳐 터져도 2 ~ 3개면 충분).
-/// - 위치: 라인 가운데 x, 판정선 높이 y 906 (GameConstants.Play.HitFxCenterYPx, 1080 기준 px → GearView.UnitsPerReferencePx).
+/// - 위치: 라인 가운데 x, 판정선 높이 (GearView.JudgeLineY, 노트를 판정하는 높이와 같은 값. 1080 기준 y 900).
 /// - 스프라이트는 Resources/Images/InGame/Fx/에서, 색은 UITheme 판정 이펙트 묶음에서 읽는다.
 /// - 시간은 곡 시간(노트와 같은 기준)이라 일시정지 중에는 멈추고(InGameScene이 Tick을 부르지 않음), 재생 배율을 따른다.
 /// </summary>
@@ -49,7 +49,7 @@ public class HitFxPool : MonoBehaviour
         int laneCount = GameConstants.Editor.LaneCount;
         int perLane = GameConstants.Play.HitFxPoolPerLane;
         float px = gear.UnitsPerReferencePx;
-        float y = gear.ScreenTopY - GameConstants.Play.HitFxCenterYPx * px;
+        float y = gear.JudgeLineY;
 
         activeCounts = new int[laneCount];
         maxActive = new int[laneCount];

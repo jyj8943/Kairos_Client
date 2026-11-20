@@ -29,9 +29,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BottomAlpha: 0.85
+    - _BottomAlpha: 0.7
     - _Height: 1
-    - _TopAlpha: 0.55
+    - _TopAlpha: 0.45
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

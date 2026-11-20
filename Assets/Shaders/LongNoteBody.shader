@@ -9,8 +9,8 @@ Shader "Kairos/LongNoteBody"
     Properties
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
-        _TopAlpha ("Top Alpha", Range(0, 1)) = 0.55
-        _BottomAlpha ("Bottom Alpha", Range(0, 1)) = 0.85
+        _TopAlpha ("Top Alpha", Range(0, 1)) = 0.45
+        _BottomAlpha ("Bottom Alpha", Range(0, 1)) = 0.7
         _Height ("Body Height", Float) = 1
     }
 

@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// 2. 랭크 빈 자리 색: 바탕 흰색 55% · 점선 #2C2838 35% (기획서 3-3 「랭크·FC 표시 (11/18 개정)」)
 /// 3. 덮는 색 그라데이션: 왼쪽·가운데·오른쪽 알파 = 0.80 · 0.62 · 0.82 (함수와 MenuBackground가 만든 텍스처 둘 다)
 /// 4. 인게임 묶음 기본값 = 기획서 3-4 「인게임 톤 개편 (11/18)」 표 (기본값과 에셋 값 둘 다)
-/// 5. 롱노트 몸통 알파: 위 0.55 / 아래 0.85 (셰이더 Kairos/LongNoteBody와 같은 식)
+/// 5. 롱노트 몸통 알파: 위 0.45 / 아래 0.70 (11/20 정정) (셰이더 Kairos/LongNoteBody와 같은 식)
 /// </summary>
 public class UIThemeTests
 {
@@ -189,12 +189,16 @@ public class UIThemeTests
     [Test]
     public void LongNoteBody_TopAndBottomAlpha()
     {
-        Assert.AreEqual(0.55f, theme.longNoteTopAlpha, 1e-5f, "위 55%");
-        Assert.AreEqual(0.85f, theme.longNoteBottomAlpha, 1e-5f, "아래 85%");
-        Assert.AreEqual(0.85f, UITheme.LongNoteAlphaAt(0f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "아래 끝(머리)");
-        Assert.AreEqual(0.70f, UITheme.LongNoteAlphaAt(0.5f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "가운데");
-        Assert.AreEqual(0.55f, UITheme.LongNoteAlphaAt(1f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "위 끝(꼬리)");
-        Assert.AreEqual(0.55f, UITheme.LongNoteAlphaAt(3f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "범위 밖은 끝 값");
+        // 11/20 정정: 위(꼬리) 45% → 아래(머리) 70%, 기본값과 에셋 둘 다
+        foreach (UITheme target in new[] { theme, Resources.Load<UITheme>(UITheme.ResourcePath) })
+        {
+            Assert.AreEqual(0.45f, target.longNoteTopAlpha, 1e-5f, "위 45%");
+            Assert.AreEqual(0.70f, target.longNoteBottomAlpha, 1e-5f, "아래 70%");
+        }
+        Assert.AreEqual(0.70f, UITheme.LongNoteAlphaAt(0f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "아래 끝(머리)");
+        Assert.AreEqual(0.575f, UITheme.LongNoteAlphaAt(0.5f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "가운데");
+        Assert.AreEqual(0.45f, UITheme.LongNoteAlphaAt(1f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "위 끝(꼬리)");
+        Assert.AreEqual(0.45f, UITheme.LongNoteAlphaAt(3f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "범위 밖은 끝 값");
         AssertHex("FFFFFF", 0.78f, theme.longNoteCenterLine, "가운데 선 흰색 78% (11/20)");
         AssertHex("FFFFFF", 0.75f, theme.noteShine, "광택 흰색 75% (11/20)");
     }

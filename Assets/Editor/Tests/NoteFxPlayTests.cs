@@ -13,6 +13,7 @@ using UnityEngine.TestTools;
 ///     - 키 글자 안내: −2박 1, −0.5박 약 0.5, 0박 뒤 0
 ///     - PERFECT · GREAT · GOOD · MISS 숏노트 4개 + 2박 롱노트(머리 PERFECT, 끝에서 뗌): 이펙트 1 + 1 + 1 + 0 + 9 = 12번, 판정별 색 C
 ///     - 이펙트 풀: 판 도중 생성 0, 라인별 최대 동시 사용 수
+/// F3. 롱노트 모양 상태별 (11/20 정정): 내려오는 중 · 누르는 동안 · 떼기 직전 · 시작 MISS.
 /// F2. 8박부터 테스트 플레이(메트로놈 없음): 키 글자 0.5초 1, 1.25초 약 0.5, 1.5초 0.
 ///     일시정지 → 이어 하기 뒤에도 0. F5 다시 하기 → isRetry, 키 글자 0.
 /// </summary>
@@ -182,7 +183,9 @@ public class NoteFxPlayTests
         Assert.AreEqual(GameConstants.InGameSort.LongNoteBody, orders["LongNote/Body"]);
         Assert.AreEqual(GameConstants.InGameSort.LongNoteCenterLine, orders["LongNote/CenterLine"]);
         Assert.AreEqual(GameConstants.InGameSort.Note, orders["LongNote/Head"]);
-        Assert.AreEqual(GameConstants.InGameSort.Note, orders["LongNote/Tail"]);
+        Assert.IsFalse(orders.ContainsKey("LongNote/Tail"), "꼬리 오브젝트 없음 (11/20 정정)");
+        Assert.Less(orders["JudgeLine"], orders["LongNote/Body"], "판정선 < 몸통");
+        Assert.Less(orders["LongNote/CenterLine"], orders["LongNote/Head"], "가운데 선 < 머리");
         Assert.AreEqual(GameConstants.InGameSort.HitFx, orders["HitFx(SortingGroup)"]);
         Assert.AreEqual(GameConstants.InGameSort.KeyCell, orders["KeyCell_n"]);
         Assert.AreEqual(GameConstants.InGameSort.KeyCellFrame, orders["Frame"]);
@@ -278,7 +281,8 @@ public class NoteFxPlayTests
         AssertColor(theme.hitFxGood, pool.GetFx(2, 0).Color, "GOOD C");
         Assert.IsFalse(perfectFx.IsPlaying, "0.38초 뒤 꺼짐");
         float fxCenterPx = (gear.ScreenTopY - (perfectFx.transform.position.y - gear.transform.position.y)) / px;
-        Assert.AreEqual(906f, fxCenterPx, 0.5f, "이펙트 y 906");
+        float judgeLinePx = (gear.ScreenTopY - gear.JudgeLineY) / px;
+        Assert.AreEqual(judgeLinePx, fxCenterPx, 0.5f, "이펙트 y = 판정선 높이");
 
         // ── 2박 롱노트: 머리 PERFECT, 끝에서 뗌 ──
         PlayNote longNote = notes[4];
@@ -290,14 +294,14 @@ public class NoteFxPlayTests
         Color inner = theme.NoteColor(1);
         AssertColor(inner, longView.BodyColor, "몸통 라인 색");
         AssertColor(inner, longView.HeadColor, "머리 라인 색");
-        AssertColor(inner, longView.TailColor, "꼬리 라인 색");
         AssertColor(theme.longNoteCenterLine, longView.CenterLine.color, "가운데 선 흰색 78%");
         Assert.AreEqual(2f * px, longView.CenterLine.size.x, 1e-4f, "가운데 선 폭 2px");
         Assert.AreEqual(longView.Body.size.y, longView.CenterLine.size.y, 1e-4f, "가운데 선 = 몸통 길이");
-        Assert.AreEqual(new Vector2(76f, 10f) * px, longView.Tail.size, "꼬리 76 × 10");
-        Assert.AreEqual(0.85f, longView.AlphaAt(0f), 1e-4f, "몸통 아래 85%");
-        Assert.AreEqual(0.55f, longView.AlphaAt(1f), 1e-4f, "몸통 위 55%");
-        log.Append($"| 롱노트 | 1 | 몸통 {Hex(longView.BodyColor)} (위 55% → 아래 85%) · 머리 {Hex(longView.HeadColor)} · 꼬리 {Hex(longView.TailColor)} ({longView.Tail.size.x / px:0}×{longView.Tail.size.y / px:0}px) | 머리 광택 {longView.HeadShine.size.x / px:0.0}×{longView.HeadShine.size.y / px:0.0}px | 가운데 선 {Hex(longView.CenterLine.color)} 폭 {longView.CenterLine.size.x / px:0.0}px |\n");
+        Assert.AreEqual(76f * px, longView.Body.size.x, 1e-4f, "몸통 폭 76");
+        Assert.AreEqual("Square", longView.Body.sprite.name, "몸통 = Square 평평한 띠");
+        Assert.AreEqual(0.70f, longView.AlphaAt(0f), 1e-4f, "몸통 아래 70%");
+        Assert.AreEqual(0.45f, longView.AlphaAt(1f), 1e-4f, "몸통 위 45%");
+        log.Append($"| 롱노트 | 1 | 몸통 {Hex(longView.BodyColor)} 폭 {longView.Body.size.x / px:0}px (위 45% → 아래 70%) · 머리 {Hex(longView.HeadColor)} | 머리 광택 {longView.HeadShine.size.x / px:0.0}×{longView.HeadShine.size.y / px:0.0}px | 가운데 선 {Hex(longView.CenterLine.color)} 폭 {longView.CenterLine.size.x / px:0.0}px |\n");
 
         int before = pool.PlayCount;
         int tickResults = 0;
@@ -323,6 +327,145 @@ public class NoteFxPlayTests
         Debug.Log($"[NoteFxPlayTest] F1 이펙트: 합계 {pool.PlayCount} (P {pool.PlayCountByJudge[0]} · G {pool.PlayCountByJudge[1]} · Go {pool.PlayCountByJudge[2]} · M {pool.PlayCountByJudge[3]}), " +
                   $"롱노트 틱 {tickResults} → 이펙트 {longFx}, 풀 {created}개 (판 도중 생성 {pool.CreatedCount - created}), {maxLog}, " +
                   $"색 C: P {Hex(theme.hitFxPerfect)} G {Hex(theme.hitFxGreat)} Go {Hex(theme.hitFxGood)}");
+    }
+
+    /// <summary>1080 기준 px로 바꾼 y (화면 위에서)</summary>
+    private static float PxY(GearView gear, float worldY) => (gear.ScreenTopY - (worldY - gear.transform.position.y)) / gear.UnitsPerReferencePx;
+
+    /// <summary>라인 왼쪽 끝 기준 x (px)</summary>
+    private static float PxX(GearView gear, int lane, float worldX) =>
+        (worldX - (gear.transform.position.x + gear.GetLaneX(lane) - gear.LaneWidth * 0.5f)) / gear.UnitsPerReferencePx;
+
+    private static LongNoteView FindLong(NoteLayer layer, GearView gear, int lane)
+    {
+        foreach (LongNoteView v in layer.GetComponentsInChildren<LongNoteView>(false))
+            if (Mathf.Abs(v.transform.localPosition.x - gear.GetLaneX(lane)) < 1e-3f) return v;
+        return null;
+    }
+
+    private struct LongShot
+    {
+        public string Name;
+        public bool Visible, HeadVisible, ShineOn, LineOn, Missed;
+        public float BodyLeft, BodyRight, Bottom, Top, LineLength, LineLeft, LineRight, HeadY, AlphaTop, AlphaBottom;
+        public Color Color;
+    }
+
+    private static LongShot Shot(string name, LongNoteView v, GearView gear, int lane)
+    {
+        LongShot s = new LongShot { Name = name, Visible = v != null && v.gameObject.activeInHierarchy };
+        if (!s.Visible) return s;
+        float px = gear.UnitsPerReferencePx;
+        Bounds body = v.Body.bounds;
+        Bounds line = v.CenterLine.bounds;
+        s.BodyLeft = PxX(gear, lane, body.min.x);
+        s.BodyRight = PxX(gear, lane, body.max.x);
+        s.Bottom = PxY(gear, body.min.y);
+        s.Top = PxY(gear, body.max.y);
+        s.LineLeft = PxX(gear, lane, line.min.x);
+        s.LineRight = PxX(gear, lane, line.max.x);
+        s.LineLength = v.CenterLine.size.y / px;
+        s.HeadY = PxY(gear, v.Head.transform.position.y);
+        s.HeadVisible = v.Head.enabled && v.Head.gameObject.activeInHierarchy;
+        s.ShineOn = v.HeadShine.enabled;
+        s.LineOn = v.CenterLine.enabled;
+        s.Missed = v.IsMissed;
+        s.AlphaTop = v.AlphaAt(1f);
+        s.AlphaBottom = v.AlphaAt(0f);
+        s.Color = v.BodyColor;
+        return s;
+    }
+
+    private static string Row(LongShot s) => !s.Visible ? $"| {s.Name} | (사라짐) |" :
+        $"| {s.Name} | {s.BodyRight - s.BodyLeft:0.0} (x+{s.BodyLeft:0.0}~{s.BodyRight:0.0}) | {s.Bottom:0.0} | {s.Top:0.0} | {s.LineLength:0.0} (x+{s.LineLeft:0.0}~{s.LineRight:0.0}) | {s.HeadY:0.0} | {(s.HeadVisible ? "보임" : "숨김")} | " +
+        $"{s.AlphaTop:0.00} / {s.AlphaBottom:0.00} | {(s.Missed ? "회색 " : "라인 색 ")}{Hex(s.Color)} | 광택 {(s.ShineOn ? "켜짐" : "꺼짐")} · 선 {(s.LineOn ? "켜짐" : "꺼짐")} |";
+
+    /// <summary>
+    /// F3: 롱노트 모양 상태별 (11/20 정정). 라인 1에 3박 롱노트(누르고 끝에서 뗌), 라인 2에 2박 롱노트(안 눌러 시작 MISS).
+    /// ① 내려오는 중 ② 누르는 동안(틱 3번 뒤 · 5번 뒤) ③ 떼기 직전 ④ 시작 MISS로 지나가는 중.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator F3_LongNoteShape_ByState()
+    {
+        yield return StartPlay(Chart(Long(4f, 7f, 1), Long(9f, 11f, 2)), 0f);
+        GearView gear = scene.Gear;
+        HitFxPool pool = scene.HitFx;
+        NoteLayer layer = Get<NoteLayer>(scene, "noteLayer");
+        NoteJudge judge = Get<NoteJudge>(scene, "judge");
+        TimingMap timing = Get<TimingMap>(scene, "timing");
+        PlayNote held = judge.Notes[0];
+        PlayNote missed = judge.Notes[1];
+        double quarter = timing.BeatToSeconds(4.25) - timing.BeatToSeconds(4);
+        float judgeLinePx = PxY(gear, gear.transform.position.y + gear.JudgeLineY);
+        List<LongShot> shots = new List<LongShot>();
+
+        // ① 내려오는 중
+        yield return WaitSongTime(held.Time - 0.3);
+        LongShot s1 = Shot("① 내려오는 중", FindLong(layer, gear, 1), gear, 1);
+        shots.Add(s1);
+        Assert.IsTrue(s1.Visible);
+        Assert.AreEqual(76f, s1.BodyRight - s1.BodyLeft, 0.05f, "몸통 폭 76");
+        Assert.AreEqual(16f, s1.BodyLeft, 0.05f, "x+16");
+        Assert.AreEqual(53f, s1.LineLeft, 0.05f, "선 x+53");
+        Assert.AreEqual(55f, s1.LineRight, 0.05f, "선 x+55");
+        Assert.AreEqual(s1.HeadY, s1.Bottom, 0.05f, "아래 끝 = 머리 가운데");
+        Assert.AreEqual(s1.Bottom - s1.Top, s1.LineLength, 0.05f, "가운데 선 = 몸통 길이");
+        Assert.Less(s1.HeadY, judgeLinePx, "아직 판정선 위");
+
+        // ② 누르는 동안: 머리 판정선 고정, 위 끝만 내려옴
+        yield return PressAt(1, held.Time);
+        yield return WaitSongTime(held.Time + quarter * 3 + 0.02);
+        LongShot s2 = Shot("② 누르는 동안 (틱 3번 뒤)", FindLong(layer, gear, 1), gear, 1);
+        shots.Add(s2);
+        HitFx tickFx = null;
+        for (int i = 0; i < GameConstants.Play.HitFxPoolPerLane; i++) if (pool.GetFx(1, i).IsPlaying) tickFx = pool.GetFx(1, i);
+        Assert.IsNotNull(tickFx, "누르는 동안 틱 이펙트가 보인다");
+        float fxY = PxY(gear, tickFx.transform.position.y);
+        float fxX = PxX(gear, 1, tickFx.transform.position.x);
+        Assert.AreEqual(PxY(gear, gear.transform.position.y + gear.JudgeLineY), fxY, 0.05f, "틱 이펙트 y = 판정선 높이");
+        Assert.AreEqual(54f, fxX, 0.05f, "라인 가운데");
+
+        yield return WaitSongTime(held.Time + quarter * 5 + 0.02);
+        LongShot s2b = Shot("② 누르는 동안 (틱 5번 뒤)", FindLong(layer, gear, 1), gear, 1);
+        shots.Add(s2b);
+        foreach (LongShot s in new[] { s2, s2b })
+        {
+            Assert.IsTrue(s.Visible && s.HeadVisible, "누르는 동안 머리 보임");
+            Assert.AreEqual(judgeLinePx, s.HeadY, 0.05f, "머리 = 판정선");
+            Assert.AreEqual(judgeLinePx, s.Bottom, 0.05f, "몸통 아래 끝 = 판정선");
+        }
+        Assert.Greater(s2b.Top, s2.Top, "위 끝이 시간에 따라 내려온다 (y 증가)");
+
+        // ③ 떼기 직전 → 뗌
+        yield return WaitSongTime(held.EndTime - 0.08);
+        LongShot s3 = Shot("③ 떼기 직전", FindLong(layer, gear, 1), gear, 1);
+        shots.Add(s3);
+        Assert.AreEqual(judgeLinePx, s3.HeadY, 0.05f);
+        Assert.AreEqual(judgeLinePx, s3.Bottom, 0.05f);
+        Assert.Greater(s3.Top, s2b.Top, "더 내려옴");
+        yield return ReleaseAt(1, held.EndTime);
+        yield return null;
+        Assert.IsNull(FindLong(layer, gear, 1), "떼면 머리 · 몸통 사라짐");
+        int fxTotal = pool.GetPlayCount(1);
+        int ticks = LongNoteTicks.Count(4, 7);
+
+        // ④ 시작 MISS: 안 눌러 판정선을 그대로 지나감
+        yield return WaitSongTime(missed.Time + 0.25);
+        LongNoteView missedView = FindLong(layer, gear, 2);
+        LongShot s4 = Shot("④ 시작 MISS 지나가는 중", missedView, gear, 2);
+        shots.Add(s4);
+        Assert.IsTrue(s4.Visible && s4.Missed, "시작 MISS 회색");
+        AssertColor(UITheme.Current.longNoteMissed, missedView.HeadColor, "머리 회색");
+        Assert.IsFalse(s4.ShineOn || s4.LineOn, "광택 · 선 끔");
+        Assert.Greater(s4.HeadY, judgeLinePx + 5f, "머리가 판정선에 고정되지 않고 지나감");
+        Assert.AreEqual(s4.HeadY, s4.Bottom, 0.05f);
+        Assert.AreEqual(0, pool.GetPlayCount(2), "시작 MISS 이펙트 없음");
+
+        StringBuilder table = new StringBuilder("| 상태 | 몸통 폭 | 아래 끝 y | 위 끝 y | 가운데 선 길이 (x) | 머리 y | 머리 | 위/아래 알파 | 색 | 광택 · 선 |\n");
+        foreach (LongShot s in shots) table.Append(Row(s)).Append('\n');
+        Debug.Log($"[NoteFxPlayTest] F3 롱노트 상태별 (판정선 {judgeLinePx:0.0}px)\n{table}" +
+                  $"3박 롱노트 유지 틱 {ticks}, 라인 1 이펙트 {fxTotal}번 (틱 + 머리 + 꼬리 = {ticks + 2}), 틱 이펙트 위치 x+{fxX:0.0} y {fxY:0.0}");
+        Assert.AreEqual(ticks + 2, fxTotal, "틱 + 머리 + 꼬리");
     }
 
     /// <summary>F2: 8박부터(메트로놈 없음) 키 글자 1.5초 → 일시정지·이어 하기 뒤 0 → F5 다시 하기 0</summary>

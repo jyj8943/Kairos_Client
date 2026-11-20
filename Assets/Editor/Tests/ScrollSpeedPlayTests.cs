@@ -201,7 +201,6 @@ public class ScrollSpeedPlayTests
         yield return LoadInGame(TestPlayEntry(Chart(new List<NoteData> { Long(6f, 9f, 1) }), false));
         PlayNote note = judge.Notes[0];
         LongNoteView view = null;
-        float half = layer.NoteSize.y / 2f;
 
         yield return WaitSongTime(note.Time - InjectLeadSeconds);
         scene.TestPress(1, note.Time);
@@ -213,7 +212,7 @@ public class ScrollSpeedPlayTests
             TapTo(target);
             yield return null;
             view = Get<LongNoteView[]>(layer, "longViewByNote")[0];
-            float headCenter = view.BottomY + half;
+            float headCenter = view.HeadY; // 11/20: 몸통 아래 끝 = 머리 가운데
             maxHeadError = Mathf.Max(maxHeadError, Mathf.Abs(headCenter - gear.JudgeLineY));
             samples.Add($"x{target:0.0} 머리 중심 {headCenter:0.0000}, 위 끝 {view.TopY:0.000}");
         }

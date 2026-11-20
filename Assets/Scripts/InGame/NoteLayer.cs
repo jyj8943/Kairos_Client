@@ -9,9 +9,9 @@ using UnityEngine;
 /// - 숏노트는 NoteView, 롱노트는 LongNoteView를 각각 풀로 재사용한다. 화면에 들어오기 직전에 꺼내고,
 ///   판정(키로 친 것)되거나 화면 아래로 벗어나면 돌려놓는다. 플레이 중 Instantiate·Destroy와 매 프레임 할당이 없다.
 /// - 롱노트 (롱노트 판정 세부 규칙 4)
-///   - 하나로 이어진 막대(LongNoteView)다. 머리(시작)·꼬리(끝) y를 시작·끝 시간의 스크롤 거리로 각각 구해 넘기면,
-///     막대는 시작 숏노트의 아래 가장자리 ~ 끝 숏노트의 위 가장자리를 채운다.
-///   - 누르는 동안(Held): 머리를 판정선에 붙이고 위 끝만 내려오며 막대가 점점 짧아진다.
+///   - 머리(숏노트 모양) + 몸통(76px 띠)이다 (LongNoteView). 머리(시작)·꼬리(끝) y를 시작·끝 시간의 스크롤 거리로 각각 구해 넘기면,
+///     몸통은 머리 가운데 ~ 끝 시각 y를 채운다 (꼬리는 따로 그리지 않는다, 11/20).
+///   - 누르는 동안(Held): 머리를 판정선에 고정해 계속 보이고, 몸통 위 끝만 내려오며 점점 짧아진다 (NoteShape.ResolveLongNoteY).
 ///   - 끝 판정이 나면(Done) 바로 돌려놓는다. 시작 MISS(Missed)면 회색으로 바꿔 꼬리가 화면 아래로 벗어나면 돌려놓는다.
 /// - 풀은 Init에서 채보를 보고 동시에 보일 최대 수만큼 미리 만든다 (롱노트는 끝까지 화면에 남는 시간을 넣어 센다).
 /// </summary>
@@ -205,13 +205,9 @@ public class NoteLayer : MonoBehaviour
             }
 
             float tailY = judgeLineY + (float)((scroll.PositionAt(note.EndTime) - songPosition) * ScrollSpeed);
-            if (state == LongNoteState.Held)
-            {
-                // 누르는 동안 머리는 판정선에 붙고, 꼬리가 판정선을 지나도(늦게 떼는 중) 판정선 아래로 내려가지 않는다
-                headY = judgeLineY;
-                if (tailY < judgeLineY) tailY = judgeLineY;
-            }
-            else if (tailY < despawnY)
+            // 누르는 동안 머리는 판정선에 붙어 보이고, 꼬리가 판정선을 지나도(늦게 떼는 중) 판정선 아래로 내려가지 않는다
+            NoteShape.ResolveLongNoteY(state, judgeLineY, ref headY, ref tailY);
+            if (state != LongNoteState.Held && tailY < despawnY)
             {
                 Release(i);
                 continue;

@@ -206,11 +206,10 @@ public class LongNotePlayTests
         yield return WaitSongTime(note.Time + 0.2);
         LongNoteView view = Get<LongNoteView[]>(Get<NoteLayer>(scene, "noteLayer"), "longViewByNote")[n];
         GearView gear = Get<GearView>(scene, "gear");
-        Vector2 noteSize = Get<NoteLayer>(scene, "noteLayer").NoteSize;
-        float bottom1 = view.BottomY, top1 = view.TopY;
+        float bottom1 = view.BottomY, top1 = view.TopY, head1 = view.HeadY;
         yield return WaitSongTime(note.Time + 0.5);
-        float bottom2 = view.BottomY, top2 = view.TopY;
-        Debug.Log($"[LongNoteTest] P11 표시: 판정선 {gear.JudgeLineY:0.000}, 아래 끝 {bottom1:0.000} → {bottom2:0.000} (머리 중심 {bottom1 + noteSize.y / 2:0.000} → {bottom2 + noteSize.y / 2:0.000}), 위 끝 {top1:0.000} → {top2:0.000}");
+        float bottom2 = view.BottomY, top2 = view.TopY, head2 = view.HeadY;
+        Debug.Log($"[LongNoteTest] P11 표시: 판정선 {gear.JudgeLineY:0.000}, 아래 끝 {bottom1:0.000} → {bottom2:0.000} (머리 중심 {head1:0.000} → {head2:0.000}), 위 끝 {top1:0.000} → {top2:0.000}");
 
         yield return ReleaseAt(0, note.EndTime);
         yield return WaitJudged(n);
@@ -223,8 +222,11 @@ public class LongNotePlayTests
         Assert.AreEqual(1 + note.TickCount, score.Combo, "콤보 = 1 + 틱");
         Assert.AreEqual(1, EndKeySounds, "끝 키음");
 
-        Assert.AreEqual(gear.JudgeLineY, bottom1 + noteSize.y / 2, 0.01, "P11: 누르는 동안 머리 중심이 판정선");
-        Assert.AreEqual(gear.JudgeLineY, bottom2 + noteSize.y / 2, 0.01, "P11: 머리는 판정선에 고정");
+        // 11/20 정정: 몸통 아래 끝 = 머리 가운데 = 판정선 (누르는 동안 머리 고정)
+        Assert.AreEqual(gear.JudgeLineY, head1, 0.01, "P11: 누르는 동안 머리 중심이 판정선");
+        Assert.AreEqual(gear.JudgeLineY, head2, 0.01, "P11: 머리는 판정선에 고정");
+        Assert.AreEqual(gear.JudgeLineY, bottom1, 0.01, "P11: 몸통 아래 끝 = 머리 가운데");
+        Assert.AreEqual(gear.JudgeLineY, bottom2, 0.01, "P11: 몸통 아래 끝도 고정");
         Assert.Less(top2, top1, "P11: 위 끝은 계속 내려온다");
     }
 

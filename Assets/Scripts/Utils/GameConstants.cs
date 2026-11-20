@@ -266,9 +266,8 @@ public static class GameConstants
         public const float NoteShineTopInsetPx = 2f;
         /// <summary>숏노트 광택 두께 (px)</summary>
         public const float NoteShineHeightPx = 4f;
-        /// <summary>롱노트 꼬리 끝 (ShortNote.png, 라인 색) 크기 (px)</summary>
-        public const float LongNoteTailWidthPx = 76f;
-        public const float LongNoteTailHeightPx = 10f;
+        /// <summary>롱노트 몸통 폭 (px, 라인 x+16 ~ x+92). 숏노트(머리)보다 좁은 평평한 띠이고, 꼬리는 따로 그리지 않는다 (몸통 위 끝 = 꼬리)</summary>
+        public const float LongNoteBodyWidthPx = 76f;
         /// <summary>롱노트 몸통 가운데 흰 선 폭 (px)</summary>
         public const float LongNoteCenterLineWidthPx = 2f;
 
@@ -278,8 +277,6 @@ public static class GameConstants
         public const string HitFxSpriteFolder = "Images/InGame/Fx/";
         /// <summary>라인마다 미리 만들어 두는 이펙트 수. 다 쓰고 있으면 가장 오래된 것을 다시 쓴다</summary>
         public const int HitFxPoolPerLane = 6;
-        /// <summary>이펙트 세로 중심 (1080 화면 위에서 px). 판정선 높이</summary>
-        public const float HitFxCenterYPx = 906f;
 
         // ───── 키 칸 마름모 · 시작 키 글자 안내 (11/20) ─────
 

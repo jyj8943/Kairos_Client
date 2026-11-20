@@ -81,8 +81,8 @@ MonoBehaviour:
   noteGlowAlpha: 0.35
   noteShine: {r: 1, g: 1, b: 1, a: 0.75}
   longNoteCenterLine: {r: 1, g: 1, b: 1, a: 0.78}
-  longNoteTopAlpha: 0.55
-  longNoteBottomAlpha: 0.85
+  longNoteTopAlpha: 0.45
+  longNoteBottomAlpha: 0.7
   longNoteMissed: {r: 0.3529412, g: 0.3529412, b: 0.36862746, a: 1}
   keyCell: {r: 0.17254902, g: 0.15686275, b: 0.21960784, a: 1}
   keyCellFrame: {r: 1, g: 1, b: 1, a: 0.12}

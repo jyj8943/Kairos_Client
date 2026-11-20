@@ -4,8 +4,8 @@ using UnityEngine;
 /// 노트 모양 계산 (11/20, 기획서 3-4 「노트 · 판정 이펙트」 🔧 색 · 모양 상세). 크기는 1080 화면 기준 px를 unitsPerPx로 월드로 바꾼다.
 /// 계산은 순수 함수라 EditMode 테스트로 검사하고, Apply 함수는 숏노트·롱노트 머리가 같이 쓴다.
 /// - 광택(ShortNote_Shine): (노트 폭 − 좌우 3px × 2) × 4px, 위 끝 = 노트 위 끝 − 2px
-/// - 롱노트 꼬리 끝: ShortNote 76 × 10px
-/// - 롱노트 가운데 선: 폭 2px × 몸통 길이
+/// - 롱노트 (11/20 정정, README 1-1): 몸통 = 폭 76px 평평한 띠, 세로 머리 y(가운데) ~ 꼬리 y(끝 시각). 꼬리는 따로 그리지 않는다.
+///   가운데 선 = 폭 2px × 몸통 길이. 누르는 동안 머리·몸통 아래 끝은 판정선에 붙고 꼬리만 내려온다 (ResolveLongNoteY).
 /// </summary>
 public static class NoteShape
 {
@@ -22,10 +22,31 @@ public static class NoteShape
         return noteSize.y * 0.5f - (GameConstants.Play.NoteShineTopInsetPx + GameConstants.Play.NoteShineHeightPx * 0.5f) * unitsPerPx;
     }
 
-    /// <summary>롱노트 꼬리 끝 크기 (월드): 76 × 10px</summary>
-    public static Vector2 TailSize(float unitsPerPx)
+    /// <summary>롱노트 몸통 폭 (월드): 76px</summary>
+    public static float LongNoteBodyWidth(float unitsPerPx)
     {
-        return new Vector2(GameConstants.Play.LongNoteTailWidthPx, GameConstants.Play.LongNoteTailHeightPx) * unitsPerPx;
+        return GameConstants.Play.LongNoteBodyWidthPx * unitsPerPx;
+    }
+
+    /// <summary>
+    /// 롱노트 몸통 세로 범위 (부모 기준 y): 아래 끝 = 머리 y(가운데), 위 끝 = 꼬리 y(끝 시각). 꼬리가 머리보다 아래면 높이 0.
+    /// </summary>
+    public static void LongNoteBodyRange(float headY, float tailY, out float bottom, out float top)
+    {
+        bottom = headY;
+        top = Mathf.Max(headY, tailY);
+    }
+
+    /// <summary>
+    /// 상태에 따라 롱노트 머리·꼬리 y를 정한다 (NoteLayer.Refresh). 순수 함수.
+    /// - 누르는 동안(Held): 머리는 판정선에 고정, 꼬리는 그대로 내려오되 판정선 아래로는 내려가지 않는다 (늦게 떼는 중).
+    /// - 판정 전(Waiting)·시작 MISS(Missed): 시간대로 그대로 지나간다 (머리를 판정선에 고정하지 않는다).
+    /// </summary>
+    public static void ResolveLongNoteY(LongNoteState state, float judgeLineY, ref float headY, ref float tailY)
+    {
+        if (state != LongNoteState.Held) return;
+        headY = judgeLineY;
+        if (tailY < judgeLineY) tailY = judgeLineY;
     }
 
     /// <summary>롱노트 가운데 선 폭 (월드): 2px</summary>

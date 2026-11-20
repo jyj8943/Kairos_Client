@@ -177,11 +177,11 @@ public class UITheme : ScriptableObject
     public Color noteShine = new Color(1f, 1f, 1f, 0.75f);
     [Tooltip("롱노트 몸통 가운데 선 LongNoteCenterLine (흰색 78%)")]
     public Color longNoteCenterLine = new Color(1f, 1f, 1f, 0.78f);
-    [Tooltip("롱노트 몸통 위(꼬리 쪽) 불투명도")]
-    [Range(0f, 1f)] public float longNoteTopAlpha = 0.55f;
-    [Tooltip("롱노트 몸통 아래(머리 쪽) 불투명도")]
-    [Range(0f, 1f)] public float longNoteBottomAlpha = 0.85f;
-    [Tooltip("시작 MISS 롱노트 색 (몸통 · 머리 · 꼬리 끝까지 이 색, 몸통 알파는 같은 그라데이션)")]
+    [Tooltip("롱노트 몸통 위(꼬리 쪽) 불투명도 (11/20: 45%)")]
+    [Range(0f, 1f)] public float longNoteTopAlpha = 0.45f;
+    [Tooltip("롱노트 몸통 아래(머리 쪽) 불투명도 (11/20: 70%)")]
+    [Range(0f, 1f)] public float longNoteBottomAlpha = 0.70f;
+    [Tooltip("시작 MISS 롱노트 색 (몸통 · 머리 끝까지 이 색, 몸통 알파는 같은 그라데이션)")]
     public Color longNoteMissed = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
 
     [Header("인게임 · 키 칸 · 라인 빛 (판정선은 이미지 그대로라 색이 없다)")]
