@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 일반 로딩 오버레이 (기획서 3-10 「일반 로딩」, 와이어프레임 13_GeneralLoading). 곡 로딩이 아닌 씬 이동(타이틀 ↔ 곡 선택, 곡 선택 → 에디터,
+/// 일반 로딩 오버레이 (기획서 3-9 「일반 로딩」, 와이어프레임 13_GeneralLoading). 곡 로딩이 아닌 씬 이동(타이틀 ↔ 곡 선택, 곡 선택 → 에디터,
 /// 에디터 → 곡 선택 · 테스트 플레이, 결과 → 곡 선택, 인게임 나가기)을 덮는다.
 /// - Managers_DontDestroy/UIManager 아래에 있어 씬이 바뀌어도 살아 있다. 정렬 순서는 Canvas_Overlay 팝업 · 곡 로딩보다 위(GameConstants.Loading.SortOrder).
 /// - Bootstrapper가 전역 매니저 Init 때 Init()을 한 번 부르고 숨겨 둔다. 일러스트 목록을 읽고, 폰트 글자를 채우고, 숨긴 채 한 번 그려 둔다.

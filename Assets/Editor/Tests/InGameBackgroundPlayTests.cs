@@ -177,13 +177,13 @@ public class InGameBackgroundPlayTests
         Assert.AreEqual("x1.0", card.SpeedText, "1 → x1.0");
         Assert.IsNull(GameObject.Find("Txt_SpeedChange"), "Txt_SpeedChange 오브젝트 없음");
 
-        // 판정 패널 판정 이름 = 기어 판정 글자와 같은 이미지 (11/19), 크기 = 원본 × 배율, 개수 숫자는 TMP 그대로
+        // 판정 패널 판정 이름 = 밝은 바탕용 JudgeMenu 이미지 (11/20, 이름·크기는 기어 판정 글자와 같음), 크기 = 원본 × 배율, 개수 숫자는 TMP 그대로
         Img_JudgePanel panel = canvas.JudgePanel;
         foreach (JudgeType judgeType in System.Enum.GetValues(typeof(JudgeType)))
         {
             UnityEngine.UI.Image title = panel.GetJudgeTitle(judgeType);
             Assert.IsNotNull(title, judgeType + " 이름 이미지");
-            Assert.AreSame(JudgeSprites.Get(judgeType), title.sprite, judgeType + " 이미지");
+            Assert.AreSame(JudgeSprites.Get(judgeType, JudgeSpriteSet.Menu), title.sprite, judgeType + " 이미지");
             Assert.AreEqual(JudgeSprites.DisplaySize(title.sprite, GameConstants.Play.PanelJudgeImageScale), title.rectTransform.sizeDelta, judgeType + " 크기 = 원본 × 판정 배율");
             Assert.IsTrue(title.preserveAspect && !title.raycastTarget, judgeType + " Preserve Aspect 켬 · Raycast 끔");
             Assert.AreEqual(Color.white, title.color, judgeType + " 색 흰색 (색은 이미지 안)");
@@ -191,7 +191,7 @@ public class InGameBackgroundPlayTests
         foreach (FastSlow dir in new[] { FastSlow.Fast, FastSlow.Slow })
         {
             UnityEngine.UI.Image title = panel.GetFastSlowTitle(dir);
-            Assert.AreSame(JudgeSprites.Get(dir), title.sprite, dir + " 이미지");
+            Assert.AreSame(JudgeSprites.Get(dir, JudgeSpriteSet.Menu), title.sprite, dir + " 이미지");
             Assert.AreEqual(JudgeSprites.DisplaySize(title.sprite, GameConstants.Play.PanelFastSlowImageScale), title.rectTransform.sizeDelta, dir + " 크기 = 원본 × FAST·SLOW 배율");
         }
         Assert.AreNotEqual(KartFontName, Get<TMP_Text>(canvas, "scoreText").font.name, "점수 숫자는 NEXON Lv2 그대로");

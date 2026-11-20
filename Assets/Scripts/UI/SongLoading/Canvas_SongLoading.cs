@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 곡 로딩 오버레이 (기획서 3-9 「곡 로딩」, 와이어프레임 12_SongLoading). 곡 선택 시작 · 결과 다시 하기 → 인게임 사이에 덮는다.
+/// 곡 로딩 오버레이 (기획서 3-8 「곡 로딩」, 와이어프레임 12_SongLoading). 곡 선택 시작 · 결과 다시 하기 → 인게임 사이에 덮는다.
 /// - Managers_DontDestroy/UIManager 아래에 있어 씬이 바뀌어도 살아 있다. 정렬 순서는 Canvas_Overlay 팝업보다 위(GameConstants.SongLoading.SortOrder).
 /// - Bootstrapper가 전역 매니저 Init 때 Init()을 한 번 부르고 숨겨 둔다.
 /// - 흐름은 GameSceneManager.LoadWithSongLoading이 정한다: Open(진입 데이터, 카드를 먼저 채움) → 다음 프레임부터 열기 연출 0~1.1초(화면만) →

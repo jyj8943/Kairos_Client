@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 /// <summary>
-/// 일반 로딩 오버레이 (기획서 3-10 「일반 로딩」) 실제 흐름 확인. 이 테스트만 GameSceneManager.SkipLoadingOverlayForTests를 끄고 오버레이 경로를 탄다.
+/// 일반 로딩 오버레이 (기획서 3-9 「일반 로딩」) 실제 흐름 확인. 이 테스트만 GameSceneManager.SkipLoadingOverlayForTests를 끄고 오버레이 경로를 탄다.
 /// - G1 타이틀 → 곡 선택 → 에디터 → 곡 선택: 단계 순서(들어오기 0.5초 뒤 앞 씬 OnExit · 로드, 정리는 닫기 전, 닫기 시작은 들어오기 0초 + 1.5초 뒤,
 ///   OnEnter는 닫기 끝 뒤), 가는 곳 문구, 로딩 중 ESC · Enter · ↓ · Tab · E · Space를 눌러도 아무 일도 없음
 /// - G2 에디터 → 테스트 플레이 → 나가기 → 에디터: 판 시작(OnEnter · 첫 카운트인 클릭)이 닫기 끝 뒤

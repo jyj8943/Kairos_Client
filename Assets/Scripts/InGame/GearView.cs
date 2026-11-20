@@ -4,7 +4,10 @@ using UnityEngine;
 /// <summary>
 /// 4라인 기어 표시 (SpriteRenderer 월드 오브젝트). InGameScene.unity의 "Gear"에 붙이고, InGameScene이 Init()을 호출한다.
 /// - 라인 위치·판정선 높이·화면 위아래 끝(월드 y)을 노트 표시에 알려준다.
-/// - 키를 누르는 동안 그 라인을 빛나게 하고, 아래 키 칸을 포인트색으로 채운다(글자는 흰색).
+/// - 키를 누르는 동안 그 라인을 빛나게 하고, 아래 키 칸을 포인트색으로 채운다.
+/// - 키 칸 가운데(y 1020)에는 라인 색 마름모(11/20): 평소 Key_DiamondLine(반대각 16, 선 3) + 가운데 Key_Diamond 0.375배, 누를 때 Key_Diamond(반대각 16) 흰색 채움.
+///   키 칸 글자(keyLabels)는 평소에 끄고, 판 시작 때만 어두운 판(Key_LabelPlate 56×56) 위에 보여 준다 (SetKeyLabelHintAlpha, 규칙은 KeyLabelHintRules).
+///   스프라이트는 Resources/Images/InGame/KeyCell/에서 Init 때 읽는다. 그리는 순서는 GameConstants.InGameSort.
 /// - 키 칸(KeyCells)은 화면 아래 끝에 붙인다. 크기·위치는 Init에서 카메라 높이로 계산한다 (1080 화면 기준 px → 월드, 해상도가 바뀌어도 같은 비율).
 ///   노트보다 위에 그려(sortingOrder) 놓친 노트가 판정선 아래를 지나 키 칸 뒤로 사라진다.
 /// - 색은 모두 UITheme 인게임 묶음에서 Init 때 읽어 칠한다 (기획서 3-4 「인게임 톤 개편 (11/18)」, 어두운 기어). 씬에 색을 직렬화하지 않는다.
@@ -31,12 +34,18 @@ public class GearView : MonoBehaviour
     [SerializeField] private SpriteRenderer[] laneDividers;
 
     [Header("키 칸 (KeyCells, 라인 순서)")]
-    [Tooltip("키 칸 배경 (KeyCell_0 ~ 3, Sliced). 노트(sortingOrder 5)보다 위에 그린다")]
+    [Tooltip("키 칸 배경 (KeyCell_0 ~ 3, Sliced). 노트·판정 이펙트보다 위에 그린다 (GameConstants.InGameSort.KeyCell)")]
     [SerializeField] private SpriteRenderer[] keyCells;
     [Tooltip("키 칸 테두리 (KeyCell_n/Frame, Sliced)")]
     [SerializeField] private SpriteRenderer[] keyCellFrames;
-    [Tooltip("키 칸 글자 (KeyCell_n/Label, TextMeshPro)")]
+    [Tooltip("키 칸 글자 (KeyCell_n/Label, TextMeshPro). 평소에는 끄고 시작 키 글자 안내 때만 보인다")]
     [SerializeField] private TMP_Text[] keyLabels;
+    [Tooltip("키 칸 마름모 테두리 (KeyCell_n/KeyDiamondLine_n, Key_DiamondLine 스프라이트)")]
+    [SerializeField] private SpriteRenderer[] keyDiamondLines;
+    [Tooltip("키 칸 가운데 마름모 (KeyCell_n/KeyDiamond_n, Key_Diamond 스프라이트). 평소 0.375배 라인 색, 누를 때 1배 흰색")]
+    [SerializeField] private SpriteRenderer[] keyDiamonds;
+    [Tooltip("시작 키 글자 뒤 판 (KeyCell_n/KeyLabelPlate_n, Key_LabelPlate 스프라이트)")]
+    [SerializeField] private SpriteRenderer[] keyLabelPlates;
 
     public float LaneWidth => laneWidth;
 
@@ -66,6 +75,23 @@ public class GearView : MonoBehaviour
 
     private bool[] keyPressed;
 
+    /// <summary>지금 시작 키 글자 알파 (확인용)</summary>
+    public float KeyLabelHintAlpha { get; private set; }
+
+    /// <summary>키 칸 마름모 (확인용)</summary>
+    public SpriteRenderer GetKeyDiamond(int lane) => Pick(keyDiamonds, lane);
+
+    /// <summary>키 칸 마름모 테두리 (확인용)</summary>
+    public SpriteRenderer GetKeyDiamondLine(int lane) => Pick(keyDiamondLines, lane);
+
+    /// <summary>시작 키 글자 뒤 판 (확인용)</summary>
+    public SpriteRenderer GetKeyLabelPlate(int lane) => Pick(keyLabelPlates, lane);
+
+    /// <summary>키 칸 글자 (확인용)</summary>
+    public TMP_Text GetKeyLabel(int lane) => keyLabels != null && lane >= 0 && lane < keyLabels.Length ? keyLabels[lane] : null;
+
+    private static SpriteRenderer Pick(SpriteRenderer[] renderers, int lane) => renderers != null && lane >= 0 && lane < renderers.Length ? renderers[lane] : null;
+
     /// <summary>
     /// 화면 끝을 계산하고 키 칸·판정선 크기를 맞춘 뒤, 기어·라인 빛에 UITheme 색을 입히고 라인 빛과 키 칸 눌림을 끈다.
     /// </summary>
@@ -81,9 +107,94 @@ public class GearView : MonoBehaviour
         LayoutJudgeLine();
 
         ApplyTheme(UITheme.Current);
+        LayoutKeyMarks();
 
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
             SetPressed(lane, false);
+        SetKeyLabelHintAlpha(0f);
+    }
+
+    /// <summary>
+    /// 키 칸 마름모 · 키 글자 판 · 키 글자를 키 칸 가운데(y 1020)에 놓고 스프라이트 · 크기 · 그리는 순서를 정한다.
+    /// 크기는 표시 px(반대각 16, 판 56)를 원본 px와 PPU로 나눈 배율로 맞춘다 (판은 원본 112px 9-slice 모서리 20 → 표시 56px 모서리 10).
+    /// </summary>
+    private void LayoutKeyMarks()
+    {
+        Sprite diamondLine = LoadKeyCellSprite("Key_DiamondLine");
+        Sprite diamond = LoadKeyCellSprite("Key_Diamond");
+        Sprite plate = LoadKeyCellSprite("Key_LabelPlate");
+        float centerY = ScreenTopY - GameConstants.Play.KeyDiamondCenterYPx * UnitsPerReferencePx;
+        float fontSize = KeyLabelFontSize(UnitsPerReferencePx);
+
+        for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
+        {
+            Vector3 center = new Vector3(GetLaneX(lane), centerY, 0f);
+            Place(Pick(keyDiamondLines, lane), diamondLine, center, KeyDiamondScale(diamondLine, 1f), GameConstants.InGameSort.KeyDiamond);
+            Place(Pick(keyDiamonds, lane), diamond, center, KeyDiamondScale(diamond, GameConstants.Play.KeyDiamondDotScale), GameConstants.InGameSort.KeyDiamond);
+            Place(Pick(keyLabelPlates, lane), plate, center, HitFxRules.SpriteScale(GameConstants.Play.KeyLabelPlateSizePx, plate, UnitsPerReferencePx), GameConstants.InGameSort.KeyLabelPlate);
+
+            TMP_Text label = GetKeyLabel(lane);
+            if (label == null) continue;
+            label.transform.position = transform.TransformPoint(center);
+            label.fontSize = fontSize;
+            label.alignment = TextAlignmentOptions.Center;
+            Renderer labelRenderer = label.GetComponent<Renderer>();
+            if (labelRenderer != null) labelRenderer.sortingOrder = GameConstants.InGameSort.KeyLabel;
+        }
+    }
+
+    /// <summary>키 글자 TMP(월드) 글꼴 크기: 표시 px × 1px 월드 길이 × 10 (TextMeshPro 월드 글꼴 크기 1 = 0.1유닛)</summary>
+    public static float KeyLabelFontSize(float unitsPerPx) => GameConstants.Play.KeyLabelHintFontPx * unitsPerPx * 10f;
+
+    /// <summary>키 칸 마름모 배율: 반대각 16px × 배율이 되게 (원본 반대각 32px, PPU 100)</summary>
+    private float KeyDiamondScale(Sprite sprite, float scale)
+    {
+        if (sprite == null) return 0f;
+        float nativeHalfUnits = GameConstants.Play.KeyDiamondSourceHalfDiagonalPx / sprite.pixelsPerUnit;
+        return GameConstants.Play.KeyDiamondHalfDiagonalPx * scale * UnitsPerReferencePx / nativeHalfUnits;
+    }
+
+    private void Place(SpriteRenderer renderer, Sprite sprite, Vector3 gearLocalCenter, float scale, int sortingOrder)
+    {
+        if (renderer == null) return;
+        renderer.sprite = sprite;
+        renderer.drawMode = SpriteDrawMode.Simple;
+        renderer.transform.position = transform.TransformPoint(gearLocalCenter);
+        renderer.transform.localScale = new Vector3(scale, scale, 1f);
+        renderer.sortingOrder = sortingOrder;
+    }
+
+    private static Sprite LoadKeyCellSprite(string name)
+    {
+        Sprite sprite = Resources.Load<Sprite>(GameConstants.Play.KeyCellSpriteFolder + name);
+        if (sprite == null) Debug.LogWarning($"[GearView] Resources/{GameConstants.Play.KeyCellSpriteFolder}{name} 이미지가 없습니다.");
+        return sprite;
+    }
+
+    /// <summary>
+    /// 시작 키 글자 안내의 알파 (판과 글자를 함께). 0이면 끈다. 규칙은 KeyLabelHintRules (InGameScene이 매 프레임 부른다).
+    /// </summary>
+    public void SetKeyLabelHintAlpha(float alpha)
+    {
+        alpha = Mathf.Clamp01(alpha);
+        KeyLabelHintAlpha = alpha;
+        bool visible = alpha > 0f;
+        UITheme theme = UITheme.Current;
+        for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
+        {
+            SpriteRenderer plate = Pick(keyLabelPlates, lane);
+            if (plate != null)
+            {
+                plate.enabled = visible;
+                plate.color = UITheme.WithAlpha(theme.keyLabelPlate, theme.keyLabelPlate.a * alpha);
+            }
+            TMP_Text label = GetKeyLabel(lane);
+            if (label != null)
+            {
+                label.enabled = visible;
+                label.color = UITheme.WithAlpha(theme.keyLabel, theme.keyLabel.a * alpha);
+            }
+        }
     }
 
     /// <summary>기어 바탕·테두리·구분선·라인 빛 색을 테마로 칠한다 (키 칸은 SetPressed가, 판정선은 이미지 그대로라 칠하지 않는다)</summary>
@@ -140,7 +251,12 @@ public class GearView : MonoBehaviour
             if (cell == null) continue;
             cell.transform.localPosition = new Vector3(GetLaneX(lane), ScreenBottomY + height * 0.5f, 0f);
             cell.size = size;
-            if (keyCellFrames != null && lane < keyCellFrames.Length && keyCellFrames[lane] != null) keyCellFrames[lane].size = size;
+            cell.sortingOrder = GameConstants.InGameSort.KeyCell;
+            if (keyCellFrames != null && lane < keyCellFrames.Length && keyCellFrames[lane] != null)
+            {
+                keyCellFrames[lane].size = size;
+                keyCellFrames[lane].sortingOrder = GameConstants.InGameSort.KeyCellFrame;
+            }
         }
     }
 
@@ -165,7 +281,8 @@ public class GearView : MonoBehaviour
     }
 
     /// <summary>
-    /// 키를 누르는 동안 라인을 빛나게 하고 키 칸을 포인트색으로 채운다(글자는 흰색). 색은 UITheme 인게임 묶음.
+    /// 키를 누르는 동안 라인을 빛나게 하고 키 칸을 포인트색으로 채운다. 색은 UITheme 인게임 묶음.
+    /// 마름모: 평소 테두리(라인 색) + 가운데 0.375배(라인 색), 누를 때 테두리를 끄고 Key_Diamond 1배 흰색으로 채운다.
     /// 라인 빛남은 개발용 설정(DevPlaySettings.LaneGlowEnabled)이 꺼져 있으면 켜지 않는다 (끄기는 항상 한다). 키 칸은 설정과 상관없이 바꾼다.
     /// 자동 플레이·일시정지도 이 함수 하나로 켜고 끈다 (InGameScene).
     /// </summary>
@@ -182,7 +299,18 @@ public class GearView : MonoBehaviour
             keyCells[lane].color = pressed ? theme.keyCellPressed : theme.keyCell;
         if (keyCellFrames != null && lane < keyCellFrames.Length && keyCellFrames[lane] != null)
             keyCellFrames[lane].color = pressed ? theme.keyCellFramePressed : theme.keyCellFrame;
-        if (keyLabels != null && lane < keyLabels.Length && keyLabels[lane] != null)
-            keyLabels[lane].color = pressed ? theme.keyLabelPressed : theme.keyLabel;
+        SpriteRenderer line = Pick(keyDiamondLines, lane);
+        if (line != null)
+        {
+            line.enabled = !pressed;
+            line.color = theme.NoteColor(lane);
+        }
+        SpriteRenderer diamond = Pick(keyDiamonds, lane);
+        if (diamond != null)
+        {
+            diamond.color = pressed ? theme.keyDiamondPressed : theme.NoteColor(lane);
+            float scale = KeyDiamondScale(diamond.sprite, pressed ? 1f : GameConstants.Play.KeyDiamondDotScale);
+            diamond.transform.localScale = new Vector3(scale, scale, 1f);
+        }
     }
 }

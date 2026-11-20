@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 화면 아래쪽 키 안내 줄 (기획서 3-8). 타이틀·곡 선택·일시정지·결과가 같은 프리팹(Prefabs/Common/KeyGuideBar)을 쓴다.
+/// 화면 아래쪽 키 안내 줄 (기획서 2-6). 타이틀·곡 선택·일시정지·결과가 같은 프리팹(Prefabs/Common/KeyGuideBar)을 쓴다.
 /// - 오브젝트 구조: KeyGuideBar(HorizontalLayoutGroup) → Item(꺼 둔 틀) → Img_KeyCap(키 모양 박스) → Txt_KeyName, 그리고 Txt_KeyLabel(짧은 이름).
 /// - 화면 스크립트가 Init(항목 목록)을 부르면 틀을 복제해 항목을 만든다. 키 이름은 그때 한 번 바인딩에서 읽는다 (GetKeyText).
 /// - 키는 입력 에셋 한 곳에만 정의한다. 안내 문구에 키 이름을 직접 쓰지 않는다 (고정 글자는 방향키·UI 맵 키만).

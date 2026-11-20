@@ -63,14 +63,14 @@ public class ResultPlayTests
         UnityEngine.UI.Image[] titles = canvas.JudgeTitles;
         Sprite[] expected =
         {
-            JudgeSprites.Get(JudgeType.Perfect), JudgeSprites.Get(JudgeType.Great), JudgeSprites.Get(JudgeType.Good), JudgeSprites.Get(JudgeType.Miss),
-            JudgeSprites.Get(FastSlow.Fast), JudgeSprites.Get(FastSlow.Slow)
+            JudgeSprites.Get(JudgeType.Perfect, JudgeSpriteSet.Menu), JudgeSprites.Get(JudgeType.Great, JudgeSpriteSet.Menu), JudgeSprites.Get(JudgeType.Good, JudgeSpriteSet.Menu), JudgeSprites.Get(JudgeType.Miss, JudgeSpriteSet.Menu),
+            JudgeSprites.Get(FastSlow.Fast, JudgeSpriteSet.Menu), JudgeSprites.Get(FastSlow.Slow, JudgeSpriteSet.Menu)
         };
         for (int i = 0; i < expected.Length; i++)
         {
             Assert.IsNotNull(titles[i], $"이름 이미지 {i}");
             Assert.AreSame(expected[i], titles[i].sprite, titles[i].name + " 이미지");
-            float scale = expected[i] == JudgeSprites.Get(FastSlow.Fast) || expected[i] == JudgeSprites.Get(FastSlow.Slow)
+            float scale = expected[i] == JudgeSprites.Get(FastSlow.Fast, JudgeSpriteSet.Menu) || expected[i] == JudgeSprites.Get(FastSlow.Slow, JudgeSpriteSet.Menu)
                 ? GameConstants.Result.FastSlowImageScale : GameConstants.Result.JudgeImageScale;
             Assert.AreEqual(JudgeSprites.DisplaySize(expected[i], scale), titles[i].rectTransform.sizeDelta, titles[i].name + " 크기 = 원본 × 배율");
             Assert.IsTrue(titles[i].preserveAspect && !titles[i].raycastTarget, titles[i].name + " Preserve Aspect 켬 · Raycast 끔");

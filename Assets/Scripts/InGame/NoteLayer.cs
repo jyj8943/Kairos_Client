@@ -164,14 +164,14 @@ public class NoteLayer : MonoBehaviour
             {
                 if (longNotePrefab == null) continue;
                 LongNoteView longView = longPool.Count > 0 ? longPool.Pop() : GrowLong();
-                longView.Init(notes[index].Lane, noteSize);
+                longView.Init(notes[index].Lane, noteSize, gear.UnitsPerReferencePx);
                 longView.gameObject.SetActive(true);
                 longViewByNote[index] = longView;
             }
             else
             {
                 NoteView view = pool.Count > 0 ? pool.Pop() : Grow();
-                view.Init(notes[index].Lane);
+                view.Init(notes[index].Lane, gear.UnitsPerReferencePx);
                 view.gameObject.SetActive(true);
                 viewByNote[index] = view;
             }

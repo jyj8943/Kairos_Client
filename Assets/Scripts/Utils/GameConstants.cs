@@ -22,6 +22,39 @@ public static class GameConstants
         public const string Result = "ResultScene";
     }
 
+    /// <summary>
+    /// 인게임 기어(SpriteRenderer 월드 오브젝트) 그리는 순서 (sortingOrder, 11/20). 같은 순서 안에서 겹치는 것이 없게 한 칸씩 나눈다.
+    /// 기어 위 판정 글자·콤보는 Screen Space Overlay Canvas(Canvas_InGame)라 이 값과 상관없이 항상 위다.
+    /// </summary>
+    public static class InGameSort
+    {
+        public const int LaneBackground = 0;
+        /// <summary>테두리 · 라인 구분선 · 마디선</summary>
+        public const int Lines = 1;
+        public const int LaneGlow = 2;
+        public const int JudgeLine = 3;
+        /// <summary>숏노트 · 롱노트 머리 뒤 빛</summary>
+        public const int NoteGlow = 4;
+        /// <summary>롱노트 몸통 (반투명)</summary>
+        public const int LongNoteBody = 5;
+        /// <summary>롱노트 몸통 가운데 흰 선</summary>
+        public const int LongNoteCenterLine = 6;
+        /// <summary>숏노트 · 롱노트 머리 · 꼬리 본체</summary>
+        public const int Note = 7;
+        /// <summary>숏노트 · 롱노트 머리 광택</summary>
+        public const int NoteShine = 8;
+        /// <summary>판정 이펙트 (판정선·노트 위)</summary>
+        public const int HitFx = 9;
+        public const int KeyCell = 10;
+        public const int KeyCellFrame = 11;
+        /// <summary>키 칸 마름모 (Key_DiamondLine · Key_Diamond)</summary>
+        public const int KeyDiamond = 12;
+        /// <summary>시작 키 글자 뒤 판 (Key_LabelPlate)</summary>
+        public const int KeyLabelPlate = 13;
+        /// <summary>시작 키 글자 (TMP)</summary>
+        public const int KeyLabel = 14;
+    }
+
     /// <summary>인게임 플레이 규칙 (기획서 2-1). 판정 범위 기본값은 잠정치이며 InGameScene 인스펙터에서 조정한다</summary>
     public static class Play
     {
@@ -219,6 +252,57 @@ public static class GameConstants
         /// JudgeLine.png(542×69)의 Pixels Per Unit 310.5는 이 값 24px에 이미지 세로 69px가 맞게 정한 값이다 (좌우 9-slice 테두리가 위아래 테두리와 같은 굵기로 보이게).
         /// </summary>
         public const float JudgeLineThicknessPx = 24f;
+
+        /// <summary>
+        /// 판정 패널 · 결과용 판정 이미지 폴더 (밝은 바탕용 진한 색, 11/20). 이름은 기어용(JudgeSpriteFolder)과 같다.
+        /// </summary>
+        public const string JudgeMenuSpriteFolder = "Images/InGame/JudgeMenu/";
+
+        // ───── 노트 모양 (11/20, 1080 화면 기준 px) ─────
+
+        /// <summary>숏노트 광택(ShortNote_Shine): 좌우로 노트 안쪽 이만큼(px)</summary>
+        public const float NoteShineSideInsetPx = 3f;
+        /// <summary>숏노트 광택: 노트 위 끝에서 이만큼(px) 아래가 광택 위 끝</summary>
+        public const float NoteShineTopInsetPx = 2f;
+        /// <summary>숏노트 광택 두께 (px)</summary>
+        public const float NoteShineHeightPx = 4f;
+        /// <summary>롱노트 꼬리 끝 (ShortNote.png, 라인 색) 크기 (px)</summary>
+        public const float LongNoteTailWidthPx = 76f;
+        public const float LongNoteTailHeightPx = 10f;
+        /// <summary>롱노트 몸통 가운데 흰 선 폭 (px)</summary>
+        public const float LongNoteCenterLineWidthPx = 2f;
+
+        // ───── 판정 이펙트 R2 (11/20, 기획서 3-4 「노트 · 판정 이펙트」) ─────
+
+        /// <summary>판정 이펙트 스프라이트 폴더 (Resources 기준)</summary>
+        public const string HitFxSpriteFolder = "Images/InGame/Fx/";
+        /// <summary>라인마다 미리 만들어 두는 이펙트 수. 다 쓰고 있으면 가장 오래된 것을 다시 쓴다</summary>
+        public const int HitFxPoolPerLane = 6;
+        /// <summary>이펙트 세로 중심 (1080 화면 위에서 px). 판정선 높이</summary>
+        public const float HitFxCenterYPx = 906f;
+
+        // ───── 키 칸 마름모 · 시작 키 글자 안내 (11/20) ─────
+
+        /// <summary>키 칸 스프라이트 폴더 (Resources 기준)</summary>
+        public const string KeyCellSpriteFolder = "Images/InGame/KeyCell/";
+        /// <summary>키 칸 마름모 세로 중심 (1080 화면 위에서 px)</summary>
+        public const float KeyDiamondCenterYPx = 1020f;
+        /// <summary>Key_DiamondLine · Key_Diamond 반대각 (px, 이미지 76px = 표시 38px)</summary>
+        public const float KeyDiamondHalfDiagonalPx = 16f;
+        /// <summary>Key_Diamond 이미지의 반대각 (원본 px)</summary>
+        public const float KeyDiamondSourceHalfDiagonalPx = 32f;
+        /// <summary>평소 가운데 점(Key_Diamond) 배율 (반대각 16 × 0.375 = 6)</summary>
+        public const float KeyDiamondDotScale = 0.375f;
+        /// <summary>시작 키 글자 뒤 판(Key_LabelPlate) 크기 (px)</summary>
+        public const float KeyLabelPlateSizePx = 56f;
+        /// <summary>시작 키 글자 크기 (px, 굵게)</summary>
+        public const float KeyLabelHintFontPx = 34f;
+        /// <summary>메트로놈이 없을 때(중간부터 테스트 플레이) 키 글자를 보여 주는 시간 (초, 곡 시간)</summary>
+        public const double KeyLabelHintSeconds = 1.5;
+        /// <summary>메트로놈이 없을 때 끝에서 사라지는 시간 (초)</summary>
+        public const double KeyLabelHintFadeSeconds = 0.5;
+        /// <summary>메트로놈이 있을 때 사라지기 시작하는 박 (−1박 ~ 0박 동안 1 → 0)</summary>
+        public const int KeyLabelHintFadeStartBeat = -1;
 
         /// <summary>테스트 플레이: 시작 위치 이만큼(초) 앞의 음악부터 들려준다 (첫 노트 전 준비 시간)</summary>
         public const double TestPlayLeadInSeconds = 2.0;
@@ -482,7 +566,7 @@ public static class GameConstants
     }
 
     /// <summary>
-    /// 화면 아래쪽 키 안내 줄(KeyGuideBar) 문구 (기획서 3-8 조작 키 표). 키 이름은 바인딩에서 읽고 여기에는 짧은 이름만 둔다.
+    /// 화면 아래쪽 키 안내 줄(KeyGuideBar) 문구 (기획서 2-6 조작 키 표). 키 이름은 바인딩에서 읽고 여기에는 짧은 이름만 둔다.
     /// 고정 글자는 바인딩 하나로 이름을 읽기 어려운 키(방향키 묶음, UI 맵의 Submit·Cancel)에만 쓴다.
     /// </summary>
     public static class KeyGuide
@@ -715,7 +799,7 @@ public static class GameConstants
         }
     }
 
-    /// <summary>일반 로딩 오버레이 (기획서 3-10 「일반 로딩」, Canvas_Loading)</summary>
+    /// <summary>일반 로딩 오버레이 (기획서 3-9 「일반 로딩」, Canvas_Loading)</summary>
     public static class Loading
     {
         /// <summary>최소 표시 시간 (초, 들어오기 0초부터)</summary>
@@ -779,7 +863,7 @@ public static class GameConstants
         };
     }
 
-    /// <summary>곡 로딩 오버레이 (기획서 3-9 「곡 로딩」, Canvas_SongLoading)</summary>
+    /// <summary>곡 로딩 오버레이 (기획서 3-8 「곡 로딩」, Canvas_SongLoading)</summary>
     public static class SongLoading
     {
         /// <summary>열기 연출이 화면을 다 덮는 시각 (초). 이 뒤에 지금 씬을 떠나고 다음 씬을 불러온다</summary>

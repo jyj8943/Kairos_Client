@@ -23,7 +23,7 @@ using UnityEngine.UI;
 ///   (나만의 채보 탭은 chartId → 그 채보, 없으면 그 곡의 + 줄), 곡이 없으면(타이틀 플레이 · 에디터) 그 탭의 마지막 선택 칸. 보이지 않는 탭도 자기 칸으로 맞춰 두어
 ///   Tab으로 바꾸면 그 탭의 마지막 선택이 보인다. 칸이 비었거나 곡·채보가 없으면 공식은 첫 곡, 나만의 채보는 첫 정지점.
 ///   배속은 진입 데이터에 값이 있을 때만 그 값, 없으면 저장된 마지막 배속 (ResolveStartSpeed).
-/// - 조작 (기획서 3-8): Tab 탭 전환, 1 / 2 배속(꾹 누르면 KeyRepeat로 계속), Enter 시작(+ 줄이면 새 채보 팝업), E 편집(나만의 채보 탭 채보 줄), ESC 타이틀(UIManager → SongSelectScene.OnBack).
+/// - 조작 (기획서 2-6): Tab 탭 전환, 1 / 2 배속(꾹 누르면 KeyRepeat로 계속), Enter 시작(+ 줄이면 새 채보 팝업), E 편집(나만의 채보 탭 채보 줄), ESC 타이틀(UIManager → SongSelectScene.OnBack).
 ///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로 곡·난이도·채보 클릭, 시작 버튼, 휠 스크롤.
 /// - 키보드 선택(EventSystem)은 항상 지금 탭의 고른 항목(곡 / 채보)에 둔다. 마우스로 다른 것을 누르면 다음 프레임에 되돌린다.
 /// </summary>
@@ -329,7 +329,7 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
-    /// 키 안내 줄 (기획서 3-8): 공식 탭 = ↑↓ 곡 · ←→ 난이도 · Tab 공식 ↔ 나만의 채보 · 1 2 배속 · Enter 시작 · ESC 타이틀.
+    /// 키 안내 줄 (기획서 2-6): 공식 탭 = ↑↓ 곡 · ←→ 난이도 · Tab 공식 ↔ 나만의 채보 · 1 2 배속 · Enter 시작 · ESC 타이틀.
     /// 나만의 채보 탭 = ↑↓ 채보 · 새 채보 줄 · ←→ 이전 · 다음 곡 묶음 · Tab · 1 2 배속 · E 편집(채보 줄일 때만) · ESC 타이틀 (시작은 시작 버튼에 Enter가 보인다).
     /// ↑↓ ←→는 한 액션으로 보이기 어려워 고정 글자, ESC는 UIManager(UI/Cancel)가 받아 고정 글자. 탭·고른 줄이 바뀌면 이름과 보이는 항목을 바꾼다 (RefreshKeyGuide).
     /// </summary>

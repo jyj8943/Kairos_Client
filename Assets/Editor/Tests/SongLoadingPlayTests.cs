@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 /// <summary>
-/// 곡 로딩 오버레이 (기획서 3-9 「곡 로딩」) 실제 흐름 확인. 이 테스트만 GameSceneManager.SkipLoadingOverlayForTests를 끄고 오버레이 경로를 탄다.
+/// 곡 로딩 오버레이 (기획서 3-8 「곡 로딩」) 실제 흐름 확인. 이 테스트만 GameSceneManager.SkipLoadingOverlayForTests를 끄고 오버레이 경로를 탄다.
 /// - L1 곡 선택 Enter → 곡 로딩 → 인게임: 단계 순서(열기 연출 1.1초가 끝난 뒤 곡 선택 OnExit · 로드, 정리는 닫기 전, 닫기 시작은 열기 끝 + 2초 뒤, OnEnter와 첫 클릭은 닫기 끝 뒤),
 ///   로딩 중 ESC · Enter · ↓를 눌러도 아무 일도 없음 (곡 선택 선택 그대로, 팝업 · 일시정지 없음, 시작 한 번)
 /// - L2 결과 다시 하기 → 같은 곡 로딩 (결과 위에 덮고 0.35초 뒤 결과 OnExit)

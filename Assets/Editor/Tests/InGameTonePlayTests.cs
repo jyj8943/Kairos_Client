@@ -17,7 +17,7 @@ using UnityEngine.UI;
 ///     F5 재시작 뒤에도 배경 소스는 같은 곡 일러스트 텍스처다.
 ///     재시작은 테스트 플레이로 확인한다 (일반 플레이 재시작은 PlayerData에 마지막 배속을 저장하므로)
 /// T3. 라인 키(A)를 누르면 키 칸이 #3E9BE0, 떼면 평소 색 (입력 에셋 → InGameInput → GearView 실제 경로)
-/// T4. 판정선 이미지 (11/18): 스프라이트 JudgeLine, 색 흰색(덧칠 없음), Sliced, 폭 = 기어 폭, 두께 = JudgeLineThicknessPx, 세로 중심 = y 900 (이전 JudgeLineY 그대로)
+/// T4. 판정선 이미지 (11/18), 그리는 순서 (11/20 GameConstants.InGameSort): 스프라이트 JudgeLine, 색 흰색(덧칠 없음), Sliced, 폭 = 기어 폭, 두께 = JudgeLineThicknessPx, 세로 중심 = y 900 (이전 JudgeLineY 그대로)
 /// </summary>
 public class InGameTonePlayTests
 {
@@ -224,7 +224,11 @@ public class InGameTonePlayTests
         float px = gear.UnitsPerReferencePx;
         Assert.AreEqual(gear.LaneWidth * GameConstants.Editor.LaneCount, line.size.x, 1e-4f, "폭 = 기어 폭");
         Assert.AreEqual(GameConstants.Play.JudgeLineThicknessPx * px, line.size.y, 1e-4f, "두께 = JudgeLineThicknessPx");
-        Assert.AreEqual(3, line.sortingOrder, "판정선은 노트(5)·노트 빛(4)보다 뒤, 라인 빛(2) 위 (11/18)");
+        Assert.AreEqual(3, line.sortingOrder, "판정선 3: 라인 빛(2) 위, 노트 빛(4)·노트(7)·판정 이펙트(9)보다 뒤 (11/20 순서표)");
+        Assert.AreEqual(GameConstants.InGameSort.JudgeLine, line.sortingOrder);
+        Assert.Less(line.sortingOrder, GameConstants.InGameSort.NoteGlow);
+        Assert.Less(GameConstants.InGameSort.NoteShine, GameConstants.InGameSort.HitFx, "판정 이펙트는 노트 위");
+        Assert.Less(GameConstants.InGameSort.HitFx, GameConstants.InGameSort.KeyCell, "키 칸(10)·테두리(11)는 판정 이펙트 위 (11/20, 7·8에서 올림)");
 
         // 세로 중심 = 화면 위에서 900px (이전 JudgeLineY 그대로), 렌더러 중심도 같은 높이
         float expectedY = gear.ScreenTopY - 900f * px;

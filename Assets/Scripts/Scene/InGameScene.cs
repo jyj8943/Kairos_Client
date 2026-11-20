@@ -41,6 +41,9 @@ using UnityEngine.InputSystem;
 ///   −4·−3·−2·−1박에 에디터 메트로놈 박 소리를 ScheduleSfx로 예약한다 (곡 offset만 반영, 판정 오프셋 제외).
 ///   −1마디에는 마디선을 그리지 않는다 (판정선 위에서 0박 선이 내려온다).
 ///   판 시작·재시작(일시정지 메뉴, F5)·자동 플레이에서 울리고, 일시정지·재시작·나가기 때 아직 안 울린 클릭은 취소한다 (재개해도 다시 예약하지 않는다).
+/// - 판정 이펙트 R2 (11/20, HitFxPool): 판정 결과마다 HitFxRules로 터뜨릴지 고른다 (MISS 없음, 롱노트는 머리 · 유지 틱 · 꼬리).
+///   곡 시간으로 Tick하므로 일시정지 중에는 멈춘다.
+/// - 시작 키 글자 안내 (11/20, KeyLabelHintRules): 메트로놈 −4박 ~ 0박 또는 중간 시작 1.5초. 다시 하기(entry.isRetry)면 없음.
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 테스트 값으로 시작한다.
 /// </summary>
 public class InGameScene : SceneBase
@@ -48,6 +51,8 @@ public class InGameScene : SceneBase
     [Header("화면")]
     [SerializeField] private GearView gear;
     [SerializeField] private NoteLayer noteLayer;
+    [Tooltip("판정 이펙트 풀 (Gear/HitFx). GearView 다음에 Init하고 같은 곡 시간으로 Tick한다")]
+    [SerializeField] private HitFxPool hitFx;
     [Tooltip("마디선 (Gear/MeasureLines). NoteLayer 다음에 Init하고 같은 곡 시간으로 Refresh한다")]
     [SerializeField] private MeasureLineLayer measureLineLayer;
     [SerializeField] private InGameInput input;
@@ -171,6 +176,24 @@ public class InGameScene : SceneBase
     /// TODO: FULL COMBO / ALL PERFECT 연출을 이 시점에 띄운다
     /// </summary>
     public event System.Action OnAllNotesJudged;
+
+    // 시작 키 글자 안내 (KeyLabelHintRules). 박 시각은 카운트인 클릭과 같은 곡 시간
+    private double keyHintShowTime;
+    private double keyHintFadeStartTime;
+    private double keyHintFadeEndTime;
+    /// <summary>판 시작 곡 시간 (메트로놈이 없을 때 경과 시간 기준). 첫 Update에서 정한다</summary>
+    private double keyHintStartSongTime;
+    private bool hasKeyHintStart;
+    private bool isKeyHintOver;
+
+    /// <summary>판정 이펙트 풀 (확인용)</summary>
+    public HitFxPool HitFx => hitFx;
+
+    /// <summary>기어 (확인용)</summary>
+    public GearView Gear => gear;
+
+    /// <summary>다시 하기로 들어온 판이면 true (확인용)</summary>
+    public bool IsRetryEntry => entry != null && entry.isRetry;
     private bool isReady;
     private bool isPlaying;
     private bool isFinished;
@@ -243,6 +266,14 @@ public class InGameScene : SceneBase
         usesCountIn = CountInRules.UsesCountIn(entry);
         TimingMap songTiming = usesCountIn ? TimingMap.FromChart(chart, song.OffsetMs) : null;
         countInClickTimes = usesCountIn ? CountInRules.GetClickTimes(songTiming) : new double[0];
+        if (usesCountIn)
+        {
+            keyHintShowTime = songTiming.BeatToSeconds(-GameConstants.Play.CountInBeats);
+            keyHintFadeStartTime = songTiming.BeatToSeconds(GameConstants.Play.KeyLabelHintFadeStartBeat);
+            keyHintFadeEndTime = songTiming.BeatToSeconds(0);
+        }
+        hasKeyHintStart = false;
+        isKeyHintOver = entry.isRetry;
         if (IsTestPlay)
         {
             double startTime = timing.BeatToSeconds(entry.testPlay.startBeat);
@@ -272,6 +303,8 @@ public class InGameScene : SceneBase
         backgroundBrightness = PlayerDataManager.HasInstance ? GameManager.PlayerData.LastBackgroundBrightness : BackgroundBrightnessRules.Default;
         if (background != null) background.Init(song, backgroundBrightness);
         gear.Init();
+        if (hitFx != null) hitFx.Init(gear);
+        else Debug.LogWarning("[InGameScene] hitFx(HitFxPool)가 연결되지 않아 판정 이펙트가 없습니다.", this);
 #if UNITY_EDITOR
         if (debugPanel != null) debugPanel.Init(gear);
 #endif
@@ -460,6 +493,8 @@ public class InGameScene : SceneBase
 
         noteLayer.Refresh(songTime);
         measureLineLayer.Refresh(songTime);
+        if (hitFx != null) hitFx.Tick(songTime);
+        UpdateKeyLabelHint(songTime);
 
 #if UNITY_EDITOR
         CheckSync(songTime);
@@ -758,6 +793,8 @@ public class InGameScene : SceneBase
         // (틱은 시작 판정). FAST/SLOW는 대상일 때만 새로 띄우고(틱은 항상 None), 아니면 떠 있던 것이 남은 시간만큼 그대로 남는다.
         // 같은 프레임에 여러 결과가 오면 마지막 것이 보인다 (매번 처음부터라 화면상 문제 없음).
         canvas.ShowJudge(result.JudgeTextType, FastSlowRules.GetDisplay(result), score.Combo, score.Score);
+        // 판정 이펙트 (MISS 없음. 롱노트는 머리 · 유지 틱(머리 판정 색) · 꼬리(꼬리 판정 색))
+        if (hitFx != null) hitFx.Play(result, GameManager.Sound.SongTime);
         // 판정 패널은 판정 개수가 바뀌는 숏노트·롱노트 종합 때만
         if (result.CountsAsJudgement) canvas.RefreshJudgePanel(score);
 
@@ -776,6 +813,29 @@ public class InGameScene : SceneBase
         hitCount++;
         hitErrorSumMs += error;
         if (error > hitErrorMaxMs) hitErrorMaxMs = error;
+    }
+
+    /// <summary>
+    /// 시작 키 글자 안내 알파를 곡 시간으로 정한다 (KeyLabelHintRules). 끝나면 더 계산하지 않는다.
+    /// 일시정지 중에는 Update가 여기까지 오지 않아 멈추고, 이어 하기는 곡 시간이 그대로 이어져 새로 시작하지 않는다.
+    /// </summary>
+    private void UpdateKeyLabelHint(double songTime)
+    {
+        if (isKeyHintOver) return;
+        if (!hasKeyHintStart)
+        {
+            hasKeyHintStart = true;
+            keyHintStartSongTime = songTime;
+        }
+
+        double elapsed = songTime - keyHintStartSongTime;
+        bool isRetry = entry.isRetry;
+        gear.SetKeyLabelHintAlpha(KeyLabelHintRules.GetAlpha(usesCountIn, isRetry, songTime, keyHintShowTime, keyHintFadeStartTime, keyHintFadeEndTime, elapsed));
+        if (KeyLabelHintRules.IsOver(usesCountIn, isRetry, songTime, keyHintFadeEndTime, elapsed))
+        {
+            isKeyHintOver = true;
+            gear.SetKeyLabelHintAlpha(0f);
+        }
     }
 
     /// <summary>
@@ -816,7 +876,7 @@ public class InGameScene : SceneBase
         result.scrollMultiplier = entry.scrollMultiplier;
         result.isTestPlay = IsTestPlay;
         result.isAutoPlay = isAutoPlay;
-        result.retryEntry = entry.Clone();
+        result.retryEntry = entry.CloneForRetry();
         result.returnTarget = CreateReturnTarget();
 
         SaveLastScrollMultiplier();
@@ -1012,7 +1072,7 @@ public class InGameScene : SceneBase
         StopForLeave();
         Debug.Log("[InGameScene] 재시작", this);
         SaveLastScrollMultiplier();
-        GameManager.Scene.Load(GameConstants.Scenes.InGame, entry.Clone());
+        GameManager.Scene.Load(GameConstants.Scenes.InGame, entry.CloneForRetry());
     }
 
     // ───── F5 즉시 다시 하기 ─────

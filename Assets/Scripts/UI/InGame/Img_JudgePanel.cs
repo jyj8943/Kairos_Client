@@ -54,12 +54,12 @@ public class Img_JudgePanel : MonoBehaviour
     public void Init(ScoreCalculator score)
     {
         UITheme theme = UITheme.Current;
-        SetJudgeImage(perfectTitle, JudgeSprites.Get(JudgeType.Perfect), GameConstants.Play.PanelJudgeImageScale);
-        SetJudgeImage(greatTitle, JudgeSprites.Get(JudgeType.Great), GameConstants.Play.PanelJudgeImageScale);
-        SetJudgeImage(goodTitle, JudgeSprites.Get(JudgeType.Good), GameConstants.Play.PanelJudgeImageScale);
-        SetJudgeImage(missTitle, JudgeSprites.Get(JudgeType.Miss), GameConstants.Play.PanelJudgeImageScale);
-        SetJudgeImage(fastTitle, JudgeSprites.Get(FastSlow.Fast), GameConstants.Play.PanelFastSlowImageScale);
-        SetJudgeImage(slowTitle, JudgeSprites.Get(FastSlow.Slow), GameConstants.Play.PanelFastSlowImageScale);
+        SetJudgeImage(perfectTitle, JudgeSprites.Get(JudgeType.Perfect, JudgeSpriteSet.Menu), GameConstants.Play.PanelJudgeImageScale);
+        SetJudgeImage(greatTitle, JudgeSprites.Get(JudgeType.Great, JudgeSpriteSet.Menu), GameConstants.Play.PanelJudgeImageScale);
+        SetJudgeImage(goodTitle, JudgeSprites.Get(JudgeType.Good, JudgeSpriteSet.Menu), GameConstants.Play.PanelJudgeImageScale);
+        SetJudgeImage(missTitle, JudgeSprites.Get(JudgeType.Miss, JudgeSpriteSet.Menu), GameConstants.Play.PanelJudgeImageScale);
+        SetJudgeImage(fastTitle, JudgeSprites.Get(FastSlow.Fast, JudgeSpriteSet.Menu), GameConstants.Play.PanelFastSlowImageScale);
+        SetJudgeImage(slowTitle, JudgeSprites.Get(FastSlow.Slow, JudgeSpriteSet.Menu), GameConstants.Play.PanelFastSlowImageScale);
         SetTitle(rateTitle, GameConstants.Play.RateTitleText, JudgeColor.Solid(theme.textDescription));
         SetTitle(scoreTitle, GameConstants.Play.ScoreTitleText, JudgeColor.Solid(theme.textDescription));
 

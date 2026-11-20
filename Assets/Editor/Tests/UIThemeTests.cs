@@ -112,12 +112,14 @@ public class UIThemeTests
             AssertHex("7CC4FA", 0.55f, target.gearBorder, who + " 기어 양옆 테두리");
             AssertHex("FFFFFF", 0.08f, target.laneDivider, who + " 라인 구분선");
             AssertHex("FFFFFF", 0.35f, target.measureLine, who + " 마디선");
-            AssertHex("F7F5FA", 1f, target.shortNote, who + " 숏노트");
+            AssertHex("B4A6FF", 1f, target.noteOuter, who + " 바깥 라인 노트 라벤더 (11/20)");
+            AssertHex("7CC4FA", 1f, target.noteInner, who + " 안쪽 라인 노트 하늘 (11/20)");
             AssertRgb(44, 40, 56, 1f, target.keyCell, who + " 키 칸 평소 불투명 (11/19)");
             AssertHex("FFFFFF", 0.12f, target.keyCellFrame, who + " 키 칸 테두리");
-            AssertHex("D9D5E2", 1f, target.keyLabel, who + " 키 칸 글자");
+            AssertHex("FFFFFF", 1f, target.keyLabel, who + " 시작 키 글자 흰색 (11/20)");
+            AssertHex("17141F", 0.88f, target.keyLabelPlate, who + " 시작 키 글자 판 (11/20)");
             AssertHex("3E9BE0", 1f, target.keyCellPressed, who + " 키 칸 누름");
-            AssertHex("FFFFFF", 1f, target.keyLabelPressed, who + " 키 칸 누름 글자");
+            AssertHex("FFFFFF", 1f, target.keyDiamondPressed, who + " 키 칸 마름모 누름 흰색 (11/20)");
             AssertHex("A9A3B8", 1f, target.comboTitle, who + " 콤보 라벨");
             AssertHex("FFFFFF", 1f, target.comboNumber, who + " 콤보 숫자");
             // 11/19 왼쪽 패널 라벤더 불투명 (배경 · BGA 와이어프레임)
@@ -132,7 +134,7 @@ public class UIThemeTests
         }
     }
 
-    /// <summary>판정 색 B3안 (11/19): 메뉴용·인게임용 6색 + PERFECT 그라데이션 두 색, 기본값과 에셋 둘 다</summary>
+    /// <summary>판정 색 B3안 (11/19, 11/20 GREAT · MISS · FAST · SLOW 바꿈): 메뉴용 6색 + PERFECT 그라데이션 두 색, 기본값과 에셋 둘 다</summary>
     [Test]
     public void JudgeColors_B3_DefaultsAndAsset()
     {
@@ -143,15 +145,15 @@ public class UIThemeTests
             // 메뉴용 (판정 패널 · 결과)
             AssertHex("B87A10", 1f, target.judgePerfectStart, who + " PERFECT 왼쪽 금");
             AssertHex("C8358C", 1f, target.judgePerfectEnd, who + " PERFECT 오른쪽 분홍");
-            AssertHex("6650D8", 1f, target.judgeGreat, who + " GREAT");
+            AssertHex("E0503E", 1f, target.judgeGreat, who + " GREAT (11/20)");
             AssertHex("2C9C66", 1f, target.judgeGood, who + " GOOD");
-            AssertHex("C24D6B", 1f, target.judgeMiss, who + " MISS");
-            AssertHex("2389C4", 1f, target.judgeFast, who + " FAST");
-            AssertHex("C97418", 1f, target.judgeSlow, who + " SLOW");
+            AssertHex("6E6A7A", 1f, target.judgeMiss, who + " MISS (11/20)");
+            AssertHex("3E63D6", 1f, target.judgeFast, who + " FAST (11/20)");
+            AssertHex("A93BC2", 1f, target.judgeSlow, who + " SLOW (11/20)");
             // 기어 위 판정 글자는 색이 든 이미지 (JudgeSprites, 11/19)라 테마 색이 없다
             Assert.IsTrue(target.GetMenuJudge(JudgeType.Perfect).IsGradient, who + " 메뉴 PERFECT 그라데이션");
             Assert.IsFalse(target.GetMenuJudge(JudgeType.Great).IsGradient, who + " GREAT 단색");
-            AssertHex("6650D8", 1f, target.GetMenuJudge(JudgeType.Great).Start, who + " 판정 패널 GREAT");
+            AssertHex("E0503E", 1f, target.GetMenuJudge(JudgeType.Great).Start, who + " 판정 패널 GREAT");
             // 난이도 색은 판정 색과 따로 (그대로)
             AssertHex("2F7FC8", 1f, target.difficultyNormal, who + " NORMAL 난이도 그대로");
         }
@@ -193,7 +195,49 @@ public class UIThemeTests
         Assert.AreEqual(0.70f, UITheme.LongNoteAlphaAt(0.5f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "가운데");
         Assert.AreEqual(0.55f, UITheme.LongNoteAlphaAt(1f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "위 끝(꼬리)");
         Assert.AreEqual(0.55f, UITheme.LongNoteAlphaAt(3f, theme.longNoteBottomAlpha, theme.longNoteTopAlpha), 1e-5f, "범위 밖은 끝 값");
-        AssertHex("FFFFFF", 1f, theme.longNoteBody, "몸통 흰색");
+        AssertHex("FFFFFF", 0.78f, theme.longNoteCenterLine, "가운데 선 흰색 78% (11/20)");
+        AssertHex("FFFFFF", 0.75f, theme.noteShine, "광택 흰색 75% (11/20)");
+    }
+
+    /// <summary>11/20 라인 색: 라인 0 · 3 라벤더, 1 · 2 하늘. 빛은 라인 색 35%. 기본값과 에셋 둘 다</summary>
+    [Test]
+    public void NoteColor_ByLane_DefaultsAndAsset()
+    {
+        foreach (UITheme target in new[] { theme, Resources.Load<UITheme>(UITheme.ResourcePath) })
+        {
+            string who = target == theme ? "기본값" : "에셋";
+            string[] expected = { "B4A6FF", "7CC4FA", "7CC4FA", "B4A6FF" };
+            Assert.AreEqual(expected.Length, GameConstants.Editor.LaneCount, "라인 수");
+            for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++)
+            {
+                AssertHex(expected[lane], 1f, target.NoteColor(lane), who + " 라인 " + lane + " 노트");
+                AssertHex(expected[lane], 0.35f, target.NoteGlowColor(lane), who + " 라인 " + lane + " 빛");
+            }
+            Assert.IsTrue(UITheme.IsOuterLane(0) && UITheme.IsOuterLane(3), "바깥 라인 0 · 3");
+            Assert.IsFalse(UITheme.IsOuterLane(1) || UITheme.IsOuterLane(2), "안쪽 라인 1 · 2");
+        }
+    }
+
+    /// <summary>11/20 판정 이펙트 색: C 3색, MISS 없음, L = C와 흰색 55%</summary>
+    [Test]
+    public void HitFxColors_DefaultsAndAsset()
+    {
+        foreach (UITheme target in new[] { theme, Resources.Load<UITheme>(UITheme.ResourcePath) })
+        {
+            string who = target == theme ? "기본값" : "에셋";
+            Assert.IsTrue(target.TryGetHitFxColor(JudgeType.Perfect, out Color perfect));
+            AssertHex("FFA698", 1f, perfect, who + " PERFECT");
+            Assert.IsTrue(target.TryGetHitFxColor(JudgeType.Great, out Color great));
+            AssertHex("FF7E6E", 1f, great, who + " GREAT");
+            Assert.IsTrue(target.TryGetHitFxColor(JudgeType.Good, out Color good));
+            AssertHex("6FE0A4", 1f, good, who + " GOOD");
+            Assert.IsFalse(target.TryGetHitFxColor(JudgeType.Miss, out _), who + " MISS는 이펙트 없음");
+            Assert.AreEqual(0.55f, target.hitFxLightMix, 1e-5f, who + " 밝은 색 섞는 비율");
+        }
+        Color light = UITheme.HitFxLight(new Color32(0xFF, 0x7E, 0x6E, 0xFF), 0.55f);
+        Assert.AreEqual(1f, light.r, 1e-3f);
+        Assert.AreEqual((0x7E + (255 - 0x7E) * 0.55f) / 255f, light.g, 1e-3f, "L = Lerp(C, 흰색, 0.55)");
+        Assert.AreEqual(1f, light.a, 1e-5f);
     }
 
     private static void AssertRgb(int r, int g, int b, float alpha, Color actual, string message)

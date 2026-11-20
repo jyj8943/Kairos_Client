@@ -61,21 +61,21 @@ public class UITheme : ScriptableObject
     public Color textDescription = new Color32(0x5A, 0x54, 0x70, 0xFF);
     public Color textMuted = new Color32(0x7A, 0x73, 0x90, 0xFF);
 
-    [Header("판정 색 (메뉴용 = 밝은 배경용 진한 색, 11/19 B3안. 인게임 판정 패널·결과. 기어 위 판정 글자는 인게임 묶음)")]
+    [Header("판정 색 (메뉴용 = 밝은 배경용 진한 색, 11/19 B3안, 11/20 GREAT·MISS·FAST·SLOW 바꿈. 인게임 판정 패널·결과 (이름은 JudgeMenu 이미지, 이 색은 결과 FAST/SLOW 개수·막대). 기어 위 판정 글자는 인게임 묶음)")]
     [Tooltip("PERFECT 가로 그라데이션 왼쪽 (금 #B87A10)")]
     public Color judgePerfectStart = new Color32(0xB8, 0x7A, 0x10, 0xFF);
     [Tooltip("PERFECT 가로 그라데이션 오른쪽 (분홍 #C8358C)")]
     public Color judgePerfectEnd = new Color32(0xC8, 0x35, 0x8C, 0xFF);
-    [Tooltip("GREAT (남보라 #6650D8)")]
-    public Color judgeGreat = new Color32(0x66, 0x50, 0xD8, 0xFF);
+    [Tooltip("GREAT (코랄 #E0503E)")]
+    public Color judgeGreat = new Color32(0xE0, 0x50, 0x3E, 0xFF);
     [Tooltip("GOOD (초록 #2C9C66)")]
     public Color judgeGood = new Color32(0x2C, 0x9C, 0x66, 0xFF);
-    [Tooltip("MISS (장미빛 #C24D6B)")]
-    public Color judgeMiss = new Color32(0xC2, 0x4D, 0x6B, 0xFF);
-    [Tooltip("FAST (하늘 #2389C4)")]
-    public Color judgeFast = new Color32(0x23, 0x89, 0xC4, 0xFF);
-    [Tooltip("SLOW (호박 #C97418)")]
-    public Color judgeSlow = new Color32(0xC9, 0x74, 0x18, 0xFF);
+    [Tooltip("MISS (회색 #6E6A7A)")]
+    public Color judgeMiss = new Color32(0x6E, 0x6A, 0x7A, 0xFF);
+    [Tooltip("FAST (코발트 #3E63D6)")]
+    public Color judgeFast = new Color32(0x3E, 0x63, 0xD6, 0xFF);
+    [Tooltip("SLOW (자주 #A93BC2)")]
+    public Color judgeSlow = new Color32(0xA9, 0x3B, 0xC2, 0xFF);
 
     [Header("난이도 색 (메뉴용, 위 글자 흰색. 인게임 곡 정보 카드 뱃지도 이 색)")]
     public Color difficultyEasy = new Color32(0x2E, 0x9C, 0x6A, 0xFF);
@@ -120,7 +120,7 @@ public class UITheme : ScriptableObject
     [Tooltip("카운트다운 숫자 빛 (하늘색, 알파 = 빛 세기, TMP Underlay)")]
     public Color countdownGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.6f);
 
-    [Header("일반 로딩 (기획서 3-10 「일반 로딩」, Canvas_Loading. 화면 이름 · TIP 글자는 위 글자 색, TIP 알약은 포인트색)")]
+    [Header("일반 로딩 (기획서 3-9 「일반 로딩」, Canvas_Loading. 화면 이름 · TIP 글자는 위 글자 색, TIP 알약은 포인트색)")]
     [Tooltip("아래 띠 (#F4F1F8, 뒤 흐림 대신 85% 단색)")]
     public Color loadingBand = new Color(0xF4 / 255f, 0xF1 / 255f, 0xF8 / 255f, 0.85f);
     [Tooltip("띠 위 흰 선 1px")]
@@ -128,7 +128,7 @@ public class UITheme : ScriptableObject
     [Tooltip("불러오는 중 시계 · 켜진 점 (보라 #7B6BD8)")]
     public Color loadingClock = new Color32(0x7B, 0x6B, 0xD8, 0xFF);
 
-    [Header("곡 로딩 (기획서 3-9 「곡 로딩」, Canvas_SongLoading. 글자·포인트·난이도·판 바탕은 위 공용 값)")]
+    [Header("곡 로딩 (기획서 3-8 「곡 로딩」, Canvas_SongLoading. 글자·포인트·난이도·판 바탕은 위 공용 값)")]
     [Tooltip("정보 판 흰 테두리 (흰색 80%)")]
     public Color songLoadingPanelBorder = new Color(1f, 1f, 1f, 0.8f);
     [Tooltip("기록 3칸 바탕 (흰색 70%)")]
@@ -166,18 +166,22 @@ public class UITheme : ScriptableObject
     [Tooltip("마디선 (흰색 35%)")]
     public Color measureLine = new Color(1f, 1f, 1f, 0.35f);
 
-    [Header("인게임 · 노트")]
-    [Tooltip("숏노트 (#F7F5FA)")]
-    public Color shortNote = new Color32(0xF7, 0xF5, 0xFA, 0xFF);
-    [Tooltip("숏노트 빛 (은은한 하늘색, 알파 = 빛 세기)")]
-    public Color shortNoteGlow = new Color(0x7C / 255f, 0xC4 / 255f, 0xFA / 255f, 0.35f);
-    [Tooltip("롱노트 몸통 색 (알파는 아래 위·아래 값으로 세로 그라데이션)")]
-    public Color longNoteBody = Color.white;
+    [Header("인게임 · 노트 (11/20: 라인 색 노트. 바깥 라인 0·3 라벤더, 안쪽 라인 1·2 하늘. NoteColor(lane)으로 고른다)")]
+    [Tooltip("바깥 라인(0·3, A · ') 노트 · 키 칸 마름모 (#B4A6FF)")]
+    public Color noteOuter = new Color32(0xB4, 0xA6, 0xFF, 0xFF);
+    [Tooltip("안쪽 라인(1·2, S · ;) 노트 · 키 칸 마름모 (#7CC4FA)")]
+    public Color noteInner = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
+    [Tooltip("숏노트 뒤 빛 알파 (색은 라인 색)")]
+    [Range(0f, 1f)] public float noteGlowAlpha = 0.35f;
+    [Tooltip("숏노트 · 롱노트 머리 위 광택 ShortNote_Shine (흰색 75%, 라인 색을 입히지 않는다)")]
+    public Color noteShine = new Color(1f, 1f, 1f, 0.75f);
+    [Tooltip("롱노트 몸통 가운데 선 LongNoteCenterLine (흰색 78%)")]
+    public Color longNoteCenterLine = new Color(1f, 1f, 1f, 0.78f);
     [Tooltip("롱노트 몸통 위(꼬리 쪽) 불투명도")]
     [Range(0f, 1f)] public float longNoteTopAlpha = 0.55f;
     [Tooltip("롱노트 몸통 아래(머리 쪽) 불투명도")]
     [Range(0f, 1f)] public float longNoteBottomAlpha = 0.85f;
-    [Tooltip("시작 MISS 롱노트 색 (끝까지 이 색, 알파는 같은 그라데이션)")]
+    [Tooltip("시작 MISS 롱노트 색 (몸통 · 머리 · 꼬리 끝까지 이 색, 몸통 알파는 같은 그라데이션)")]
     public Color longNoteMissed = new Color32(0x5A, 0x5A, 0x5E, 0xFF);
 
     [Header("인게임 · 키 칸 · 라인 빛 (판정선은 이미지 그대로라 색이 없다)")]
@@ -185,16 +189,28 @@ public class UITheme : ScriptableObject
     public Color keyCell = new Color(44 / 255f, 40 / 255f, 56 / 255f, 1f);
     [Tooltip("키 칸 평소 테두리 (흰색 12%)")]
     public Color keyCellFrame = new Color(1f, 1f, 1f, 0.12f);
-    [Tooltip("키 칸 평소 글자 (#D9D5E2)")]
-    public Color keyLabel = new Color32(0xD9, 0xD5, 0xE2, 0xFF);
+    [Tooltip("시작 키 글자 안내 글자 (흰색, 11/20: 평소에는 글자를 끄고 판 시작 때만 보인다)")]
+    public Color keyLabel = Color.white;
     [Tooltip("키 칸 누를 때 채움 (#3E9BE0)")]
     public Color keyCellPressed = new Color32(0x3E, 0x9B, 0xE0, 0xFF);
     [Tooltip("키 칸 누를 때 테두리 (채움과 같은 색)")]
     public Color keyCellFramePressed = new Color32(0x3E, 0x9B, 0xE0, 0xFF);
-    [Tooltip("키 칸 누를 때 글자 (흰색)")]
-    public Color keyLabelPressed = Color.white;
+    [Tooltip("키 칸 마름모 누를 때 채움 Key_Diamond (흰색, 평소는 라인 색 NoteColor)")]
+    public Color keyDiamondPressed = Color.white;
+    [Tooltip("시작 키 글자 뒤 판 Key_LabelPlate (#17141F 88%)")]
+    public Color keyLabelPlate = new Color(0x17 / 255f, 0x14 / 255f, 0x1F / 255f, 0.88f);
     [Tooltip("누른 라인 빛 LaneGlow (하늘색, 알파 = 판정선 쪽 가장 진한 곳)")]
     public Color laneGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.55f);
+
+    [Header("인게임 · 판정 이펙트 R2 (11/20). 색 C = 판정별 색, 밝은 색 L = C와 흰색을 hitFxLightMix만큼 섞은 색. MISS는 이펙트 없음")]
+    [Tooltip("PERFECT 이펙트 색 (#FFA698, 기어 PERFECT 그라데이션의 가운데)")]
+    public Color hitFxPerfect = new Color32(0xFF, 0xA6, 0x98, 0xFF);
+    [Tooltip("GREAT 이펙트 색 (#FF7E6E)")]
+    public Color hitFxGreat = new Color32(0xFF, 0x7E, 0x6E, 0xFF);
+    [Tooltip("GOOD 이펙트 색 (#6FE0A4)")]
+    public Color hitFxGood = new Color32(0x6F, 0xE0, 0xA4, 0xFF);
+    [Tooltip("밝은 색 L = Lerp(C, 흰색, 이 값)")]
+    [Range(0f, 1f)] public float hitFxLightMix = 0.55f;
 
     [Header("인게임 · 기어 위 콤보 (밝은 색. 기어 판정 글자·FAST/SLOW는 색이 든 이미지 Images/InGame/Judge/, 11/19)")]
     [Tooltip("콤보 제목 COMBO (#A9A3B8)")]
@@ -347,6 +363,39 @@ public class UITheme : ScriptableObject
             case GameConstants.Chart.DifficultyHard: return difficultyHard;
             default: return difficultyCustom;
         }
+    }
+
+    /// <summary>
+    /// 라인의 노트 색 (11/20): 바깥 라인(0, 마지막)은 noteOuter, 안쪽 라인은 noteInner. 키 칸 마름모도 이 색이다.
+    /// </summary>
+    public Color NoteColor(int lane) => IsOuterLane(lane) ? noteOuter : noteInner;
+
+    /// <summary>바깥 라인인지 (0 또는 마지막 라인). 순수 함수</summary>
+    public static bool IsOuterLane(int lane) => lane <= 0 || lane >= GameConstants.Editor.LaneCount - 1;
+
+    /// <summary>라인의 숏노트 뒤 빛 색 = 라인 색 × noteGlowAlpha</summary>
+    public Color NoteGlowColor(int lane) => WithAlpha(NoteColor(lane), noteGlowAlpha);
+
+    /// <summary>
+    /// 판정 이펙트 색 C (11/20). PERFECT · GREAT · GOOD만 있고 MISS는 false (이펙트 없음).
+    /// </summary>
+    public bool TryGetHitFxColor(JudgeType judge, out Color color)
+    {
+        switch (judge)
+        {
+            case JudgeType.Perfect: color = hitFxPerfect; return true;
+            case JudgeType.Great: color = hitFxGreat; return true;
+            case JudgeType.Good: color = hitFxGood; return true;
+            default: color = Color.clear; return false;
+        }
+    }
+
+    /// <summary>판정 이펙트 밝은 색 L = C와 흰색을 mix만큼 섞은 색 (알파 1). 순수 함수</summary>
+    public static Color HitFxLight(Color color, float mix)
+    {
+        Color light = Color.Lerp(color, Color.white, mix);
+        light.a = 1f;
+        return light;
     }
 
     /// <summary>메뉴용(밝은 배경) 판정 이름 색 (인게임 왼쪽 판정 패널 라벨 · 결과). PERFECT는 금 → 분홍 가로 그라데이션</summary>
