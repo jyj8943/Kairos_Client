@@ -39,6 +39,7 @@ public static class Bootstrapper
         Init(GameManager.UI);     // 오버레이 Canvas·공용 팝업·ESC (씬이 Canvas를 등록하기 전에)
         if (GameManager.UI != null && GameManager.UI.SongLoading != null) GameManager.UI.SongLoading.Init(); // 곡 로딩 오버레이 (숨김)
         if (GameManager.UI != null && GameManager.UI.Loading != null) GameManager.UI.Loading.Init();         // 일반 로딩 오버레이 (숨김)
+        if (GameManager.UI != null && GameManager.UI.FadeLoading != null) GameManager.UI.FadeLoading.Init(); // 암전 로딩 오버레이 (숨김)
         Init(GameManager.Scene);  // 씬 전환 준비 (마지막)
 
         GameManager.IsInitialized = true;

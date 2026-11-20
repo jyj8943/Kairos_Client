@@ -67,11 +67,20 @@ public class ResultScene : SceneBase
     }
 
     /// <summary>
-    /// 초기화가 끝나면 F5·Enter 입력을 받는다.
+    /// 암전 로딩이 다 걷힌 뒤(닫기 끝) 불린다: 결과 화면 등장 애니메이션을 시작하고 F5·Enter 입력을 받는다.
     /// </summary>
     protected override void OnEnter()
     {
-        if (isReady) canvas.EnableInput();
+        if (!isReady) return;
+        PlayEnterAnimation();
+        canvas.EnableInput();
+    }
+
+    /// <summary>
+    /// 결과 화면 등장 애니메이션 자리 (기획서 3-10 「암전 로딩」: 걷힌 뒤 OnEnter에서 시작). 애니메이션은 나중에 정함 — 지금은 비어 있고 바로 입력을 받는다.
+    /// </summary>
+    private void PlayEnterAnimation()
+    {
     }
 
     /// <summary>

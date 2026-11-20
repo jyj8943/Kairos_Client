@@ -134,6 +134,12 @@ public static class GameConstants
         /// </summary>
         public const double ResultDelaySeconds = 3.0;
 
+        /// <summary>
+        /// 모든 노트 판정 뒤 암전 로딩(인게임 → 결과)을 시작하는 시각 (초) = ResultDelaySeconds − FadeLoading.OpenSeconds (2.5).
+        /// 열기 0.5초가 끝나는 ResultDelaySeconds(3.0)에 씬이 바뀌어 곡 끝부터 결과까지는 그대로 3초다.
+        /// </summary>
+        public const double FadeStartSeconds = ResultDelaySeconds - FadeLoading.OpenSeconds;
+
         /// <summary>곡 끝 FC/AP 연출 이미지 폴더 (Resources 안)</summary>
         public const string ClearSpriteFolder = "Images/InGame/Clear/";
 
@@ -858,6 +864,22 @@ public static class GameConstants
             new LoadingTip(CategoryEditor, "에디터에서 Space로 재생하고 멈출 수 있어요."),
             new LoadingTip(CategoryEditor, "나만의 채보 탭에서 채보를 고르고 E를 누르면 바로 편집할 수 있어요.")
         };
+    }
+
+    /// <summary>암전 로딩 오버레이 (기획서 3-10 「암전 로딩」, Canvas_FadeLoading). 인게임 → 결과에만 쓴다</summary>
+    public static class FadeLoading
+    {
+        /// <summary>열기 길이 (초): 검은 덮개 알파 0 → 1 · 곡 음악 계수 1 → 0, ease-in t²</summary>
+        public const float OpenSeconds = 0.5f;
+
+        /// <summary>최소 시간 (초, 열기 끝부터). 결과 씬이 빨리 준비돼도 검은 화면을 이만큼 둔다</summary>
+        public const float MinSeconds = 0.2f;
+
+        /// <summary>닫기 길이 (초): 알파 1 → 0, ease-out 1 − (1 − t)². 끝나면 결과 OnEnter</summary>
+        public const float CloseSeconds = 0.45f;
+
+        /// <summary>정렬 순서 (Canvas_Overlay 팝업 100 · 곡 로딩 200 · 일반 로딩 210보다 위)</summary>
+        public const int SortOrder = 220;
     }
 
     /// <summary>곡 로딩 오버레이 (기획서 3-8 「곡 로딩」, Canvas_SongLoading)</summary>

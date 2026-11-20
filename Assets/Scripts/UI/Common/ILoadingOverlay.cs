@@ -1,7 +1,7 @@
 using System.Collections;
 
 /// <summary>
-/// 씬 이동을 덮는 로딩 오버레이 규약 (곡 로딩 Canvas_SongLoading · 일반 로딩 Canvas_Loading).
+/// 씬 이동을 덮는 로딩 오버레이 규약 (곡 로딩 Canvas_SongLoading · 일반 로딩 Canvas_Loading · 암전 로딩 Canvas_FadeLoading).
 /// GameSceneManager의 오버레이 로딩 루틴이 이 규약만 보고 흐름을 진행한다:
 /// 화면 데이터 채우기(각 오버레이의 Open) → HasOpenStarted(다음 프레임부터 0초) → IsOpening이 끝나면 화면을 다 덮음 →
 /// (씬 교체 · Init · 정리 · 최소 시간) → CloseRoutine() → 다음 씬 OnEnter.
@@ -26,7 +26,13 @@ public interface ILoadingOverlay
     /// <summary>닫기(나가기) 연출을 하고 숨긴다. 끝날 때까지 기다릴 수 있다</summary>
     IEnumerator CloseRoutine();
 
-    /// <summary>로그 이름 ("곡 로딩" / "일반 로딩")</summary>
+    /// <summary>최소 표시 시간 (초). 불러오기가 빨리 끝나도 닫기는 이만큼 지난 뒤에 시작한다</summary>
+    double MinSeconds { get; }
+
+    /// <summary>최소 시간을 열기 끝부터 세면 true (곡 로딩 · 암전 로딩), 열기 0초부터 세면 false (일반 로딩)</summary>
+    bool MinFromOpenEnd { get; }
+
+    /// <summary>로그 이름 ("곡 로딩" / "일반 로딩" / "암전 로딩")</summary>
     string LogName { get; }
 
     /// <summary>단계 로그 이름: 열기 0초 · 열기 끝</summary>

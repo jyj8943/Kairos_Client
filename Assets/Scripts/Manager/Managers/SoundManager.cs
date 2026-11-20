@@ -6,6 +6,8 @@ using UnityEngine;
 /// - 판정·노트 위치는 SongTime을 쓴다. AudioSource.time은 기준으로 쓰지 않는다 (기획서: 판정 기준은 DSP 시간).
 /// - 다른 스크립트보다 먼저 Update해 그 프레임의 SongTime을 맞춰 둔다.
 /// - 음량: 노래·BGM = 메인 × 음악, 키음·효과음(예약 효과음 포함) = 메인 × 효과음 (ApplyVolumes). 설정 창이 MasterVolume·MusicVolume·SfxVolume을 바꾼다.
+///   노래에는 페이드 계수(MusicFadeMultiplier, 기본 1)를 한 번 더 곱한다. 암전 로딩(Canvas_FadeLoading)이 열기 동안만 1 → 0으로 줄이고,
+///   설정 음량(저장값)은 건드리지 않는다. 노래를 멈추거나(StopMusic) 새로 재생하면(PlayMusicScheduled) 계수는 1로 돌아간다.
 ///   앞으로 추가하는 BGM·효과음도 따로 AudioSource를 두지 말고 이 매니저를 거쳐 재생해야 음량이 적용된다.
 /// - 재생 배율(PlaybackRate, 기본 1.0): 에디터 테스트를 빠르게 돌릴 때만 바꾼다 (SetPlaybackRateForTests, Unity 에디터 전용).
 ///   노래 pitch, 곡 시간(MusicClock), 곡 시간 ↔ DSP 시각, 입력 시각 → 곡 시간이 모두 같은 배율을 따른다. 키음·효과음 pitch는 바꾸지 않는다.
@@ -28,6 +30,20 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     [Range(0f, 1f)] [SerializeField] private float sfxVolume = 1f;
 
     private readonly MusicClock clock = new MusicClock();
+
+    private float musicFadeMultiplier = 1f;
+
+    /// <summary>
+    /// 노래에만 곱하는 페이드 계수 (0 ~ 1, 기본 1). 설정 음량과 따로이고 저장하지 않는다 (암전 로딩 열기 동안 1 → 0).
+    /// </summary>
+    public float MusicFadeMultiplier
+    {
+        get => musicFadeMultiplier;
+        set { musicFadeMultiplier = Mathf.Clamp01(value); ApplyVolumes(); }
+    }
+
+    /// <summary>노래 AudioSource의 실제 음량 (확인용) = 메인 × 음악 × 페이드 계수</summary>
+    public float MusicSourceVolume => musicSource != null ? musicSource.volume : 0f;
 
 #if UNITY_EDITOR
     /// <summary>
@@ -200,6 +216,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         musicSource.Stop();
         musicSource.clip = clip;
         musicSource.timeSamples = ToSamples(clip, startPositionSeconds);
+        MusicFadeMultiplier = 1f;
 
         ApplyPlaybackRate();
         double dspNow = AudioSettings.dspTime;
@@ -244,11 +261,12 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         musicSource.PlayScheduled(clock.SongTimeToDsp(position));
     }
 
-    /// <summary>노래를 멈추고 곡 시간을 0으로 되돌린다.</summary>
+    /// <summary>노래를 멈추고 곡 시간을 0으로 되돌린다. 페이드 계수도 1로 되돌린다 (다음 노래에 남지 않게).</summary>
     public void StopMusic()
     {
         clock.Stop();
         if (musicSource != null) musicSource.Stop();
+        MusicFadeMultiplier = 1f;
     }
 
     /// <summary>
@@ -361,7 +379,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
 
     private void ApplyVolumes()
     {
-        if (musicSource != null) musicSource.volume = masterVolume * musicVolume;
+        if (musicSource != null) musicSource.volume = masterVolume * musicVolume * musicFadeMultiplier;
 
         if (sfxSources != null)
         {

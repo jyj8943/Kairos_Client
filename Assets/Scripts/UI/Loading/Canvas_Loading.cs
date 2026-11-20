@@ -69,6 +69,8 @@ public class Canvas_Loading : UIBase, ILoadingOverlay
     public string OpenEndStep => "들어오기 끝";
     public string OpeningPhase => "들어오기 0~0.5초";
     public string ClosingPhase => "나가기";
+    public double MinSeconds => GameConstants.Loading.MinSeconds;
+    public bool MinFromOpenEnd => false;
 
     public bool IsShown => isShown;
     public bool HasOpenStarted => isShown && openStarted;

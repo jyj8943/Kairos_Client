@@ -7,6 +7,8 @@ using UnityEngine.InputSystem;
 /// 인게임 씬 진입점 (숏노트·롱노트 한 판). InGameScene.unity 루트의 "InGameScene" 오브젝트에 붙인다.
 /// - 진입 데이터(곡·채보)로 채보를 불러와 노트 시간을 계산하고, 노래를 준비 시간 뒤에 예약 재생한다.
 /// - 곡 시간은 GameManager.Sound.SongTime(DSP 기준). 판정은 NoteJudge, 점수는 ScoreCalculator가 맡는다.
+/// - 결과로 (11/20, 기획서 3-10 「암전 로딩」): 모든 노트 판정 뒤 2.5초(FadeStartSeconds)에 GameSceneManager.LoadWithFadeLoading을 부른다.
+///   열기 0.5초(화면 · 노래가 함께 어두워짐)가 끝나는 3.0초에 씬이 바뀐다. 그동안 화면은 갱신하고 입력은 막는다. 테스트 건너뛰기면 3.0초에 바로 Load.
 /// - 모든 노트가 판정(친 판정 또는 놓침 MISS)되면 OnAllNotesJudged를 한 번 알리고, 그 곡 시간부터 3초(ResultDelaySeconds) 뒤
 ///   결과 씬으로 ResultData를 넘긴다. 그 3초 동안 노래는 계속 흐르고, 결과로 넘어가는 중이라 일시정지는 받지 않는다.
 ///   그 사이 ALL PERFECT / FULL COMBO면 곡 끝 연출(ClearBanner, 정확히 3초)을 같은 타이머(판정 뒤 곡 시간)로 띄운다.
@@ -163,8 +165,20 @@ public class InGameScene : SceneBase
     private double allJudgedSongTime = -1;
     /// <summary>모든 노트가 판정돼 결과로 넘어가기를 기다리는 중이면 true</summary>
     private bool isWaitingResult;
-    /// <summary>결과로 넘어간 순간의 "모든 노트 판정 뒤 곡 시간" (초, 확인용 로그·테스트)</summary>
+    /// <summary>결과로 넘어간 순간의 "모든 노트 판정 뒤 곡 시간" (초, 확인용 로그·테스트). 암전 로딩이면 암전을 시작한 순간</summary>
     private double finishedAfterJudged = -1;
+    /// <summary>모든 노트가 판정된 unscaled 시각 (암전 로딩 단계 로그의 기준 0초)</summary>
+    private double allJudgedRealtime = -1;
+    /// <summary>암전 로딩을 한 번 시도했으면 true (오버레이가 없거나 테스트 건너뛰기면 3초에 바로 Load)</summary>
+    private bool isFadeTried;
+    /// <summary>암전 로딩으로 결과에 가는 중이면 true (2.5초 ~ 씬 교체). 화면은 계속 갱신하고 입력만 막는다</summary>
+    private bool isFadingToResult;
+
+    /// <summary>암전 로딩으로 결과에 가는 중이면 true (확인용)</summary>
+    public bool IsFadingToResult => isFadingToResult;
+
+    /// <summary>모든 노트가 판정된 unscaled 시각 (확인용, 아직이면 음수)</summary>
+    public double AllJudgedRealtime => allJudgedRealtime;
 #if UNITY_EDITOR
     // 싱크 진단 (Unity 에디터 전용): 곡 시간과 실제 음원 재생 위치의 차이
     private double maxSyncErrorSeconds;
@@ -290,6 +304,9 @@ public class InGameScene : SceneBase
             if (usesCountIn) startDelaySeconds = CountInRules.GetStartDelay(songTiming, startDelaySeconds);
         }
         allJudgedSongTime = -1;
+        allJudgedRealtime = -1;
+        isFadeTried = false;
+        isFadingToResult = false;
         frameStats.Reset();
         longReleaseStats.Reset();
         skipNextFrameSample = true;
@@ -504,6 +521,7 @@ public class InGameScene : SceneBase
         {
             isWaitingResult = true;
             allJudgedSongTime = songTime;
+            allJudgedRealtime = Time.unscaledTimeAsDouble;
             // 곡 끝 FULL COMBO / ALL PERFECT 연출 (테스트 플레이·자동 플레이 제외). 결과로 가는 시간(3초) 타이머를 연출도 같이 쓴다
             ClearType clearType = ClearBannerRules.Select(IsTestPlay, isAutoPlay, score.PerfectCount, score.MissCount, score.JudgedCount, score.TotalNotes);
             bool ap = clearType == ClearType.AllPerfect;
@@ -517,7 +535,14 @@ public class InGameScene : SceneBase
         // 연출 시간은 결과 대기와 같은 곡 시간으로 센다 (일시정지·카운트다운 중에는 위에서 돌아가 멈춘다)
         if (isWaitingResult) canvas.SetClearTime((float)(songTime - allJudgedSongTime));
 
-        if (isWaitingResult && songTime >= allJudgedSongTime + GameConstants.Play.ResultDelaySeconds) Finish();
+        // 결과로: 2.5초(FadeStartSeconds)에 암전 로딩을 시작한다 (열기 0.5초가 끝나는 3.0초에 씬이 바뀐다).
+        // 오버레이가 없거나 테스트 실행 중 건너뛰기면 지금처럼 3.0초(ResultDelaySeconds)에 바로 Load한다
+        if (isWaitingResult && !isFinished)
+        {
+            double waited = songTime - allJudgedSongTime;
+            if (!isFadeTried && waited >= GameConstants.Play.FadeStartSeconds) StartFadeToResult();
+            if (!isFinished && waited >= GameConstants.Play.ResultDelaySeconds) Finish();
+        }
     }
 
     /// <summary>
@@ -738,7 +763,7 @@ public class InGameScene : SceneBase
     /// </summary>
     private void OnUserLaneHeld(int lane, bool pressed)
     {
-        if (isAutoPlay) return;
+        if (isAutoPlay || isFinished) return;
         gear.SetPressed(lane, pressed);
     }
 
@@ -749,7 +774,7 @@ public class InGameScene : SceneBase
     /// <param name="inputSongTime">입력 시각 (곡 시간, 초)</param>
     private void OnLanePressed(int lane, double inputSongTime)
     {
-        if (!isPlaying || isPaused) return;
+        if (!isPlaying || isPaused || isFinished) return;
 
         // 개발용 F1 패널에서 키음을 끄면 소리만 내지 않는다 (판정은 그대로)
         if (DevPlaySettings.KeySoundEnabled) GameManager.Sound.PlaySfx(keySound);
@@ -769,7 +794,7 @@ public class InGameScene : SceneBase
     /// <param name="releaseSongTime">뗀 시각 (곡 시간, 초)</param>
     private void OnLaneReleased(int lane, double releaseSongTime)
     {
-        if (!isPlaying || isPaused) return;
+        if (!isPlaying || isPaused || isFinished) return;
 
         releaseResults.Clear();
         if (!judge.TryRelease(lane, releaseSongTime, releaseResults)) return;
@@ -839,7 +864,28 @@ public class InGameScene : SceneBase
     }
 
     /// <summary>
-    /// 곡이 끝나면 결과 씬으로 넘어간다. 돌아갈 곳은 여기서 정해 넘긴다 (결과 씬은 에디터·곡 선택을 직접 알지 않는다).
+    /// 모든 노트 판정 뒤 2.5초: 암전 로딩으로 결과에 간다 (기획서 3-10). 결과 데이터는 지금 만든다 (이 뒤로 판정·점수는 바뀌지 않는다).
+    /// - 화면(ClearBanner · 판정 이펙트 · 라인 빛)은 열기 0.5초 동안 계속 갱신하고(isPlaying 유지), 입력만 막는다 (isFinished: 레인 키 · 키 칸 눌림 ·
+    ///   배속 · 밝기 · F5 · 일시정지). ESC는 UIManager가 씬 로딩 중이라 무시한다. 노래는 열기 동안 암전 로딩이 줄이고 OnExit에서 멈춘다.
+    /// - 오버레이가 없거나 테스트 건너뛰기면 아무것도 하지 않고, 3초에 Finish()가 바로 Load한다.
+    /// </summary>
+    private void StartFadeToResult()
+    {
+        isFadeTried = true;
+        double nowSongTime = GameManager.Sound.SongTime;
+        ResultData result = BuildResult(nowSongTime);
+        if (!GameManager.Scene.LoadWithFadeLoading(GameConstants.Scenes.Result, result, allJudgedRealtime, "마지막 판정")) return;
+
+        isFinished = true;
+        isFadingToResult = true;
+        finishedAfterJudged = nowSongTime - allJudgedSongTime;
+        input.DisableInput();
+        SaveLastScrollMultiplier();
+        Debug.Log($"[InGameScene] 암전 로딩 시작: 모든 노트 판정 뒤 곡 시간 {finishedAfterJudged:0.000}초 · 실제 {Time.unscaledTimeAsDouble - allJudgedRealtime:0.000}초", this);
+    }
+
+    /// <summary>
+    /// 곡이 끝나면 결과 씬으로 바로 넘어간다 (암전 로딩을 쓰지 않을 때: 오버레이 없음 · 테스트 건너뛰기). 돌아갈 곳은 여기서 정해 넘긴다.
     /// </summary>
     private void Finish()
     {
@@ -852,6 +898,16 @@ public class InGameScene : SceneBase
         finishedAfterJudged = finishSongTime - allJudgedSongTime;
         GameManager.Sound.StopMusic();
 
+        ResultData result = BuildResult(finishSongTime);
+        SaveLastScrollMultiplier();
+        GameManager.Scene.Load(GameConstants.Scenes.Result, result);
+    }
+
+    /// <summary>
+    /// 결과 데이터를 만들고 판 요약 로그를 남긴다 (결과 씬은 에디터·곡 선택을 직접 알지 않으므로 돌아갈 곳도 여기서 정한다).
+    /// </summary>
+    private ResultData BuildResult(double finishSongTime)
+    {
         Debug.Log($"[InGameScene] 결과 (모든 노트 판정 뒤 곡 시간 {finishSongTime - allJudgedSongTime:0.000}초): 점수 {score.Score}, 랭크 {score.Rank}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, FAST/SLOW {score.FastCount}/{score.SlowCount}, " +
                   $"최대 콤보 {score.MaxCombo}/{score.MaxPossibleCombo} (노트 {score.TotalNotes} + 유지 틱 {score.TotalTicks}), 롱노트 끝 키음 {longEndKeySoundCount}번, 정확도 {score.Accuracy:0.00}%, FC={score.IsFullCombo}, AP={score.IsAllPerfect}, " +
                   $"판정 오차(친 노트 {hitCount}개) 평균 {(hitCount > 0 ? hitErrorSumMs / hitCount : 0):0.###}ms · 최대 {hitErrorMaxMs:0.###}ms, " +
@@ -878,9 +934,7 @@ public class InGameScene : SceneBase
         result.isAutoPlay = isAutoPlay;
         result.retryEntry = entry.CloneForRetry();
         result.returnTarget = CreateReturnTarget();
-
-        SaveLastScrollMultiplier();
-        GameManager.Scene.Load(GameConstants.Scenes.Result, result);
+        return result;
     }
 
     /// <summary>

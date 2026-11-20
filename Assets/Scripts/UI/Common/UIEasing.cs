@@ -9,6 +9,12 @@ public static class UIEasing
 
     public static float InCubic(float x) => x * x * x;
 
+    /// <summary>easeInQuad: t² (암전 로딩 열기)</summary>
+    public static float InQuad(float x) => x * x;
+
+    /// <summary>easeOutQuad: 1 − (1 − t)² (암전 로딩 닫기)</summary>
+    public static float OutQuad(float x) { float y = 1f - x; return 1f - y * y; }
+
     public static float InOutCubic(float x) => x < 0.5f ? 4f * x * x * x : 1f - Mathf.Pow(-2f * x + 2f, 3f) / 2f;
 
     /// <summary>easeOutBack (튀어 오름 1.70158)</summary>

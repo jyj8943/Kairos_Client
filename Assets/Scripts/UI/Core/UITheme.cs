@@ -120,6 +120,10 @@ public class UITheme : ScriptableObject
     [Tooltip("카운트다운 숫자 빛 (하늘색, 알파 = 빛 세기, TMP Underlay)")]
     public Color countdownGlow = new Color(0x3E / 255f, 0x9B / 255f, 0xE0 / 255f, 0.6f);
 
+    [Header("암전 로딩 (기획서 3-10 「암전 로딩」, Canvas_FadeLoading. 인게임 → 결과)")]
+    [Tooltip("검은 덮개 Img_Fade (알파는 연출이 0 ~ 1로 곱한다)")]
+    public Color fadeColor = Color.black;
+
     [Header("일반 로딩 (기획서 3-9 「일반 로딩」, Canvas_Loading. 화면 이름 · TIP 글자는 위 글자 색, TIP 알약은 포인트색)")]
     [Tooltip("아래 띠 (#F4F1F8, 뒤 흐림 대신 85% 단색)")]
     public Color loadingBand = new Color(0xF4 / 255f, 0xF1 / 255f, 0xF8 / 255f, 0.85f);

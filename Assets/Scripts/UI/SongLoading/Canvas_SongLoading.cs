@@ -106,6 +106,8 @@ public class Canvas_SongLoading : UIBase, ILoadingOverlay
     public string OpenEndStep => "열기 끝";
     public string OpeningPhase => "열기 0~1.1초";
     public string ClosingPhase => "닫기";
+    public double MinSeconds => GameConstants.SongLoading.MinLoadSeconds;
+    public bool MinFromOpenEnd => true;
 
     /// <summary>오버레이가 보이는 중이면 true (열기 시작 ~ 닫기 끝)</summary>
     public bool IsShown => isShown;

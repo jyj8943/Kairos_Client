@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
-/// <summary>오버레이 로딩(곡 로딩 · 일반 로딩) 한 단계의 시각 (확인용 로그·테스트)</summary>
+/// <summary>오버레이 로딩(곡 로딩 · 일반 로딩 · 암전 로딩) 한 단계의 시각 (확인용 로그·테스트)</summary>
 public readonly struct LoadingStep
 {
     public readonly string Name;
@@ -31,7 +31,7 @@ public class LoadingFrameStats
 /// <summary>
 /// 씬 전환과 현재 씬(SceneBase) 관리.
 /// - 씬 간 데이터는 Load(sceneName, data)로 넘기고, 다음 씬 Init에서 TakeSceneData&lt;T&gt;()로 받는다.
-/// - 오버레이 로딩 (곡 로딩 3-9 · 일반 로딩 3-10, 같은 루틴 OverlayLoadingRoutine, 오버레이 규약 ILoadingOverlay):
+/// - 오버레이 로딩 (곡 로딩 3-8 · 일반 로딩 3-9 · 암전 로딩 3-10, 같은 루틴 OverlayLoadingRoutine, 오버레이 규약 ILoadingOverlay):
 ///   1) 입력 차단 (IsLoading, EventSystem 방향키·Enter 전달 끄기) → 2) 화면 데이터 채우기 (오버레이 Open, Enter 프레임) →
 ///   3) 다음 프레임부터 열기 연출 (이 동안은 화면 말고 아무것도 하지 않는다) →
 ///   4) 열기가 끝나 화면을 다 덮은 뒤 지금 씬 OnExit → 다음 씬 비동기 로드(Single) → 다음 씬 Init (판 시작은 아직) →
@@ -39,10 +39,13 @@ public class LoadingFrameStats
 ///   5) 최소 시간 대기 → 6) 닫기 연출 → 7) 다음 씬 OnEnter (SceneBase.Enter).
 ///   - 곡 로딩 (LoadWithSongLoading): 열기 1.1초, 최소 시간 = 열기 끝부터 2초 (GameConstants.SongLoading.MinLoadSeconds).
 ///   - 일반 로딩 (LoadWithLoading): 들어오기 0.5초, 최소 시간 = 들어오기 0초부터 1.5초 (GameConstants.Loading.MinSeconds).
+///   - 암전 로딩 (LoadWithFadeLoading, 인게임 → 결과): 열기 0.5초, 최소 시간 = 열기 끝부터 0.2초, 닫기 0.45초 (GameConstants.FadeLoading).
+///   - 최소 시간과 그 기준(열기 0초 / 열기 끝)은 오버레이가 정한다 (ILoadingOverlay.MinSeconds · MinFromOpenEnd).
+///   - 단계 시각은 Enter 기준이고, 기준 시각(예: 마지막 판정)을 함께 넘기면 그 기준으로 다시 잰 값도 로그에 적는다 (LoadingOriginName · LoadingOriginOffset).
 ///   - 다음 씬이 Init 중에 Load를 부르면 (예: 에디터가 채보를 못 읽어 곡 선택으로) 같은 오버레이 아래에서 그 씬으로 이어서 간다.
 ///   - 단계 시각(LoadingSteps)과 단계별 프레임 통계(LoadingFrames)를 두 로딩 모두 로그로 남긴다.
-/// - 일반 Load는 지금 동작 그대로다 (인게임 → 결과, 인게임 재시작 등).
-/// - 테스트(Unity 에디터): SkipLoadingOverlayForTests가 켜져 있으면 두 오버레이를 건너뛰고 바로 Load한다.
+/// - 일반 Load는 지금 동작 그대로다 (인게임 재시작 등).
+/// - 테스트(Unity 에디터): SkipLoadingOverlayForTests가 켜져 있으면 오버레이를 건너뛰고 바로 Load한다.
 /// </summary>
 public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
 {
@@ -62,6 +65,18 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
 
     /// <summary>일반 로딩 중이면 true (LoadWithLoading 호출부터 다음 씬 OnEnter까지)</summary>
     public bool IsGeneralLoading { get; private set; }
+
+    /// <summary>암전 로딩 중이면 true (LoadWithFadeLoading 호출부터 다음 씬 OnEnter까지)</summary>
+    public bool IsFadeLoading { get; private set; }
+
+    /// <summary>마지막 오버레이 로딩의 기준 시각 이름 (예: "마지막 판정", 없으면 null, 확인용)</summary>
+    public string LoadingOriginName { get; private set; }
+
+    /// <summary>기준 시각부터 Enter까지 지난 unscaled 시간 (초, 기준이 없으면 0). 단계 시각 + 이 값 = 기준 시각부터 지난 시간</summary>
+    public double LoadingOriginOffset { get; private set; }
+
+    private double pendingOriginRealtime = double.NaN;
+    private string pendingOriginName;
 
 #if UNITY_EDITOR
     /// <summary>
@@ -160,6 +175,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         IsOverlayLoading = false;
         IsSongLoading = false;
         IsGeneralLoading = false;
+        IsFadeLoading = false;
         deferredScene = null;
         redirectScene = null;
         redirectData = null;
@@ -241,7 +257,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         if (!CanStartOverlay(sceneName)) return false;
 
         IsSongLoading = true;
-        StartOverlayLoading(sceneName, entry, overlay, () => overlay.Open(entry), GameConstants.SongLoading.MinLoadSeconds, true);
+        StartOverlayLoading(sceneName, entry, overlay, () => overlay.Open(entry));
         return true;
     }
 
@@ -261,7 +277,31 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         if (!CanStartOverlay(sceneName)) return false;
 
         IsGeneralLoading = true;
-        StartOverlayLoading(sceneName, data, overlay, () => overlay.Open(sceneName), GameConstants.Loading.MinSeconds, false);
+        StartOverlayLoading(sceneName, data, overlay, () => overlay.Open(sceneName));
+        return true;
+    }
+
+    /// <summary>
+    /// 암전 로딩 오버레이를 거쳐 씬을 불러온다 (인게임 → 결과). 오버레이가 없거나 테스트 실행 중 건너뛰기면 false를 돌려주고 아무것도 하지 않는다
+    /// (부르는 쪽이 지금처럼 ResultDelaySeconds에 Load한다).
+    /// </summary>
+    /// <param name="originRealtime">단계 로그의 기준 시각 (Time.unscaledTimeAsDouble, 예: 마지막 판정). NaN이면 기준 없음</param>
+    /// <param name="originName">기준 시각 이름 (로그용)</param>
+    /// <returns>암전 로딩을 시작했으면 true</returns>
+    public bool LoadWithFadeLoading(string sceneName, object data, double originRealtime = double.NaN, string originName = null)
+    {
+        Canvas_FadeLoading overlay = UIManager.HasInstance ? GameManager.UI.FadeLoading : null;
+        if (overlay == null || IsOverlaySkipped)
+        {
+            if (overlay == null) Debug.LogWarning("[GameSceneManager] 암전 로딩 오버레이(Canvas_FadeLoading)가 없습니다.");
+            return false;
+        }
+        if (!CanStartOverlay(sceneName)) return false;
+
+        IsFadeLoading = true;
+        pendingOriginRealtime = originRealtime;
+        pendingOriginName = originName;
+        StartOverlayLoading(sceneName, data, overlay, overlay.OpenFade);
         return true;
     }
 
@@ -280,7 +320,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         return true;
     }
 
-    private void StartOverlayLoading(string sceneName, object data, ILoadingOverlay overlay, System.Action open, double minSeconds, bool minFromOpenEnd)
+    private void StartOverlayLoading(string sceneName, object data, ILoadingOverlay overlay, System.Action open)
     {
         sceneData = data;
         IsLoading = true;
@@ -289,13 +329,14 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         redirectScene = null;
         redirectData = null;
         isWaitingInit = false;
-        StartCoroutine(OverlayLoadingRoutine(sceneName, overlay, open, minSeconds, minFromOpenEnd));
+        StartCoroutine(OverlayLoadingRoutine(sceneName, overlay, open));
     }
 
     /// <summary>
-    /// 곡 로딩 · 일반 로딩 공용 흐름 (클래스 설명의 1~7). minFromOpenEnd면 최소 시간을 열기 끝부터(곡 로딩), 아니면 열기 0초부터(일반 로딩) 센다.
+    /// 곡 로딩 · 일반 로딩 · 암전 로딩 공용 흐름 (클래스 설명의 1~7). 최소 시간과 기준은 오버레이가 정한다
+    /// (MinFromOpenEnd면 열기 끝부터 — 곡 로딩 · 암전 로딩, 아니면 열기 0초부터 — 일반 로딩).
     /// </summary>
-    private IEnumerator OverlayLoadingRoutine(string sceneName, ILoadingOverlay overlay, System.Action open, double minSeconds, bool minFromOpenEnd)
+    private IEnumerator OverlayLoadingRoutine(string sceneName, ILoadingOverlay overlay, System.Action open)
     {
         loadingSteps.Clear();
         frameStats.Clear();
@@ -303,6 +344,11 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         lastFramePhase = null;
         phaseOverlay = overlay;
         loadingStart = Time.unscaledTimeAsDouble;
+        bool hasOrigin = !double.IsNaN(pendingOriginRealtime);
+        LoadingOriginName = hasOrigin ? pendingOriginName : null;
+        LoadingOriginOffset = hasOrigin ? loadingStart - pendingOriginRealtime : 0;
+        pendingOriginRealtime = double.NaN;
+        pendingOriginName = null;
         MarkLoading("Enter");
 
         // 1. 방향키·Enter가 뒤 화면의 선택을 옮기지 않게 EventSystem 전달을 잠시 끈다 (UI 맵은 그대로)
@@ -362,10 +408,13 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         watch.Restart();
         System.GC.Collect();
         MarkLoading($"정리 끝 (UnloadUnusedAssets {unloadMs:0.0}ms, GC.Collect {watch.Elapsed.TotalMilliseconds:0.0}ms)");
+        // 정리(GC)가 든 긴 프레임에서 닫기를 시작하면 닫기 첫 화면이 그 프레임 길이만큼 건너뛴다 (암전 로딩은 최소 0.2초가 이미 지나 있다).
+        // 한 프레임 넘긴 뒤 닫기를 시작한다 (곡 로딩 · 일반 로딩은 아래 최소 시간 대기가 길어 시각이 바뀌지 않는다)
+        yield return null;
 
-        // 5. 최소 시간: 곡 로딩은 열기 끝부터, 일반 로딩은 열기 0초부터
-        double minBase = minFromOpenEnd ? openEndTime : openStartTime;
-        while (Time.unscaledTimeAsDouble - minBase < minSeconds) yield return null;
+        // 5. 최소 시간: 곡 로딩 · 암전 로딩은 열기 끝부터, 일반 로딩은 열기 0초부터 (오버레이가 정한다)
+        double minBase = overlay.MinFromOpenEnd ? openEndTime : openStartTime;
+        while (Time.unscaledTimeAsDouble - minBase < overlay.MinSeconds) yield return null;
 
         // 6. 닫기 연출
         MarkLoading("닫기 시작");
@@ -381,6 +430,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         deferredScene = null;
         IsSongLoading = false;
         IsGeneralLoading = false;
+        IsFadeLoading = false;
         IsOverlayLoading = false;
         IsLoading = false;
         scene.Enter();
@@ -397,14 +447,16 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         loadingSteps.Add(new LoadingStep(step, Time.unscaledTimeAsDouble - loadingStart));
     }
 
-    /// <summary>로딩 단계 시각을 한 줄로</summary>
+    /// <summary>로딩 단계 시각을 한 줄로 (기준 시각이 있으면 "기준 +x초"도 같이)</summary>
     public string DescribeLoading()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        if (LoadingOriginName != null) sb.Append('(').Append(LoadingOriginName).Append(" 기준 +").Append(LoadingOriginOffset.ToString("0.000")).Append("초에 Enter) ");
         for (int i = 0; i < loadingSteps.Count; i++)
         {
             if (i > 0) sb.Append(" → ");
             sb.Append(loadingSteps[i].Name).Append(' ').Append(loadingSteps[i].Seconds.ToString("0.000")).Append('초');
+            if (LoadingOriginName != null) sb.Append(" [").Append((loadingSteps[i].Seconds + LoadingOriginOffset).ToString("0.000")).Append(']');
         }
         return sb.ToString();
     }
