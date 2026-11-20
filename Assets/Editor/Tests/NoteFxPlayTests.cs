@@ -278,13 +278,14 @@ public class NoteFxPlayTests
             int lane = Mathf.RoundToInt(view.transform.localPosition.x / gear.LaneWidth + (GameConstants.Editor.LaneCount - 1) * 0.5f);
             AssertColor(theme.NoteColor(lane), view.BodyColor, "숏노트 라인 " + lane);
             AssertColor(theme.NoteGlowColor(lane), view.Glow.color, "빛 라인 " + lane);
+            Assert.AreEqual(theme.noteGlowEnabled, view.Glow.enabled, "빛 켜짐 = UITheme.noteGlowEnabled, 라인 " + lane);
             AssertColor(theme.noteShine, view.Shine.color, "광택 흰색 75%");
             Vector2 noteSize = view.GetComponent<SpriteRenderer>().size;
             Assert.AreEqual(noteSize.x - 6f * px, view.Shine.size.x, 1e-4f);
             Assert.AreEqual(4f * px, view.Shine.size.y, 1e-4f);
             float shineTopPx = (noteSize.y * 0.5f - (view.Shine.transform.localPosition.y + view.Shine.size.y * 0.5f)) / px;
             Assert.AreEqual(2f, shineTopPx, 0.01f, "광택 위 끝 = 노트 위 끝 − 2px");
-            log.Append($"| 숏노트 | {lane} | {Hex(view.BodyColor)} | 광택 {view.Shine.size.x / px:0.0}×{view.Shine.size.y / px:0.0}px, 위에서 {shineTopPx:0.0}px | 빛 {Hex(view.Glow.color)} |\n");
+            log.Append($"| 숏노트 | {lane} | {Hex(view.BodyColor)} | 광택 {view.Shine.size.x / px:0.0}×{view.Shine.size.y / px:0.0}px, 위에서 {shineTopPx:0.0}px | 빛 {(view.Glow.enabled ? Hex(view.Glow.color) : "꺼짐")} |\n");
             checkedShort++;
         }
         Assert.AreEqual(4, checkedShort, "숏노트 4개");

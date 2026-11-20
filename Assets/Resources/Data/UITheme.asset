@@ -79,6 +79,7 @@ MonoBehaviour:
   measureLine: {r: 1, g: 1, b: 1, a: 0.35}
   noteOuter: {r: 0.70588235, g: 0.65098039, b: 1, a: 1}
   noteInner: {r: 0.48627451, g: 0.76862745, b: 0.98039216, a: 1}
+  noteGlowEnabled: 0
   noteGlowAlpha: 0.35
   noteShine: {r: 1, g: 1, b: 1, a: 0.75}
   longNoteCenterLine: {r: 1, g: 1, b: 1, a: 0.78}

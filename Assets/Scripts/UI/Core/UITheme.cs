@@ -175,6 +175,8 @@ public class UITheme : ScriptableObject
     public Color noteOuter = new Color32(0xB4, 0xA6, 0xFF, 0xFF);
     [Tooltip("안쪽 라인(1·2, S · ;) 노트 · 키 칸 마름모 (#7CC4FA)")]
     public Color noteInner = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
+    [Tooltip("숏노트 뒤 빛(Glow, SoftGlow)을 켤지. 11/20 실물 확인용으로 끔. 다시 켜면 noteGlowAlpha로 그대로 나온다")]
+    public bool noteGlowEnabled = false;
     [Tooltip("숏노트 뒤 빛 알파 (색은 라인 색)")]
     [Range(0f, 1f)] public float noteGlowAlpha = 0.35f;
     [Tooltip("숏노트 · 롱노트 머리 위 광택 ShortNote_Shine (흰색 75%, 라인 색을 입히지 않는다)")]

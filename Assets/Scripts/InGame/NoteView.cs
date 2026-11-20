@@ -5,6 +5,7 @@ using UnityEngine;
 /// - 스프라이트는 ShortNote (Draw Mode Sliced, size 0.94 × 0.22, 스케일 1). 크기는 프리팹의 size로 정하고 여기서는 바꾸지 않는다.
 /// - 색 (11/20, 기획서 3-4 「노트 · 판정 이펙트」): 본체 = 라인 색(UITheme.NoteColor, 바깥 라벤더 · 안쪽 하늘),
 ///   자식 Shine(ShortNote_Shine, Sliced) = 흰색 75% 광택 (라인 색을 입히지 않음), 자식 Glow(SoftGlow) = 라인 색 × noteGlowAlpha.
+///   빛은 UITheme.noteGlowEnabled가 꺼져 있으면 그리지 않는다 (11/20 실물 확인용으로 끔, 오브젝트는 남겨 두어 바로 되돌릴 수 있다).
 /// - 광택 크기·위치는 NoteShape(1080 기준 px → 월드)로 정한다: (노트 폭 − 6) × 4, 노트 위 끝에서 2px 아래.
 /// - 그리는 순서 (GameConstants.InGameSort): 빛 NoteGlow → 본체 Note → 광택 NoteShine. 같은 종류끼리 묶여 그려져 드로우 콜이 노트 수만큼 늘지 않는다.
 /// </summary>
@@ -44,6 +45,7 @@ public class NoteView : MonoBehaviour
         spriteRenderer.sortingOrder = GameConstants.InGameSort.Note;
         if (glow != null)
         {
+            glow.enabled = theme.noteGlowEnabled;
             glow.color = theme.NoteGlowColor(lane);
             glow.sortingOrder = GameConstants.InGameSort.NoteGlow;
         }
