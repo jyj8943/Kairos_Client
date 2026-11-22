@@ -13,7 +13,7 @@ using UnityEngine;
 /// - 실행 취소(Ctrl+Z)·다시 실행(Ctrl+Y · Ctrl+Shift+Z) 요청을 받아 세션에 맡기고 결과를 상태 표시줄에 잠깐 보여 준다.
 ///   롱노트를 드래그하는 중이면 무시한다. 재생 중에도 노트 편집이 되므로 실행 취소도 된다.
 /// - BPM 구간 (기획서 3-6): BPM 구간 도구 클릭 → Popup_BpmSection(추가·수정), 구간선 오른쪽 클릭 → 삭제(뒤에 노트가 있으면 확인 팝업),
-///   목록 줄 클릭 → 그 구간으로 이동, Btn_ResetBpm → 확인 팝업 → 곡 기본 BPM으로 되돌리기.
+///   목록 줄 클릭 → 그 구간으로 이동, Btn_ResetBpm → 확인 팝업 → 곡 BPM 구간으로 되돌리기.
 ///   구간이 바뀌면(세션 OnTimingChanged, 실행 취소 포함) 그리드·목록·타임라인을 다시 맞추고, 재생 중이면 그 자리에서 다시 재생한다.
 /// - 도구 단축키 1 · 2 · 3은 롱노트를 드래그하는 중이면 무시한다.
 /// </summary>
@@ -70,10 +70,10 @@ public class EditorScene : SceneBase
 
         EditorEntryData entry = GameManager.Scene.TakeSceneData<EditorEntryData>();
         song = FindSong(entry);
-        if (song == null || song.Bpm <= 0f)
+        if (song == null || song.StartBpm <= 0f)
         {
             Debug.LogError($"[EditorScene] 편집할 곡을 쓸 수 없어 곡 선택(나만의 채보 탭)으로 돌아갑니다: songId={entry?.songId ?? "(없음)"}, " +
-                           $"bpm={(song != null ? song.Bpm : 0f)}", this);
+                           $"bpm={(song != null ? song.StartBpm : 0f)}", this);
             GameManager.Scene.Load(GameConstants.Scenes.SongSelect, CreateSongSelectEntry(entry?.songId, entry?.chartId));
             yield break;
         }
@@ -129,11 +129,11 @@ public class EditorScene : SceneBase
             canvas.SetTestPlaySpeed(restore.scrollMultiplier);
             canvas.RefreshSaveStatus();
         }
-        else if (chart != null && !Mathf.Approximately(chart.timingPoints[0].bpm, song.Bpm))
+        else if (chart != null && !session.IsSongBpmSections)
         {
-            // 곡 BPM을 바꾼 뒤 예전 채보를 연 경우. 자동으로 고치지 않고 알리기만 한다 (편집은 채보 BPM으로)
-            Debug.LogWarning($"[EditorScene] {GameConstants.Editor.BpmMismatchWarning}: 곡 {SongData.FormatBpm(song.Bpm)}, " +
-                             $"채보 {SongData.FormatBpm(chart.timingPoints[0].bpm)} (chartId={chart.chartId}). 편집은 채보 BPM으로 합니다.", this);
+            // 곡 BPM 구간을 바꾼 뒤(또는 구간을 넣기 전에 만든) 채보를 연 경우. 자동으로 고치지 않고 알리기만 한다 (편집은 채보 구간으로)
+            Debug.LogWarning($"[EditorScene] {GameConstants.Editor.BpmMismatchWarning}: 곡 [{BpmSectionRules.FormatSections(session.SongBpmSections)}], " +
+                             $"채보 [{BpmSectionRules.FormatSections(session.BpmSections)}] (chartId={chart.chartId}). 편집은 채보 BPM 구간으로 합니다.", this);
             canvas.ShowStatusMessage(GameConstants.Editor.BpmMismatchWarning);
         }
 
@@ -377,18 +377,19 @@ public class EditorScene : SceneBase
         if (wasPlaying) playback.Play();
     }
 
-    /// <summary>Btn_ResetBpm: 확인 팝업 뒤 곡 기본 BPM 하나로 되돌린다</summary>
+    /// <summary>Btn_ResetBpm: 확인 팝업 뒤 곡 BPM 구간 전체로 되돌린다</summary>
     private void OnResetBpmRequested()
     {
-        if (!CanUseHistory() || session.IsSongDefaultBpm) return;
+        if (!CanUseHistory() || session.IsSongBpmSections) return;
 
         playback.Stop(false);
-        string message = string.Format(GameConstants.Confirm.BpmResetMessageFormat, SongData.FormatBpm(session.SongDefaultBpm));
+        System.Collections.Generic.IReadOnlyList<BpmSection> songSections = session.SongBpmSections;
+        string message = string.Format(GameConstants.Confirm.BpmResetMessageFormat, songSections.Count, SongData.FormatBpm(songSections[0].Bpm));
         GameManager.UI.Confirm(message, GameConstants.Confirm.BpmResetLabel, () =>
         {
-            if (!session.ResetBpmToSongDefault()) return;
+            if (!session.ResetBpmToSongSections()) return;
             ShowTimedStatus(GameConstants.Editor.BpmResetDoneMessage);
-            Debug.Log($"[EditorScene] 곡 기본 BPM으로 되돌림: {SongData.FormatBpm(session.SongDefaultBpm)}", this);
+            Debug.Log($"[EditorScene] 곡 BPM 구간으로 되돌림: {BpmSectionRules.FormatSections(session.SongBpmSections)}", this);
         }, null, GameConstants.Confirm.BpmResetIsDanger);
     }
 

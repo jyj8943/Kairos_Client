@@ -7754,7 +7754,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uACE1 \uAE30\uBCF8 BPM\uC73C\uB85C \uB418\uB3CC\uB9AC\uAE30"
+  m_text: "\uACE1 BPM \uAD6C\uAC04\uC73C\uB85C \uB418\uB3CC\uB9AC\uAE30"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}
   m_sharedMaterial: {fileID: 5180054123522931063, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}

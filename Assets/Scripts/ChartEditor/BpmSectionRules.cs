@@ -245,6 +245,49 @@ public static class BpmSectionRules
         return result;
     }
 
+    /// <summary>
+    /// 채보의 timingPoints를 구간 목록으로 바꾼다 (규칙은 위와 같음). 쓸 구간이 하나도 없으면 fallback 구간 목록 전체(곡 BPM 구간)를 복사해 쓴다.
+    /// </summary>
+    public static List<BpmSection> FromTimingPoints(IReadOnlyList<TimingPointData> points, IReadOnlyList<BpmSection> fallback, out int skipped)
+    {
+        int validCount = 0;
+        if (points != null)
+        {
+            foreach (TimingPointData point in points)
+                if (point != null && point.bpm > 0f) validCount++;
+        }
+        if (validCount == 0 && fallback != null && fallback.Count > 0)
+        {
+            skipped = points != null ? points.Count : 0;
+            return new List<BpmSection>(fallback);
+        }
+        return FromTimingPoints(points, fallback != null && fallback.Count > 0 ? fallback[0].Bpm : 0f, out skipped);
+    }
+
+    /// <summary>
+    /// 두 구간 목록이 같으면 true: 구간 수가 같고, 각 구간의 tick이 같고, BPM이 SameBpm(소수 둘째 자리 기준)이면 같다.
+    /// (곡 BPM 구간으로 되돌리기 버튼 · 에디터 BPM 불일치 경고가 같이 쓴다)
+    /// </summary>
+    public static bool SameSections(IReadOnlyList<BpmSection> a, IReadOnlyList<BpmSection> b)
+    {
+        if (a == null || b == null || a.Count != b.Count) return false;
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (a[i].Tick != b[i].Tick || !SameBpm(a[i].Bpm, b[i].Bpm)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>구간 목록을 로그용 글자로 만든다 (예: "0박 150.07 / 150박 150.68 / 280박 151.2")</summary>
+    public static string FormatSections(IReadOnlyList<BpmSection> sections)
+    {
+        if (sections == null || sections.Count == 0) return "(없음)";
+        List<string> parts = new List<string>(sections.Count);
+        foreach (BpmSection section in sections)
+            parts.Add($"{section.Beat.ToString("0.###", CultureInfo.InvariantCulture)}박 {SongData.FormatBpm(section.Bpm)}");
+        return string.Join(" / ", parts);
+    }
+
     /// <summary>구간 목록을 채보 파일 형식으로 바꾼다 (beat = tick ÷ TicksPerBeat)</summary>
     public static List<TimingPointData> ToTimingPoints(IReadOnlyList<BpmSection> sections)
     {

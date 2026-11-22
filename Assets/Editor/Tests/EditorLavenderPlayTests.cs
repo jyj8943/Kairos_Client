@@ -199,8 +199,13 @@ public class EditorLavenderPlayTests
         Assert.IsNull(canvas.transform.Find("LeftTools/Txt_SpeedHint"), "배속 안내 문구 삭제");
         Assert.IsNull(canvas.transform.Find("TopBar/Img_AutoTestShadow"), "자동 테스트 뒤 판 삭제");
         Assert.IsNull(canvas.transform.Find("TopBar/Img_TestPlayShadow"), "테스트 플레이 뒤 판 삭제");
-        StringAssert.Contains("2개", Get<TMPro.TMP_Text>(canvas, "bpmSectionsTitleText").text, "BPM 구간 개수");
-        Assert.IsTrue(Get<Button>(canvas, "resetBpmButton").interactable, "구간 2개 → 되돌리기 켜짐");
+        StringAssert.Contains($"{session.BpmSections.Count}개", Get<TMPro.TMP_Text>(canvas, "bpmSectionsTitleText").text, "BPM 구간 개수 (곡 구간 + 추가 1개)");
+        Assert.IsTrue(Get<Button>(canvas, "resetBpmButton").interactable, "곡 BPM 구간과 다름 → 되돌리기 켜짐");
+        TMPro.TMP_Text resetLabel = Get<TMPro.TMP_Text>(canvas, "resetBpmLabel");
+        resetLabel.ForceMeshUpdate();
+        Assert.AreEqual(GameConstants.Editor.ResetBpmButtonLabel, resetLabel.text, "되돌리기 버튼 글자");
+        Assert.IsFalse(resetLabel.isTextOverflowing, "되돌리기 버튼 글자 넘침");
+        log.AppendLine($"되돌리기 버튼 '{resetLabel.text}' 넘침 {resetLabel.isTextOverflowing}, 선호 폭 {resetLabel.preferredWidth:0.#} / 칸 {resetLabel.rectTransform.rect.width:0.#}");
         log.AppendLine("제목 lineCount " + title.textInfo.lineCount + " / " + titleEn.textInfo.lineCount + ", 구간 제목 '" + Get<TMPro.TMP_Text>(canvas, "bpmSectionsTitleText").text + "'");
 
         // 입력 창 4가지 상태

@@ -23,7 +23,7 @@ public class EditHistoryTests
         owner = new GameObject("ChartEditSession_Undo");
         session = owner.AddComponent<ChartEditSession>();
         // 150 BPM · 60초 = 150박 (tick 7200)
-        session.Init(new EditorEntryData { songId = SongId, chartName = "실행 취소", level = 1 }, SongId, 150f, 0, 60f);
+        session.Init(new EditorEntryData { songId = SongId, chartName = "실행 취소", level = 1 }, SongId, SongData.SingleTimingPoint(150f), 0, 60f);
     }
 
     [TearDown]
@@ -222,7 +222,7 @@ public class EditHistoryTests
 
         // 새 채보 시작(Init)도 기록을 비운다
         session.AddNote(2, 0);
-        session.Init(new EditorEntryData { songId = SongId, chartName = "새 채보", level = 1 }, SongId, 150f, 0, 60f);
+        session.Init(new EditorEntryData { songId = SongId, chartName = "새 채보", level = 1 }, SongId, SongData.SingleTimingPoint(150f), 0, 60f);
         Assert.IsFalse(session.CanUndo);
     }
 
@@ -281,7 +281,7 @@ public class EditHistoryTests
         Object.DestroyImmediate(owner);
         owner = new GameObject("ChartEditSession_Undo_Return");
         session = owner.AddComponent<ChartEditSession>();
-        session.Init(new EditorEntryData { songId = SongId, chartName = "실행 취소", level = 1, chartId = restore.chart.chartId }, SongId, 150f, 0, 60f);
+        session.Init(new EditorEntryData { songId = SongId, chartName = "실행 취소", level = 1, chartId = restore.chart.chartId }, SongId, SongData.SingleTimingPoint(150f), 0, 60f);
         session.ApplyChartData(restore.chart);
         session.RestoreEditState(restore.isDirty, restore.history);
 

@@ -280,7 +280,7 @@ public class ChartRepositoryTests
     {
         ChartEditSession session = owner.AddComponent<ChartEditSession>();
         EditorEntryData entry = new EditorEntryData { songId = TestSongId, chartName = "세션 테스트", level = 3, chartId = chartId };
-        session.Init(entry, TestSongId, 150f, 0, 144f);
+        session.Init(entry, TestSongId, SongData.SingleTimingPoint(150f), 0, 144f);
         return session;
     }
 

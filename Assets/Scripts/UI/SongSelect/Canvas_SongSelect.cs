@@ -604,7 +604,7 @@ public class Canvas_SongSelect : UIBase
         songTitleText.text = song.Title;
         artistText.text = string.IsNullOrEmpty(song.Artist) ? GameConstants.SongSelect.EmptyValue : song.Artist;
 
-        string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : GameConstants.SongSelect.EmptyValue;
+        string bpmText = song.DisplayBpm > 0f ? SongData.FormatBpm(song.DisplayBpm) : GameConstants.SongSelect.EmptyValue;
         songInfoText.text = string.Format(GameConstants.SongSelect.SongInfoFormat, bpmText, song.GetLengthText());
 
         if (menuBackground != null) menuBackground.SetIllustration(song.Background, instantBackground);

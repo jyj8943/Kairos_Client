@@ -9,7 +9,7 @@ using UnityEngine;
 /// - Undo / Redo도 같은 검사를 거치는 내부 경로(ApplyAddNote / ApplyRemoveNote)로 노트를 바꾸고 기록은 남기지 않는다.
 /// - 수정 여부(IsDirty)는 기록의 저장 시점과 비교한다: 실행 취소·다시 실행으로 저장 시점에 돌아오면 false.
 /// - BPM 구간(채보의 timingPoints)을 tick 순 목록으로 들고, 바뀔 때마다 TimingMap과 곡 끝(UpdateLength)을 다시 계산한 뒤 OnTimingChanged를 보낸다.
-///   구간 편집(AddBpmSection / SetBpmSection / RemoveBpmSection / ResetBpmToSongDefault)도 실행 취소 기록에 남는다.
+///   구간 편집(AddBpmSection / SetBpmSection / RemoveBpmSection / ResetBpmToSongSections)도 실행 취소 기록에 남는다.
 ///   노트는 박(tick) 위치 그대로 두고 시간만 바뀐다 (기획서 3-6 A안).
 /// - 표시 쪽(EditorNoteLayer, Canvas_Editor)은 Data를 읽기만 한다.
 /// - 싱글톤이 아니다. EditorScene이 참조를 들고 필요한 곳에 넘겨준다.
@@ -52,14 +52,24 @@ public class ChartEditSession : MonoBehaviour
     /// <summary>곡 시작 구간(0박)의 BPM</summary>
     public float Bpm => bpmSections[0].Bpm;
 
-    /// <summary>곡 기본 BPM (SongData의 BPM). 새 채보와 "곡 기본 BPM으로 되돌리기"에 쓴다</summary>
-    public float SongDefaultBpm { get; private set; }
+    /// <summary>
+    /// 곡의 BPM 구간 (SongData.TimingPoints를 복사해 둔 것). 새 채보의 시작 구간과 "곡 BPM 구간으로 되돌리기"의 기준이다.
+    /// </summary>
+    public IReadOnlyList<TimingPointData> SongTimingPoints => songTimingPoints;
+
+    /// <summary>곡 BPM 구간을 편집용 구간 목록으로 바꾼 것 (비교·되돌리기용)</summary>
+    public IReadOnlyList<BpmSection> SongBpmSections => songSections;
+
+    private List<TimingPointData> songTimingPoints = SongData.SingleTimingPoint(120f);
+    private List<BpmSection> songSections = new List<BpmSection> { new BpmSection(0, 120f) };
 
     /// <summary>BPM 구간 목록 (tick 순, 첫 구간은 0 tick). 읽기만 하고, 바꿀 때는 구간 편집 함수를 쓴다</summary>
     public IReadOnlyList<BpmSection> BpmSections => bpmSections;
 
-    /// <summary>곡 기본 BPM 1개 상태면 true ("곡 기본 BPM으로 되돌리기" 비활성)</summary>
-    public bool IsSongDefaultBpm => bpmSections.Count == 1 && BpmSectionRules.SameBpm(bpmSections[0].Bpm, SongDefaultBpm);
+    /// <summary>
+    /// 편집 중인 구간이 곡 BPM 구간과 같으면 true (구간 수·각 tick이 같고 BPM이 SameBpm). "곡 BPM 구간으로 되돌리기" 비활성 기준.
+    /// </summary>
+    public bool IsSongBpmSections => BpmSectionRules.SameSections(bpmSections, songSections);
 
     private List<BpmSection> bpmSections = new List<BpmSection> { new BpmSection(0, 120f) };
 
@@ -99,21 +109,23 @@ public class ChartEditSession : MonoBehaviour
     public int RedoCount => history.RedoCount;
 
     /// <summary>
-    /// 곡 정보(BPM·offset·음원 길이)로 세션을 시작한다. EditorScene이 호출한다.
+    /// 곡 정보(BPM 구간·offset·음원 길이)로 세션을 시작한다. EditorScene이 호출한다.
     /// </summary>
     /// <param name="entry">곡 선택 나만의 채보 탭이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
     public void Init(EditorEntryData entry, SongData song)
     {
-        Init(entry, song.SongId, song.Bpm, song.OffsetMs, song.Length);
+        Init(entry, song.SongId, song.TimingPoints, song.OffsetMs, song.Length);
     }
 
     /// <summary>
     /// 채보 정보를 채우고 빈 노트 데이터를 만든다. 수정 여부는 false로 시작한다.
+    /// BPM 구간은 곡 BPM 구간 전체로 시작한다 (새 커스텀 채보가 곡의 변속을 처음부터 갖게).
     /// 곡 끝 tick은 곡 길이를 offset·BPM으로 바꾼 박에서 구하고, 곡 끝을 넘지 않게 내림한다.
     /// (EditMode 테스트처럼 음원 없이 시작할 때도 이 함수를 쓴다)
     /// </summary>
     /// <param name="entry">곡 선택 나만의 채보 탭이 넘긴 채보 정보. null이면 테스트 기본 채보 이름·레벨을 쓴다</param>
-    public void Init(EditorEntryData entry, string songId, float bpm, int offsetMs, float songLengthSeconds)
+    /// <param name="songTimingPoints">곡 BPM 구간 (SongData.TimingPoints 형식, beat 순, 첫 구간 0박)</param>
+    public void Init(EditorEntryData entry, string songId, IReadOnlyList<TimingPointData> songTimingPoints, int offsetMs, float songLengthSeconds)
     {
         if (entry == null)
         {
@@ -125,8 +137,8 @@ public class ChartEditSession : MonoBehaviour
         ChartId = entry.chartId;
         ChartName = entry.chartName;
         Level = entry.level;
-        SongDefaultBpm = bpm;
-        bpmSections = new List<BpmSection> { new BpmSection(0, bpm) };
+        SetSongTimingPoints(songTimingPoints);
+        bpmSections = new List<BpmSection>(songSections);
         OffsetMs = offsetMs;
         Timing = BuildTiming();
         SongLengthSeconds = songLengthSeconds;
@@ -145,7 +157,7 @@ public class ChartEditSession : MonoBehaviour
         RefreshDebugNotes();
 
         Debug.Log($"[ChartEditSession] 시작: songId={SongId}, chartName={ChartName}, level={Level}, " +
-                  $"chartId={ChartId ?? "(새 채보)"}, bpm={Bpm}, offsetMs={OffsetMs}, 곡 길이={SongLengthSeconds:0.###}초, " +
+                  $"chartId={ChartId ?? "(새 채보)"}, BPM 구간 {BpmSectionRules.FormatSections(bpmSections)}, offsetMs={OffsetMs}, 곡 길이={SongLengthSeconds:0.###}초, " +
                   $"곡 끝 {TotalBeats:0.###}박 (tick {totalTicks})");
         // 내 채보 열기(chartId 있음)는 EditorScene이 파일을 읽어 ApplyChartData로 채운다
     }
@@ -345,7 +357,7 @@ public class ChartEditSession : MonoBehaviour
         Level = chart.level;
 
         // BPM 구간을 전부 불러온다. 곡 끝 박은 편집에 쓰는 구간(채보 BPM)으로 다시 계산한다 (곡 BPM과 다를 수 있다)
-        bpmSections = BpmSectionRules.FromTimingPoints(chart.timingPoints, SongDefaultBpm, out int skippedPoints);
+        bpmSections = BpmSectionRules.FromTimingPoints(chart.timingPoints, songSections, out int skippedPoints);
         if (skippedPoints > 0)
             Debug.LogWarning($"[ChartEditSession] BPM이 0 이하이거나 같은 위치에 겹친 BPM 구간 {skippedPoints}개를 뺐습니다: chartId={ChartId}", this);
         Timing = BuildTiming();
@@ -525,20 +537,31 @@ public class ChartEditSession : MonoBehaviour
     }
 
     /// <summary>
-    /// 모든 구간을 지우고 곡 기본 BPM 하나로 되돌린다 (기록 하나). 이미 곡 기본 BPM 1개면 false.
+    /// 편집 중인 구간을 곡 BPM 구간 전체로 되돌린다 (기록 하나). 이미 곡 BPM 구간과 같으면 false.
     /// </summary>
-    public bool ResetBpmToSongDefault()
+    public bool ResetBpmToSongSections()
     {
-        if (IsSongDefaultBpm) return false;
-        return ChangeBpmSections(GameConstants.Editor.HistoryResetBpm, new List<BpmSection> { new BpmSection(0, SongDefaultBpm) });
+        if (IsSongBpmSections) return false;
+        return ChangeBpmSections(GameConstants.Editor.HistoryResetBpm, new List<BpmSection>(songSections));
     }
 
     /// <summary>
-    /// 곡 기본 BPM을 바꾼다 (F1 곡 조정에서 SongData에 저장했을 때). 구간은 그대로 둔다.
+    /// 곡 BPM 구간(되돌리기·비교 기준)을 바꾼다. Init과 F1 곡 조정(SongData에 저장했을 때)이 부른다. 편집 중인 구간은 그대로 둔다.
+    /// 쓸 구간이 없으면 바꾸지 않고 경고를 남긴다.
     /// </summary>
-    public void SetSongDefaultBpm(float bpm)
+    public void SetSongTimingPoints(IReadOnlyList<TimingPointData> points)
     {
-        if (bpm > 0f) SongDefaultBpm = bpm;
+        List<BpmSection> sections = BpmSectionRules.FromTimingPoints(points, 0f, out int skipped);
+        if (!(sections[0].Bpm > 0f))
+        {
+            Debug.LogWarning("[ChartEditSession] 곡 BPM 구간이 비어 있어 바꾸지 않습니다.", this);
+            return;
+        }
+        if (skipped > 0)
+            Debug.LogWarning($"[ChartEditSession] 곡 BPM 구간 중 BPM이 0 이하이거나 같은 위치에 겹친 {skipped}개를 뺐습니다: songId={SongId}", this);
+
+        songSections = sections;
+        songTimingPoints = BpmSectionRules.ToTimingPoints(sections);
     }
 
     /// <summary>

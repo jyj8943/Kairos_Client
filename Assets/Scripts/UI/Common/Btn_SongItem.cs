@@ -114,7 +114,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         }
         else
         {
-            string bpmText = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : "-";
+            string bpmText = song.DisplayBpm > 0f ? SongData.FormatBpm(song.DisplayBpm) : "-";
             infoText.text = $"BPM {bpmText} · {song.GetLengthText()}";
         }
 

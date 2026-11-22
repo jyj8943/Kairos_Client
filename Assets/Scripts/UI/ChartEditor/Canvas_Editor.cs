@@ -146,7 +146,7 @@ public class Canvas_Editor : UIBase
     [Header("오른쪽 패널: BPM 구간")]
     [SerializeField] private TMP_Text bpmSectionsTitleText;
     [SerializeField] private ScrollView_BpmSections bpmSectionList;
-    [Tooltip("곡 기본 BPM으로 되돌리기 (Btn_ResetBpm). 곡 기본 BPM 1개 상태면 꺼짐(회색), 켜지면 빨간 글자 + 빨간 50% 테두리")]
+    [Tooltip("곡 BPM 구간으로 되돌리기 (Btn_ResetBpm). 곡 BPM 구간과 같은 상태면 꺼짐(회색), 켜지면 빨간 글자 + 빨간 50% 테두리")]
     [SerializeField] private Button resetBpmButton;
     [SerializeField] private TMP_Text resetBpmLabel;
     [Tooltip("되돌리기 버튼 테두리 (Img_Frame)")]
@@ -210,7 +210,7 @@ public class Canvas_Editor : UIBase
     /// <summary>BPM 구간 목록 줄 클릭 (구간 tick)</summary>
     public event Action<int> BpmSectionChosen;
 
-    /// <summary>곡 기본 BPM으로 되돌리기 (Btn_ResetBpm)</summary>
+    /// <summary>곡 BPM 구간으로 되돌리기 (Btn_ResetBpm)</summary>
     public event Action ResetBpmRequested;
 
     /// <summary>BPM 구간 추가 · 수정 창</summary>
@@ -381,6 +381,7 @@ public class Canvas_Editor : UIBase
         bpmSectionList.Init(tick => BpmSectionChosen?.Invoke(tick));
         resetBpmButton.onClick.RemoveListener(RequestResetBpm);
         resetBpmButton.onClick.AddListener(RequestResetBpm);
+        if (resetBpmLabel != null) resetBpmLabel.text = GameConstants.Editor.ResetBpmButtonLabel;
         bpmSectionPopup.Init();
 
         // 재생: 버튼·슬라이더·메트로놈 (재생은 항상 1배)
@@ -817,12 +818,12 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 곡 기본 BPM으로 되돌리기 버튼: 구간이 2개 이상이면 빨간 글자 + 빨간 50% 테두리로 켜고, 하나뿐이면 회색으로 끈다 (11/19 와이어프레임).
+    /// 곡 BPM 구간으로 되돌리기 버튼: 편집 중인 구간이 곡 BPM 구간과 다르면 빨간 글자 + 빨간 50% 테두리로 켜고, 같으면 회색으로 끈다 (11/19 와이어프레임).
     /// </summary>
     private void RefreshResetBpmButton()
     {
         UITheme theme = UITheme.Current;
-        bool on = session.BpmSections.Count >= 2;
+        bool on = !session.IsSongBpmSections;
         resetBpmButton.interactable = on;
         if (resetBpmButton.targetGraphic != null) resetBpmButton.targetGraphic.color = theme.toolNormalBackground;
         if (resetBpmLabel != null) resetBpmLabel.color = on ? theme.danger : theme.textMuted;

@@ -75,7 +75,7 @@ public class TestPlayRulesTests
         try
         {
             ChartEditSession session = owner.AddComponent<ChartEditSession>();
-            session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", 150f, 0, 60f);
+            session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", SongData.SingleTimingPoint(150f), 0, 60f);
 
             Assert.IsNull(session.CreateTestPlayData(0f, 4, 1f, EditorTool.ShortNote, false, out string emptyError), "노트가 없으면 null");
             Assert.IsNotEmpty(emptyError);
@@ -145,7 +145,7 @@ public class TestPlayRulesTests
         try
         {
             ChartEditSession session = owner.AddComponent<ChartEditSession>();
-            session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", 150f, 0, 60f);
+            session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", SongData.SingleTimingPoint(150f), 0, 60f);
             Assert.IsTrue(session.AddLongNote(0, 48 * 4, 48 * 12, out _));
 
             Assert.IsNull(session.CreateTestPlayData(8f, 4, 1f, EditorTool.LongNote, false, out string error), "롱노트 도중에서 시작");

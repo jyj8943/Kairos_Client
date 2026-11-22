@@ -131,17 +131,22 @@ public class Canvas_SongTuning : MonoBehaviour
     }
 
     /// <summary>
-    /// 지금 세션의 BPM·offsetMs를 SongData 에셋에 저장한다.
+    /// 지금 세션의 곡 시작 BPM·offsetMs를 SongData 에셋에 저장한다.
+    /// - BPM 구간 목록(timingPoints)이 있는 곡: 첫 구간(0박) bpm만 바꾸고 뒤 구간은 건드리지 않는다 (bpm 필드도 같은 값으로 맞춘다).
+    /// - 목록이 비어 있는 곡: 지금처럼 bpm 필드를 바꾼다.
     /// </summary>
     private void SaveToSongData()
     {
         SerializedObject serialized = new SerializedObject(song);
+        SerializedProperty points = serialized.FindProperty("timingPoints");
+        if (points != null && points.arraySize > 0)
+            points.GetArrayElementAtIndex(0).FindPropertyRelative("bpm").floatValue = session.Bpm;
         serialized.FindProperty("bpm").floatValue = session.Bpm;
         serialized.FindProperty("offsetMs").intValue = session.OffsetMs;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(song);
-        // 곡 기본 BPM이 바뀌었으므로 "곡 기본 BPM으로 되돌리기"도 새 값을 쓴다
-        session.SetSongDefaultBpm(session.Bpm);
+        // 곡 BPM 구간이 바뀌었으므로 "곡 BPM 구간으로 되돌리기"·비교 기준도 새 구간을 쓴다
+        session.SetSongTimingPoints(song.TimingPoints);
         AssetDatabase.SaveAssets();
 
         statusText.text = $"SongData에 저장했습니다 ({AssetDatabase.GetAssetPath(song)})";
@@ -242,11 +247,14 @@ public class Canvas_SongTuning : MonoBehaviour
     {
         if (session == null || song == null) return;
 
-        bool changed = !Mathf.Approximately(song.Bpm, session.Bpm) || song.OffsetMs != session.OffsetMs;
+        // F1은 곡 시작 BPM(첫 구간)과 offset만 저장하므로 저장 여부는 그 둘로 보고, 구간 목록 전체가 곡 구간과 다르면 따로 알린다
+        bool changed = !BpmSectionRules.SameBpm(song.StartBpm, session.Bpm) || song.OffsetMs != session.OffsetMs;
+        bool sectionsDiffer = !session.IsSongBpmSections;
         valuesText.text =
             $"{song.Title}\n" +
-            $"BPM  {SongData.FormatBpm(session.Bpm)}    offsetMs  {session.OffsetMs}\n" +
-            (changed ? $"<color=#F97316>저장 안 함 (SongData: BPM {SongData.FormatBpm(song.Bpm)}, offsetMs {song.OffsetMs})</color>" : "SongData와 같음");
+            $"시작 BPM  {SongData.FormatBpm(session.Bpm)}    offsetMs  {session.OffsetMs}\n" +
+            (changed ? $"<color=#F97316>저장 안 함 (SongData: 시작 BPM {SongData.FormatBpm(song.StartBpm)}, BPM 구간 {song.TimingPoints.Count}개, offsetMs {song.OffsetMs})</color>" : "SongData와 같음") +
+            (sectionsDiffer ? $"\n<color=#F97316>편집 중인 BPM 구간 {session.BpmSections.Count}개가 곡 BPM 구간 {session.SongBpmSections.Count}개와 다름</color>" : string.Empty);
         bpmInput.SetTextWithoutNotify(SongData.FormatBpm(session.Bpm));
     }
 }

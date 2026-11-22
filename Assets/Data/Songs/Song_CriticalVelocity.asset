@@ -15,7 +15,15 @@ MonoBehaviour:
   songId: critical_velocity
   title: Critical Velocity
   artist: Kairos
-  bpm: 150.61
+  bpm: 150.07
+  timingPoints:
+  - beat: 0
+    bpm: 150.07
+  - beat: 150
+    bpm: 150.68
+  - beat: 280
+    bpm: 151.2
+  displayBpm: 150.61
   offsetMs: 169
   clip: {fileID: 8300000, guid: b0486ba82675b3a488d280ff43f77371, type: 3}
   cover: {fileID: 21300000, guid: dbe3b8261903f894889a0f24f9a1e94b, type: 3}

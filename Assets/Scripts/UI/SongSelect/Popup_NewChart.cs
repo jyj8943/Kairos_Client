@@ -122,7 +122,7 @@ public class Popup_NewChart : UIPopup
             albumImage.color = song.Cover != null ? Color.white : theme.emptyCover;
             songTitleText.text = song.Title;
             string artist = string.IsNullOrEmpty(song.Artist) ? GameConstants.SongSelect.EmptyValue : song.Artist;
-            string bpm = song.Bpm > 0f ? SongData.FormatBpm(song.Bpm) : GameConstants.SongSelect.EmptyValue;
+            string bpm = song.DisplayBpm > 0f ? SongData.FormatBpm(song.DisplayBpm) : GameConstants.SongSelect.EmptyValue;
             songInfoText.text = string.Format(GameConstants.SongSelect.NewChartSongInfoFormat, artist, bpm, song.GetLengthText());
         }
 

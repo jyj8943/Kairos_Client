@@ -24,7 +24,7 @@ public class BpmSectionTests
         owner = new GameObject("ChartEditSession_Bpm");
         session = owner.AddComponent<ChartEditSession>();
         // 150 BPM · 120초 = 300박
-        session.Init(new EditorEntryData { songId = SongId, chartName = "BPM 구간", level = 1 }, SongId, 150f, 0, 120f);
+        session.Init(new EditorEntryData { songId = SongId, chartName = "BPM 구간", level = 1 }, SongId, SongData.SingleTimingPoint(150f), 0, 120f);
     }
 
     [TearDown]
@@ -124,7 +124,7 @@ public class BpmSectionTests
         try
         {
             ChartEditSession reopened = other.AddComponent<ChartEditSession>();
-            reopened.Init(new EditorEntryData { songId = SongId, chartName = "x", level = 1, chartId = session.ChartId }, SongId, 150f, 0, 120f);
+            reopened.Init(new EditorEntryData { songId = SongId, chartName = "x", level = 1, chartId = session.ChartId }, SongId, SongData.SingleTimingPoint(150f), 0, 120f);
             reopened.ApplyChartData(loaded);
             Assert.AreEqual(session.BpmSections.Count, reopened.BpmSections.Count);
             for (int i = 0; i < session.BpmSections.Count; i++)
@@ -175,13 +175,13 @@ public class BpmSectionTests
         Assert.AreEqual(GameConstants.Editor.HistoryRemoveBpmSection, session.Undo());
         AssertSections(0, 140, 16 * T, 180);
 
-        Assert.IsTrue(session.ResetBpmToSongDefault());
+        Assert.IsTrue(session.ResetBpmToSongSections());
         AssertSections(0, 150);
-        Assert.IsTrue(session.IsSongDefaultBpm);
-        Assert.IsFalse(session.ResetBpmToSongDefault(), "이미 곡 기본 BPM 1개");
+        Assert.IsTrue(session.IsSongBpmSections);
+        Assert.IsFalse(session.ResetBpmToSongSections(), "이미 곡 BPM 구간(1개)과 같음");
         Assert.AreEqual(GameConstants.Editor.HistoryResetBpm, session.Undo());
         AssertSections(0, 140, 16 * T, 180);
-        Assert.IsFalse(session.IsSongDefaultBpm);
+        Assert.IsFalse(session.IsSongBpmSections);
         session.Redo();
         AssertSections(0, 150);
 

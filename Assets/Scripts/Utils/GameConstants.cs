@@ -504,8 +504,8 @@ public static class GameConstants
         public const string BpmSectionRemoveMergedLine = "\n같은 BPM이 된 다음 구간도 함께 삭제됩니다.";
         public const string BpmSectionRemoveLabel = "삭제";
 
-        /// <summary>에디터 곡 기본 BPM으로 되돌리기: {0} 곡 기본 BPM</summary>
-        public const string BpmResetMessageFormat = "모든 BPM 구간을 삭제하고 곡의 기본 BPM({0})으로 되돌리시겠습니까?";
+        /// <summary>에디터 곡 BPM 구간으로 되돌리기: {0} 곡 BPM 구간 수, {1} 곡 시작 BPM</summary>
+        public const string BpmResetMessageFormat = "편집한 BPM 구간을 모두 지우고 곡의 BPM 구간({0}개, 시작 {1})으로 되돌리시겠습니까?";
         public const string BpmResetLabel = "되돌리기";
     }
 
@@ -1168,8 +1168,11 @@ public static class GameConstants
         public const string TestPlayNoNotesAfterMessage = "현재 위치 뒤에 노트가 없습니다";
         public const float StatusMessageSeconds = 3f;
 
-        /// <summary>채보를 열 때 곡 BPM과 채보 BPM이 다르면 보여주는 경고 (자동으로 고치지 않는다)</summary>
-        public const string BpmMismatchWarning = "곡 BPM과 채보 BPM이 다릅니다";
+        /// <summary>채보를 열 때 채보 BPM 구간이 곡 BPM 구간(SongData.TimingPoints)과 다르면 보여주는 경고 (자동으로 고치지 않는다)</summary>
+        public const string BpmMismatchWarning = "채보 BPM 구간이 곡 BPM 구간과 다릅니다";
+
+        /// <summary>오른쪽 패널 되돌리기 버튼 글자 (Btn_ResetBpm/Txt_ResetBpm)</summary>
+        public const string ResetBpmButtonLabel = "곡 BPM 구간으로 되돌리기";
 
         /// <summary>에디터 재생: 재생 버튼 글자 (재생 중이 아니면 ▶, 재생 중이면 ❚❚)</summary>
         public const string PlayIcon = "▶";
@@ -1282,7 +1285,7 @@ public static class GameConstants
         public const string HistorySetBpmSection = "BPM 구간 수정";
         public const string HistoryRemoveBpmSection = "BPM 구간 삭제";
         public const string HistoryRemoveMergedBpmSection = "같은 BPM이 된 다음 구간 삭제";
-        public const string HistoryResetBpm = "곡 기본 BPM으로 되돌리기";
+        public const string HistoryResetBpm = "곡 BPM 구간으로 되돌리기";
         public const string HistoryTuneStartBpm = "곡 시작 BPM 변경 (F1)";
 
         /// <summary>BPM 구간 BPM 범위 (기획서 3-6, 소수 둘째 자리까지)</summary>
@@ -1356,7 +1359,7 @@ public static class GameConstants
         public const string BpmSectionAddedFormat = "BPM 구간 추가: {0} · {1}";
         public const string BpmSectionChangedFormat = "BPM 구간 수정: {0} · {1}";
         public const string BpmSectionRemovedFormat = "BPM 구간 삭제: {0}";
-        public const string BpmResetDoneMessage = "곡 기본 BPM으로 되돌렸습니다";
+        public const string BpmResetDoneMessage = "곡 BPM 구간으로 되돌렸습니다";
 
 
         /// <summary>에디터 롱노트 몸통 폭 = 라인 폭 × 이 비율 (인게임 몸통 76px ÷ 라인 108px ≈ 0.70, 11/20)</summary>

@@ -9,6 +9,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 에디터 BPM 구간 실제 씬 확인 (EnterPlayMode + Bootstrapper, Critical Velocity 새 채보).
+/// 새 채보는 곡 BPM 구간(Critical Velocity는 0 · 150 · 280박 3개)으로 시작하므로 구간 수는 곡 구간 수(SongCount) 기준으로 본다.
+/// 테스트가 넣는 구간은 모두 150박 앞이라 추가한 구간의 번호는 1부터다.
 /// 9. BPM 구간 도구 클릭 → 창 → 확인이면 추가, 취소면 그대로, 잘못된 값이면 확인 버튼 비활성
 /// 10. 구간선 오른쪽 클릭: 뒤 노트가 있으면 확인 팝업, 없으면 바로 삭제. 곡 시작 구간은 아무 일도 없음
 /// 11. 화면 개편 뒤 Missing 참조가 없고 지운 오브젝트가 없음, 목록·타임라인 눈금·현재 BPM이 구간을 따름
@@ -76,6 +78,9 @@ public class BpmSectionEditorPlayTests
         grid.SetGridHeight(1f);
     }
 
+    /// <summary>곡 BPM 구간 수 (새 채보의 시작 구간 수)</summary>
+    private int SongCount => session.SongBpmSections.Count;
+
     private static TValue Get<TValue>(object target, string field)
     {
         FieldInfo info = target.GetType().GetField(field, Private);
@@ -141,7 +146,7 @@ public class BpmSectionEditorPlayTests
         yield return null;
 
         Assert.IsFalse(popup.IsOpen);
-        Assert.AreEqual(2, session.BpmSections.Count, "확인 → 추가");
+        Assert.AreEqual(SongCount + 1, session.BpmSections.Count, "확인 → 추가");
         Assert.AreEqual(16 * T, session.BpmSections[1].Tick);
         Assert.AreEqual(200f, session.BpmSections[1].Bpm);
         Assert.IsTrue(session.IsDirty);
@@ -153,7 +158,7 @@ public class BpmSectionEditorPlayTests
         popup.BpmInput.text = "175";
         popup.OnCancelRequested();
         yield return null;
-        Assert.AreEqual(2, session.BpmSections.Count, "취소 → 추가 안 됨");
+        Assert.AreEqual(SongCount + 1, session.BpmSections.Count, "취소 → 추가 안 됨");
 
         // 구간선 위 클릭 → 수정 모드
         Click(16f, PointerEventData.InputButton.Left);
@@ -185,7 +190,7 @@ public class BpmSectionEditorPlayTests
         Click(32f, PointerEventData.InputButton.Right);
         yield return null;
         Assert.IsFalse(GameManager.UI.HasOpenPopup, "뒤 노트가 없으면 확인 없이");
-        Assert.AreEqual(2, session.BpmSections.Count);
+        Assert.AreEqual(SongCount + 1, session.BpmSections.Count);
 
         // 뒤에 노트 있음 → 확인 팝업 → 삭제
         Assert.IsTrue(session.AddBpmSection(32 * T, session.Bpm, out _));
@@ -202,7 +207,7 @@ public class BpmSectionEditorPlayTests
         StringAssert.Contains("같은 BPM이 된 다음 구간도 함께 삭제됩니다.", message, "뒤 구간이 같이 지워지는 경우 한 줄 더");
         Get<Button>(confirm, "confirmButton").onClick.Invoke();
         yield return null;
-        Assert.AreEqual(1, session.BpmSections.Count, "16박 구간 + 같은 BPM이 된 32박 구간");
+        Assert.AreEqual(SongCount, session.BpmSections.Count, "16박 구간 + 같은 BPM이 된 32박 구간");
         Assert.AreEqual(2, session.Data.Notes.Count, "노트는 그대로");
 
         // 곡 시작 구간 → 아무 일도 없음
@@ -211,11 +216,11 @@ public class BpmSectionEditorPlayTests
         Click(0f, PointerEventData.InputButton.Right);
         yield return null;
         Assert.IsFalse(GameManager.UI.HasOpenPopup);
-        Assert.AreEqual(1, session.BpmSections.Count);
+        Assert.AreEqual(SongCount, session.BpmSections.Count);
 
         // 한 번에 되돌리기
         session.Undo();
-        Assert.AreEqual(3, session.BpmSections.Count);
+        Assert.AreEqual(SongCount + 2, session.BpmSections.Count);
         Debug.Log($"[BpmSectionEditorPlayTest] P10: 확인 문구 \"{message.Replace("\n", " / ")}\"");
     }
 
@@ -247,7 +252,7 @@ public class BpmSectionEditorPlayTests
         Assert.IsTrue(session.AddBpmSection(98 * T, 175f, out _));
         yield return null;
         ScrollView_BpmSections list = canvas.BpmSectionList;
-        Assert.AreEqual(3, list.Count);
+        Assert.AreEqual(SongCount + 2, list.Count);
         Assert.AreEqual("마디 1 · 1박", list.GetItem(0).PositionText.text);
         Assert.AreEqual("마디 25 · 3박", list.GetItem(2).PositionText.text);
         Assert.AreEqual(0, list.CurrentIndex, "현재 위치(0박)가 속한 구간 강조");
@@ -264,26 +269,27 @@ public class BpmSectionEditorPlayTests
         Assert.AreEqual("다음 175", Get<TMP_Text>(canvas, "nextBpmText").text);
 
         Slider_Timeline timeline = Object.FindFirstObjectByType<Slider_Timeline>();
-        Assert.AreEqual(2, timeline.MarkerCount, "곡 시작 구간은 눈금 없음");
+        Assert.AreEqual(SongCount + 1, timeline.MarkerCount, "곡 시작 구간은 눈금 없음");
         Assert.AreEqual("200", timeline.GetMarker(0).GetComponentInChildren<TMP_Text>().text);
 
         EditorBpmSectionLayer layer = Object.FindFirstObjectByType<EditorBpmSectionLayer>();
         Assert.GreaterOrEqual(layer.ActiveCount, 1, "보이는 구간선");
         Assert.AreEqual("♩ 200 BPM", layer.GetLabelText(1));
-        Assert.AreEqual($"{SongData.FormatBpm(session.SongDefaultBpm)} → 200", layer.GetChangeText(1));
+        Assert.AreEqual($"{SongData.FormatBpm(session.SongBpmSections[0].Bpm)} → 200", layer.GetChangeText(1));
         Assert.AreEqual(GameConstants.Editor.BpmSectionStartLabel, layer.GetChangeText(0));
 
-        // 되돌리기 버튼 → 확인 팝업 → 곡 기본 BPM 1개, 버튼 비활성
+        // 되돌리기 버튼 → 확인 팝업 → 곡 BPM 구간 전체, 버튼 비활성
         Get<Button>(canvas, "resetBpmButton").onClick.Invoke();
         yield return null;
         Popup_Confirm confirm = GameManager.UI.Get<Popup_Confirm>();
         Assert.IsTrue(confirm.IsOpen);
-        StringAssert.Contains($"곡의 기본 BPM({SongData.FormatBpm(session.SongDefaultBpm)})", Get<TMP_Text>(confirm, "messageText").text);
+        StringAssert.Contains($"곡의 BPM 구간({SongCount}개, 시작 {SongData.FormatBpm(session.SongBpmSections[0].Bpm)})", Get<TMP_Text>(confirm, "messageText").text);
         Get<Button>(confirm, "confirmButton").onClick.Invoke();
         yield return null;
-        Assert.AreEqual(1, session.BpmSections.Count);
+        Assert.AreEqual(SongCount, session.BpmSections.Count);
+        Assert.IsTrue(session.IsSongBpmSections);
         Assert.IsFalse(Get<Button>(canvas, "resetBpmButton").interactable);
-        Assert.AreEqual(0, timeline.MarkerCount);
+        Assert.AreEqual(SongCount - 1, timeline.MarkerCount);
 
         // 도구 단축키 경로 (1 · 2 · 3)
         canvas.SetTool(EditorTool.LongNote);
@@ -321,7 +327,7 @@ public class BpmSectionEditorPlayTests
         }
 
         ChartData chart = Get<ChartData>(inGame, "chart");
-        Assert.AreEqual(2, chart.timingPoints.Count, "구간이 전부 넘어감");
+        Assert.AreEqual(SongCount + 1, chart.timingPoints.Count, "구간이 전부 넘어감");
         TimingMap timing = Get<TimingMap>(inGame, "timing");
         double inGameNoteTime = timing.BeatToSeconds(10);
         NoteJudge judge = Get<NoteJudge>(inGame, "judge");
@@ -333,12 +339,12 @@ public class BpmSectionEditorPlayTests
         exit.Invoke(inGame, null);
         yield return WaitEditor();
 
-        Assert.AreEqual(2, session.BpmSections.Count, "돌아와도 구간 유지");
+        Assert.AreEqual(SongCount + 1, session.BpmSections.Count, "돌아와도 구간 유지");
         Assert.AreEqual(300f, session.BpmSections[1].Bpm);
         Assert.AreEqual(undoCount, session.UndoCount, "실행 취소 기록 유지");
         Assert.AreEqual(GameConstants.Editor.HistoryAddShortNote, session.Undo());
         Assert.AreEqual(GameConstants.Editor.HistoryAddBpmSection, session.Undo());
-        Assert.AreEqual(1, session.BpmSections.Count);
+        Assert.AreEqual(SongCount, session.BpmSections.Count);
         Debug.Log($"[BpmSectionEditorPlayTest] P12: 인게임 timingPoints {chart.timingPoints.Count}개, 노트 시간 {inGameNoteTime:0.000}초 (에디터 {editorNoteTime:0.000}초), 돌아와서 실행 취소 {undoCount}개 유지");
     }
 }

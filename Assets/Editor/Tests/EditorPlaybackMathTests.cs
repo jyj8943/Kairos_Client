@@ -101,7 +101,7 @@ public class EditorPlaybackMathTests
         try
         {
             ChartEditSession session = owner.AddComponent<ChartEditSession>();
-            session.Init(new EditorEntryData { songId = "__test__", chartName = "t", level = 1 }, "__test__", 120f, 0, 60f);
+            session.Init(new EditorEntryData { songId = "__test__", chartName = "t", level = 1 }, "__test__", SongData.SingleTimingPoint(120f), 0, 60f);
             Assert.AreEqual(120f, session.TotalBeats, 1e-3);
 
             session.AddNote(0, 48 * 10);
