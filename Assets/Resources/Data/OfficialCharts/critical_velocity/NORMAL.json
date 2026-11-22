@@ -441,22 +441,22 @@
             "beat": 74.0,
             "lane": 0,
             "type": "long",
-            "endBeat": 76.25
+            "endBeat": 76.0
         },
         {
             "beat": 74.0,
             "lane": 3,
             "type": "long",
-            "endBeat": 76.25
+            "endBeat": 76.0
         },
         {
-            "beat": 76.25,
+            "beat": 76.0,
             "lane": 1,
             "type": "short",
             "endBeat": 0.0
         },
         {
-            "beat": 76.25,
+            "beat": 76.0,
             "lane": 2,
             "type": "short",
             "endBeat": 0.0
@@ -483,10 +483,10 @@
             "beat": 83.0,
             "lane": 2,
             "type": "long",
-            "endBeat": 84.25
+            "endBeat": 84.0
         },
         {
-            "beat": 84.25,
+            "beat": 84.0,
             "lane": 0,
             "type": "long",
             "endBeat": 85.5
@@ -546,7 +546,7 @@
             "endBeat": 0.0
         },
         {
-            "beat": 93.75,
+            "beat": 93.5,
             "lane": 2,
             "type": "long",
             "endBeat": 94.75
@@ -684,10 +684,10 @@
             "endBeat": 116.0
         },
         {
-            "beat": 116.25,
+            "beat": 116.0,
             "lane": 1,
             "type": "long",
-            "endBeat": 117.25
+            "endBeat": 117.5
         },
         {
             "beat": 117.5,
@@ -1932,55 +1932,55 @@
             "endBeat": 0.0
         },
         {
-            "beat": 268.0,
-            "lane": 2,
-            "type": "short",
-            "endBeat": 0.0
-        },
-        {
-            "beat": 269.0,
+            "beat": 268.75,
             "lane": 1,
             "type": "short",
             "endBeat": 0.0
         },
         {
-            "beat": 269.0,
-            "lane": 2,
-            "type": "short",
-            "endBeat": 0.0
-        },
-        {
-            "beat": 270.0,
-            "lane": 1,
-            "type": "short",
-            "endBeat": 0.0
-        },
-        {
-            "beat": 270.0,
-            "lane": 2,
-            "type": "short",
-            "endBeat": 0.0
-        },
-        {
-            "beat": 271.0,
-            "lane": 0,
-            "type": "short",
-            "endBeat": 0.0
-        },
-        {
-            "beat": 271.0,
+            "beat": 268.75,
             "lane": 3,
             "type": "short",
             "endBeat": 0.0
         },
         {
+            "beat": 269.5,
+            "lane": 2,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 270.25,
+            "lane": 0,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 270.25,
+            "lane": 2,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 271.0,
+            "lane": 1,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
+            "beat": 271.5,
+            "lane": 2,
+            "type": "short",
+            "endBeat": 0.0
+        },
+        {
             "beat": 272.0,
             "lane": 0,
             "type": "short",
             "endBeat": 0.0
         },
         {
-            "beat": 272.0,
+            "beat": 272.5,
             "lane": 3,
             "type": "short",
             "endBeat": 0.0
@@ -1992,20 +1992,20 @@
             "endBeat": 0.0
         },
         {
-            "beat": 273.0,
+            "beat": 273.5,
             "lane": 3,
             "type": "short",
             "endBeat": 0.0
         },
         {
             "beat": 274.0,
-            "lane": 0,
+            "lane": 1,
             "type": "long",
             "endBeat": 276.0
         },
         {
             "beat": 274.0,
-            "lane": 3,
+            "lane": 2,
             "type": "long",
             "endBeat": 276.0
         },
@@ -2521,12 +2521,6 @@
         },
         {
             "beat": 343.0,
-            "lane": 0,
-            "type": "short",
-            "endBeat": 0.0
-        },
-        {
-            "beat": 343.0,
             "lane": 1,
             "type": "short",
             "endBeat": 0.0
@@ -2534,12 +2528,6 @@
         {
             "beat": 343.0,
             "lane": 2,
-            "type": "short",
-            "endBeat": 0.0
-        },
-        {
-            "beat": 343.0,
-            "lane": 3,
             "type": "short",
             "endBeat": 0.0
         },
