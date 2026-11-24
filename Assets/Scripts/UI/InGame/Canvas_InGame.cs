@@ -34,7 +34,7 @@ public class Canvas_InGame : UIBase
     [SerializeField] private Image albumFrame;
     [Tooltip("앨범 이미지 (Img_Album/Img_AlbumCover). 진입 데이터 곡의 SongData.Cover")]
     [SerializeField] private Image albumImage;
-    [Tooltip("곡 제목 (Txt_SongTitle, 넘치면 제목만 줄임표)")]
+    [Tooltip("곡 제목 (Txt_SongTitle, 넘치면 제목 칸 TitleViewport 안에서 흐른다)")]
     [SerializeField] private TMP_Text songTitleText;
     [Tooltip("채보 뱃지 배경 (Img_ChartBadge). 공식은 메뉴용 난이도 색, 나만의 채보는 CUSTOM 색")]
     [SerializeField] private Image chartBadgeImage;
@@ -142,7 +142,7 @@ public class Canvas_InGame : UIBase
         testPlayText.text = info.TestPlayText;
         testPlayBadge.SetActive(info.ShowTestPlay);
         // 줄 안에서 줄어들지 않을 것(테스트 플레이 뱃지·Lv.)은 글자 폭을 최소 폭으로 둔다.
-        // 넘치면 최소 폭 0인 곡 제목·채보 이름만 줄어들고 줄임표가 붙는다
+        // 넘치면 최소 폭 0인 곡 제목 칸·채보 이름만 줄어든다 (제목은 칸 안에서 흐르고, 채보 이름은 줄임표)
         FitWidthToText(testPlayBadge, testPlayText, BadgePaddingX * 2f);
         FitWidthToText(levelText.gameObject, levelText, 0f);
 

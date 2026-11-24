@@ -52,6 +52,8 @@ public class Canvas_SongLoading : UIBase, ILoadingOverlay
     [SerializeField] private Image phraseLine;
     [SerializeField] private TMP_Text phraseText;
     [SerializeField] private TMP_Text titleText;
+    [Tooltip("제목 칸 (TitleViewport). 긴 제목이 흐른다")]
+    [SerializeField] private UIMarqueeText titleMarquee;
     [SerializeField] private TMP_Text artistText;
     [SerializeField] private Image difficultyBadge;
     [SerializeField] private TMP_Text difficultyText;
@@ -62,6 +64,8 @@ public class Canvas_SongLoading : UIBase, ILoadingOverlay
     [SerializeField] private GameObject chartRow;
     [SerializeField] private TMP_Text chartLabel;
     [SerializeField] private TMP_Text chartNameText;
+    [Tooltip("채보 이름 칸 (TitleViewport). 긴 이름이 흐른다")]
+    [SerializeField] private UIMarqueeText chartNameMarquee;
 
     [Header("기록 3칸 (Records)")]
     [SerializeField] private Image recordsBack;
@@ -136,6 +140,8 @@ public class Canvas_SongLoading : UIBase, ILoadingOverlay
     /// <summary>확인용 참조</summary>
     public TMP_Text TitleText => titleText;
     public TMP_Text ChartNameText => chartNameText;
+    public UIMarqueeText TitleMarquee => titleMarquee;
+    public UIMarqueeText ChartNameMarquee => chartNameMarquee;
     public TMP_Text BubbleText => bubbleText;
     public TMP_Text BestScoreText => bestScoreText;
     public TMP_Text MaxComboText => maxComboText;
@@ -292,6 +298,9 @@ public class Canvas_SongLoading : UIBase, ILoadingOverlay
     {
         CacheComponents();
         SetContent(entry);
+        // 숨겨져 있을 때도 돌고 있으므로 열 때마다 처음 상태부터
+        if (titleMarquee != null) titleMarquee.Restart();
+        if (chartNameMarquee != null) chartNameMarquee.Restart();
         isShown = true;
         isClosing = false;
         openStarted = false;

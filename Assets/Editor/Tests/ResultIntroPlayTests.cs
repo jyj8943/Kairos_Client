@@ -170,7 +170,12 @@ public class ResultIntroPlayTests
     {
         List<float> list = new List<float>();
         Transform panel = canvas.transform.Find("Img_ResultPanel");
-        foreach (CanvasGroup g in panel.GetComponentsInChildren<CanvasGroup>(true)) list.Add(g.alpha);
+        foreach (CanvasGroup g in panel.GetComponentsInChildren<CanvasGroup>(true))
+        {
+            // 흐르는 제목 글자의 CanvasGroup은 연출이 아니라 마퀴가 쓴다 (연출 알파는 그 칸에 있다)
+            if (g.GetComponent<UIMarqueeText>() == null && g.GetComponentInParent<UIMarqueeText>(true) != null) continue;
+            list.Add(g.alpha);
+        }
         return list;
     }
 
@@ -347,6 +352,40 @@ public class ResultIntroPlayTests
         yield return Tap(Key.Enter);
         Assert.AreEqual(return0 + 1, canvas.TestReturnCount, "첫 Enter에 돌아가기");
         Debug.Log($"[ResultIntroPlayTest] 테스트 플레이 결과: Init 직후 끝 상태 True, 첫 Enter 돌아가기 {canvas.TestReturnCount - return0}번, 버튼 \"{label}\"");
+    }
+
+    /// <summary>I6: 긴 곡 제목은 등장 연출 중 처음 위치에 멈춰 있다가, 연출이 끝나거나 건너뛴 뒤 처음 멈춤(1.5초)부터 흐른다 (UIMarqueeText)</summary>
+    [UnityTest]
+    public IEnumerator I6_LongTitle_ScrollsAfterIntro()
+    {
+        yield return WaitManagers();
+        ResultData result = CvNormalResult(false);
+        result.songTitle = "Send My Love Tonight (Extended Hyper Midnight Drive Remix for the Endless Night in the City)";
+        ResultScene scene = null;
+        yield return LoadResult(result, s => scene = s);
+        Canvas_Result canvas = scene.Canvas;
+        UIMarqueeText marquee = canvas.SongTitleMarquee;
+        float maxOffset = 0f;
+        Assert.IsTrue(canvas.IsIntroPlaying || canvas.IsIntroPending, "등장 연출 중");
+        float until = Time.realtimeSinceStartup + 2f;
+        while (Time.realtimeSinceStartup < until && (canvas.IsIntroPlaying || canvas.IsIntroPending))
+        {
+            Assert.IsFalse(marquee.IsPlaying, "연출 중에는 멈춤");
+            maxOffset = Mathf.Max(maxOffset, marquee.CurrentOffset);
+            yield return null;
+        }
+        Assert.AreEqual(0f, maxOffset, "연출 중 위치 0");
+        float introAt = canvas.IntroTime;
+        canvas.SkipIntro();
+        yield return null;
+        Assert.IsTrue(marquee.IsScrolling, "건너뛴 뒤 흐른다");
+        float startedAt = Time.unscaledTime - marquee.Elapsed;
+        Assert.Less(marquee.Elapsed, 0.2f, "처음 멈춤부터");
+        while (marquee.CurrentOffset <= 0f && Time.unscaledTime - startedAt < 3f) yield return null;
+        float movedAt = Time.unscaledTime - startedAt;
+        Debug.Log($"[ResultIntroPlayTest] I6: 연출 {introAt:0.00}초까지 위치 {maxOffset:0.0}, 건너뛴 뒤 {movedAt:0.00}초에 이동 시작, 칸 {marquee.CellWidth:0} · 글자 {marquee.TextWidth:0} · 이동 거리 {marquee.OverflowWidth:0}");
+        Assert.AreEqual(GameConstants.Marquee.StartDelay, movedAt, 0.2f, "StartDelay 뒤 이동");
+        Assert.AreEqual(950f, marquee.CellWidth, 0.5f, "제목 칸 폭 그대로");
     }
 
     /// <summary>스위치 꺼짐/켜짐 × 테스트 플레이/자동 테스트: 곡 끝 흐름, 저장값 유지, 설명 줄 배치</summary>

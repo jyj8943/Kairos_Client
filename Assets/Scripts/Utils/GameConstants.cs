@@ -865,6 +865,21 @@ public static class GameConstants
         }
     }
 
+    /// <summary>칸보다 긴 제목이 전광판처럼 흐르는 시간 (UIMarqueeText · MarqueeTimeline, 11/24)</summary>
+    public static class Marquee
+    {
+        /// <summary>처음 위치에서 멈추는 시간 (초)</summary>
+        public const float StartDelay = 1.5f;
+        /// <summary>왼쪽으로 흐르는 속도 (px/초, 1920×1080 Canvas 기준)</summary>
+        public const float Speed = 60f;
+        /// <summary>끝 글자가 칸 오른쪽 끝에 닿은 뒤 멈추는 시간 (초)</summary>
+        public const float EndDelay = 1.0f;
+        /// <summary>처음으로 되돌릴 때 사라지는 시간 · 나타나는 시간 (초, 각각)</summary>
+        public const float ReturnFade = 0.25f;
+        /// <summary>칸 좌우 경계 흐림 (px)</summary>
+        public const int EdgeSoftness = 12;
+    }
+
     /// <summary>일반 로딩 오버레이 (기획서 3-9 「일반 로딩」, Canvas_Loading)</summary>
     public static class Loading
     {

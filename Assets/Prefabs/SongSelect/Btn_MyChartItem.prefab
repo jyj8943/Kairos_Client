@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8695485548777105302}
   - component: {fileID: 995768526476726950}
   - component: {fileID: 8036719785076140576}
+  - component: {fileID: 8396619803361443579}
   m_Layer: 5
   m_Name: Txt_ChartName
   m_TagString: Untagged
@@ -30,12 +31,12 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3576915091914052223}
+  m_Father: {fileID: 2515689625567336460}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 104, y: 0}
-  m_SizeDelta: {x: -274, y: 30}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &995768526476726950
 CanvasRenderer:
@@ -137,6 +138,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!225 &8396619803361443579
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1244411222654307012}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &2809323735367095268
 GameObject:
   m_ObjectHideFlags: 0
@@ -472,7 +485,7 @@ RectTransform:
   m_Children:
   - {fileID: 4847504751380798939}
   - {fileID: 2915651296072337655}
-  - {fileID: 8695485548777105302}
+  - {fileID: 2515689625567336460}
   - {fileID: 8615248549739378194}
   - {fileID: 8288904904448998740}
   - {fileID: 7324202453435512996}
@@ -692,11 +705,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Btn_MyChartItem
   background: {fileID: 9093613070934766587}
   chartNameText: {fileID: 8036719785076140576}
+  chartNameMarquee: {fileID: 93873044455664340}
   chartInfoText: {fileID: 7967140841372846340}
-  selectedBackgroundColor: {r: 0.16470589, g: 0.21960784, b: 0.32156864, a: 0.92156863}
-  selectedTextColor: {r: 1, g: 1, b: 1, a: 1}
-  useMenuTheme: 1
-  showLevelOnly: 1
   selectBar: {fileID: 1979502971271356679}
   rank: {fileID: 125260463978089692}
 --- !u!1 &7814231023448353660
@@ -836,6 +846,74 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &7864997795418020464
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2515689625567336460}
+  - component: {fileID: 2037462601532297234}
+  - component: {fileID: 93873044455664340}
+  m_Layer: 5
+  m_Name: TitleViewport
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2515689625567336460
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7864997795418020464}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8695485548777105302}
+  m_Father: {fileID: 3576915091914052223}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 1, y: 0.5}
+  m_AnchoredPosition: {x: 104, y: 0}
+  m_SizeDelta: {x: -274, y: 30}
+  m_Pivot: {x: 0, y: 0.5}
+--- !u!114 &2037462601532297234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7864997795418020464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3312d7739989d2b4e91e6319e9a96d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
+  m_Padding: {x: 0, y: 0, z: 0, w: 0}
+  m_Softness: {x: 12, y: 0}
+--- !u!114 &93873044455664340
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7864997795418020464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03cd15a04ea55354a8630faa53578549, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIMarqueeText
+  text: {fileID: 8036719785076140576}
+  textGroup: {fileID: 8396619803361443579}
+  playOnStart: 0
+  ellipsisWhenStopped: 1
 --- !u!1 &7997129336443050453
 GameObject:
   m_ObjectHideFlags: 0

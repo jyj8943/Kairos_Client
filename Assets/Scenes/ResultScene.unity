@@ -1929,6 +1929,7 @@ GameObject:
   - component: {fileID: 551386901}
   - component: {fileID: 551386902}
   - component: {fileID: 551386900}
+  - component: {fileID: 551386903}
   m_Layer: 5
   m_Name: Txt_SongTitle
   m_TagString: Untagged
@@ -1948,13 +1949,13 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1390293540}
+  m_Father: {fileID: 965090518}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 163, y: -40}
-  m_SizeDelta: {x: 950, y: 46}
-  m_Pivot: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 950, y: 0}
+  m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &551386900
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2042,7 +2043,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -2068,6 +2069,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!225 &551386903
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 551386898}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &631134971
 GameObject:
   m_ObjectHideFlags: 0
@@ -3904,6 +3917,74 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &965090517
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 965090518}
+  - component: {fileID: 965090519}
+  - component: {fileID: 965090520}
+  m_Layer: 5
+  m_Name: TitleViewport
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &965090518
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 965090517}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 551386899}
+  m_Father: {fileID: 1390293540}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 163, y: -40}
+  m_SizeDelta: {x: 950, y: 46}
+  m_Pivot: {x: 0, y: 1}
+--- !u!114 &965090519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 965090517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3312d7739989d2b4e91e6319e9a96d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
+  m_Padding: {x: 0, y: 0, z: 0, w: 0}
+  m_Softness: {x: 12, y: 0}
+--- !u!114 &965090520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 965090517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03cd15a04ea55354a8630faa53578549, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIMarqueeText
+  text: {fileID: 551386902}
+  textGroup: {fileID: 551386903}
+  playOnStart: 0
+  ellipsisWhenStopped: 0
 --- !u!1 &988231766
 GameObject:
   m_ObjectHideFlags: 0
@@ -5942,7 +6023,7 @@ RectTransform:
   m_Children:
   - {fileID: 1808116011}
   - {fileID: 1450302887}
-  - {fileID: 551386899}
+  - {fileID: 965090518}
   - {fileID: 1173994511}
   - {fileID: 1428136587}
   - {fileID: 280803128}
@@ -6147,6 +6228,7 @@ MonoBehaviour:
   testPlayText: {fileID: 2033235843}
   coverImage: {fileID: 1450302889}
   songTitleText: {fileID: 551386902}
+  songTitleMarquee: {fileID: 965090520}
   artistText: {fileID: 1173994514}
   chartBadge: {fileID: 897082456}
   chartBadgeText: {fileID: 1666236972}

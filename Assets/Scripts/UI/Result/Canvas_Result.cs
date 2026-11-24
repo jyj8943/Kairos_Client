@@ -48,6 +48,8 @@ public class Canvas_Result : UIBase
     [Header("⑧ 곡 정보")]
     [SerializeField] private Image coverImage;
     [SerializeField] private TMP_Text songTitleText;
+    [Tooltip("곡 제목 칸 (TitleViewport). 등장 연출이 끝난 뒤부터 긴 제목이 흐른다")]
+    [SerializeField] private UIMarqueeText songTitleMarquee;
     [SerializeField] private TMP_Text artistText;
     [Tooltip("난이도 뱃지 (나만의 채보는 CUSTOM 뱃지)")]
     [SerializeField] private Image chartBadge;
@@ -212,7 +214,7 @@ public class Canvas_Result : UIBase
     {
         introParts.Clear();
         AddPart(coverImage, f => f.Album, false);
-        AddPart(songTitleText, f => f.Title, true);
+        AddPart(songTitleMarquee != null ? (Component)songTitleMarquee : songTitleText, f => f.Title, true);
         AddPart(artistText, f => f.Artist, true);
         AddPart(chartBadge != null ? chartBadge.transform.parent : null, f => f.ChartLine, true);
         AddPart(scoreLabelText, f => f.Score, true);
@@ -288,6 +290,7 @@ public class Canvas_Result : UIBase
         {
             isIntroPending = true;
             introTime = 0f;
+            SetTitleMarquee(false);
             ApplyIntro(ResultIntroTimeline.Evaluate(0f));
         }
         else
@@ -295,8 +298,18 @@ public class Canvas_Result : UIBase
             isIntroPending = false;
             introTime = GameConstants.ResultIntro.EndSeconds;
             ApplyIntro(ResultIntroTimeline.Finished);
+            SetTitleMarquee(true);
         }
     }
+
+    /// <summary>긴 곡 제목을 흐르게 하거나(연출이 끝났거나 없을 때) 처음 위치에 멈춘다(연출 중, 왼쪽에서 들어오는 움직임과 겹치지 않게)</summary>
+    private void SetTitleMarquee(bool playing)
+    {
+        if (songTitleMarquee != null) songTitleMarquee.SetPlaying(playing);
+    }
+
+    /// <summary>곡 제목 칸 (확인용)</summary>
+    public UIMarqueeText SongTitleMarquee => songTitleMarquee;
 
     /// <summary>등장 연출을 0초부터 재생한다 (ResultScene.OnEnter, 암전 로딩이 다 걷힌 뒤)</summary>
     public void PlayIntro()
@@ -317,6 +330,7 @@ public class Canvas_Result : UIBase
         Debug.Log($"[Canvas_Result] 등장 연출 건너뜀: {introTime:0.000}초에 끝 상태로 (지나온 단계 {introStageLog.Count}개)", this);
         introTime = GameConstants.ResultIntro.EndSeconds;
         ApplyIntro(ResultIntroTimeline.Finished);
+        SetTitleMarquee(true);
     }
 
     private void StepIntro(float time)
@@ -340,6 +354,7 @@ public class Canvas_Result : UIBase
         if (!frame.IsFinished) return;
 
         isIntroPlaying = false;
+        SetTitleMarquee(true);
         Debug.Log($"[Canvas_Result] 등장 연출 끝 {time:0.000}초 — 단계 (표 시작→실제): {string.Join(" / ", introStageLog)}", this);
     }
 

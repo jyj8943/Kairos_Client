@@ -167,7 +167,7 @@ public class EditorLavenderPlayTests
         string[] paths =
         {
             "TopBar/TitleRow", "TopBar/TitleRow/Txt_Title", "TopBar/TitleRow/Txt_TitleEn", "TopBar/Img_TitleLine", "TopBar/Img_TopDivider", "TopBar/Img_AlbumMask",
-            "TopBar/Txt_SongTitle", "TopBar/ChartRow", "TopBar/Btn_Save", "TopBar/Btn_AutoTestPlay", "TopBar/Btn_TestPlay", "TopBar/Btn_Exit",
+            "TopBar/TitleViewport", "TopBar/TitleViewport/Txt_SongTitle", "TopBar/ChartRow", "TopBar/Btn_Save", "TopBar/Btn_AutoTestPlay", "TopBar/Btn_TestPlay", "TopBar/Btn_Exit",
             "LeftTools/NoteCards", "LeftTools/Toggle_ShortNote", "LeftTools/Toggle_BpmSection", "LeftTools/Txt_ToolHint", "LeftTools/TestPlaySpeed",
             "RightPanel/Bpm/Txt_CurrentBpmTitle", "RightPanel/Bpm/Img_CurrentBpmBox", "RightPanel/Bpm/Img_CurrentBpmBox/Txt_NextBpm",
             "RightPanel/BpmSections/Txt_BpmSectionsTitle", "RightPanel/BpmSections/ScrollView_BpmSections", "RightPanel/Btn_ResetBpm",

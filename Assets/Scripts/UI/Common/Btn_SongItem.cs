@@ -34,6 +34,8 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     [SerializeField] private Image background;
     [SerializeField] private Image cover;
     [SerializeField] private TMP_Text titleText;
+    [Tooltip("제목 칸 (TitleViewport). 고른 칸일 때만 긴 제목이 흐르고, 아니면 …")]
+    [SerializeField] private UIMarqueeText titleMarquee;
     [SerializeField] private TMP_Text infoText;
 
     [Header("색")]
@@ -76,6 +78,9 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
 
     /// <summary>고른 곡 표시 중이면 true (확인용)</summary>
     public bool IsChosen { get; private set; }
+
+    /// <summary>제목 칸 (확인용)</summary>
+    public UIMarqueeText TitleMarquee => titleMarquee;
 
     /// <summary>난이도 칸 (확인용)</summary>
     public IReadOnlyList<DifficultyColumn> DifficultyColumns => difficultyColumns;
@@ -204,6 +209,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         }
         if (normalTitleSize > 0f && chosenTitleSize > 0f)
             titleText.fontSize = chosen ? chosenTitleSize : normalTitleSize;
+        if (titleMarquee != null) titleMarquee.SetPlaying(chosen);
     }
 
     /// <summary>

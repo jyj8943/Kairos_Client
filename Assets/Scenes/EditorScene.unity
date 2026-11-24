@@ -366,7 +366,7 @@ RectTransform:
   - {fileID: 1058901804}
   - {fileID: 165121211}
   - {fileID: 1532597082}
-  - {fileID: 1623906006}
+  - {fileID: 1288533515}
   - {fileID: 77256913}
   - {fileID: 1544261109}
   m_Father: {fileID: 1997036935}
@@ -15522,6 +15522,74 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1283892007}
   m_CullTransparentMesh: 1
+--- !u!1 &1288533514
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1288533515}
+  - component: {fileID: 1288533517}
+  - component: {fileID: 1288533516}
+  m_Layer: 5
+  m_Name: TitleViewport
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1288533515
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1288533514}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1623906006}
+  m_Father: {fileID: 11790720}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 367, y: -8}
+  m_SizeDelta: {x: -1072, y: 30}
+  m_Pivot: {x: 0, y: 1}
+--- !u!114 &1288533516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1288533514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03cd15a04ea55354a8630faa53578549, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIMarqueeText
+  text: {fileID: 1623906009}
+  textGroup: {fileID: 1623906010}
+  playOnStart: 1
+  ellipsisWhenStopped: 0
+--- !u!114 &1288533517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1288533514}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3312d7739989d2b4e91e6319e9a96d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
+  m_Padding: {x: 0, y: 0, z: 0, w: 0}
+  m_Softness: {x: 12, y: 0}
 --- !u!1 &1291608756
 GameObject:
   m_ObjectHideFlags: 0
@@ -21397,6 +21465,7 @@ GameObject:
   - component: {fileID: 1623906008}
   - component: {fileID: 1623906009}
   - component: {fileID: 1623906007}
+  - component: {fileID: 1623906010}
   m_Layer: 5
   m_Name: Txt_SongTitle
   m_TagString: Untagged
@@ -21416,13 +21485,13 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 11790720}
+  m_Father: {fileID: 1288533515}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 367, y: -8}
-  m_SizeDelta: {x: -1072, y: 30}
-  m_Pivot: {x: 0, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 848, y: 0}
+  m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &1623906007
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21510,7 +21579,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -21536,6 +21605,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!225 &1623906010
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623906005}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &1634857568
 GameObject:
   m_ObjectHideFlags: 0

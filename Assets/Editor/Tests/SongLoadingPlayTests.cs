@@ -290,14 +290,17 @@ public class SongLoadingPlayTests
             new ChartData { chartId = "x", type = ChartData.TypeCustom, chartName = "아주아주 긴 나만의 채보 이름이 판 끝까지 이어지는 경우를 확인하기 위한 채보 이름입니다 그리고 조금 더 길게 이어 붙인 부분까지", level = 12 }, ap);
         longInfo.Title = "Critical Velocity (Extended Hyper Midnight Drive Remix for the Endless Night)";
         Report(sb, overlay, root, "긴 제목 · 채보 이름", longInfo, song);
-        sb.AppendLine($"  긴 글자: 제목 원래 폭 {Preferred(overlay.TitleText):0} > 칸 {overlay.TitleText.rectTransform.rect.width:0}, 보이는 글자 끝 '{VisibleTail(overlay.TitleText)}' · " +
-                      $"채보 이름 원래 폭 {Preferred(overlay.ChartNameText):0} > 칸 {overlay.ChartNameText.rectTransform.rect.width:0}, 보이는 글자 끝 '{VisibleTail(overlay.ChartNameText)}'");
-        Assert.Greater(Preferred(overlay.TitleText), overlay.TitleText.rectTransform.rect.width, "긴 제목은 칸보다 김");
-        Assert.Greater(Preferred(overlay.ChartNameText), overlay.ChartNameText.rectTransform.rect.width, "긴 채보 이름은 칸보다 김");
-        Assert.AreEqual('\u2026', VisibleTail(overlay.TitleText), "긴 제목 끝 줄임표");
-        Assert.AreEqual('\u2026', VisibleTail(overlay.ChartNameText), "긴 채보 이름 끝 줄임표");
-        Assert.AreEqual(TextOverflowModes.Ellipsis, overlay.TitleText.overflowMode);
-        Assert.AreEqual(TextOverflowModes.Ellipsis, overlay.ChartNameText.overflowMode);
+        // 긴 글자는 …으로 자르지 않고 칸 안에서 흐른다 (UIMarqueeText, 11/24)
+        overlay.TitleMarquee.Tick(0f);
+        overlay.ChartNameMarquee.Tick(0f);
+        sb.AppendLine($"  긴 글자: 제목 {overlay.TitleMarquee.TextWidth:0} > 칸 {overlay.TitleMarquee.CellWidth:0} (이동 {overlay.TitleMarquee.OverflowWidth:0}) · " +
+                      $"채보 이름 {overlay.ChartNameMarquee.TextWidth:0} > 칸 {overlay.ChartNameMarquee.CellWidth:0} (이동 {overlay.ChartNameMarquee.OverflowWidth:0})");
+        Assert.AreEqual(1068f, overlay.TitleMarquee.CellWidth, 0.5f, "제목 칸 폭 그대로");
+        Assert.AreEqual(1000f, overlay.ChartNameMarquee.CellWidth, 0.5f, "채보 이름 칸 폭 그대로");
+        Assert.IsTrue(overlay.TitleMarquee.IsScrolling, "긴 제목은 흐른다");
+        Assert.IsTrue(overlay.ChartNameMarquee.IsScrolling, "긴 채보 이름은 흐른다");
+        Assert.AreEqual(TextOverflowModes.Overflow, overlay.TitleText.overflowMode);
+        Assert.AreEqual(TextOverflowModes.Overflow, overlay.ChartNameText.overflowMode);
 
         Assert.IsNull(overlay.SdImage.sprite, "SD 일러스트 아직 없음");
         Assert.AreEqual(0f, overlay.SdImage.color.a, "스프라이트 없으면 투명");
@@ -358,18 +361,6 @@ public class SongLoadingPlayTests
         if (state.StartsWith("01")) Assert.AreEqual(56f, rank.Size.y, 0.5f, "랭크 높이 56");
         if (state.StartsWith("02")) Assert.IsTrue(overlay.ChartRow.activeSelf);
         if (state.StartsWith("01")) Assert.IsFalse(overlay.ChartRow.activeSelf);
-    }
-
-    private static float Preferred(TMP_Text text) => text.GetPreferredValues(text.text, float.PositiveInfinity, float.PositiveInfinity).x;
-
-    /// <summary>화면에 그려진 마지막 글자 (줄임표면 '\u2026')</summary>
-    private static char VisibleTail(TMP_Text text)
-    {
-        text.ForceMeshUpdate();
-        TMP_TextInfo info = text.textInfo;
-        for (int i = info.characterCount - 1; i >= 0; i--)
-            if (info.characterInfo[i].isVisible) return info.characterInfo[i].character;
-        return '\0';
     }
 
     private static string Shorten(string text) => text.Length > 12 ? text.Substring(0, 12) + "…" : text;

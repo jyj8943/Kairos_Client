@@ -16,6 +16,8 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
 {
     [SerializeField] private Image background;
     [SerializeField] private TMP_Text chartNameText;
+    [Tooltip("채보 이름 칸 (TitleViewport). 고른 줄일 때만 긴 이름이 흐르고, 아니면 …")]
+    [SerializeField] private UIMarqueeText chartNameMarquee;
     [Tooltip("레벨 (\"Lv. 6\")")]
     [SerializeField] private TMP_Text chartInfoText;
     [Tooltip("고른 채보 왼쪽 하늘색 막대 (Img_SelectBar)")]
@@ -93,6 +95,9 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
     /// <summary>채보 이름 글자 (확인용)</summary>
     public TMP_Text ChartNameText => chartNameText;
 
+    /// <summary>채보 이름 칸 (확인용)</summary>
+    public UIMarqueeText ChartNameMarquee => chartNameMarquee;
+
     /// <summary>
     /// 고른 채보 표시를 켜거나 끈다: 포인트색 18% 바탕 + 왼쪽 막대 (UIThemePaint.SelectableRow). EventSystem 선택이 풀려도 남는다.
     /// </summary>
@@ -102,6 +107,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
         UIThemePaint.SelectableRow(background, selectBar, chosen);
         UIThemePaint.Text(chartNameText, UITextLevel.Primary);
         UIThemePaint.Text(chartInfoText, UITextLevel.Primary);
+        if (chartNameMarquee != null) chartNameMarquee.SetPlaying(chosen);
     }
 
     public void OnSelect(BaseEventData eventData)
