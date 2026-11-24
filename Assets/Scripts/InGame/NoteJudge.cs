@@ -145,11 +145,13 @@ public readonly struct JudgeResult
 ///   - 시작 판정은 숏노트와 같다. PERFECT·GREAT·GOOD이면 그 라인은 "누르고 있는 롱노트" 상태가 되고, 그동안 그 라인의 다음 노트는 판정하지 않는다.
 ///   - 시작 MISS(MISS 범위에서 누름, 또는 +GOOD 범위를 지나도록 안 누름)면 바로 종합 MISS. 몸통이 끝까지 내려가는 동안(끝 시간 전) 그 라인 누름은 빈 타격이다.
 ///   - 끝 판정 (뗀 시각 − 끝 시각, GameConstants.Play.LongReleaseMs = ±120ms, 경계 포함):
-///     범위 안에서 떼면 끝 판정 = 시작 판정 (끝이 판정을 깎지도 올리지도 않는다).
+///     범위 안에서 떼면 끝 판정 = 시작 판정 (끝이 판정을 깎지도 올리지도 않는다). 아직 오지 않은 남은 틱도 모두 인정한다.
 ///     범위보다 일찍 떼면 끝 MISS (종합 MISS, 콤보 0, 남은 틱 인정 안 함). 끝 + 범위를 지나도록 누르고 있으면 그 순간 끝 GOOD (모든 틱 인정).
 ///   - 종합 판정 = 시작과 끝 중 낮은 쪽 (범위 안이면 결국 시작 판정). 한 번 떼면 끝이다 (다시 누르기 불가).
 ///   - 유지 틱: 누르고 있는 동안 지난 틱마다 Tick 결과 (StartType = 시작 판정). 늦게 눌러 이미 지난 틱도 인정하고(다음 CollectTimeouts·TryRelease에서),
-///     일찍 떼서 남은 틱과 종합 MISS 뒤 남은 틱은 인정하지 않는다.
+///     끝 판정이 MISS가 아니면 뗄 때 남은 틱을 모두 인정한다 (끝 범위 ±120ms가 1/4박보다 길어, 안 그러면 정상으로 떼고도 콤보가 모자란다).
+///     끝 MISS(범위보다 일찍 뗌)·시작 MISS의 남은 틱은 인정하지 않는다.
+///     → MISS 없이 모두 판정하면 콤보는 항상 노트 수 + 전체 틱 수 (FULL COMBO = 가능한 최대 콤보).
 /// - 판정 중에는 메모리를 새로 잡지 않는다 (매 프레임 GC 할당 없음).
 /// </summary>
 public class NoteJudge
@@ -290,7 +292,8 @@ public class NoteJudge
     }
 
     /// <summary>
-    /// 키를 뗐다. 그 라인에서 누르고 있는 롱노트가 있으면 뗀 시각까지 지난 틱(Tick)과 종합 판정(LongFinal)을 results 뒤에 붙인다.
+    /// 키를 뗐다. 그 라인에서 누르고 있는 롱노트가 있으면 유지 틱(Tick)과 종합 판정(LongFinal)을 results 뒤에 붙인다.
+    /// 틱은 끝 판정이 MISS면 뗀 시각까지 지난 것만, MISS가 아니면 남은 것을 모두 붙인다 (종합 판정보다 먼저).
     /// results는 비우지 않는다 (CollectTimeouts 결과와 같이 쓸 수 있게).
     /// </summary>
     /// <param name="releaseTime">뗀 시각 (곡 시간, 초)</param>
@@ -300,14 +303,13 @@ public class NoteJudge
         if (lane < 0 || lane >= heldNote.Length || heldNote[lane] < 0) return false;
 
         int noteIndex = heldNote[lane];
-        CollectTicks(lane, releaseTime, results);
-
         double deltaMs = (releaseTime - notes[noteIndex].EndTime) * 1000.0;
         JudgeType endType;
         if (deltaMs < -LongReleaseMs - BoundaryEpsilonMs) endType = JudgeType.Miss;     // 범위보다 일찍 뗌
         else if (deltaMs - BoundaryEpsilonMs > LongReleaseMs) endType = JudgeType.Good; // 범위를 지나 뗀 것이 자동 GOOD 처리 전에 들어옴
         else endType = heldStartType[lane];                                             // 범위 안: 시작 판정 그대로
 
+        CollectTicks(lane, releaseTime, endType != JudgeType.Miss, results);
         results.Add(FinishLong(lane, noteIndex, endType, deltaMs, true));
         return true;
     }
@@ -327,7 +329,7 @@ public class NoteJudge
             int held = heldNote[lane];
             if (held >= 0)
             {
-                CollectTicks(lane, songTime, results);
+                CollectTicks(lane, songTime, false, results);
                 double elapsedMs = (songTime - notes[held].EndTime) * 1000.0;
                 if (elapsedMs - BoundaryEpsilonMs > LongReleaseMs) results.Add(FinishLong(lane, held, JudgeType.Good, elapsedMs, false));
             }
@@ -374,11 +376,12 @@ public class NoteJudge
     private const double LongReleaseMs = GameConstants.Play.LongReleaseMs;
 
     /// <summary>누르고 있는 롱노트에서 time까지 지난 틱을 Tick 결과로 붙인다.</summary>
-    private void CollectTicks(int lane, double time, List<JudgeResult> results)
+    /// <param name="includeRemaining">true면 아직 오지 않은 남은 틱도 모두 붙인다 (끝 판정이 MISS가 아닌 뗌. DeltaMs는 음수가 된다)</param>
+    private void CollectTicks(int lane, double time, bool includeRemaining, List<JudgeResult> results)
     {
         int noteIndex = heldNote[lane];
         PlayNote note = notes[noteIndex];
-        while (heldTickCursor[lane] < note.TickCount && note.GetTickTime(heldTickCursor[lane]) <= time)
+        while (heldTickCursor[lane] < note.TickCount && (includeRemaining || note.GetTickTime(heldTickCursor[lane]) <= time))
         {
             double deltaMs = (time - note.GetTickTime(heldTickCursor[lane])) * 1000.0;
             heldTickCursor[lane]++;

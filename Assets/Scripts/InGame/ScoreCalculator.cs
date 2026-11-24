@@ -9,7 +9,7 @@
 ///   - 판정 1개로 센다: 전체 판정 수 = 숏노트 + 롱노트. 점수·판정 개수에는 종합 판정(AddLongFinal)만 넣는다.
 ///   - 시작 PERFECT·GREAT·GOOD은 콤보만 +1 (AddLongStart), 유지 틱도 콤보만 +1 (AddTick).
 ///   - 종합 판정이 MISS면 그 순간 콤보 0, MISS가 아니면 콤보는 그대로 (시작에서 이미 +1 했다).
-///   - 끝까지 잘 누르면 최대 콤보 = 노트 수 + 전체 틱 수 (MaxPossibleCombo).
+///   - MISS 없이 모두 판정하면(FULL COMBO) 최대 콤보 = 노트 수 + 전체 틱 수 (MaxPossibleCombo). NoteJudge가 끝 MISS가 아닌 롱노트의 남은 틱을 모두 인정한다.
 /// - FAST / SLOW 개수: Apply로 넣은 결과 중 FastSlowRules.GetCount가 방향을 돌려준 것(숏노트·롱노트 종합의 GREAT·GOOD)만 센다
 ///   → Apply만 쓰면 항상 FastCount + SlowCount = GreatCount + GoodCount.
 /// - 정확도: 결과 화면용 Accuracy(전체 노트 수로 나눔)와 플레이 중 표시용 LiveAccuracy(지금까지 판정한 수로 나눔)를 따로 둔다.
