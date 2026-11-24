@@ -1470,7 +1470,6 @@ GameObject:
   - component: {fileID: 5235867023714681548}
   - component: {fileID: 6457801902986009105}
   - component: {fileID: 3293659009000062579}
-  - component: {fileID: 2756402982604976419}
   - component: {fileID: 2100868762203699699}
   - component: {fileID: 113055865309096077}
   m_Layer: 5
@@ -1631,18 +1630,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &2756402982604976419
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7010319682251073943}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d7b1398d4cfdd5499600b3dd5f31970, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UISelectOnHover
 --- !u!114 &2100868762203699699
 MonoBehaviour:
   m_ObjectHideFlags: 0
