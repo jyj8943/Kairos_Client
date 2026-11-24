@@ -1123,9 +1123,47 @@ public class Canvas_Editor : UIBase
         int measure = grid.CurrentMeasure;
         float length = session.SongLengthSeconds;
         if (timeTotalText == null || (measure == shownTimeMeasure && Mathf.Approximately(length, shownSongLength))) return;
+        if (!Mathf.Approximately(length, shownSongLength)) LayoutTimeTexts(length);
         shownTimeMeasure = measure;
         shownSongLength = length;
         timeTotalText.text = string.Format(GameConstants.Editor.TimeTotalFormat, TimeFormat.ToMinSec(length), measure);
+    }
+
+    /// <summary>
+    /// 아래 재생 줄: 시간 글자 두 칸을 가장 긴 글자 폭에 맞추고, 남은 폭만큼 슬라이더를 줄인다 (11/24, "마디 83"이 "마디 …"로 잘리던 문제).
+    /// 가장 긴 글자 = 곡 길이 기준 시간(숫자는 모두 8로) + 세 자리 마디. 곡 길이가 바뀔 때만 다시 잡아 재생 중에 슬라이더가 흔들리지 않는다.
+    /// Txt_TimeInfo · Txt_TimeTotal은 오른쪽 위 앵커(pivot 왼쪽 위), Slider_Timeline은 좌우로 늘어나는 앵커다.
+    /// </summary>
+    private void LayoutTimeTexts(float songLength)
+    {
+        if (timeInfoText == null || timeTotalText == null) return;
+        string widestInfo = WidestDigits(TimeFormat.ToMinSecMillis(songLength));
+        string widestTotal = WidestDigits(string.Format(GameConstants.Editor.TimeTotalFormat, TimeFormat.ToMinSec(songLength), GameConstants.Editor.TimeLayoutMaxMeasure));
+        float infoWidth = Mathf.Ceil(timeInfoText.GetPreferredValues(widestInfo).x) + 2f;
+        float totalWidth = Mathf.Ceil(timeTotalText.GetPreferredValues(widestTotal).x) + 2f;
+
+        RectTransform total = timeTotalText.rectTransform;
+        RectTransform info = timeInfoText.rectTransform;
+        float totalX = -GameConstants.Editor.TimeTextRightMargin - totalWidth;
+        float infoX = totalX - GameConstants.Editor.TimeTextGap - infoWidth;
+        total.sizeDelta = new Vector2(totalWidth, total.sizeDelta.y);
+        total.anchoredPosition = new Vector2(totalX, total.anchoredPosition.y);
+        info.sizeDelta = new Vector2(infoWidth, info.sizeDelta.y);
+        info.anchoredPosition = new Vector2(infoX, info.anchoredPosition.y);
+
+        if (timelineSlider != null && timelineSlider.transform is RectTransform slider)
+        {
+            slider.anchoredPosition = new Vector2(GameConstants.Editor.TimelineSliderLeft, slider.anchoredPosition.y);
+            slider.sizeDelta = new Vector2(infoX - GameConstants.Editor.TimelineSliderGap - GameConstants.Editor.TimelineSliderLeft, slider.sizeDelta.y);
+        }
+    }
+
+    /// <summary>숫자를 모두 8로 바꾼 글자 (숫자 폭이 글자마다 달라도 가장 넓게 잡는다)</summary>
+    private static string WidestDigits(string text)
+    {
+        char[] chars = text.ToCharArray();
+        for (int i = 0; i < chars.Length; i++) if (char.IsDigit(chars[i])) chars[i] = '8';
+        return new string(chars);
     }
 
     /// <summary>시간 글자 (확인용: 현재 시간 + 뒤쪽)</summary>

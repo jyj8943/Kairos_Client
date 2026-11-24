@@ -125,7 +125,6 @@ public class Slider_Timeline : MonoBehaviour, IPointerDownHandler, IPointerUpHan
             markers.Add(marker);
         }
 
-        float width = markerParent.rect.width;
         for (int i = 0; i < markers.Count; i++)
         {
             bool used = i < positions.Count;
@@ -133,7 +132,11 @@ public class Slider_Timeline : MonoBehaviour, IPointerDownHandler, IPointerUpHan
             if (!used) continue;
 
             RectTransform rect = markers[i].rectTransform;
-            rect.anchoredPosition = new Vector2(Mathf.Clamp01(positions[i]) * width, rect.anchoredPosition.y);
+            // 폭이 아니라 앵커 비율로 놓는다: 막대 폭이 나중에 바뀌어도(시간 글자 폭에 맞춰 줄일 때) 눈금이 따라간다
+            float x = Mathf.Clamp01(positions[i]);
+            rect.anchorMin = new Vector2(x, rect.anchorMin.y);
+            rect.anchorMax = new Vector2(x, rect.anchorMax.y);
+            rect.anchoredPosition = new Vector2(0f, rect.anchoredPosition.y);
             TMP_Text label = markers[i].GetComponentInChildren<TMP_Text>(true);
             if (label != null) label.text = labels[i];
         }

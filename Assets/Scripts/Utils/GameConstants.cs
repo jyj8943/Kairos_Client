@@ -1156,6 +1156,13 @@ public static class GameConstants
 
         /// <summary>타임라인 정보 뒤쪽 (현재 시간은 Bold 따로): {0} 곡 길이, {1} 마디 번호</summary>
         public const string TimeTotalFormat = "/ {0} · 마디 {1}";
+        /// <summary>시간 글자 폭을 잡을 때 쓰는 가장 긴 마디 번호 (세 자리)</summary>
+        public const int TimeLayoutMaxMeasure = 888;
+        /// <summary>아래 재생 줄 배치 (px, 11/24): 왼쪽 슬라이더 시작 x, 슬라이더와 시간 글자 사이, 현재 시간과 뒤쪽 글자 사이, 오른쪽 끝 여백</summary>
+        public const float TimelineSliderLeft = 98f;
+        public const float TimelineSliderGap = 16f;
+        public const float TimeTextGap = 4f;
+        public const float TimeTextRightMargin = 24f;
 
         /// <summary>저장 상태 표시. Saved의 {0}에 저장 시각(SaveTimeFormat)이 들어간다</summary>
         public const string SaveStatusSaved = "저장됨 {0}";
