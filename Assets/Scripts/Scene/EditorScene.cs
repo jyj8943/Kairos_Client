@@ -15,7 +15,7 @@ using UnityEngine;
 /// - BPM 구간 (기획서 3-6): BPM 구간 도구 클릭 → Popup_BpmSection(추가·수정), 구간선 오른쪽 클릭 → 삭제(뒤에 노트가 있으면 확인 팝업),
 ///   목록 줄 클릭 → 그 구간으로 이동, Btn_ResetBpm → 확인 팝업 → 곡 BPM 구간으로 되돌리기.
 ///   구간이 바뀌면(세션 OnTimingChanged, 실행 취소 포함) 그리드·목록·타임라인을 다시 맞추고, 재생 중이면 그 자리에서 다시 재생한다.
-/// - 도구 단축키 1 · 2 · 3은 롱노트를 드래그하는 중이면 무시한다.
+/// - 도구 단축키 1 · 2는 롱노트를 드래그하는 중이면 무시한다.
 /// </summary>
 public class EditorScene : SceneBase
 {
@@ -277,7 +277,7 @@ public class EditorScene : SceneBase
         return isReady && !isLeaving && !isSaving && !notePlacer.IsPressing;
     }
 
-    /// <summary>도구 단축키 1 · 2 · 3. 롱노트를 드래그하는 중이면 무시한다</summary>
+    /// <summary>도구 단축키 1 · 2. 롱노트를 드래그하는 중이면 무시한다</summary>
     private void OnToolShortcutRequested(EditorTool tool)
     {
         if (!CanUseHistory()) return;

@@ -16,13 +16,13 @@ using UnityEngine.UI;
 ///   버튼 4개(저장 [Ctrl+S] · 자동 테스트 보라 ◎ · 테스트 플레이 하늘 ▶ · 나가기 [Esc]), 맨 아래 키 안내 줄(KeyGuideBar). 색은 모두 UITheme.
 /// - 왼쪽 도구 토글 상태를 CurrentTool로 알려준다 (도구 동작은 각 처리 쪽에서 이 값을 읽는다).
 ///   고른 도구는 하늘 14% 바탕 · 하늘 1.5px 테두리 · 선택 링(흰 3 + 하늘 6) · 글자 #2F7FC8, 나머지는 흰 바탕 · 흐린 테두리 · 기본 글자 (UITheme 에디터 묶음).
-///   아래에 고른 도구 사용법 한 줄. 키 칩 [1][2][3]은 입력 에셋 바인딩에서 읽는다.
+///   아래에 고른 도구 사용법 한 줄. 키 칩 [1][2]는 입력 에셋 바인딩에서 읽는다.
 /// - 테스트 플레이 배속: 마지막으로 쓴 값을 PlayerData(lastSelection.editorTestPlayMultiplier)에 저장하고, 들어올 때 그 값으로 시작한다 (처음 1.0, 인게임 배속과 따로).
 /// - 「테스트 후 결과 보기」 스위치 (Toggle_ShowTestResult, 11/20): 테스트 플레이 배속 아래. 켜짐이면 테스트 끝 → 결과(연출 없음) → 에디터, 꺼짐이면 바로 에디터.
 ///   값은 PlayerData(lastSelection.editorShowTestResult, 처음 true)에 저장하고 Init에서 읽는다. 설명 줄(Txt_ShowTestResultHint)은 값에 따라 바뀐다.
 /// - 저장 상태 글자(Txt_SaveStatus): 저장하지 않은 변경이 있으면 "● 저장 안 됨"(호박), 저장된 상태면 숨김.
 ///   잠깐 띄우는 안내(테스트 플레이 안내·BPM 구간 결과 등)와 저장 실패도 같은 자리에 띄우고, 시간이 지나면(EditorScene) 저장 상태로 되돌린다. 저장 성공은 "● 저장 안 됨"이 사라지는 것으로 알린다.
-///   도구 단축키 1 · 2 · 3(ChartEditor/ToolShortNote·ToolLongNote·ToolBpmSection)은 이벤트로 알린다 (롱노트 드래그 중 확인은 EditorScene).
+///   도구 단축키 1 · 2(ChartEditor/ToolNote·ToolBpmSection)는 이벤트로 알린다 (롱노트 드래그 중 확인은 EditorScene).
 /// - BPM 구간: 목록 줄 클릭·Btn_ResetBpm은 이벤트로 알리고, 구간이 바뀌면(RefreshTiming) 목록·현재 BPM·타임라인 눈금을 다시 그린다.
 ///   현재 위치가 속한 구간이 바뀔 때만 현재 BPM 글자·목록 강조를 바꾼다 (재생 중 매 프레임 글자를 새로 만들지 않게).
 /// - 마우스 휠은 입력 에셋의 ChartEditor 맵으로 받는다. 포인터가 그리드 위에 있을 때만 처리한다.
@@ -33,7 +33,7 @@ using UnityEngine.UI;
 ///   (재생 처리는 EditorPlayback이 맡는다). 입력창에 글자를 쓰는 중이면 Space를 무시한다.
 /// - 실행 취소(ChartEditor/Undo, Ctrl+Z)·다시 실행(ChartEditor/Redo, Ctrl+Y · Ctrl+Shift+Z)은 이벤트로 알린다 (처리는 EditorScene).
 ///   입력창에 글자를 쓰는 중이면 무시한다. Ctrl+Shift+Z는 다시 실행만 받는다 (Undo 콜백에서 Shift가 눌려 있으면 무시).
-/// - 확인 팝업 등 팝업이 열려 있으면 Space·Ctrl+S·Ctrl+Z·Ctrl+Y·1·2·3·휠은 동작하지 않는다 (GameManager.UI.HasOpenPopup).
+/// - 확인 팝업 등 팝업이 열려 있으면 Space·Ctrl+S·Ctrl+Z·Ctrl+Y·1·2·휠은 동작하지 않는다 (GameManager.UI.HasOpenPopup).
 /// - 폴더 이름을 Editor로 두면 Unity 특수 폴더가 되므로 UI/ChartEditor/에 둔다.
 /// </summary>
 public class Canvas_Editor : UIBase
@@ -88,29 +88,25 @@ public class Canvas_Editor : UIBase
     [Tooltip("롱노트 수 값 (Txt_LongNotesValue)")]
     [SerializeField] private TMP_Text longNotesValueText;
 
-    [Header("왼쪽 도구 (단축키 1 · 2 · 3)")]
+    [Header("왼쪽 도구 (단축키 1 · 2)")]
+    [Tooltip("노트 도구 (Toggle_ShortNote). Toggle_LongNote는 노트 도구로 합쳐져 씬에서 꺼 둔다 (디자인 반영 때 지움)")]
     [SerializeField] private Toggle shortNoteToggle;
-    [SerializeField] private Toggle longNoteToggle;
     [SerializeField] private Toggle bpmSectionToggle;
 
     [SerializeField] private TMP_Text toolsTitleText;
-    [Tooltip("도구 이름 (Txt_ShortNote · Txt_LongNote · Txt_BpmSection)")]
+    [Tooltip("도구 이름 (Txt_ShortNote · Txt_BpmSection)")]
     [SerializeField] private TMP_Text shortNoteLabel;
-    [SerializeField] private TMP_Text longNoteLabel;
     [SerializeField] private TMP_Text bpmSectionLabel;
-    [Tooltip("도구 키 칩 글자 [1][2][3] (바인딩)")]
+    [Tooltip("도구 키 칩 글자 [1][2] (바인딩)")]
     [SerializeField] private TMP_Text shortNoteKeyText;
-    [SerializeField] private TMP_Text longNoteKeyText;
     [SerializeField] private TMP_Text bpmSectionKeyText;
     [Tooltip("고른 도구 선택 링 (Img_FocusRing, 흰 3 + 하늘 6). 고른 도구만 켠다")]
     [SerializeField] private GameObject shortNoteRing;
-    [SerializeField] private GameObject longNoteRing;
     [SerializeField] private GameObject bpmSectionRing;
     [Tooltip("BPM 구간 도구 ♩ 아이콘 글자 (호박 둥근 사각 위 흰 글자)")]
     [SerializeField] private TMP_Text bpmSectionIcon;
-    [Tooltip("숏노트 · 롱노트 도구 아이콘 막대 (고르면 하늘, 아니면 흐린 회색)")]
+    [Tooltip("노트 도구 아이콘 막대 (고르면 하늘, 아니면 흐린 회색)")]
     [SerializeField] private Image shortNoteIcon;
-    [SerializeField] private Image longNoteIcon;
     [Tooltip("고른 도구 사용법 한 줄 (Txt_ToolHint, 13, textMuted)")]
     [SerializeField] private TMP_Text toolHintText;
 
@@ -197,14 +193,12 @@ public class Canvas_Editor : UIBase
     [SerializeField] private InputActionReference undoAction;
     [Tooltip("입력 에셋의 ChartEditor/Redo (Ctrl+Y · Ctrl+Shift+Z)")]
     [SerializeField] private InputActionReference redoAction;
-    [Tooltip("입력 에셋의 ChartEditor/ToolShortNote (1)")]
-    [SerializeField] private InputActionReference toolShortNoteAction;
-    [Tooltip("입력 에셋의 ChartEditor/ToolLongNote (2)")]
-    [SerializeField] private InputActionReference toolLongNoteAction;
-    [Tooltip("입력 에셋의 ChartEditor/ToolBpmSection (3)")]
+    [Tooltip("입력 에셋의 ChartEditor/ToolNote (1)")]
+    [SerializeField] private InputActionReference toolNoteAction;
+    [Tooltip("입력 에셋의 ChartEditor/ToolBpmSection (2)")]
     [SerializeField] private InputActionReference toolBpmSectionAction;
 
-    /// <summary>도구 단축키 1 · 2 · 3 요청 (EditorScene이 롱노트 드래그 중이 아니면 SetTool)</summary>
+    /// <summary>도구 단축키 1 · 2 요청 (EditorScene이 롱노트 드래그 중이 아니면 SetTool)</summary>
     public event Action<EditorTool> ToolShortcutRequested;
 
     /// <summary>BPM 구간 목록 줄 클릭 (구간 tick)</summary>
@@ -273,7 +267,7 @@ public class Canvas_Editor : UIBase
     private readonly List<string> markerLabels = new List<string>();
 
     /// <summary>
-    /// 지금 켜진 도구. 토글이 모두 꺼져 있으면 숏노트로 본다 (ToggleGroup이 하나는 켜 두므로 보통 생기지 않음).
+    /// 지금 켜진 도구. 토글이 모두 꺼져 있으면 노트 도구로 본다 (ToggleGroup이 하나는 켜 두므로 보통 생기지 않음).
     /// </summary>
     /// <summary>테스트 플레이 배속 단계 (배속 × 10, ScrollSpeedRules)</summary>
     private int testPlaySpeedSteps = ScrollSpeedRules.ToSteps(GameConstants.Play.DefaultScrollMultiplier);
@@ -292,9 +286,8 @@ public class Canvas_Editor : UIBase
     {
         get
         {
-            if (longNoteToggle != null && longNoteToggle.isOn) return EditorTool.LongNote;
             if (bpmSectionToggle != null && bpmSectionToggle.isOn) return EditorTool.BpmSection;
-            return EditorTool.ShortNote;
+            return EditorTool.Note;
         }
     }
 
@@ -460,12 +453,10 @@ public class Canvas_Editor : UIBase
         SetText(notesCardLabel, GameConstants.Editor.NotesCardLabel);
         SetText(longNotesCardLabel, GameConstants.Editor.LongNotesCardLabel);
         SetText(toolsTitleText, SectionLabel(GameConstants.Editor.ToolsTitle, GameConstants.Editor.ToolsTitleEn));
-        SetText(shortNoteLabel, GameConstants.Editor.ToolShortNoteName);
-        SetText(longNoteLabel, GameConstants.Editor.ToolLongNoteName);
+        SetText(shortNoteLabel, GameConstants.Editor.ToolNoteName);
         SetText(bpmSectionLabel, GameConstants.Editor.ToolBpmSectionName);
-        SetText(shortNoteKeyText, KeyGuideBar.GetKeyText(toolShortNoteAction != null ? toolShortNoteAction.action : null, "1"));
-        SetText(longNoteKeyText, KeyGuideBar.GetKeyText(toolLongNoteAction != null ? toolLongNoteAction.action : null, "2"));
-        SetText(bpmSectionKeyText, KeyGuideBar.GetKeyText(toolBpmSectionAction != null ? toolBpmSectionAction.action : null, "3"));
+        SetText(shortNoteKeyText, KeyGuideBar.GetKeyText(toolNoteAction != null ? toolNoteAction.action : null, "1"));
+        SetText(bpmSectionKeyText, KeyGuideBar.GetKeyText(toolBpmSectionAction != null ? toolBpmSectionAction.action : null, "2"));
         if (bpmSectionIcon != null)
         {
             bpmSectionIcon.text = GameConstants.Editor.BpmSectionIcon;
@@ -534,7 +525,7 @@ public class Canvas_Editor : UIBase
     }
 
     /// <summary>
-    /// 맨 아래 키 안내 줄: Space 재생 · 휠 이동 · 클릭 놓기 · 우클릭 지우기 · 1 2 3 도구 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행 · Ctrl+S 저장 · Esc 나가기.
+    /// 맨 아래 키 안내 줄: Space 재생 · 휠 이동 · 클릭 놓기 · 우클릭 지우기 · 1 2 도구 · Ctrl+Z 실행 취소 · Ctrl+Y 다시 실행 · Ctrl+S 저장 · Esc 나가기.
     /// 키 글자는 바인딩에서 읽고, 마우스·Esc는 고정 글자.
     /// </summary>
     private void InitKeyGuide()
@@ -547,7 +538,7 @@ public class Canvas_Editor : UIBase
             new KeyGuideEntry(GameConstants.Editor.GuidePlace, KeyGuideKey.Fixed(GameConstants.Editor.KeyClick)),
             new KeyGuideEntry(GameConstants.Editor.GuideRemove, KeyGuideKey.Fixed(GameConstants.Editor.KeyRightClick)),
             new KeyGuideEntry(GameConstants.Editor.GuideTools,
-                KeyGuideKey.FromAction(toolShortNoteAction, "1"), KeyGuideKey.FromAction(toolLongNoteAction, "2"), KeyGuideKey.FromAction(toolBpmSectionAction, "3")),
+                KeyGuideKey.FromAction(toolNoteAction, "1"), KeyGuideKey.FromAction(toolBpmSectionAction, "2")),
             new KeyGuideEntry(GameConstants.Editor.GuideUndo, KeyGuideKey.FromAction(undoAction, "Ctrl+Z")),
             new KeyGuideEntry(GameConstants.Editor.GuideRedo, KeyGuideKey.FromAction(redoAction, "Ctrl+Y")),
             new KeyGuideEntry(GameConstants.Editor.GuideSave, KeyGuideKey.FromAction(saveAction, "Ctrl+S")),
@@ -658,18 +649,16 @@ public class Canvas_Editor : UIBase
         {
             Debug.LogWarning("[Canvas_Editor] 실행 취소·다시 실행 입력 액션이 연결되지 않아 Ctrl+Z·Ctrl+Y를 받을 수 없습니다.", this);
         }
-        if (toolShortNoteAction != null && toolLongNoteAction != null && toolBpmSectionAction != null)
+        if (toolNoteAction != null && toolBpmSectionAction != null)
         {
-            toolShortNoteAction.action.performed += OnToolShortNoteShortcut;
-            toolLongNoteAction.action.performed += OnToolLongNoteShortcut;
+            toolNoteAction.action.performed += OnToolNoteShortcut;
             toolBpmSectionAction.action.performed += OnToolBpmSectionShortcut;
-            toolShortNoteAction.action.Enable();
-            toolLongNoteAction.action.Enable();
+            toolNoteAction.action.Enable();
             toolBpmSectionAction.action.Enable();
         }
         else
         {
-            Debug.LogWarning("[Canvas_Editor] 도구 단축키 입력 액션이 연결되지 않아 1·2·3을 받을 수 없습니다.", this);
+            Debug.LogWarning("[Canvas_Editor] 도구 단축키 입력 액션이 연결되지 않아 1·2를 받을 수 없습니다.", this);
         }
         scrollAction.action.Enable();
         zoomModifierAction.action.Enable();
@@ -692,8 +681,7 @@ public class Canvas_Editor : UIBase
         playPauseAction.action.performed -= OnPlayPauseShortcut;
         if (undoAction != null) undoAction.action.performed -= OnUndoShortcut;
         if (redoAction != null) redoAction.action.performed -= OnRedoShortcut;
-        if (toolShortNoteAction != null) toolShortNoteAction.action.performed -= OnToolShortNoteShortcut;
-        if (toolLongNoteAction != null) toolLongNoteAction.action.performed -= OnToolLongNoteShortcut;
+        if (toolNoteAction != null) toolNoteAction.action.performed -= OnToolNoteShortcut;
         if (toolBpmSectionAction != null) toolBpmSectionAction.action.performed -= OnToolBpmSectionShortcut;
         isInputEnabled = false;
     }
@@ -762,10 +750,7 @@ public class Canvas_Editor : UIBase
 
     public void SetTool(EditorTool tool)
     {
-        Toggle target = shortNoteToggle;
-        if (tool == EditorTool.LongNote) target = longNoteToggle;
-        else if (tool == EditorTool.BpmSection) target = bpmSectionToggle;
-
+        Toggle target = tool == EditorTool.BpmSection ? bpmSectionToggle : shortNoteToggle;
         if (target != null) target.isOn = true;
         RefreshToolStyles();
     }
@@ -773,7 +758,6 @@ public class Canvas_Editor : UIBase
     private IEnumerable<Toggle> ToolToggles()
     {
         yield return shortNoteToggle;
-        yield return longNoteToggle;
         yield return bpmSectionToggle;
     }
 
@@ -790,20 +774,13 @@ public class Canvas_Editor : UIBase
     {
         UITheme theme = UITheme.Current;
         PaintTool(shortNoteToggle, shortNoteLabel, shortNoteRing, theme);
-        PaintTool(longNoteToggle, longNoteLabel, longNoteRing, theme);
         PaintTool(bpmSectionToggle, bpmSectionLabel, bpmSectionRing, theme);
         // 막대 아이콘: 고른 도구면 하늘, 아니면 흐린 회색 (BPM 구간 ♩는 늘 호박 사각)
         if (shortNoteIcon != null) shortNoteIcon.color = shortNoteToggle != null && shortNoteToggle.isOn ? theme.accent : theme.textMuted;
-        if (longNoteIcon != null) longNoteIcon.color = longNoteToggle != null && longNoteToggle.isOn ? theme.accent : theme.textMuted;
 
         if (toolHintText != null)
         {
-            switch (CurrentTool)
-            {
-                case EditorTool.LongNote: toolHintText.text = GameConstants.Editor.ToolLongNoteHint; break;
-                case EditorTool.BpmSection: toolHintText.text = GameConstants.Editor.ToolBpmSectionHint; break;
-                default: toolHintText.text = GameConstants.Editor.ToolShortNoteHint; break;
-            }
+            toolHintText.text = CurrentTool == EditorTool.BpmSection ? GameConstants.Editor.ToolBpmSectionHint : GameConstants.Editor.ToolNoteHint;
         }
     }
 
@@ -962,11 +939,10 @@ public class Canvas_Editor : UIBase
         RedoRequested?.Invoke();
     }
 
-    private void OnToolShortNoteShortcut(InputAction.CallbackContext context) => RequestToolShortcut(EditorTool.ShortNote);
-    private void OnToolLongNoteShortcut(InputAction.CallbackContext context) => RequestToolShortcut(EditorTool.LongNote);
+    private void OnToolNoteShortcut(InputAction.CallbackContext context) => RequestToolShortcut(EditorTool.Note);
     private void OnToolBpmSectionShortcut(InputAction.CallbackContext context) => RequestToolShortcut(EditorTool.BpmSection);
 
-    /// <summary>도구 단축키 1 · 2 · 3. 팝업이 열려 있거나 입력창에 글자를 쓰는 중이면 무시한다</summary>
+    /// <summary>도구 단축키 1 · 2. 팝업이 열려 있거나 입력창에 글자를 쓰는 중이면 무시한다</summary>
     private void RequestToolShortcut(EditorTool tool)
     {
         if (IsShortcutBlocked()) return;

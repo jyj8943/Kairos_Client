@@ -272,7 +272,7 @@ public class EditHistoryTests
         session.AddLongNote(2, 2 * T, 4 * T, out _);
         session.Undo();
 
-        TestPlayData data = session.CreateTestPlayData(0f, 4, 1f, EditorTool.ShortNote, false, out string playError);
+        TestPlayData data = session.CreateTestPlayData(0f, 4, 1f, EditorTool.Note, false, out string playError);
         Assert.IsNotNull(data, playError);
         Assert.IsNotNull(data.editorState.history, "씬 데이터에 기록을 담는다");
 

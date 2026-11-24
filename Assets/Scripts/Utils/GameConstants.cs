@@ -1208,6 +1208,9 @@ public static class GameConstants
         /// <summary>롱노트 최소 길이 (틱) = 1/4박. 이보다 짧은 롱노트는 만들 수 없다 (기획서 2-3)</summary>
         public const int MinLongNoteTicks = TicksPerBeat / 4;
 
+        /// <summary>롱노트로 보는 최소 세로 드래그 거리 (px, 1920×1080 Canvas 기준). 실수로 조금 끌린 클릭이 롱노트가 되지 않게 한다 (11/24)</summary>
+        public const float LongNoteDragMinPx = 12f;
+
         /// <summary>노트 배치 실패 안내 (StatusMessageSeconds 동안 상태 표시줄에 보여준다)</summary>
         public const string LongNoteTooShortMessage = "롱노트가 너무 짧습니다";
         public const string NoteOverlapMessage = "다른 노트와 겹칩니다";
@@ -1264,12 +1267,10 @@ public static class GameConstants
         public const string NotesCardLabel = "노트";
         public const string LongNotesCardLabel = "롱노트";
         /// <summary>도구 이름</summary>
-        public const string ToolShortNoteName = "숏노트";
-        public const string ToolLongNoteName = "롱노트";
+        public const string ToolNoteName = "노트";
         public const string ToolBpmSectionName = "BPM 구간";
-        /// <summary>고른 도구 사용법 (숏노트 · 롱노트는 같은 문구)</summary>
-        public const string ToolShortNoteHint = "클릭으로 놓고, 오른쪽 클릭으로 지워요.";
-        public const string ToolLongNoteHint = "클릭으로 놓고, 오른쪽 클릭으로 지워요.";
+        /// <summary>고른 도구 사용법</summary>
+        public const string ToolNoteHint = "클릭으로 놓고, 끌면 롱노트, 오른쪽 클릭으로 지워요.";
         public const string ToolBpmSectionHint = "가로선 왼쪽을 클릭하면 BPM 입력 창이 열려요. 구간선 오른쪽 클릭은 삭제예요.";
 
         /// <summary>오른쪽 패널 묶음 제목</summary>

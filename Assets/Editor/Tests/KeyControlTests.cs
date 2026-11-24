@@ -64,6 +64,25 @@ public class KeyControlTests
         Assert.IsFalse(KeyboardPaths(Find("Result/Return")).Contains("<Keyboard>/escape"), "ESC는 UIManager → ResultScene.OnBack");
     }
 
+    /// <summary>에디터 도구: 1 노트 · 2 BPM 구간 (3은 안 씀, 롱노트 도구 액션 없음). 노트 액션은 합치기 전 숏노트 도구 액션의 id를 그대로 쓴다</summary>
+    [Test]
+    public void EditorTools_Are1NoteAnd2BpmSection()
+    {
+        Assert.AreEqual(0, (int)EditorTool.Note);
+        Assert.AreEqual(1, (int)EditorTool.BpmSection);
+        Assert.AreEqual(2, System.Enum.GetValues(typeof(EditorTool)).Length);
+
+        InputActionMap map = LoadAsset().FindActionMap("ChartEditor", true);
+        CollectionAssert.AreEqual(new[] { "ToolNote", "ToolBpmSection" }, map.actions.Where(a => a.name.StartsWith("Tool")).Select(a => a.name).ToList());
+        CollectionAssert.AreEqual(new[] { "<Keyboard>/1" }, KeyboardPaths(Find("ChartEditor/ToolNote")));
+        CollectionAssert.AreEqual(new[] { "<Keyboard>/2" }, KeyboardPaths(Find("ChartEditor/ToolBpmSection")));
+        Assert.IsFalse(map.bindings.Any(b => b.path == "<Keyboard>/3"), "3은 비어 있다");
+        Assert.AreEqual("8a734417-f0eb-41e0-8295-60f9c96a111a", Find("ChartEditor/ToolNote").id.ToString());
+        Assert.AreEqual("85218bec-86fb-4d8b-aad0-7d8d4ee844bc", Find("ChartEditor/ToolBpmSection").id.ToString());
+        Assert.AreEqual("1", KeyGuideBar.GetKeyText(Find("ChartEditor/ToolNote"), "?"));
+        Assert.AreEqual("2", KeyGuideBar.GetKeyText(Find("ChartEditor/ToolBpmSection"), "?"));
+    }
+
     // ───── 2. KeyGuideBar 키 이름 ─────
 
     [Test]

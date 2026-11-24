@@ -8,14 +8,14 @@ using UnityEngine.InputSystem;
 /// - 노트는 직접 바꾸지 않고 ChartEditSession.AddNote / AddLongNote / RemoveNote를 거친다.
 /// - 포인터는 EventSystem 이벤트로 받는다. Img_Grid가 이벤트를 받아 부모인 GridArea로 전달한다 (노트 오브젝트는 이벤트를 받지 않음).
 /// - 위치는 누른 x의 라인 칸, y를 지금 스냅의 가장 가까운 선으로 반올림한 tick이다.
-/// - 숏노트 도구: 왼쪽 클릭 = 숏노트. 같은 라인에서 1/4박 이상 드래그하면 롱노트, 그보다 짧은 드래그는 클릭으로 본다 (기획서 2-3).
-/// - 롱노트 도구: 왼쪽 버튼을 누른 칸 = 시작, 놓은 칸 = 끝. 위아래 어느 쪽으로 끌어도 작은 쪽이 시작이다.
-///   드래그하는 동안 끝을 스냅 칸에 맞춘 반투명 미리보기를 보여준다 (EditorNoteLayer).
-/// - 오른쪽 클릭(숏노트·롱노트 도구): 화면에 그려진 노트를 지운다 (숏노트는 가장자리까지, 롱노트는 어느 부분이든. 노트가 겹쳐 보이면 가까운 쪽).
+/// - 노트 도구: 왼쪽 클릭 = 숏노트, 끌기 = 롱노트 (누른 칸 = 시작, 놓은 칸 = 끝. 위아래 어느 쪽으로 끌어도 작은 쪽이 시작이다).
+///   틱 차이 1/4박 이상 + 마우스를 세로로 LongNoteDragMinPx 이상 끌었을 때만 롱노트다 (IsLongNoteDrag, 기획서 2-3). 아니면 숏노트.
+///   롱노트가 되는 동안 끝을 스냅 칸에 맞춘 반투명 미리보기를 보여준다 (EditorNoteLayer).
+/// - 오른쪽 클릭(노트 도구): 화면에 그려진 노트를 지운다 (숏노트는 가장자리까지, 롱노트는 어느 부분이든. 노트가 겹쳐 보이면 가까운 쪽).
 /// - BPM 구간 도구: 노트를 찍지 않는다. 왼쪽 클릭 = 구간선 근처(bpmSectionPickPixels 안)면 그 구간, 아니면 스냅 위치로 추가·수정 요청,
 ///   오른쪽 클릭 = 구간선 근처면 삭제 요청. 실제 처리(창·확인 팝업)는 EditorScene이 맡는다.
 /// - 배치가 실패하면(너무 짧음, 겹침) 이유를 상태 표시줄에 잠깐 보여준다.
-/// - 마우스 미리 보기 (숏노트 · 롱노트 도구, 11/20): 매 프레임 커서 위치를 다시 보고(스크롤 · 줌으로 노트가 움직여도 맞게)
+/// - 마우스 미리 보기 (노트 도구, 11/20): 매 프레임 커서 위치를 다시 보고(스크롤 · 줌으로 노트가 움직여도 맞게)
 ///   노트 위면 흰 테두리, 빈 칸이면 놓을 자리 미리 보기를 EditorNoteLayer에 보여 달라고 한다. 노트 판정은 우클릭 삭제와 같은 TryFindNoteAt이다.
 ///   그리드 밖 · BPM 구간 도구 · 재생 중 · 팝업 열림 · 드래그 중에는 둘 다 숨긴다.
 /// </summary>
@@ -34,12 +34,13 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     private Action<string> showMessage;
     private Func<bool> isPlaying;
 
-    // 왼쪽 버튼으로 누르고 있는 동안의 상태 (숏노트·롱노트 도구)
+    // 왼쪽 버튼으로 누르고 있는 동안의 상태 (노트 도구). y는 그리드 로컬 px이라 스크롤과 상관없이 마우스가 움직인 거리다
     private bool isPressing;
-    private EditorTool pressTool;
     private int pressLane;
     private int pressTick;
     private int dragTick;
+    private float pressY;
+    private float dragY;
 
     /// <summary>
     /// 그리드·편집 세션·노트 표시(미리보기용)와 지금 고른 도구를 읽을 함수, 안내를 보여줄 함수를 받는다.
@@ -98,8 +99,7 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     /// </summary>
     private void RefreshCursorPreview(Vector2? screenPoint)
     {
-        EditorTool tool = getCurrentTool();
-        bool blocked = (tool != EditorTool.ShortNote && tool != EditorTool.LongNote)
+        bool blocked = getCurrentTool() != EditorTool.Note
                        || isPressing
                        || (isPlaying != null && isPlaying())
                        || (UIManager.HasInstance && GameManager.UI.HasOpenPopup)
@@ -164,19 +164,30 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
         return x >= 0f && x < rect.width && y >= 0f && y < rect.height;
     }
 
+    /// <summary>
+    /// 이 드래그가 롱노트인지. 틱 차이가 MinLongNoteTicks(1/4박) 이상이고, 마우스를 세로로 LongNoteDragMinPx 이상 끌었을 때만 롱노트다.
+    /// 놓기와 드래그 미리 보기가 같이 쓴다.
+    /// </summary>
+    /// <param name="dragPixels">누른 곳에서 세로로 끈 거리 (그리드 로컬 px, 부호 무시)</param>
+    public static bool IsLongNoteDrag(int pressTick, int dragTick, float dragPixels)
+    {
+        return Mathf.Abs(dragTick - pressTick) >= GameConstants.Editor.MinLongNoteTicks
+               && Mathf.Abs(dragPixels) >= GameConstants.Editor.LongNoteDragMinPx;
+    }
+
     public void OnPointerDown(PointerEventData eventData)
     {
         if (!IsReady || eventData.button != PointerEventData.InputButton.Left) return;
 
-        EditorTool tool = getCurrentTool();
-        if (tool != EditorTool.ShortNote && tool != EditorTool.LongNote) return;
-        if (!TryGetGridPosition(eventData, out int lane, out int tick)) return;
+        if (getCurrentTool() != EditorTool.Note) return;
+        if (!TryGetGridPosition(eventData, out int lane, out int tick, out float y)) return;
 
         isPressing = true;
-        pressTool = tool;
         pressLane = lane;
         pressTick = tick;
         dragTick = tick;
+        pressY = y;
+        dragY = y;
         UpdatePreview();
     }
 
@@ -184,9 +195,10 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     public void OnDrag(PointerEventData eventData)
     {
         if (!isPressing || eventData.button != PointerEventData.InputButton.Left) return;
-        if (!TryGetTickAtY(eventData, out int tick) || tick == dragTick) return;
+        if (!TryGetTickAtY(eventData, out int tick, out float y)) return;
 
         dragTick = tick;
+        dragY = y;
         UpdatePreview();
     }
 
@@ -194,17 +206,20 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     {
         if (!isPressing || eventData.button != PointerEventData.InputButton.Left) return;
 
-        if (TryGetTickAtY(eventData, out int tick)) dragTick = tick;
+        if (TryGetTickAtY(eventData, out int tick, out float y))
+        {
+            dragTick = tick;
+            dragY = y;
+        }
         int lane = pressLane;
         int start = pressTick;
         int end = dragTick;
-        EditorTool tool = pressTool;
+        bool isLong = IsLongNoteDrag(start, end, dragY - pressY);
         CancelPress();
 
-        bool isLongDrag = Mathf.Abs(end - start) >= GameConstants.Editor.MinLongNoteTicks;
         NoteEditError error;
         bool added;
-        if (tool == EditorTool.LongNote || isLongDrag)
+        if (isLong)
             added = session.AddLongNote(lane, start, end, out error);
         else
             added = session.AddNote(lane, start, out error);
@@ -217,15 +232,14 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     }
 
     /// <summary>
-    /// 오른쪽 클릭(숏노트·롱노트 도구)으로 그 자리를 덮는 노트를 지운다. BPM 구간 도구면 구간 추가·수정·삭제를 요청한다.
-    /// 숏노트·롱노트 도구의 왼쪽 버튼은 OnPointerDown / OnPointerUp에서 처리한다.
+    /// 오른쪽 클릭(노트 도구)으로 그 자리를 덮는 노트를 지운다. BPM 구간 도구면 구간 추가·수정·삭제를 요청한다.
+    /// 노트 도구의 왼쪽 버튼은 OnPointerDown / OnPointerUp에서 처리한다.
     /// </summary>
     public void OnPointerClick(PointerEventData eventData)
     {
         if (!IsReady) return;
 
-        EditorTool tool = getCurrentTool();
-        if (tool == EditorTool.BpmSection)
+        if (getCurrentTool() == EditorTool.BpmSection)
         {
             HandleBpmSectionClick(eventData);
             return;
@@ -294,42 +308,40 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
 
     /// <summary>
     /// 지금 누른 칸 ~ 드래그한 칸의 롱노트 미리보기를 보여준다.
-    /// 숏노트 도구는 1/4박 이상 끌었을 때만 보여준다 (그보다 짧으면 클릭으로 본다).
+    /// 놓으면 롱노트가 되는 동안만 보여준다 (IsLongNoteDrag, 아니면 숏노트로 본다).
     /// </summary>
     private void UpdatePreview()
     {
         if (noteLayer == null) return;
 
-        bool show = pressTool == EditorTool.LongNote || Mathf.Abs(dragTick - pressTick) >= GameConstants.Editor.MinLongNoteTicks;
-        if (show) noteLayer.SetPreview(pressLane, Mathf.Min(pressTick, dragTick), Mathf.Max(pressTick, dragTick));
+        if (IsLongNoteDrag(pressTick, dragTick, dragY - pressY)) noteLayer.SetPreview(pressLane, Mathf.Min(pressTick, dragTick), Mathf.Max(pressTick, dragTick));
         else noteLayer.ClearPreview();
     }
 
     /// <summary>
-    /// 포인터 위치를 라인·tick으로 바꾼다. 그리드 좌우 밖이거나 0 ~ 곡 끝을 벗어나면 false.
+    /// 포인터 위치를 라인·스냅 tick으로 바꾼다. 그리드 좌우 밖이거나 0 ~ 곡 끝을 벗어나면 false.
     /// </summary>
-    /// <param name="snap">true면 tick을 지금 스냅에 맞춘다. 지울 때는 맞추지 않고 가리킨 tick을 그대로 쓴다 (롱노트 몸통 어디든 지우게)</param>
-    private bool TryGetGridPosition(PointerEventData eventData, out int lane, out int tick, bool snap = true)
+    /// <param name="y">포인터 y (그리드 로컬 px)</param>
+    private bool TryGetGridPosition(PointerEventData eventData, out int lane, out int tick, out float y)
     {
         lane = -1;
         tick = -1;
-        if (!TryGetLocalPoint(eventData, out float x, out float y)) return false;
+        if (!TryGetLocalPoint(eventData, out float x, out y)) return false;
         if (x < 0f || x >= grid.GridRect.rect.width) return false;
 
         lane = Mathf.Clamp(Mathf.FloorToInt(x / grid.LaneWidth), 0, GameConstants.Editor.LaneCount - 1);
-        tick = snap
-            ? BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision)
-            : BeatGridMath.BeatToTick(grid.LocalYToBeat(y));
+        tick = BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision);
         return tick >= 0 && tick <= session.Data.TotalTicks;
     }
 
     /// <summary>
     /// 드래그 중 포인터 y의 스냅 tick. 그리드 위아래 밖이어도 0 ~ 곡 끝으로 제한해 돌려준다 (라인은 누른 라인 그대로).
     /// </summary>
-    private bool TryGetTickAtY(PointerEventData eventData, out int tick)
+    /// <param name="y">포인터 y (그리드 로컬 px, 제한하지 않음)</param>
+    private bool TryGetTickAtY(PointerEventData eventData, out int tick, out float y)
     {
         tick = -1;
-        if (!TryGetLocalPoint(eventData, out _, out float y)) return false;
+        if (!TryGetLocalPoint(eventData, out _, out y)) return false;
 
         tick = Mathf.Clamp(BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision), 0, session.Data.TotalTicks);
         return true;

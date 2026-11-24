@@ -291,9 +291,10 @@ public class BpmSectionEditorPlayTests
         Assert.IsFalse(Get<Button>(canvas, "resetBpmButton").interactable);
         Assert.AreEqual(SongCount - 1, timeline.MarkerCount);
 
-        // 도구 단축키 경로 (1 · 2 · 3)
-        canvas.SetTool(EditorTool.LongNote);
-        Assert.AreEqual(EditorTool.LongNote, canvas.CurrentTool);
+        // 도구 단축키 경로 (1 · 2)
+        canvas.SetTool(EditorTool.Note);
+        Assert.AreEqual(EditorTool.Note, canvas.CurrentTool);
+        Assert.AreEqual(GameConstants.Editor.ToolNoteHint, canvas.ToolHint, "노트 도구 사용법");
         Toggle bpmToggle = Get<Toggle>(canvas, "bpmSectionToggle");
         Assert.AreEqual((Color)new Color32(0xFF, 0xFF, 0xFF, 0xFF), bpmToggle.targetGraphic.color, "선택 안 된 도구: 흰 바탕");
         canvas.SetTool(EditorTool.BpmSection);
@@ -312,6 +313,7 @@ public class BpmSectionEditorPlayTests
         Assert.IsTrue(session.AddBpmSection(8 * T, 300f, out _));
         session.AddNote(0, 10 * T);
         int undoCount = session.UndoCount;
+        canvas.SetTool(EditorTool.BpmSection);
         double editorNoteTime = session.Timing.BeatToSeconds(10);
 
         MethodInfo start = typeof(EditorScene).GetMethod("OnTestPlayRequested", Private);
@@ -339,12 +341,13 @@ public class BpmSectionEditorPlayTests
         exit.Invoke(inGame, null);
         yield return WaitEditor();
 
+        Assert.AreEqual(EditorTool.BpmSection, canvas.CurrentTool, "돌아와도 BPM 구간 도구 그대로");
         Assert.AreEqual(SongCount + 1, session.BpmSections.Count, "돌아와도 구간 유지");
         Assert.AreEqual(300f, session.BpmSections[1].Bpm);
         Assert.AreEqual(undoCount, session.UndoCount, "실행 취소 기록 유지");
         Assert.AreEqual(GameConstants.Editor.HistoryAddShortNote, session.Undo());
         Assert.AreEqual(GameConstants.Editor.HistoryAddBpmSection, session.Undo());
         Assert.AreEqual(SongCount, session.BpmSections.Count);
-        Debug.Log($"[BpmSectionEditorPlayTest] P12: 인게임 timingPoints {chart.timingPoints.Count}개, 노트 시간 {inGameNoteTime:0.000}초 (에디터 {editorNoteTime:0.000}초), 돌아와서 실행 취소 {undoCount}개 유지");
+        Debug.Log($"[BpmSectionEditorPlayTest] P12: 인게임 timingPoints {chart.timingPoints.Count}개, 노트 시간 {inGameNoteTime:0.000}초 (에디터 {editorNoteTime:0.000}초), 돌아와서 실행 취소 {undoCount}개 유지, 도구 {canvas.CurrentTool}");
     }
 }

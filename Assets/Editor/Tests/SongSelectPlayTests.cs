@@ -1,6 +1,7 @@
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
@@ -126,6 +127,7 @@ public class SongSelectPlayTests
             Key away = index < songSelect.SongItems.Count - 1 ? Key.DownArrow : Key.UpArrow;
             Key back = away == Key.DownArrow ? Key.UpArrow : Key.DownArrow;
             int processed = blur.ProcessCount;
+            yield return WaitSongItemSelected(songSelect);
             yield return Tap(away);
             Assert.AreNotEqual(TestCharts.OfficialSongId, songSelect.ChosenSongId, "곡이 바뀜");
             Assert.AreEqual(processed + 1, blur.ProcessCount, "곡을 바꿀 때 한 번 처리");
@@ -133,10 +135,12 @@ public class SongSelectPlayTests
             yield return WaitFadeEnd(blur);
             AssertFrontOnly(blur, "다른 곡");
 
-            // 원래 곡으로 돌아와 Enter (공식 채보는 Critical Velocity NORMAL만 쓴다)
+            // 원래 곡으로 돌아와 → 로 NORMAL을 고르고 Enter (공식 채보는 Critical Velocity NORMAL만 쓴다)
             yield return Tap(back);
             Assert.AreEqual(TestCharts.OfficialSongId, songSelect.ChosenSongId);
-            Assert.AreEqual(TestCharts.OfficialChartId, songSelect.ChosenChart.chartId, "Critical Velocity는 NORMAL만 있어 그것이 골라짐");
+            for (int i = 0; i < GameConstants.Chart.Difficulties.Length && songSelect.ChosenChart.chartId != TestCharts.OfficialChartId; i++)
+                yield return Tap(Key.RightArrow);
+            Assert.AreEqual(TestCharts.OfficialChartId, songSelect.ChosenChart.chartId, "NORMAL을 고름");
             yield return WaitFadeEnd(blur);
             AssertFrontOnly(blur, "원래 곡");
             Debug.Log($"[SongSelectPlayTest] S2 곡 바꿀 때 블러 {blur.LastProcessMilliseconds:0.00}ms, 처리 {blur.ProcessCount}번, RenderTexture {blur.CreatedTextureCount}장");
@@ -195,6 +199,19 @@ public class SongSelectPlayTests
         }
         Assert.Fail($"곡 항목이 없습니다: {songId}");
         return -1;
+    }
+
+    /// <summary>방향키를 받을 수 있을 때까지 기다린다: 키보드 선택이 고른 곡 항목에 있고 막힌 입력(팝업·로딩)이 없음</summary>
+    private static IEnumerator WaitSongItemSelected(Canvas_SongSelect songSelect)
+    {
+        GameObject item = songSelect.SongItems[IndexOfItem(songSelect, songSelect.ChosenSongId)].gameObject;
+        float deadline = TestSpeed.Deadline(5f);
+        while (EventSystem.current == null || EventSystem.current.currentSelectedGameObject != item || GameManager.UI.IsShortcutBlocked)
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "고른 곡 항목에 키보드 선택이 오지 않음");
+            yield return null;
+        }
+        yield return null;
     }
 
     private static IEnumerator WaitFadeEnd(UIBlurBackground blur)

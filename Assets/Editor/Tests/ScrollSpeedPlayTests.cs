@@ -9,6 +9,7 @@ using UnityEngine.TestTools;
 /// <summary>
 /// 배속 변경 실제 씬 확인 (LongNotePlayTests와 같은 방식: EnterPlayMode + Bootstrapper, 코드로 만든 채보, TestPress·TestRelease).
 /// 배속 키는 InGameScene.TestTapSpeedKey(키 콜백과 같은 PressSpeedKey 경로, 팝업 확인 포함)로 누른다.
+/// 테스트 플레이에서 바꾼 배속과 일반 플레이의 마지막 선택은 PlayerData.json에 바로 저장되므로, 마지막 선택을 테스트 앞뒤로 되돌린다.
 /// </summary>
 public class ScrollSpeedPlayTests
 {
@@ -29,14 +30,18 @@ public class ScrollSpeedPlayTests
         Application.runInBackground = true;
     }
 
-    /// <summary>테스트가 바꾼 마지막 에디터 테스트 플레이 배속을 되돌릴 값 (S6)</summary>
-    private float? savedEditorSpeed;
+    /// <summary>테스트 전 마지막 선택 (배속 · 곡 · 채보). 끝나면 되돌려 저장한다</summary>
+    private LastSelectionSaveData savedSelection;
 
     [UnityTearDown]
     public IEnumerator TearDown()
     {
-        if (savedEditorSpeed.HasValue && PlayerDataManager.HasInstance) GameManager.PlayerData.SetLastEditorTestPlayMultiplier(savedEditorSpeed.Value);
-        savedEditorSpeed = null;
+        if (savedSelection != null && PlayerDataManager.HasInstance)
+        {
+            GameManager.PlayerData.LastSelection.CopyFrom(savedSelection);
+            GameManager.PlayerData.Save();
+        }
+        savedSelection = null;
         scene = null;
         yield return new ExitPlayMode();
     }
@@ -70,7 +75,7 @@ public class ScrollSpeedPlayTests
         return Chart(notes);
     }
 
-    private static IEnumerator WaitManagers()
+    private IEnumerator WaitManagers()
     {
         float deadline = TestSpeed.Deadline(20f);
         while (!GameManager.IsInitialized || GameManager.Scene.IsLoading)
@@ -78,6 +83,7 @@ public class ScrollSpeedPlayTests
             Assert.Less(Time.realtimeSinceStartup, deadline, "전역 매니저·씬 로딩 대기 시간 초과");
             yield return null;
         }
+        if (savedSelection == null) savedSelection = GameManager.PlayerData.LastSelection.Clone();
     }
 
     private IEnumerator LoadInGame(InGameEntryData entry)
@@ -208,7 +214,8 @@ public class ScrollSpeedPlayTests
     [UnityTest]
     public IEnumerator S3_ChangeWhileHoldingLong()
     {
-        yield return LoadInGame(TestPlayEntry(Chart(new List<NoteData> { Long(6f, 9f, 1) }), false));
+        // 배속을 누를 때마다 파일에 저장해(테스트 플레이) 수십 번 누르는 프레임이 길다. 그동안 끝나지 않게 롱노트를 14박으로 둔다 (끝 약 8초)
+        yield return LoadInGame(TestPlayEntry(Chart(new List<NoteData> { Long(6f, 20f, 1) }), false));
         PlayNote note = judge.Notes[0];
         LongNoteView view = null;
 
@@ -219,7 +226,7 @@ public class ScrollSpeedPlayTests
         foreach (float target in new[] { 6f, 2f, 7.5f })
         {
             yield return WaitSongTime(SongTime + 0.25);
-            yield return TapTo(target, int.MaxValue); // 롱노트를 누르는 동안 끝나지 않게 한 프레임에
+            yield return TapTo(target, int.MaxValue); // 노트 위치만 보므로 한 프레임에
             yield return null;
             view = Get<LongNoteView[]>(layer, "longViewByNote")[0];
             float headCenter = view.HeadY; // 11/20: 몸통 아래 끝 = 머리 가운데
@@ -322,7 +329,7 @@ public class ScrollSpeedPlayTests
         log.Add($"곡 선택 x{songSelectMultiplier:0.0}");
 
         // ③ 테스트 플레이 (편집 상태 x1.0) → 6.6으로 바꿈 → 나가기(에디터) → 에디터 테스트 플레이 배속 칸
-        EditorRestoreState restore = new EditorRestoreState { chart = DenseChart(), currentBeat = 0f, snapDivision = 4, gridHeightScale = 1f, tool = EditorTool.ShortNote };
+        EditorRestoreState restore = new EditorRestoreState { chart = DenseChart(), currentBeat = 0f, snapDivision = 4, gridHeightScale = 1f, tool = EditorTool.Note };
         yield return LoadInGame(TestPlayEntry(restore.chart, false, 1f, restore));
         yield return TapTo(6.6f, int.MaxValue);
         scene.GetType().GetMethod("OnClickExit", Private).Invoke(scene, null);
@@ -353,8 +360,7 @@ public class ScrollSpeedPlayTests
     public IEnumerator S6_EditorSpeedTool()
     {
         yield return WaitManagers();
-        // 에디터는 마지막 테스트 플레이 배속(PlayerData)으로 시작한다 (11/19). 이 테스트는 1.0에서 시작하도록 맞추고 끝나면 되돌린다
-        savedEditorSpeed = GameManager.PlayerData.LastEditorTestPlayMultiplier;
+        // 에디터는 마지막 테스트 플레이 배속(PlayerData)으로 시작한다 (11/19). 이 테스트는 1.0에서 시작하도록 맞춘다 (끝나면 TearDown이 되돌림)
         GameManager.PlayerData.SetLastEditorTestPlayMultiplier(1f);
         Assert.IsTrue(GameManager.Scene.Load(GameConstants.Scenes.Editor, new EditorEntryData { songId = Song, chartName = "배속 확인", level = 1 }));
         EditorScene editor = null;

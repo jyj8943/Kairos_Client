@@ -395,7 +395,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &11959865
 RectTransform:
   m_ObjectHideFlags: 0
@@ -577,7 +577,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC20F\uB178\uD2B8 (1)"
+  m_text: "\uB178\uD2B8"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}
   m_sharedMaterial: {fileID: 5180054123522931063, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}
@@ -19990,7 +19990,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "BPM \uAD6C\uAC04 (3)"
+  m_text: "BPM \uAD6C\uAC04"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}
   m_sharedMaterial: {fileID: 5180054123522931063, guid: d72096ba78de4d04a8c5688d0d233506, type: 2}
@@ -27296,21 +27296,16 @@ MonoBehaviour:
   longNotesCardLabel: {fileID: 1082169300}
   longNotesValueText: {fileID: 1531294895}
   shortNoteToggle: {fileID: 371102817}
-  longNoteToggle: {fileID: 11959866}
   bpmSectionToggle: {fileID: 1322796859}
   toolsTitleText: {fileID: 636120860}
   shortNoteLabel: {fileID: 17785584}
-  longNoteLabel: {fileID: 879294769}
   bpmSectionLabel: {fileID: 1500143581}
   shortNoteKeyText: {fileID: 911449713}
-  longNoteKeyText: {fileID: 177380901}
   bpmSectionKeyText: {fileID: 1341347890}
   shortNoteRing: {fileID: 1888924277}
-  longNoteRing: {fileID: 638024774}
   bpmSectionRing: {fileID: 147570686}
   bpmSectionIcon: {fileID: 251960070}
   shortNoteIcon: {fileID: 455522452}
-  longNoteIcon: {fileID: 1695391860}
   toolHintText: {fileID: 2088007747}
   speedDownButton: {fileID: 1291608761}
   speedUpButton: {fileID: 1595436819}
@@ -27356,8 +27351,7 @@ MonoBehaviour:
   playPauseAction: {fileID: 2322362625899557903, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   undoAction: {fileID: 8084546757780086273, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   redoAction: {fileID: -1957480570320670040, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  toolShortNoteAction: {fileID: 7726582835252541941, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  toolLongNoteAction: {fileID: 2932255169417929587, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  toolNoteAction: {fileID: 8673355879674933422, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   toolBpmSectionAction: {fileID: -4672288038741507281, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!1 &1999466424
 GameObject:

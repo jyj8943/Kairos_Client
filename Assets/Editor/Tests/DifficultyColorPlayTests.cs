@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 난이도 표기 색 실제 씬 확인: 곡 선택 Btn_Difficulty(공식 탭 난이도 카드, 메뉴용 UITheme 색).
 /// 인게임 곡 정보 카드 뱃지(같은 메뉴용 색)는 InGameTonePlayTests가 본다.
-/// Critical Velocity에는 공식 채보가 NORMAL 하나뿐이라 EASY·HARD 버튼은 채보 없음(회색)이다.
+/// 고르는 채보는 Critical Velocity NORMAL. 나머지 난이도는 공식 채보가 있으면 고르지 않은 모양, 없으면 채보 없음(회색)이어야 한다.
 /// </summary>
 public class DifficultyColorPlayTests
 {
@@ -70,7 +70,7 @@ public class DifficultyColorPlayTests
 
 
     /// <summary>3: 곡 선택 공식 탭에서 NORMAL 선택 (라벤더 톤, 메뉴용 UITheme 색) → 포인트색 테두리 + 선택 바탕(포인트색 18%),
-    /// 이름 뱃지 = 메뉴용 NORMAL 색 #2F7FC8 + 흰 글자, 레벨 기본 글자색. EASY·HARD는 채보가 없어 레벨 ―(흐린 글자)·테두리 없음·패널 바탕.
+    /// 이름 뱃지 = 메뉴용 NORMAL 색 #2F7FC8 + 흰 글자, 레벨 기본 글자색. 나머지 난이도는 테두리 없음·패널 바탕이고, 채보가 있으면 난이도 색 뱃지·레벨, 없으면 레벨 ―(흐린 글자)·누를 수 없음.
     /// </summary>
     [UnityTest]
     public IEnumerator D3_SongSelectNormalChosen_BorderAndDifficultyColorName()
@@ -105,9 +105,22 @@ public class DifficultyColorPlayTests
                 continue;
             }
 
-            Assert.IsNull(button.Chart, $"{button.Difficulty}: 채보 없음");
+            Assert.IsFalse(button.IsChosen, $"{button.Difficulty}: 고르지 않음");
             Assert.IsFalse(border.gameObject.activeSelf, $"{button.Difficulty}: 테두리 없음");
             AssertColor(theme.panel, background.color, $"{button.Difficulty}: 패널 바탕");
+
+            ChartData official = ChartRepository.GetCharts(TestCharts.OfficialSongId, ChartType.Official).Find(c => c.difficulty == button.Difficulty);
+            Assert.AreEqual(official != null, button.Chart != null, $"{button.Difficulty}: 채보 유무 = 공식 채보 파일");
+            if (official != null)
+            {
+                Assert.AreEqual(official.chartId, button.Chart.chartId, $"{button.Difficulty}: 채보");
+                AssertColor(theme.GetDifficulty(button.Difficulty), badge.color, $"{button.Difficulty}: 뱃지 난이도 색");
+                AssertColor(theme.textPrimary, level.color, $"{button.Difficulty}: 레벨 기본 글자색");
+                Assert.AreEqual(string.Format(GameConstants.SongSelect.LevelFormat, official.level), level.text, $"{button.Difficulty}: 레벨");
+                Assert.IsTrue(button.Button.interactable, $"{button.Difficulty}: 누를 수 있음");
+                continue;
+            }
+
             AssertColor(theme.textMuted, level.color, $"{button.Difficulty}: 레벨 흐린 글자");
             Assert.AreEqual(GameConstants.SongSelect.EmptyValue, level.text, $"{button.Difficulty}: 레벨 ―");
             Assert.IsFalse(button.Button.interactable, $"{button.Difficulty}: 누를 수 없음");

@@ -153,11 +153,11 @@ public class LongNoteEditorSceneTests
 
     // ───── 에디터 항목 ─────
 
-    /// <summary>E1: 롱노트 도구로 2박 드래그 → 롱노트 1개 (시작·끝 틱), 롱노트 수 표시 +1</summary>
+    /// <summary>E1: 노트 도구로 2박 드래그 → 롱노트 1개 (시작·끝 틱), 롱노트 수 표시 +1</summary>
     [UnityTest]
-    public IEnumerator E1_LongToolDrag()
+    public IEnumerator E1_DragLongNote()
     {
-        canvas.SetTool(EditorTool.LongNote);
+        canvas.SetTool(EditorTool.Note);
         string before = NoteCountText;
         Drag(0, 4f, 6f);
         yield return null;
@@ -171,37 +171,66 @@ public class LongNoteEditorSceneTests
         Assert.AreEqual("1/1", after);
     }
 
-    /// <summary>E2: 숏노트 도구로 1/4박 미만 드래그 → 숏노트, 1박 드래그 → 롱노트</summary>
+    /// <summary>
+    /// E2: 노트 도구 드래그 경계. 클릭 · 12px 미만 한 칸 · 1/4박 미만 12px 이상 → 숏노트, 1/4박 이상 + 12px 이상 → 롱노트.
+    /// 드래그 미리 보기도 롱노트가 되는 경우에만 보인다.
+    /// </summary>
     [UnityTest]
-    public IEnumerator E2_ShortToolDrag()
+    public IEnumerator E2_DragBoundary()
     {
-        canvas.SetTool(EditorTool.ShortNote);
-        Drag(1, 4f, 4.1f);
-        Drag(2, 4f, 5f);
+        canvas.SetTool(EditorTool.Note);
+        grid.SetGridHeight(2f);
+        grid.SetCurrentBeat(3f);
         yield return null;
-        bool shortOk = TryFind(1, T * 4, out EditorNote shortNote);
-        bool longOk = TryFind(2, T * 4, out EditorNote longNote);
-        Debug.Log($"[LongNoteEditorTest] E2: 4→4.1박 드래그 → {(shortOk ? (shortNote.IsLong ? "롱" : "숏") : "없음")}, 4→5박 드래그 → {(longOk ? (longNote.IsLong ? $"롱 {longNote.Tick}~{longNote.EndTick}" : "숏") : "없음")}");
+        float beatPx = grid.BeatToLocalY(5f) - grid.BeatToLocalY(4f);
+        float half = 0.125f; // 1/4 스냅의 반올림 경계 (4박 ↔ 4.25박)
 
-        Assert.IsTrue(shortOk);
-        Assert.IsFalse(shortNote.IsLong, "1/4박 미만 드래그는 숏노트");
-        Assert.IsTrue(longOk);
-        Assert.IsTrue(longNote.IsLong, "1박 드래그는 롱노트");
-        Assert.AreEqual(T * 5, longNote.EndTick);
+        var cases = new (string name, int lane, int snap, float from, float to, bool expectLong)[]
+        {
+            ("클릭", 0, 4, 4f, 4f, false),
+            ("1/4박 + 12px 이상", 1, 4, 4f, 4.25f, true),
+            ("한 칸, 12px 미만", 2, 4, 4f + half - 4f / beatPx, 4f + half + 4f / beatPx, false),
+            ("12px 이상, 1/4박 미만", 3, 8, 4f, 4.125f, false),
+        };
+
+        System.Text.StringBuilder log = new System.Text.StringBuilder($"[LongNoteEditorTest] E2 드래그 경계 (1박 = {beatPx:0.0}px)\n| 경우 | 끈 거리(px) | 미리 보기 | 결과 |\n|---|---|---|---|\n");
+        GameObject target = placer.gameObject;
+        foreach (var c in cases)
+        {
+            grid.SetSnap(c.snap);
+            float px = (c.to - c.from) * beatPx;
+            ExecuteEvents.Execute(target, Pointer(ScreenPoint(c.lane, c.from), PointerEventData.InputButton.Left), ExecuteEvents.pointerDownHandler);
+            Assert.IsFalse(IsDragPreviewShown, c.name + ": 누르기만 하면 미리 보기 없음");
+            ExecuteEvents.Execute(target, Pointer(ScreenPoint(c.lane, c.to), PointerEventData.InputButton.Left), ExecuteEvents.dragHandler);
+            bool previewShown = IsDragPreviewShown;
+            ExecuteEvents.Execute(target, Pointer(ScreenPoint(c.lane, c.to), PointerEventData.InputButton.Left), ExecuteEvents.pointerUpHandler);
+
+            bool found = TryFind(c.lane, T * 4, out EditorNote note);
+            log.Append($"| {c.name} | {px:0.0} | {previewShown} | {(!found ? "없음" : note.IsLong ? $"롱 {note.Tick}~{note.EndTick}" : $"숏 {note.Tick}")} |\n");
+            Assert.IsTrue(found, c.name);
+            Assert.AreEqual(c.expectLong, note.IsLong, c.name);
+            Assert.AreEqual(c.expectLong, previewShown, c.name + ": 미리 보기 = 놓을 결과");
+            if (c.expectLong) Assert.AreEqual(T * 4 + 12, note.EndTick);
+        }
+        Debug.Log(log.ToString());
+        Assert.Less((cases[2].to - cases[2].from) * beatPx, GameConstants.Editor.LongNoteDragMinPx, "12px 미만 경우 확인");
+        Assert.GreaterOrEqual((cases[3].to - cases[3].from) * beatPx, GameConstants.Editor.LongNoteDragMinPx, "12px 이상 경우 확인");
+        Assert.AreEqual(4, session.Data.Notes.Count);
     }
+
+    private bool IsDragPreviewShown => noteLayer.Preview != null && noteLayer.Preview.gameObject.activeSelf;
 
     /// <summary>E3: 기존 롱노트와 겹치게 드래그 / 롱노트 구간 안 숏노트 클릭 → 둘 다 거부, 상태 표시줄에 겹침 안내</summary>
     [UnityTest]
     public IEnumerator E3_OverlapRejected()
     {
-        canvas.SetTool(EditorTool.LongNote);
+        canvas.SetTool(EditorTool.Note);
         Drag(0, 4f, 6f);
         Drag(0, 5f, 7f);
         yield return null;
         string status1 = StatusText;
         int countAfterLong = session.Data.Notes.Count;
 
-        canvas.SetTool(EditorTool.ShortNote);
         Get<TMP_Text>(canvas, "saveStatusText").text = string.Empty;
         Click(0, 5f);
         yield return null;
@@ -218,11 +247,10 @@ public class LongNoteEditorSceneTests
     [UnityTest]
     public IEnumerator E4_RightClickBody()
     {
-        canvas.SetTool(EditorTool.LongNote);
+        canvas.SetTool(EditorTool.Note);
         Drag(3, 4f, 8f);
         yield return null;
         int before = session.Data.LongCount;
-        canvas.SetTool(EditorTool.ShortNote);
         RightClick(3, 6.1f);
         yield return null;
         Debug.Log($"[LongNoteEditorTest] E4: 롱노트 4~8박, 6.1박 우클릭 → 롱노트 {before} → {session.Data.LongCount}");
@@ -236,13 +264,12 @@ public class LongNoteEditorSceneTests
     [UnityTest]
     public IEnumerator E5_SaveAndReopen()
     {
-        canvas.SetTool(EditorTool.LongNote);
+        canvas.SetTool(EditorTool.Note);
         Drag(0, 4f, 6f);
         grid.SetSnap(3);
         Drag(1, 8f, 8f + 4f / 3f);
         Drag(2, 10f + 1f / 3f, 11f + 2f / 3f);
         grid.SetSnap(4);
-        canvas.SetTool(EditorTool.ShortNote);
         Click(3, 5f);
         yield return null;
 
@@ -285,7 +312,7 @@ public class LongNoteEditorSceneTests
     [UnityTest]
     public IEnumerator E6_KeySoundAtStartAndEnd()
     {
-        canvas.SetTool(EditorTool.LongNote);
+        canvas.SetTool(EditorTool.Note);
         Drag(2, 6f, 8f);
         yield return null;
 
@@ -325,7 +352,7 @@ public class LongNoteEditorSceneTests
     [UnityTest]
     public IEnumerator E7_HeadTailPosition()
     {
-        canvas.SetTool(EditorTool.LongNote);
+        canvas.SetTool(EditorTool.Note);
         Drag(1, 4f, 6f);
         Drag(2, 7f, 7.25f);
         yield return null;
@@ -361,9 +388,8 @@ public class LongNoteEditorSceneTests
     [UnityTest]
     public IEnumerator E8_NoteLooksLikeInGame()
     {
-        canvas.SetTool(EditorTool.ShortNote);
+        canvas.SetTool(EditorTool.Note);
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++) Click(lane, 4f);
-        canvas.SetTool(EditorTool.LongNote);
         for (int lane = 0; lane < GameConstants.Editor.LaneCount; lane++) Drag(lane, 5f, 7f);
         yield return null;
         grid.SetCurrentBeat(4f);
@@ -420,11 +446,9 @@ public class LongNoteEditorSceneTests
     [UnityTest]
     public IEnumerator E9_MouseHover()
     {
-        canvas.SetTool(EditorTool.ShortNote);
+        canvas.SetTool(EditorTool.Note);
         Click(1, 4f);
-        canvas.SetTool(EditorTool.LongNote);
         Drag(2, 4f, 6f);
-        canvas.SetTool(EditorTool.ShortNote);
         yield return null;
         grid.SetCurrentBeat(3f);
         yield return null;
@@ -500,7 +524,7 @@ public class LongNoteEditorSceneTests
         log.Append($"BPM 구간 도구: {placer.CursorState}\n");
         Assert.AreEqual(EditorNotePlacer.CursorPreviewState.Hidden, placer.CursorState, "BPM 구간 도구");
         Assert.IsFalse(noteLayer.IsNoteHoverVisible || noteLayer.IsPlacePreviewVisible);
-        canvas.SetTool(EditorTool.ShortNote);
+        canvas.SetTool(EditorTool.Note);
         yield return null;
         Assert.AreEqual(EditorNotePlacer.CursorPreviewState.NoteHover, placer.CursorState);
 
@@ -542,12 +566,12 @@ public class LongNoteEditorSceneTests
 
     /// <summary>
     /// E10: 롱노트 드래그 미리 보기 모양 · 알파 (몸통 W × 0.70, 하늘 22% + 하늘 테두리 2px, 머리 · 꼬리 막대 하늘 55%).
-    /// 시작 = 끝(롱노트 도구에서 누르기만 함)이면 몸통 높이 0, 막대는 머리 뒤.
+    /// 누르기만 했거나 12px 미만으로 끌면 미리 보기가 없고, 1/4박 · 12px 이상부터 보인다. 막대는 머리 뒤.
     /// </summary>
     [UnityTest]
     public IEnumerator E10_DragPreview()
     {
-        canvas.SetTool(EditorTool.LongNote);
+        canvas.SetTool(EditorTool.Note);
         grid.SetCurrentBeat(3f);
         yield return null;
         GameObject target = placer.gameObject;
@@ -555,17 +579,17 @@ public class LongNoteEditorSceneTests
         yield return null;
 
         UITheme theme = UITheme.Current;
-        Img_LongNote preview = noteLayer.Preview;
-        Assert.IsTrue(preview.gameObject.activeSelf);
-        float zeroHeight = preview.RectTransform.rect.height;
-        Vector2 head0 = Edges(preview.HeadRect, preview.RectTransform);
-        Vector2 tail0 = Edges(preview.TailRect, preview.RectTransform);
-        Debug.Log($"[LongNoteEditorTest] E10 길이 0 미리 보기: 몸통 높이 {zeroHeight:0.00}, 머리 {head0.x:0.00}~{head0.y:0.00}, 막대 {tail0.x:0.00}~{tail0.y:0.00} (막대가 머리 안, 머리가 뒤 형제라 앞에 그림)");
-        Assert.AreEqual(0f, zeroHeight, 0.01);
-        Assert.Greater(preview.HeadRect.GetSiblingIndex(), preview.TailRect.GetSiblingIndex(), "머리가 막대보다 앞");
+        Assert.IsFalse(IsDragPreviewShown, "누르기만 하면 미리 보기 없음");
+        float tenPx = 10f / (grid.BeatToLocalY(5f) - grid.BeatToLocalY(4f));
+        ExecuteEvents.Execute(target, Pointer(ScreenPoint(3, 4f + tenPx), PointerEventData.InputButton.Left), ExecuteEvents.dragHandler);
+        yield return null;
+        Assert.IsFalse(IsDragPreviewShown, "10px만 끌면 미리 보기 없음");
 
         ExecuteEvents.Execute(target, Pointer(ScreenPoint(3, 6f), PointerEventData.InputButton.Left), ExecuteEvents.dragHandler);
         yield return null;
+        Img_LongNote preview = noteLayer.Preview;
+        Assert.IsTrue(IsDragPreviewShown, "1/4박 · 12px 이상이면 보임");
+        Assert.Greater(preview.HeadRect.GetSiblingIndex(), preview.TailRect.GetSiblingIndex(), "머리가 막대보다 앞");
 
         preview.BodyAlpha.GetEdgeAlphas(out float bottom, out float top);
         Color part = UITheme.WithAlpha(theme.editorPreview, 0.55f);

@@ -20,6 +20,22 @@ public class EditorNoteShapeTests
         Assert.AreEqual(6f, GameConstants.Editor.NoteHoverRadiusPx, "흰 테두리 모서리 6");
     }
 
+    /// <summary>롱노트 드래그 조건: 1/4박 이상이면서 세로 12px 이상일 때만 (경계 포함, 위아래 같음)</summary>
+    [TestCase(0, 0f, false)]    // 클릭
+    [TestCase(12, 12f, true)]   // 1/4박 · 12px 딱
+    [TestCase(-12, -12f, true)] // 아래로 끌기
+    [TestCase(48, 120f, true)]
+    [TestCase(12, 11.9f, false)] // 한 칸이지만 12px 미만
+    [TestCase(48, 0f, false)]    // 마우스는 그대로, 스크롤로 틱만 바뀜
+    [TestCase(11, 40f, false)]   // 12px 이상이지만 1/4박 미만
+    [TestCase(0, 40f, false)]
+    public void IsLongNoteDrag_NeedsQuarterBeatAnd12Px(int tickDelta, float dragPx, bool expected)
+    {
+        Assert.AreEqual(12, GameConstants.Editor.MinLongNoteTicks);
+        Assert.AreEqual(12f, GameConstants.Editor.LongNoteDragMinPx);
+        Assert.AreEqual(expected, EditorNotePlacer.IsLongNoteDrag(192, 192 + tickDelta, dragPx));
+    }
+
     [Test]
     public void NoteRect_ShortAndLong()
     {

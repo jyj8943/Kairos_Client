@@ -77,7 +77,7 @@ public class TestPlayRulesTests
             ChartEditSession session = owner.AddComponent<ChartEditSession>();
             session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", SongData.SingleTimingPoint(150f), 0, 60f);
 
-            Assert.IsNull(session.CreateTestPlayData(0f, 4, 1f, EditorTool.ShortNote, false, out string emptyError), "노트가 없으면 null");
+            Assert.IsNull(session.CreateTestPlayData(0f, 4, 1f, EditorTool.Note, false, out string emptyError), "노트가 없으면 null");
             Assert.IsNotEmpty(emptyError);
 
             session.AddNote(0, 0);
@@ -97,7 +97,7 @@ public class TestPlayRulesTests
             Assert.AreEqual(1.5f, data.editorState.gridHeightScale);
             Assert.AreEqual(EditorTool.BpmSection, data.editorState.tool);
 
-            Assert.IsNull(session.CreateTestPlayData(8.25f, 4, 1f, EditorTool.ShortNote, false, out string afterError), "뒤에 노트가 없으면 null");
+            Assert.IsNull(session.CreateTestPlayData(8.25f, 4, 1f, EditorTool.Note, false, out string afterError), "뒤에 노트가 없으면 null");
             Assert.AreEqual(GameConstants.Editor.TestPlayNoNotesAfterMessage, afterError);
 
             // 돌아와서 되돌리기: ApplyChartData는 수정 여부를 false로 만들고, RestoreDirty로 되돌린다
@@ -148,15 +148,15 @@ public class TestPlayRulesTests
             session.Init(new EditorEntryData { songId = "__test__", chartName = "테스트", level = 2 }, "__test__", SongData.SingleTimingPoint(150f), 0, 60f);
             Assert.IsTrue(session.AddLongNote(0, 48 * 4, 48 * 12, out _));
 
-            Assert.IsNull(session.CreateTestPlayData(8f, 4, 1f, EditorTool.LongNote, false, out string error), "롱노트 도중에서 시작");
+            Assert.IsNull(session.CreateTestPlayData(8f, 4, 1f, EditorTool.Note, false, out string error), "롱노트 도중에서 시작");
             Assert.AreEqual(GameConstants.Editor.TestPlayNoNotesAfterMessage, error);
 
-            TestPlayData atStart = session.CreateTestPlayData(4f, 4, 1f, EditorTool.LongNote, false, out error);
+            TestPlayData atStart = session.CreateTestPlayData(4f, 4, 1f, EditorTool.Note, false, out error);
             Assert.IsNotNull(atStart, error);
             Assert.AreEqual(1, TestPlayRules.CountNotesFrom(atStart.chart.notes, atStart.startBeat), "롱노트 시작 박에서 시작하면 넣는다");
 
             Assert.IsTrue(session.AddNote(1, 48 * 10, out _));
-            TestPlayData middle = session.CreateTestPlayData(8f, 4, 1f, EditorTool.LongNote, false, out error);
+            TestPlayData middle = session.CreateTestPlayData(8f, 4, 1f, EditorTool.Note, false, out error);
             Assert.IsNotNull(middle, error);
             Assert.AreEqual(2, middle.chart.notes.Count, "채보에는 모든 노트가 들어 있다 (돌아올 때 되돌리기용)");
             List<NoteData> playable = TestPlayRules.FilterNotesFrom(middle.chart.notes, middle.startBeat);
