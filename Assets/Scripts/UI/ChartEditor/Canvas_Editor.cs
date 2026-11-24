@@ -477,7 +477,8 @@ public class Canvas_Editor : UIBase
         SetText(snapTitleText, SectionLabel(GameConstants.Editor.SnapTitle, GameConstants.Editor.SnapTitleEn));
         SetText(zoomTitleText, SectionLabel(GameConstants.Editor.ZoomTitle, GameConstants.Editor.ZoomTitleEn));
         SetText(zoomKeyText, KeyGuideBar.GetKeyText(zoomModifierAction != null ? zoomModifierAction.action : null, "Ctrl"));
-        SetText(zoomWheelKeyText, GameConstants.Editor.KeyWheel);
+        SetText(zoomWheelKeyText, GameConstants.Editor.KeyWheelUpDown);
+        LayoutZoomKeys();
         SetText(currentBpmTitleText, SectionLabel(GameConstants.Editor.CurrentBpmTitle, GameConstants.Editor.CurrentBpmTitleEn));
         if (currentBpmBar != null) currentBpmBar.color = theme.editorAmber;
 
@@ -486,6 +487,39 @@ public class Canvas_Editor : UIBase
         shownSongLength = -1f;
 
         InitKeyGuide();
+    }
+
+    /// <summary>
+    /// 그리드 높이 칸의 키 칩 [Ctrl] + [휠 ▲▼]을 글자 폭에 맞춰 늘리고, 오른쪽 끝(ZoomKeyRightX)에 붙여 다시 놓는다 (11/24).
+    /// 칩은 Img_ZoomKey · Txt_ZoomPlus · Img_ZoomWheelKey 순서이고, 셋 다 박스 왼쪽 위 기준 앵커다.
+    /// </summary>
+    private void LayoutZoomKeys()
+    {
+        if (zoomKeyText == null || zoomWheelKeyText == null) return;
+        RectTransform ctrlChip = zoomKeyText.transform.parent as RectTransform;
+        RectTransform wheelChip = zoomWheelKeyText.transform.parent as RectTransform;
+        if (ctrlChip == null || wheelChip == null) return;
+        Transform plus = ctrlChip.parent != null ? ctrlChip.parent.Find("Txt_ZoomPlus") : null;
+
+        float wheelWidth = ChipWidth(zoomWheelKeyText);
+        float ctrlWidth = ChipWidth(zoomKeyText);
+        float wheelX = GameConstants.Editor.ZoomKeyRightX - wheelWidth;
+        float plusX = wheelX - GameConstants.Editor.ZoomKeyPlusWidth;
+        float ctrlX = plusX - ctrlWidth;
+
+        wheelChip.sizeDelta = new Vector2(wheelWidth, wheelChip.sizeDelta.y);
+        wheelChip.anchoredPosition = new Vector2(wheelX, wheelChip.anchoredPosition.y);
+        ctrlChip.sizeDelta = new Vector2(ctrlWidth, ctrlChip.sizeDelta.y);
+        ctrlChip.anchoredPosition = new Vector2(ctrlX, ctrlChip.anchoredPosition.y);
+        if (plus is RectTransform plusRect) plusRect.anchoredPosition = new Vector2(plusX, plusRect.anchoredPosition.y);
+    }
+
+    /// <summary>키 칩 폭 = 글자 폭 + 좌우 여백 (최소 ZoomKeyChipMinWidth)</summary>
+    private static float ChipWidth(TMP_Text text)
+    {
+        text.ForceMeshUpdate();
+        float width = Mathf.Ceil(text.GetPreferredValues(text.text).x) + GameConstants.Editor.ZoomKeyChipPadding * 2f;
+        return Mathf.Max(GameConstants.Editor.ZoomKeyChipMinWidth, width);
     }
 
     private static void SetText(TMP_Text text, string value)

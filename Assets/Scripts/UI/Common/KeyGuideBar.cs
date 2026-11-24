@@ -129,11 +129,28 @@ public class KeyGuideBar : MonoBehaviour
                 if (string.IsNullOrEmpty(binding.effectivePath) || !binding.effectivePath.StartsWith("<Keyboard>")) continue;
                 if (!string.IsNullOrEmpty(binding.groups) && !binding.groups.Contains(KeyboardGroup)) continue;
 
-                string text = action.GetBindingDisplayString(i);
+                string text = ShortKeyName(action.GetBindingDisplayString(i));
                 if (!string.IsNullOrEmpty(text)) return text;
             }
         }
         return fallback ?? string.Empty;
+    }
+
+    /// <summary>
+    /// 키 칩에 쓰는 짧은 이름. Input System 표시 이름 "Control"(·"Left Control"·"Right Control")은 "Ctrl"로 줄인다 (11/24, 칩에서 "Con…"으로 잘리던 문제).
+    /// </summary>
+    public static string ShortKeyName(string displayName)
+    {
+        if (string.IsNullOrEmpty(displayName)) return displayName;
+        switch (displayName)
+        {
+            case "Control":
+            case "Left Control":
+            case "Right Control":
+                return "Ctrl";
+            default:
+                return displayName;
+        }
     }
 
     /// <summary>키 하나의 글자: 액션이 있으면 바인딩 이름, 없으면 고정 글자</summary>

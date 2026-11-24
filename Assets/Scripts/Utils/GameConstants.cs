@@ -1230,6 +1230,13 @@ public static class GameConstants
         public const string GuideSave = "저장";
         public const string GuideExit = "나가기";
         public const string KeyWheel = "휠";
+        /// <summary>그리드 높이 키 칩의 휠 글자 (Ctrl + 휠 위/아래, 11/24)</summary>
+        public const string KeyWheelUpDown = "휠 ▲▼";
+        /// <summary>그리드 높이 키 칩: 글자 좌우 여백 (px, 한쪽), 칩 최소 폭, 칩 사이 "+" 칸 폭, 오른쪽 끝 (박스 왼쪽 기준 x)</summary>
+        public const float ZoomKeyChipPadding = 7f;
+        public const float ZoomKeyChipMinWidth = 28f;
+        public const float ZoomKeyPlusWidth = 14f;
+        public const float ZoomKeyRightX = 252f;
         public const string KeyClick = "클릭";
         public const string KeyRightClick = "우클릭";
         public const string KeyEsc = "Esc";
