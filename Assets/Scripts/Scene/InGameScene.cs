@@ -669,6 +669,9 @@ public class InGameScene : SceneBase
         noteLayer.SetScrollMultiplier(next);
         entry.scrollMultiplier = noteLayer.ScrollMultiplier;
         canvas.SetSpeed(noteLayer.ScrollMultiplier);
+        // 테스트 플레이 · 자동 테스트: 에디터 테스트 플레이 배속에 바로 저장한다 (에디터 ◀ ▶와 같은 값, 일반 플레이 배속과 따로)
+        if (PlayerDataManager.HasInstance && PlayerDataRules.ShouldSaveEditorTestPlayMultiplier(IsTestPlay))
+            GameManager.PlayerData.SetLastEditorTestPlayMultiplier(noteLayer.ScrollMultiplier);
         Debug.Log($"[InGameScene] 배속 x{noteLayer.ScrollMultiplier:0.0} → 낙하 속도 {noteLayer.ScrollSpeed:0.###}유닛/초 (보이는 시간 {ScrollSpeedRules.VisibleSeconds(noteLayer.ScrollMultiplier):0.###}초)", this);
     }
 
@@ -1242,6 +1245,7 @@ public class InGameScene : SceneBase
     /// <summary>
     /// 인게임을 떠날 때(결과로 감·재시작·나가기) 지금 배속(1·2 키로 바꾼 값)을 PlayerData.json에 남긴다.
     /// 일반 플레이만 저장하고 테스트 플레이·자동 플레이는 저장하지 않는다. 값이 같으면 파일을 쓰지 않는다.
+    /// (테스트 플레이 배속은 바꿀 때마다 ChangeSpeed에서 에디터 테스트 플레이 배속에 바로 저장한다)
     /// </summary>
     private void SaveLastScrollMultiplier()
     {

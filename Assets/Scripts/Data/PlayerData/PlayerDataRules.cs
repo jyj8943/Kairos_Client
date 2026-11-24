@@ -262,6 +262,15 @@ public static class PlayerDataRules
         return !isTestPlay && !isAutoPlay;
     }
 
+    /// <summary>
+    /// 인게임에서 1·2 키로 배속을 바꿀 때 에디터 테스트 플레이 배속(lastSelection.editorTestPlayMultiplier)에 바로 저장할지 (11/24).
+    /// 테스트 플레이 · 자동 테스트(에디터에서 들어온 판)만 저장한다. 일반 플레이 배속은 따로 저장한다 (ShouldSaveLastScrollMultiplier).
+    /// </summary>
+    public static bool ShouldSaveEditorTestPlayMultiplier(bool isTestPlay)
+    {
+        return isTestPlay;
+    }
+
     private static int ClampVolume(int value, string name, List<string> log)
     {
         int clamped = Mathf.Clamp(value, GameConstants.Settings.MinVolume, GameConstants.Settings.MaxVolume);

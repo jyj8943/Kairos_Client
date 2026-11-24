@@ -482,4 +482,23 @@ public class PlayerDataTests
     {
         Assert.AreEqual(expected, PlayerDataRules.ShouldSaveLastScrollMultiplier(isTestPlay, isAutoPlay));
     }
+
+    /// <summary>인게임 1·2 키 배속: 테스트 플레이 · 자동 테스트는 에디터 테스트 플레이 배속에 바로 저장, 일반 플레이는 저장하지 않음 (11/24)</summary>
+    [TestCase(true, true)]
+    [TestCase(false, false)]
+    public void ShouldSaveEditorTestPlayMultiplier_OnlyTestPlay(bool isTestPlay, bool expected)
+    {
+        Assert.AreEqual(expected, PlayerDataRules.ShouldSaveEditorTestPlayMultiplier(isTestPlay));
+    }
+
+    /// <summary>일반 배속과 에디터 테스트 플레이 배속은 따로 저장된다 (한쪽을 바꿔도 다른 쪽은 그대로)</summary>
+    [Test]
+    public void EditorTestPlayMultiplier_SeparateFromScrollMultiplier()
+    {
+        LastSelectionSaveData s = new LastSelectionSaveData();
+        Assert.AreEqual(GameConstants.Play.DefaultScrollMultiplier, s.editorTestPlayMultiplier, SpeedDelta, "처음 1.0");
+        Assert.IsTrue(PlayerDataRules.TrySetEditorTestPlayMultiplier(s, 3.5f));
+        Assert.AreEqual(3.5f, s.editorTestPlayMultiplier, SpeedDelta);
+        Assert.AreEqual(GameConstants.Play.DefaultScrollMultiplier, s.scrollMultiplier, SpeedDelta, "일반 배속은 그대로");
+    }
 }
