@@ -14,7 +14,7 @@ using UnityEngine.UI;
 /// - 실제 키 이벤트로 Ctrl+Z · Ctrl+Y · Ctrl+Shift+Z (Ctrl+Shift+Z가 실행 취소로 같이 잡히지 않는지)
 /// - 팝업이 열려 있을 때 · 입력창에 글자를 쓰는 중 · 롱노트 드래그 중에는 무시
 /// - 테스트 플레이 → 에디터로 돌아온 뒤에도 기록 · 도구가 남아 있음
-/// - 도구 키 1 · 2 (3은 없음), 숨긴 롱노트 버튼이 선택 이동 · 포인터에 걸리지 않음
+/// - 도구 키 1 · 2 (3은 없음) · 클릭 · ↑↓, 왼쪽 패널 도구 두 줄 배치와 사용법 한 줄
 /// </summary>
 public class EditorUndoPlayTests
 {
@@ -279,11 +279,11 @@ public class EditorUndoPlayTests
     }
 
     /// <summary>
-    /// U5: 키 1 → 노트, 2 → BPM 구간, 3 → 아무 일 없음. 키 칩 · 키 안내 줄 글자.
-    /// 숨긴 롱노트 버튼(Toggle_LongNote)은 ↑↓ 선택 이동 · 포인터에 걸리지 않고, 도구 칸 안내 문구는 넘치지 않는다.
+    /// U5: 키 1 → 노트, 2 → BPM 구간, 3 → 아무 일 없음. 마우스 클릭으로도 바뀐다. 키 칩 · 키 안내 줄 글자.
+    /// 도구는 노트 · BPM 구간 두 줄뿐이고(롱노트 버튼 삭제) ↑↓로 바로 이어진다. 두 줄 간격 10px, 왼쪽 패널 요소는 모두 패널 안, 사용법은 한 줄.
     /// </summary>
     [UnityTest]
-    public IEnumerator U5_ToolKeysAndHiddenLongNote()
+    public IEnumerator U5_ToolKeysAndLeftPanel()
     {
         System.Text.StringBuilder log = new System.Text.StringBuilder("[EditorUndoPlayTest] U5");
         Assert.AreEqual(EditorTool.Note, canvas.CurrentTool, "처음은 노트 도구");
@@ -304,50 +304,67 @@ public class EditorUndoPlayTests
         Assert.AreEqual("2", Get<TMP_Text>(canvas, "bpmSectionKeyText").text);
         CollectionAssert.Contains(canvas.KeyGuide.Describe(), "1 2 도구");
 
-        // 숨긴 롱노트 버튼
-        Transform longTransform = canvas.transform.Find("LeftTools/Toggle_LongNote");
-        Assert.IsNotNull(longTransform, "버튼 오브젝트는 지우지 않는다");
-        Assert.IsFalse(longTransform.gameObject.activeInHierarchy, "롱노트 버튼 숨김");
-        Toggle longToggle = longTransform.GetComponent<Toggle>();
-        Assert.IsFalse(longToggle.isOn);
+        // 도구 두 줄: 선택 이동 · 클릭 · 간격
+        RectTransform panel = (RectTransform)canvas.transform.Find("LeftTools");
         Toggle note = Get<Toggle>(canvas, "shortNoteToggle");
         Toggle bpm = Get<Toggle>(canvas, "bpmSectionToggle");
+        ToggleGroup group = panel.GetComponent<ToggleGroup>();
+        var tools = new System.Collections.Generic.List<Toggle>(panel.GetComponentsInChildren<Toggle>(true)).FindAll(t => t.group == group);
+        CollectionAssert.AreEqual(new[] { note, bpm }, tools, "도구는 노트 · BPM 구간 두 줄");
         Assert.AreSame(bpm, note.FindSelectableOnDown(), "노트 ↓ BPM 구간");
         Assert.AreSame(note, bpm.FindSelectableOnUp(), "BPM 구간 ↑ 노트");
-        foreach (Selectable selectable in Selectable.allSelectablesArray)
+        foreach ((Toggle toggle, EditorTool expected) in new[] { (bpm, EditorTool.BpmSection), (note, EditorTool.Note) })
         {
-            Assert.AreNotSame(longToggle, selectable, "선택 목록에 없음");
-            Assert.AreNotSame(longToggle, selectable.FindSelectableOnUp(), selectable.name + " ↑");
-            Assert.AreNotSame(longToggle, selectable.FindSelectableOnDown(), selectable.name + " ↓");
-            Assert.AreNotSame(longToggle, selectable.FindSelectableOnLeft(), selectable.name + " ←");
-            Assert.AreNotSame(longToggle, selectable.FindSelectableOnRight(), selectable.name + " →");
+            ClickCenter((RectTransform)toggle.transform);
+            log.Append($" | {toggle.name} 클릭 → {canvas.CurrentTool}");
+            Assert.AreEqual(expected, canvas.CurrentTool, toggle.name + " 클릭");
+        }
+        float gap = BottomIn(panel, (RectTransform)note.transform) - TopIn(panel, (RectTransform)bpm.transform);
+        log.Append($" | 노트 ~ BPM 구간 간격 {gap:0.0}px");
+        Assert.AreEqual(10f, gap, 0.01f, "도구 줄 간격");
+
+        // 왼쪽 패널 요소는 모두 패널 안
+        foreach (RectTransform rect in panel.GetComponentsInChildren<RectTransform>(true))
+        {
+            if (rect == panel) continue;
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            Vector2 min = panel.InverseTransformPoint(corners[0]);
+            Vector2 max = panel.InverseTransformPoint(corners[2]);
+            Assert.IsTrue(min.x >= panel.rect.xMin - 0.5f && max.x <= panel.rect.xMax + 0.5f && min.y >= panel.rect.yMin - 0.5f && max.y <= panel.rect.yMax + 0.5f, rect.name + " 패널 안");
         }
 
-        // 숨긴 버튼 자리를 눌러도 걸리는 것이 없다
-        Canvas root = canvas.GetComponentInParent<Canvas>().rootCanvas;
-        Camera eventCamera = root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
-        RectTransform longRect = (RectTransform)longTransform;
-        PointerEventData pointer = new PointerEventData(EventSystem.current)
-        {
-            position = RectTransformUtility.WorldToScreenPoint(eventCamera, longRect.TransformPoint(longRect.rect.center))
-        };
-        var hits = new System.Collections.Generic.List<RaycastResult>();
-        EventSystem.current.RaycastAll(pointer, hits);
-        foreach (RaycastResult hit in hits) Assert.IsFalse(hit.gameObject.transform.IsChildOf(longTransform), hit.gameObject.name);
-        log.Append($" | 롱노트 자리 레이캐스트: {(hits.Count > 0 ? hits[0].gameObject.name : "없음")}");
-
-        // 안내 문구
+        // 사용법 한 줄
         TMP_Text hint = Get<TMP_Text>(canvas, "toolHintText");
         foreach (EditorTool tool in new[] { EditorTool.BpmSection, EditorTool.Note })
         {
             canvas.SetTool(tool);
             hint.ForceMeshUpdate();
             log.Append($" | {tool} 문구 {hint.textInfo.lineCount}줄 {hint.preferredHeight:0.0}/{hint.rectTransform.rect.height:0.0} 넘침 {hint.isTextOverflowing}");
+            Assert.AreEqual(1, hint.textInfo.lineCount, tool + " 안내 문구 한 줄");
             Assert.IsFalse(hint.isTextOverflowing, tool + " 안내 문구 넘침");
         }
-        Assert.AreEqual("클릭으로 놓고, 끌면 롱노트, 오른쪽 클릭으로 지워요.", canvas.ToolHint);
+        Assert.AreEqual("클릭: 놓기 · 끌기: 롱노트 · 우클릭: 지우기", canvas.ToolHint);
         Debug.Log(log.ToString());
     }
+
+    /// <summary>화면에서 rect 가운데에 있는 것을 레이캐스트로 찾아 클릭한다 (가려져 있으면 그것이 클릭된다)</summary>
+    private void ClickCenter(RectTransform rect)
+    {
+        Canvas root = canvas.GetComponentInParent<Canvas>().rootCanvas;
+        Camera eventCamera = root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
+        PointerEventData pointer = new PointerEventData(EventSystem.current)
+        {
+            position = RectTransformUtility.WorldToScreenPoint(eventCamera, rect.TransformPoint(rect.rect.center))
+        };
+        var hits = new System.Collections.Generic.List<RaycastResult>();
+        EventSystem.current.RaycastAll(pointer, hits);
+        Assert.Greater(hits.Count, 0, rect.name + " 자리에 걸리는 것이 없음");
+        ExecuteEvents.ExecuteHierarchy(hits[0].gameObject, pointer, ExecuteEvents.pointerClickHandler);
+    }
+
+    private static float BottomIn(RectTransform panel, RectTransform rect) => panel.InverseTransformPoint(rect.TransformPoint(rect.rect.min)).y;
+    private static float TopIn(RectTransform panel, RectTransform rect) => panel.InverseTransformPoint(rect.TransformPoint(rect.rect.max)).y;
 
     private static IEnumerator Tap(Key key)
     {

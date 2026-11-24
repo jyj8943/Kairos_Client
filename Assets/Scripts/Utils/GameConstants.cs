@@ -1269,9 +1269,9 @@ public static class GameConstants
         /// <summary>도구 이름</summary>
         public const string ToolNoteName = "노트";
         public const string ToolBpmSectionName = "BPM 구간";
-        /// <summary>고른 도구 사용법</summary>
-        public const string ToolNoteHint = "클릭으로 놓고, 끌면 롱노트, 오른쪽 클릭으로 지워요.";
-        public const string ToolBpmSectionHint = "가로선 왼쪽을 클릭하면 BPM 입력 창이 열려요. 구간선 오른쪽 클릭은 삭제예요.";
+        /// <summary>고른 도구 사용법 (Txt_ToolHint 한 줄, 11/24)</summary>
+        public const string ToolNoteHint = "클릭: 놓기 · 끌기: 롱노트 · 우클릭: 지우기";
+        public const string ToolBpmSectionHint = "가로선 왼쪽 클릭: 입력 · 구간선 우클릭: 지우기";
 
         /// <summary>오른쪽 패널 묶음 제목</summary>
         public const string SnapTitle = "박자 스냅";

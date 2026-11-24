@@ -89,7 +89,7 @@ public class Canvas_Editor : UIBase
     [SerializeField] private TMP_Text longNotesValueText;
 
     [Header("왼쪽 도구 (단축키 1 · 2)")]
-    [Tooltip("노트 도구 (Toggle_ShortNote). Toggle_LongNote는 노트 도구로 합쳐져 씬에서 꺼 둔다 (디자인 반영 때 지움)")]
+    [Tooltip("노트 도구 (Toggle_ShortNote, 11/24 롱노트 도구를 합침)")]
     [SerializeField] private Toggle shortNoteToggle;
     [SerializeField] private Toggle bpmSectionToggle;
 
