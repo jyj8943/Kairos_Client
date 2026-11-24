@@ -7,7 +7,8 @@ using UnityEngine;
 /// - 진입 데이터에 chartId가 있으면 그 내 채보를 불러와 세션을 채운다. 실패하면 곡 선택 나만의 채보 탭으로 돌아간다.
 /// - 저장 요청(Btn_Save·Ctrl+S)을 받아 곡을 확인한 뒤 세션에 저장을 맡긴다.
 /// - 나가기 요청(Btn_Exit)을 받아 곡 선택 나만의 채보 탭으로 돌아간다 (편집하던 채보를 고른 채로, 기획서 3-1 · 3-3. 저장 안 한 변경이 있으면 확인 팝업을 띄운다).
-/// - ESC(OnBack)는 지금 아무것도 하지 않는다 (기존 동작 그대로).
+/// - ESC(OnBack, UIManager가 팝업 · 입력창 · 드롭다운을 먼저 처리한 뒤 부른다)는 「나가기」 버튼과 같다 (11/24):
+///   저장 안 한 변경이 있으면 확인 팝업, 없으면 바로 곡 선택으로. 롱노트를 드래그하는 중에는 무시한다.
 /// - 테스트 플레이 요청(Btn_TestPlay)을 받아 지금 상태를 저장하지 않고 인게임으로 넘긴다.
 ///   돌아올 때는 진입 데이터의 restore로 노트·위치·스냅·그리드 높이·도구·수정 여부·실행 취소 기록을 되돌린다.
 /// - 실행 취소(Ctrl+Z)·다시 실행(Ctrl+Y · Ctrl+Shift+Z) 요청을 받아 세션에 맡기고 결과를 상태 표시줄에 잠깐 보여 준다.
@@ -466,6 +467,16 @@ public class EditorScene : SceneBase
     /// 저장하지 않은 변경(IsDirty)이 있으면 노래를 멈추고 확인 팝업을 띄운다 (취소하면 정지 상태 그대로 에디터에 남는다).
     /// 저장했으면 바로 나간다.
     /// </summary>
+    /// <summary>
+    /// ESC: 「나가기」 버튼과 같은 경로 (저장 안 함 확인 → 곡 선택). 롱노트를 드래그하는 중이면 무시한다.
+    /// 팝업이 열려 있으면 UIManager가 팝업 쪽(OnCancelRequested)으로 보내므로 여기까지 오지 않는다.
+    /// </summary>
+    public override void OnBack()
+    {
+        if (notePlacer != null && notePlacer.IsPressing) return;
+        OnExitRequested();
+    }
+
     private void OnExitRequested()
     {
         if (!isReady || isLeaving || isSaving) return;
