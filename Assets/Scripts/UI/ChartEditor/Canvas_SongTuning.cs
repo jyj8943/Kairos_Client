@@ -15,6 +15,7 @@ using UnityEngine.UI;
 /// - BPM 입력칸은 곡 시작 구간(0박) BPM만 바꾼다. 다른 BPM 구간은 그대로 두고, 바꾼 것은 구간 편집처럼 Ctrl+Z로 되돌릴 수 있다.
 ///   offset은 곡 정보 값이라 채보 수정(저장 안 됨 표시)에 넣지 않는다.
 /// - 바꾼 값은 "SongData에 저장"을 눌러야 곡 에셋에 들어간다. 저장 전에는 세션 값만 바뀌므로 플레이를 끝내면 원래 값 그대로다.
+/// - 미리 듣기 시작 저장 (11/25): 버튼을 누르면 지금 재생 위치(음원 기준)를 SongData.previewStartMs에 바로 저장한다. 길이는 인스펙터에서 정한다.
 /// - 공식 채보로 추가: 편집 중인 노트를 난이도·레벨을 정해 공식 채보(Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json)로 저장한다.
 ///   그 난이도 파일이 있으면 확인 팝업으로 덮어쓸지 묻고, 저장 뒤 바로 임포트해 같은 플레이 중에도 곡 선택 씬에서 보인다.
 ///   편집 중인 나만의 채보(세션의 chartId·수정 여부·파일)는 건드리지 않는다.
@@ -30,6 +31,10 @@ public class Canvas_SongTuning : MonoBehaviour
     [SerializeField] private TMP_InputField bpmInput;
     [SerializeField] private Button saveButton;
     [SerializeField] private TMP_Text statusText;
+
+    [Header("미리 듣기")]
+    [Tooltip("지금 재생 위치를 미리 듣기 시작으로 (Btn_SavePreviewStart)")]
+    [SerializeField] private Button savePreviewStartButton;
 
     [Header("공식 채보로 추가")]
     [Tooltip("난이도 (EASY / NORMAL / HARD, GameConstants.Chart.Difficulties 순서)")]
@@ -47,17 +52,20 @@ public class Canvas_SongTuning : MonoBehaviour
     private SongData song;
     private ChartEditSession session;
     private Action<float, int> applyTiming;
+    private Func<double> getPositionSeconds;
     private bool isInputEnabled;
 
     /// <summary>
     /// 곡·세션과 값을 바꿀 함수를 받는다. 패널은 닫은 상태로 시작한다.
     /// </summary>
     /// <param name="applyTiming">(BPM, offsetMs)를 에디터에 반영하는 함수 (EditorScene)</param>
-    public void Init(SongData song, ChartEditSession session, Action<float, int> applyTiming)
+    /// <param name="getPositionSeconds">지금 재생 위치 (음원 기준 초)</param>
+    public void Init(SongData song, ChartEditSession session, Action<float, int> applyTiming, Func<double> getPositionSeconds)
     {
         this.song = song;
         this.session = session;
         this.applyTiming = applyTiming;
+        this.getPositionSeconds = getPositionSeconds;
 
         offsetMinus10Button.onClick.RemoveAllListeners();
         offsetMinus1Button.onClick.RemoveAllListeners();
@@ -69,6 +77,11 @@ public class Canvas_SongTuning : MonoBehaviour
         offsetPlus1Button.onClick.AddListener(() => ChangeOffset(1));
         offsetPlus10Button.onClick.AddListener(() => ChangeOffset(10));
         saveButton.onClick.AddListener(SaveToSongData);
+        if (savePreviewStartButton != null)
+        {
+            savePreviewStartButton.onClick.RemoveListener(SavePreviewStart);
+            savePreviewStartButton.onClick.AddListener(SavePreviewStart);
+        }
         bpmInput.onEndEdit.RemoveListener(OnBpmEdited);
         bpmInput.onEndEdit.AddListener(OnBpmEdited);
 
@@ -152,6 +165,31 @@ public class Canvas_SongTuning : MonoBehaviour
         statusText.text = $"SongData에 저장했습니다 ({AssetDatabase.GetAssetPath(song)})";
         Debug.Log($"[Canvas_SongTuning] SongData 저장: {song.SongId} bpm={session.Bpm}, offsetMs={session.OffsetMs}", song);
         Refresh();
+    }
+
+    /// <summary>지금 재생 위치를 SongData.previewStartMs로 저장한다 (SaveToSongData와 같은 저장 경로)</summary>
+    private void SavePreviewStart()
+    {
+        double seconds = getPositionSeconds != null ? getPositionSeconds() : 0;
+        if (seconds >= song.Length)
+        {
+            statusText.text = "곡 끝이라 미리 듣기 시작으로 저장하지 않았습니다.";
+            return;
+        }
+
+        WritePreviewStart(song, seconds);
+        AssetDatabase.SaveAssets();
+        statusText.text = $"미리 듣기 시작을 저장했습니다: {song.PreviewStartMs}ms, 길이 {song.PreviewLength:0.###}초 ({AssetDatabase.GetAssetPath(song)})";
+        Debug.Log($"[Canvas_SongTuning] 미리 듣기 시작 저장: {song.SongId} previewStartMs={song.PreviewStartMs}", song);
+    }
+
+    /// <summary>SongData.previewStartMs에 쓴다. 0은 기본값이라는 뜻이므로 맨 앞이면 1ms로 쓴다</summary>
+    public static void WritePreviewStart(SongData song, double seconds)
+    {
+        SerializedObject serialized = new SerializedObject(song);
+        serialized.FindProperty("previewStartMs").intValue = Mathf.Max(1, (int)Math.Round(seconds * 1000.0));
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(song);
     }
 
     /// <summary>

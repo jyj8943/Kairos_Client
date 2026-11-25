@@ -25,6 +25,8 @@ using UnityEngine.UI;
 ///   (나만의 채보 탭은 chartId → 그 채보, 없으면 그 곡의 + 줄), 곡이 없으면(타이틀 플레이 · 에디터) 그 탭의 마지막 선택 칸. 보이지 않는 탭도 자기 칸으로 맞춰 두어
 ///   Tab으로 바꾸면 그 탭의 마지막 선택이 보인다. 칸이 비었거나 곡·채보가 없으면 공식은 첫 곡, 나만의 채보는 첫 정지점.
 ///   배속은 진입 데이터에 값이 있을 때만 그 값, 없으면 저장된 마지막 배속 (ResolveStartSpeed).
+/// - 곡 미리 듣기 (11/25): 들어오면(OnEnter) 고른 곡을 바로, 곡을 바꾸면 고른 순간 앞 곡을 줄이고 0.3초 뒤에 시작한다 (SongPreviewSelector → SoundManager.PlayPreview). 같은 곡 안에서 난이도 · 탭 · 채보 줄을 바꾸면 이어서 재생하고,
+///   팝업이 열려도 계속 재생한다. 떠나기 시작하면(SetLeaving) 0.3초 페이드 아웃, OnExit에서 남아 있으면 바로 멈춘다.
 /// - 조작 (기획서 2-6): Tab 탭 전환, 1 / 2 배속(꾹 누르면 KeyRepeat로 계속), Enter 시작(+ 줄이면 새 채보 팝업), E 편집(나만의 채보 탭 채보 줄), ESC 타이틀(UIManager → SongSelectScene.OnBack).
 ///   팝업이 열려 있으면 키보드 단축키는 동작하지 않는다 (GameManager.UI.HasOpenPopup). 마우스로 곡·난이도·채보 클릭, 시작 버튼, 휠 스크롤.
 /// - 키보드 선택(EventSystem)은 항상 지금 탭의 고른 항목(곡 / 채보)에 둔다. 마우스로 다른 것을 누르면 다음 프레임에 되돌린다.
@@ -190,6 +192,9 @@ public class Canvas_SongSelect : UIBase
     private bool isInputEnabled;
     private bool isLeaving;
 
+    /// <summary>미리 듣기 시작 시점 (0.3초 지연 · 들어가기 전에는 기억만)</summary>
+    private readonly SongPreviewSelector previewSelector = new SongPreviewSelector();
+
     // 배속 키 반복 (인게임과 같은 값: 누른 순간 한 번, 0.4초 뒤부터 0.08초마다)
     private readonly KeyRepeat speedDownRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
     private readonly KeyRepeat speedUpRepeat = new KeyRepeat(GameConstants.Play.SpeedKeyRepeatDelaySeconds, GameConstants.Play.SpeedKeyRepeatIntervalSeconds);
@@ -306,6 +311,7 @@ public class Canvas_SongSelect : UIBase
     public void Init(IReadOnlyList<SongData> songs, SongSelectEntryData entry)
     {
         isLeaving = false;
+        previewSelector.Reset();
 
         // 메뉴 화면 톤 (UITheme): 고정 그래픽(UIThemeColor)과 배경을 먼저 칠한다. 선택에 따라 바뀌는 색은 각 표시 함수가 칠한다
         UIThemeColor.ApplyAll(gameObject);
@@ -515,6 +521,7 @@ public class Canvas_SongSelect : UIBase
     private void Update()
     {
         UpdateSpeedRepeat();
+        UpdatePreview();
 
         // 팝업이 열려 있으면 팝업 버튼의 선택을 빼앗지 않는다
         if (IsShortcutBlocked) return;
@@ -689,7 +696,54 @@ public class Canvas_SongSelect : UIBase
         RefreshBpm();
 
         if (menuBackground != null) menuBackground.SetIllustration(song.Background, instantBackground);
+
+        SongPreviewSelectResult preview = previewSelector.Select(song);
+        if (preview != SongPreviewSelectResult.None && SoundManager.HasInstance) GameManager.Sound.SetPreviewDucked(preview == SongPreviewSelectResult.Duck);
     }
+
+    // ───── 곡 미리 듣기 ─────
+
+    /// <summary>들어온 곡(마지막 선택)의 미리 듣기를 바로 시작한다. 씬의 OnEnter(로딩 화면이 다 걷힌 뒤)에서 부른다</summary>
+    public void StartPreview()
+    {
+        SongData song = previewSelector.Enter();
+        PlayPreview(song);
+        // 로딩 단계 로그 끝에 시작 시각을 남긴다 (닫기 끝 → OnEnter → 미리 듣기 시작 순서 확인용)
+        if (song != null && GameSceneManager.HasInstance) GameManager.Scene.MarkLoading($"미리 듣기 시작 ({song.SongId} {song.PreviewStart:0.000}초)");
+    }
+
+    /// <summary>미리 듣기를 멈추고 기다리던 요청도 버린다 (떠날 때)</summary>
+    public void StopPreview(float fadeSeconds)
+    {
+        previewSelector.Leave();
+        if (SoundManager.HasInstance) GameManager.Sound.StopPreview(fadeSeconds);
+    }
+
+    /// <summary>0.3초 지연을 흘리고, 어느 경로로든 씬을 떠나기 시작했으면(로딩 열기) 줄여서 멈춘다</summary>
+    private void UpdatePreview()
+    {
+        if (previewSelector.IsActive && GameSceneManager.HasInstance && GameManager.Scene.IsLoading)
+        {
+            StopPreview(GameConstants.SongPreview.LeaveFadeOut);
+            return;
+        }
+        PlayPreview(previewSelector.Tick(Time.unscaledDeltaTime));
+    }
+
+    private static void PlayPreview(SongData song)
+    {
+        if (song == null || !SoundManager.HasInstance) return;
+
+        if (song.Clip == null)
+        {
+            GameManager.Sound.StopPreview(GameConstants.SongPreview.SwitchFadeOut);
+            return;
+        }
+        GameManager.Sound.PlayPreview(song.Clip, song.PreviewStart, song.PreviewLength);
+    }
+
+    /// <summary>미리 듣기 시점 (확인용)</summary>
+    public SongPreviewSelector PreviewSelector => previewSelector;
 
     /// <summary>BPM 표기: 고른 채보의 구간(채보가 없거나 + 줄이면 곡의 구간)을 곡의 방식대로 (BpmDisplayRules)</summary>
     private void RefreshBpm()
@@ -1318,6 +1372,7 @@ public class Canvas_SongSelect : UIBase
     private void SetLeaving()
     {
         isLeaving = true;
+        StopPreview(GameConstants.SongPreview.LeaveFadeOut);
         ReleaseSpeedKeys();
         officialTabButton.interactable = false;
         myChartTabButton.interactable = false;

@@ -139,7 +139,7 @@ public class EditorScene : SceneBase
         }
 
 #if UNITY_EDITOR
-        if (songTuning != null) songTuning.Init(song, session, ApplyTiming);
+        if (songTuning != null) songTuning.Init(song, session, ApplyTiming, () => session.Timing.BeatToSeconds(grid.CurrentBeat));
 #endif
 
         statusResetAt = -1f;

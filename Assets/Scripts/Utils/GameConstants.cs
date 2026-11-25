@@ -994,6 +994,34 @@ public static class GameConstants
         public const string Loading = "곡을 불러오는 중";
     }
 
+    /// <summary>곡 미리 듣기 (곡 선택, 11/25). 시간은 모두 초</summary>
+    public static class SongPreview
+    {
+        /// <summary>시작 지점을 정하지 않은 곡의 시작 = 곡 길이 × 이 값</summary>
+        public const double DefaultStartRatio = 0.35;
+
+        /// <summary>길이를 정하지 않은 곡의 길이</summary>
+        public const double DefaultLengthSeconds = 15.0;
+
+        /// <summary>곡을 바꾸고 새 곡이 시작할 때까지 (↑↓로 빠르게 훑을 때 소리가 튀지 않게). 앞 곡 페이드(SwitchFadeOut)가 이 안에 끝난다</summary>
+        public const float StartDelay = 0.3f;
+
+        /// <summary>시작 · 반복 시작 페이드 인</summary>
+        public const float FadeIn = 0.5f;
+
+        /// <summary>구간 끝 페이드 아웃</summary>
+        public const float FadeOutAtEnd = 1f;
+
+        /// <summary>다른 곡을 고른 순간부터 지금 곡 페이드 아웃 (원래 곡으로 돌아오면 같은 시간에 되살린다)</summary>
+        public const float SwitchFadeOut = 0.25f;
+
+        /// <summary>곡 선택을 떠날 때 페이드 아웃</summary>
+        public const float LeaveFadeOut = 0.3f;
+
+        /// <summary>설정 음량에 곱하는 미리 듣기 음량 계수</summary>
+        public const float Volume = 1f;
+    }
+
     public static class SongSelect
     {
         /// <summary>

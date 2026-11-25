@@ -5,7 +5,7 @@ using UnityEngine;
 /// 곡 선택 씬 진입점 (기획서 3-3). SongSelectScene.unity 루트의 "SongSelectScene" 오브젝트에 붙인다.
 /// - 곡 목록은 GameManager.Songs에서 받아 Canvas_SongSelect를 초기화한다.
 /// - 결과 화면에서 돌아오면 SongSelectEntryData의 곡·탭·채보·배속이 선택된 채로 시작한다.
-/// - 초기화가 끝나면(OnEnter) 키 입력을 받고, 떠날 때(OnExit) 구독을 해제한다.
+/// - 초기화가 끝나면(OnEnter) 키 입력을 받고 고른 곡의 미리 듣기를 시작하며, 떠날 때(OnExit) 구독을 해제하고 남은 미리 듣기를 바로 멈춘다.
 /// </summary>
 public class SongSelectScene : SceneBase
 {
@@ -30,19 +30,23 @@ public class SongSelectScene : SceneBase
     }
 
     /// <summary>
-    /// 초기화가 끝나면 키 입력을 받는다.
+    /// 초기화가 끝나면(로딩 화면이 다 걷힌 뒤) 키 입력을 받고 미리 듣기를 시작한다.
     /// </summary>
     protected override void OnEnter()
     {
-        if (canvas != null) canvas.EnableInput();
+        if (canvas == null) return;
+        canvas.EnableInput();
+        canvas.StartPreview();
     }
 
     /// <summary>
-    /// 씬을 떠나기 직전 입력 구독을 해제한다.
+    /// 씬을 떠나기 직전 입력 구독을 해제하고 미리 듣기가 남아 있으면 바로 멈춘다 (보통은 떠나기 시작할 때 이미 줄어들어 멈춰 있다).
     /// </summary>
     public override void OnExit()
     {
-        if (canvas != null) canvas.DisableInput();
+        if (canvas == null) return;
+        canvas.DisableInput();
+        canvas.StopPreview(0f);
     }
 
     /// <summary>

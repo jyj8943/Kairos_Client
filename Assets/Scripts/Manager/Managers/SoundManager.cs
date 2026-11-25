@@ -9,6 +9,8 @@ using UnityEngine;
 ///   노래에는 페이드 계수(MusicFadeMultiplier, 기본 1)를 한 번 더 곱한다. 암전 로딩(Canvas_FadeLoading)이 열기 동안만 1 → 0으로 줄이고,
 ///   설정 음량(저장값)은 건드리지 않는다. 노래를 멈추거나(StopMusic) 새로 재생하면(PlayMusicScheduled) 계수는 1로 돌아간다.
 ///   앞으로 추가하는 BGM·효과음도 따로 AudioSource를 두지 말고 이 매니저를 거쳐 재생해야 음량이 적용된다.
+/// - 곡 미리 듣기(곡 선택, 11/25)는 노래와 따로 미리 듣기 전용 AudioSource(previewSource)를 쓴다 (PlayPreview · StopPreview, 시간표 SongPreviewSequencer).
+///   곡 시간(SongTime)·DSP 예약과 상관없고 시간은 unscaledDeltaTime으로 잰다. 음량 = 메인 × 음악 × 페이드 × GameConstants.SongPreview.Volume.
 /// - 재생 배율(PlaybackRate, 기본 1.0): 에디터 테스트를 빠르게 돌릴 때만 바꾼다 (SetPlaybackRateForTests, Unity 에디터 전용).
 ///   노래 pitch, 곡 시간(MusicClock), 곡 시간 ↔ DSP 시각, 입력 시각 → 곡 시간이 모두 같은 배율을 따른다. 키음·효과음 pitch는 바꾸지 않는다.
 ///   게임 코드·설정 창에서는 바꾸지 않는다. 1.0이면 배율이 없던 때와 동작·숫자가 같다.
@@ -19,6 +21,8 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     [Header("AudioSource")]
     [Tooltip("노래용 (playOnAwake·loop 끔)")]
     [SerializeField] private AudioSource musicSource;
+    [Tooltip("곡 미리 듣기용 (곡 선택). 노래와 따로 쓴다 (playOnAwake·loop 끔)")]
+    [SerializeField] private AudioSource previewSource;
     [Tooltip("효과음용. 돌아가며 쓴다")]
     [SerializeField] private AudioSource[] sfxSources;
     [Tooltip("DSP 시각에 예약하는 효과음용 (메트로놈 등). 소스 하나에 예약 하나씩, 돌아가며 쓴다")]
@@ -30,6 +34,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     [Range(0f, 1f)] [SerializeField] private float sfxVolume = 1f;
 
     private readonly MusicClock clock = new MusicClock();
+    private readonly SongPreviewSequencer preview = new SongPreviewSequencer();
 
     private float musicFadeMultiplier = 1f;
 
@@ -171,6 +176,16 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
             musicSource.loop = false;
         }
 
+        if (previewSource == null)
+        {
+            Debug.LogWarning("[SoundManager] previewSource가 없어 곡 미리 듣기를 재생할 수 없습니다.", this);
+        }
+        else
+        {
+            previewSource.playOnAwake = false;
+            previewSource.loop = false;
+        }
+
         if (sfxSources == null || sfxSources.Length == 0)
             Debug.LogWarning("[SoundManager] sfxSources가 없어 효과음을 재생할 수 없습니다.", this);
         if (scheduledSfxSources == null || scheduledSfxSources.Length == 0)
@@ -180,6 +195,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
         nextScheduledSfxIndex = 0;
         CancelScheduledSfx();
         StopMusic();
+        StopPreview(0f);
         ApplyVolumes();
         ApplyPlaybackRate();
     }
@@ -195,6 +211,79 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     private void Update()
     {
         clock.Tick(AudioSettings.dspTime, Time.realtimeSinceStartupAsDouble);
+        if (preview.IsActive) ApplyPreview(preview.Tick(Time.unscaledDeltaTime));
+    }
+
+    // ───── 곡 미리 듣기 ─────
+
+    /// <summary>미리 듣기를 재생 중이거나 줄이는 중이면 true</summary>
+    public bool IsPreviewPlaying => preview.IsActive;
+
+    /// <summary>지금 미리 듣는 곡 (없으면 null)</summary>
+    public AudioClip PreviewClip => preview.Clip;
+
+    /// <summary>미리 듣기 AudioSource의 실제 재생 위치 (초, 소리를 내지 않으면 0, 확인용)</summary>
+    public double PreviewPosition => previewSource != null && previewSource.clip != null && previewSource.isPlaying
+        ? (double)previewSource.timeSamples / previewSource.clip.frequency
+        : 0;
+
+    /// <summary>미리 듣기 AudioSource가 소리를 내는 중이면 true · 실제 음량 · 페이드 계수 · 반복 횟수 (확인용)</summary>
+    public bool IsPreviewSourcePlaying => previewSource != null && previewSource.isPlaying;
+    public float PreviewSourceVolume => previewSource != null ? previewSource.volume : 0f;
+    public float PreviewFade => preview.Volume;
+    public int PreviewLoopCount => preview.LoopCount;
+
+    /// <summary>
+    /// 곡 미리 듣기를 시작한다. 같은 곡이 이미 재생 중이면 아무것도 하지 않고, 다른 곡이 재생 중이면 SwitchFadeOut 뒤에 시작한다
+    /// (SetPreviewDucked로 이미 다 줄였으면 바로).
+    /// 구간 끝에 닿으면 시작 지점으로 돌아가 반복한다.
+    /// </summary>
+    /// <param name="start">음원 안 시작 위치 (초)</param>
+    /// <param name="length">길이 (초)</param>
+    public void PlayPreview(AudioClip clip, double start, double length)
+    {
+        if (previewSource == null) return;
+        ApplyPreview(preview.Play(clip, start, length));
+    }
+
+    /// <summary>
+    /// 다른 곡을 고른 순간 지금 미리 듣기를 SwitchFadeOut 동안 조용히 줄인다(true). 원래 곡으로 돌아오면 이어서 되살린다(false). 재생 중이 아니면 아무것도 하지 않는다.
+    /// </summary>
+    public void SetPreviewDucked(bool ducked)
+    {
+        preview.SetDucked(ducked);
+    }
+
+    /// <summary>곡 미리 듣기를 fadeSeconds 동안 줄인 뒤 멈춘다 (0 이하면 바로).</summary>
+    public void StopPreview(float fadeSeconds)
+    {
+        ApplyPreview(preview.Stop(fadeSeconds));
+    }
+
+    /// <summary>시간표의 명령과 음량을 AudioSource에 적용한다</summary>
+    private void ApplyPreview(SongPreviewCommand command)
+    {
+        if (previewSource == null) return;
+
+        ApplyPreviewVolume();
+        switch (command)
+        {
+            case SongPreviewCommand.Start:
+                previewSource.Stop();
+                previewSource.clip = preview.Clip;
+                previewSource.timeSamples = ToSamples(preview.Clip, preview.Start);
+                previewSource.Play();
+                break;
+            case SongPreviewCommand.Stop:
+                previewSource.Stop();
+                previewSource.clip = null;
+                break;
+        }
+    }
+
+    private void ApplyPreviewVolume()
+    {
+        if (previewSource != null) previewSource.volume = masterVolume * musicVolume * preview.Volume * GameConstants.SongPreview.Volume;
     }
 
     /// <summary>
@@ -380,6 +469,7 @@ public class SoundManager : MonoSingleton<SoundManager>, IGameModule
     private void ApplyVolumes()
     {
         if (musicSource != null) musicSource.volume = masterVolume * musicVolume * musicFadeMultiplier;
+        ApplyPreviewVolume();
 
         if (sfxSources != null)
         {

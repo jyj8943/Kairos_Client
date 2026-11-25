@@ -18,7 +18,7 @@ public class SongManager : MonoSingleton<SongManager>, IGameModule
 
     /// <summary>
     /// 곡 목록을 검사한다. 빈 songId·중복 songId·시작 BPM ≤ 0·잘못된 BPM 구간이 있으면 에러 로그를 남긴다.
-    /// 이웃 구간 BPM이 같으면 경고만 남긴다.
+    /// 이웃 구간 BPM이 같거나 미리 듣기 구간 값이 이상하면 경고만 남긴다.
     /// </summary>
     public void Init()
     {
@@ -56,6 +56,11 @@ public class SongManager : MonoSingleton<SongManager>, IGameModule
                 Debug.LogError($"[SongManager] BPM 구간 오류: {song.SongId} ({song.name}) - {error}", song);
             foreach (string warning in warnings)
                 Debug.LogWarning($"[SongManager] BPM 구간 경고: {song.SongId} ({song.name}) - {warning}", song);
+
+            List<string> previewWarnings = new List<string>();
+            SongPreviewRules.Validate(song.PreviewStartMs, song.PreviewLengthMs, song.Length, previewWarnings);
+            foreach (string warning in previewWarnings)
+                Debug.LogWarning($"[SongManager] 미리 듣기 경고: {song.SongId} ({song.name}) - {warning}", song);
         }
     }
 

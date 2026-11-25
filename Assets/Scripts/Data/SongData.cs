@@ -27,6 +27,10 @@ public class SongData : ScriptableObject
     [SerializeField] private float promptBpm;
     [Tooltip("음원 시작부터 첫 박까지의 시간 (ms)")]
     [SerializeField] private int offsetMs;
+    [Tooltip("미리 듣기 시작 지점 (ms, 음원 기준). 0이면 곡 길이 × 0.35")]
+    [SerializeField] private int previewStartMs;
+    [Tooltip("미리 듣기 길이 (ms). 0이면 15초. 곡 끝을 넘으면 끝까지")]
+    [SerializeField] private int previewLengthMs;
     [SerializeField] private AudioClip clip;
     [Tooltip("선택. 없으면 회색 칸으로 표시")]
     [SerializeField] private Sprite cover;
@@ -86,6 +90,16 @@ public class SongData : ScriptableObject
 
     /// <summary>음원 시작부터 첫 박까지의 시간 (ms)</summary>
     public int OffsetMs => offsetMs;
+
+    /// <summary>미리 듣기 원본 값 (ms, 0이면 기본값). 재생에는 PreviewStart · PreviewLength를 쓴다</summary>
+    public int PreviewStartMs => previewStartMs;
+    public int PreviewLengthMs => previewLengthMs;
+
+    /// <summary>미리 듣기 시작 (초, 기본값 적용)</summary>
+    public double PreviewStart => SongPreviewRules.GetStart(previewStartMs, Length);
+
+    /// <summary>미리 듣기 길이 (초, 기본값 적용 · 곡 끝에서 자름)</summary>
+    public double PreviewLength => SongPreviewRules.GetLength(previewStartMs, previewLengthMs, Length);
 
     public AudioClip Clip => clip;
     public Sprite Cover => cover;
