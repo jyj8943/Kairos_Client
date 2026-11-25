@@ -8,8 +8,7 @@ using UnityEngine.UI;
 ///   보이는 구간 앞에서 시작해 구간 안으로 들어오는 롱노트도 배치한다 (ChartEditData.GetRange).
 /// - 숏노트는 Img_ShortNote, 롱노트는 Img_LongNote를 각각 풀에서 재사용한다. ChartEditSession.Data는 읽기만 하고 바꾸지 않는다.
 /// - 노트 모양 · 색은 인게임 노트와 같다 (11/20): 숏노트 = 라인 색 ShortNote + 광택, 롱노트 = 머리(숏노트 모양) + 몸통(라인 폭 × 0.70) + 가운데 선 + 꼬리 끝 막대(에디터만).
-///   시작과 끝의 y를 각각 그리드(BeatGridMath.BeatToY, 시간 기준)로 구해 (변속이 들어가도 맞다) 몸통은 시작 y(머리 가운데) ~ 끝 y − 숏노트 높이 ÷ 2(꼬리 끝 막대 위 끝, LongBodyTop)로 놓는다.
-///   같은 라인 끝 tick에 이어지는 다음 노트가 몸통 위에 올라앉아 보인다 (11/25).
+///   시작과 끝의 y를 각각 그리드(BeatGridMath.BeatToY, 시간 기준)로 구해 (변속이 들어가도 맞다) 몸통은 시작 y(머리 가운데) ~ 끝 y(꼬리 끝 막대 가운데)로 놓는다.
 /// - 롱노트 드래그 미리보기(하늘)도 여기서 그린다 (EditorNotePlacer가 SetPreview / ClearPreview를 부른다).
 /// - 마우스 미리 보기 (EditorNotePlacer가 매 프레임 ShowPlacePreview / ShowNoteHover / HideCursorPreview 중 하나를 부른다. 둘이 같이 보이지 않는다):
 ///   빈 칸 = Img_PlacePreview(하늘 점선 + 하늘 15% 채움, 숏노트 크기),
@@ -107,8 +106,9 @@ public class EditorNoteLayer : MonoBehaviour
     /// <summary>
     /// 라인에서 y(그리드 아래에서부터)에 그려진 노트를 찾는다 (지우기 · 흰 테두리용). 스냅과 상관없이 화면에 보이는 모양 기준이다.
     /// - 숏노트: 중심 y ± 노트 높이 ÷ 2 안
-    /// - 롱노트: 머리 아래 끝(시작 y − 노트 높이 ÷ 2) ~ 몸통 위 끝(끝 y − 노트 높이 ÷ 2, 짧으면 머리 위 끝) 안. 끝 tick 자리는 다음 노트의 자리다
-    /// 여러 개가 걸리면(노트 높이가 스냅 선 간격보다 클 때) 중심(롱노트는 시작 ~ 몸통 위 끝 구간)에 가장 가까운 노트를 고른다.
+    /// - 롱노트: 머리 아래 끝(시작 y − 노트 높이 ÷ 2) ~ 끝 tick y 아래 (LongHitTop, 짧으면 머리 위 끝까지).
+    ///   끝 tick y부터 위(꼬리 막대 위쪽 절반 포함)는 다음 노트 자리(끝 tick 칸)다. 끝 tick에 다음 노트가 있으면 그 노트가 그려진 범위 전체가 다음 노트 차지다.
+    /// 여러 개가 걸리면(노트 높이가 스냅 선 간격보다 클 때) 중심(롱노트는 시작 ~ 대상 구간 위 끝)에 가장 가까운 노트를 고른다.
     /// </summary>
     /// <returns>찾았으면 true</returns>
     public bool TryFindNoteAtLocalY(int lane, float y, out EditorNote found)
@@ -127,11 +127,11 @@ public class EditorNoteLayer : MonoBehaviour
             if (note.Lane != lane) continue;
 
             float startY = grid.BeatToLocalY(BeatGridMath.TickToBeat(note.Tick));
-            float bodyTopY = note.IsLong ? LongBodyTop(startY, grid.BeatToLocalY(BeatGridMath.TickToBeat(note.EndTick)), noteHeight) : startY;
-            if (y < startY - half || y > Mathf.Max(bodyTopY, startY + half)) continue;
+            float topY = note.IsLong ? GetLongHitTop(note) : startY;
+            if (y < startY - half || y > Mathf.Max(topY, startY + half)) continue;
 
-            // 시작 ~ 몸통 위 끝 구간 안이면 0, 밖이면 가까운 끝까지의 거리
-            float distance = y < startY ? startY - y : (y > bodyTopY ? y - bodyTopY : 0f);
+            // 시작 ~ 대상 구간 위 끝 안이면 0, 밖이면 가까운 끝까지의 거리
+            float distance = y < startY ? startY - y : (y > topY ? y - topY : 0f);
             if (distance >= bestDistance) continue;
 
             bestDistance = distance;
@@ -274,31 +274,49 @@ public class EditorNoteLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// 롱노트를 놓는다. 몸통 아래 끝(피벗) = 시작 y(머리 가운데), 위 끝 = LongBodyTop(끝 y − 숏노트 높이 ÷ 2, 꼬리 끝 막대 위 끝), 폭 = 라인 폭 × 0.70.
-    /// 머리는 숏노트 크기, 꼬리 끝 막대는 몸통 폭 × 6px. 짧으면 몸통 높이 0 (머리가 막대를 덮는다).
+    /// 롱노트를 놓는다. 몸통 아래 끝(피벗) = 시작 y(머리 가운데), 위 끝 = 끝 y(꼬리 끝 막대 가운데), 폭 = 라인 폭 × 0.70.
+    /// 머리는 숏노트 크기, 꼬리 끝 막대는 몸통 폭 × 6px. 시작 = 끝이면 몸통 높이 0 (머리가 막대를 덮는다).
     /// </summary>
     private void PlaceLong(Img_LongNote view, int lane, int startTick, int endTick)
     {
         float startY = grid.BeatToLocalY(BeatGridMath.TickToBeat(startTick));
         float endY = grid.BeatToLocalY(BeatGridMath.TickToBeat(endTick));
 
-        view.SetShape(LongBodyWidth, LongBodyTop(startY, endY, noteHeight) - startY, new Vector2(NoteWidth, noteHeight));
+        view.SetShape(LongBodyWidth, endY - startY, new Vector2(NoteWidth, noteHeight));
         view.RectTransform.anchoredPosition = new Vector2((lane + 0.5f) * grid.LaneWidth, startY);
     }
 
     /// <summary>
-    /// 롱노트 몸통 위 끝 y (순수 함수) = 끝 tick y − 숏노트 높이 ÷ 2. 시작 y보다 아래로는 내려가지 않는다 (몸통 길이 0 이상).
+    /// 커서 대상(호버 · 우클릭 삭제)으로 볼 롱노트 구간의 위 끝 y (순수 함수, 시작 y 이상). 그림(몸통 위 끝 = 끝 tick y)과 별개로, 끝 tick 칸을 다음 노트 자리로 비운다.
+    /// - 끝 tick에 다음 노트가 없으면: 끝 tick y 바로 아래(LongEndCellTolerancePx)까지. 꼬리 막대 아래쪽 절반은 이 롱노트, 끝 tick y부터는 놓을 자리
+    /// - 다음 노트가 있으면: 다음 노트가 그려진 범위 아래 끝(끝 tick y − 노트 높이 ÷ 2)까지
     /// </summary>
-    public static float LongBodyTop(float startY, float endY, float noteHeight)
+    public static float LongHitTop(float startY, float endY, float noteHeight, bool hasNextNote)
     {
-        return Mathf.Max(startY, endY - noteHeight * 0.5f);
+        float top = endY - (hasNextNote ? noteHeight * 0.5f : GameConstants.Editor.LongEndCellTolerancePx);
+        return Mathf.Max(startY, top);
+    }
+
+    /// <summary>이 롱노트의 LongHitTop (그리드 로컬 y). 끝 tick에서 시작하는 같은 라인 노트가 있는지 보고 정한다.</summary>
+    private float GetLongHitTop(EditorNote note)
+    {
+        return LongHitTop(grid.BeatToLocalY(BeatGridMath.TickToBeat(note.Tick)), grid.BeatToLocalY(BeatGridMath.TickToBeat(note.EndTick)),
+            noteHeight, data.Contains(note.Lane, note.EndTick));
+    }
+
+    /// <summary>y가 롱노트의 커서 대상 범위(LongHitTop, 짧으면 머리 위 끝)보다 위면 true. 숏노트는 항상 false</summary>
+    public bool IsAboveLongHit(EditorNote note, float y)
+    {
+        if (!note.IsLong || grid == null || data == null) return false;
+        float headTop = grid.BeatToLocalY(BeatGridMath.TickToBeat(note.Tick)) + noteHeight * 0.5f;
+        return y > Mathf.Max(GetLongHitTop(note), headTop);
     }
 
     // ───── 마우스 미리 보기 ─────
 
     /// <summary>
     /// 노트가 화면에 그려진 범위 (그리드 로컬, 흰 테두리 여백 전). 숏노트 = 숏노트 크기,
-    /// 롱노트 = 머리 아래 끝 ~ max(몸통 위 끝(꼬리 끝 막대 위 끝), 머리 위 끝), 폭 = 노트 폭(머리 폭).
+    /// 롱노트 = 머리 아래 끝 ~ max(꼬리 끝 막대 위 끝, 머리 위 끝), 폭 = 노트 폭(머리 폭).
     /// </summary>
     public Rect GetNoteRect(EditorNote note)
     {
@@ -309,13 +327,13 @@ public class EditorNoteLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// 노트 범위 계산 (순수 함수). 숏노트는 startY 가운데 noteHeight, 롱노트는 위 끝을 몸통 위 끝(LongBodyTop = 꼬리 끝 막대 위 끝)까지 넓힌다.
+    /// 노트 범위 계산 (순수 함수). 숏노트는 startY 가운데 noteHeight, 롱노트는 위 끝을 꼬리 끝 막대(endY + 막대 높이 ÷ 2)까지 넓힌다.
     /// </summary>
     public static Rect NoteRect(float centerX, float width, float startY, float endY, bool isLong, float noteHeight)
     {
         float bottom = startY - noteHeight * 0.5f;
         float top = startY + noteHeight * 0.5f;
-        if (isLong) top = Mathf.Max(top, LongBodyTop(startY, endY, noteHeight));
+        if (isLong) top = Mathf.Max(top, endY + GameConstants.Editor.EditorLongTailBarHeightPx * 0.5f);
         return new Rect(centerX - width * 0.5f, bottom, width, top - bottom);
     }
 

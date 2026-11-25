@@ -4,11 +4,11 @@ using UnityEngine.UI;
 /// <summary>
 /// 에디터 그리드의 롱노트 표시 (Img_LongNote 프리팹). EditorNoteLayer가 풀에서 꺼내 Init(lane, isPreview)와 SetShape(...)를 호출한다.
 /// 인게임 롱노트와 같은 모양 · 색에 에디터만의 꼬리 끝 막대를 더한다 (11/20, 기획서 3-6 「화면 구성」 노트).
-/// - 이 오브젝트의 Image가 몸통이다: Square 스프라이트(Simple, 테두리 없음), 폭 = 라인 폭 × 0.70, 세로 = 머리 가운데(시작 틱) ~ 끝 틱 − 숏노트 높이 ÷ 2 (11/25).
+/// - 이 오브젝트의 Image가 몸통이다: Square 스프라이트(Simple, 테두리 없음), 폭 = 라인 폭 × 0.70, 세로 = 머리 가운데(시작 틱) ~ 끝 틱.
 ///   색은 라인 색, 알파는 UIVerticalAlpha로 위(끝) 45% → 아래(시작) 70% (UITheme.longNoteTopAlpha / BottomAlpha, LongNoteAlphaAt과 같은 계산).
 ///   피벗은 아래 가운데라 anchoredPosition.y = 시작 틱 y다.
 /// - 자식 (그리는 순서 = 형제 순서): Img_BodyFrame(드래그 미리 보기만, 하늘 2px 테두리) &lt; Img_CenterLine(가운데 흰 선 2px, 흰색 78%)
-///   &lt; Img_LongTail(꼬리 끝 막대: 몸통 폭 × 6px, 모서리 3, 막대 위 끝 = 몸통 위 끝, 라인 색 100%) &lt; Img_LongHead(머리: 숏노트와 같은 모양 + 자식 Img_Shine, 시작 틱에 가운데).
+///   &lt; Img_LongTail(꼬리 끝 막대: 몸통 폭 × 6px, 모서리 3, 끝 틱에 가운데, 라인 색 100%) &lt; Img_LongHead(머리: 숏노트와 같은 모양 + 자식 Img_Shine, 시작 틱에 가운데).
 /// - 드래그 미리 보기(isPreview): 몸통 = 하늘(editorPreview) × editorPreviewFillAlpha(22%) + 하늘 테두리 2px, 가운데 선 없음,
 ///   머리 · 꼬리 끝 막대 = 하늘 × editorPreviewPartAlpha(55%).
 /// - 클릭은 노트가 아니라 GridArea에서 받으므로 모든 그래픽의 raycastTarget을 끈다.
@@ -113,8 +113,8 @@ public class Img_LongNote : MonoBehaviour
     }
 
     /// <summary>
-    /// 모양을 정한다. 몸통 = bodyWidth × 길이(몸통 위 끝 y − 시작 y, 0 이상), 머리 = 숏노트 크기(headSize)로 시작 틱(아래 끝)에 가운데,
-    /// 꼬리 끝 막대 = 몸통 폭 × 6px로 몸통 안쪽 위 가장자리 (막대 위 끝 = 몸통 위 끝). 위치(anchoredPosition)는 EditorNoteLayer가 정한다.
+    /// 모양을 정한다. 몸통 = bodyWidth × 길이(끝 y − 시작 y, 0 이상), 머리 = 숏노트 크기(headSize)로 시작 틱(아래 끝)에 가운데,
+    /// 꼬리 끝 막대 = 몸통 폭 × 6px로 끝 틱(위 끝)에 가운데. 위치(anchoredPosition)는 EditorNoteLayer가 정한다.
     /// </summary>
     public void SetShape(float bodyWidth, float length, Vector2 headSize)
     {
@@ -133,7 +133,7 @@ public class Img_LongNote : MonoBehaviour
         {
             RectTransform tailRect = tail.rectTransform;
             tailRect.anchorMin = tailRect.anchorMax = new Vector2(0.5f, 1f);
-            tailRect.pivot = new Vector2(0.5f, 1f);
+            tailRect.pivot = new Vector2(0.5f, 0.5f);
             tailRect.anchoredPosition = Vector2.zero;
             tailRect.sizeDelta = new Vector2(bodyWidth, GameConstants.Editor.EditorLongTailBarHeightPx);
             tail.type = Image.Type.Sliced;

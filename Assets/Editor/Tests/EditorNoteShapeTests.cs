@@ -44,22 +44,21 @@ public class EditorNoteShapeTests
 
         Rect longRect = EditorNoteLayer.NoteRect(75f, 146f, 100f, 300f, true, NoteHeight);
         Assert.AreEqual(89f, longRect.yMin, 1e-4f, "롱노트 아래 = 머리 아래 끝");
-        Assert.AreEqual(289f, longRect.yMax, 1e-4f, "롱노트 위 = 몸통 위 끝 = 꼬리 끝 막대 위 끝 (끝 y − 11)");
-        Rect nextRect = EditorNoteLayer.NoteRect(75f, 146f, 300f, 300f, false, NoteHeight);
-        Assert.AreEqual(nextRect.yMin, longRect.yMax, 1e-4f, "끝 tick 숏노트 아래 끝 = 롱노트 위 끝 (겹치지 않는다)");
+        Assert.AreEqual(303f, longRect.yMax, 1e-4f, "롱노트 위 = 꼬리 끝 막대 위 끝 (끝 y + 3)");
 
         Rect zeroRect = EditorNoteLayer.NoteRect(75f, 146f, 100f, 100f, true, NoteHeight);
         Assert.AreEqual(111f, zeroRect.yMax, 1e-4f, "길이 0 롱노트는 머리 위 끝까지 (막대는 머리 안에 숨는다)");
     }
 
-    /// <summary>롱노트 몸통 위 끝 = 끝 y − 노트 높이 ÷ 2, 시작 y보다 아래로 안 내려감 (몸통 길이 0 이상)</summary>
-    [TestCase(100f, 300f, 289f)]
-    [TestCase(100f, 111f, 100f)] // 딱 반 칸
-    [TestCase(100f, 105f, 100f)] // 반 칸보다 짧음
-    [TestCase(100f, 100f, 100f)]
-    public void LongBodyTop_InsetAndNotBelowStart(float startY, float endY, float expected)
+    /// <summary>롱노트 커서 대상 구간 위 끝: 다음 노트가 없으면 끝 y 바로 아래, 있으면 다음 노트 아래 끝(끝 y − 11). 시작 y보다 아래로 안 내려감</summary>
+    [TestCase(100f, 300f, false, 299.5f)]
+    [TestCase(100f, 300f, true, 289f)]
+    [TestCase(100f, 111f, true, 100f)] // 딱 반 칸
+    [TestCase(100f, 105f, true, 100f)] // 반 칸보다 짧음
+    [TestCase(100f, 100f, false, 100f)]
+    public void LongHitTop_EndTickBelongsToNextNote(float startY, float endY, bool hasNext, float expected)
     {
-        Assert.AreEqual(expected, EditorNoteLayer.LongBodyTop(startY, endY, NoteHeight), 1e-4f);
+        Assert.AreEqual(expected, EditorNoteLayer.LongHitTop(startY, endY, NoteHeight, hasNext), 1e-4f);
     }
 
     [Test]

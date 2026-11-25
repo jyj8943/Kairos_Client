@@ -578,8 +578,8 @@ public class LongNotePlayTests
     }
 
     /// <summary>
-    /// P15: 끝에 숏노트가 이어진 롱노트의 그림 (11/25). 내려오는 중 · 누르는 동안 모두 몸통 위 끝 = 숏노트 아래 끝 (1px 이내),
-    /// 끝 시각 직전에는 몸통 길이 0, x1.0에서 1/4박 롱노트 몸통 길이 0 이상, 다음 노트 머리가 앞 몸통보다 앞에 그려진다.
+    /// P15: 롱노트 그림 (11/25 결정 변경). 내려오는 중 · 누르는 동안 모두 몸통 위 끝 = 끝 시각 T 위치(= T 숏노트 가운데, 1px 이내),
+    /// 몸통 위 끝이 판정선에 닿는 곡 시간 = 끝 시각, x1.0에서 1/4박 롱노트 몸통 길이 0 이상, 다음 노트 머리가 앞 몸통보다 앞에 그려진다.
     /// </summary>
     [UnityTest]
     public IEnumerator P15_TouchingNextNote_Drawing()
@@ -596,31 +596,49 @@ public class LongNotePlayTests
         yield return null;
 
         float px = gear.UnitsPerReferencePx;
-        float GapPx() => (shortViews[s].transform.localPosition.y - shortViews[s].GetComponent<SpriteRenderer>().size.y * 0.5f - longViews[n].TopY) / px;
-        float fallingGap = GapPx();
-        float fallingInset = (gear.JudgeLineY + (float)(note.EndTime - layer.LastRefreshSongTime) * layer.ScrollSpeed - longViews[n].TopY) / px;
+        float GapPx() => (shortViews[s].transform.localPosition.y - longViews[n].TopY) / px;
+        float InsetPx() => (gear.JudgeLineY + (float)(note.EndTime - layer.LastRefreshSongTime) * layer.ScrollSpeed - longViews[n].TopY) / px;
+        // 몸통 위 끝이 이 속도로 내려와 판정선에 닿는 곡 시간 − 끝 시각 (ms)
+        double TouchErrorMs() => (layer.LastRefreshSongTime + (longViews[n].TopY - gear.JudgeLineY) / layer.ScrollSpeed - note.EndTime) * 1000.0;
+        float fallingGap = GapPx(), fallingInset = InsetPx();
+        double fallingTouchMs = TouchErrorMs();
         float quarterBody = longViews[q].Body.size.y / px;
         int bodyOrder = longViews[n].Body.sortingOrder, headOrder = shortViews[s].GetComponent<SpriteRenderer>().sortingOrder;
 
         yield return PressAt(0, note.Time);
         yield return WaitSongTime(note.Time + 0.3);
         yield return null;
-        float heldGap = GapPx(), heldHead = longViews[n].HeadY, heldBottom = longViews[n].BottomY;
+        float heldGap = GapPx(), heldInset = InsetPx(), heldHead = longViews[n].HeadY, heldBottom = longViews[n].BottomY;
+        double heldTouchMs = TouchErrorMs();
 
-        // 끝 + 20ms ~ : 위 끝이 판정선보다 내려왔으므로 몸통 길이 0, 머리는 뗄 때까지 남는다
-        yield return WaitSongTime(note.EndTime + 0.02);
-        yield return null;
+        // 끝 시각 앞뒤: 몸통이 보이는 마지막 프레임은 끝 시각 앞, 길이 0인 첫 프레임은 끝 시각 뒤다. 머리는 뗄 때까지 남는다
+        yield return WaitSongTime(note.EndTime - 0.1);
+        double lastVisible = double.NaN, firstZero = double.NaN;
+        float deadline = TestSpeed.Deadline(5f);
+        while (double.IsNaN(firstZero))
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "몸통 길이 0 대기 시간 초과");
+            yield return null;
+            if (longViews[n].Body.size.y > 0f) lastVisible = layer.LastRefreshSongTime;
+            else firstZero = layer.LastRefreshSongTime;
+        }
         bool stillHeld = judge.GetLongState(n) == LongNoteState.Held;
         float endBody = longViews[n] != null ? longViews[n].Body.size.y / px : -1f;
         float endHead = longViews[n] != null ? longViews[n].HeadY : float.NaN;
         scene.TestRelease(0, note.EndTime + 0.05);
 
-        Debug.Log($"[LongNoteTest] P15 그림 (x1.0): 숏노트 아래 끝 − 몸통 위 끝 = 내려오는 중 {fallingGap:0.000}px · 누르는 동안 {heldGap:0.000}px, 끝 시각 − 몸통 위 끝 {fallingInset:0.000}px, " +
-                  $"1/4박 롱노트 몸통 {quarterBody:0.00}px, 끝 + 20ms 몸통 {endBody:0.00}px(누르는 중 {stillHeld}), 순서 몸통 {bodyOrder} < 머리 {headOrder}");
+        Debug.Log($"[LongNoteTest] P15 그림 (x1.0): T 숏노트 가운데 − 몸통 위 끝 = 내려오는 중 {fallingGap:0.000}px · 누르는 동안 {heldGap:0.000}px, 끝 시각 위치 − 몸통 위 끝 = {fallingInset:0.000}px · {heldInset:0.000}px, " +
+                  $"판정선에 닿는 시각 − 끝 시각 = {fallingTouchMs:0.000}ms · {heldTouchMs:0.000}ms (몸통 마지막 프레임 {(lastVisible - note.EndTime) * 1000.0:0.0}ms, 길이 0 첫 프레임 {(firstZero - note.EndTime) * 1000.0:+0.0}ms), " +
+                  $"1/4박 롱노트 몸통 {quarterBody:0.00}px, 끝 시각 뒤 몸통 {endBody:0.00}px(누르는 중 {stillHeld}), 순서 몸통 {bodyOrder} < 머리 {headOrder}");
 
         Assert.AreEqual(0f, fallingGap, 1f, "내려오는 중");
         Assert.AreEqual(0f, heldGap, 1f, "누르는 동안");
-        Assert.AreEqual(GameConstants.Play.LongNoteEndInsetPx, fallingInset, 0.05f, "끝 시각보다 11px 아래");
+        Assert.AreEqual(0f, fallingInset, 1f, "내려오는 중: 몸통 위 끝 = 끝 시각 위치");
+        Assert.AreEqual(0f, heldInset, 1f, "누르는 동안: 몸통 위 끝 = 끝 시각 위치");
+        Assert.AreEqual(0.0, fallingTouchMs, 1.0, "판정선에 닿는 시각 = 끝 시각 (내려오는 중)");
+        Assert.AreEqual(0.0, heldTouchMs, 1.0, "판정선에 닿는 시각 = 끝 시각 (누르는 동안)");
+        Assert.LessOrEqual(lastVisible, note.EndTime, "몸통은 끝 시각까지 보인다");
+        Assert.GreaterOrEqual(firstZero, note.EndTime - 0.001, "끝 시각 전에 몸통이 사라지지 않는다");
         Assert.GreaterOrEqual(quarterBody, 0f, "1/4박 롱노트 몸통 길이");
         Assert.AreEqual(gear.JudgeLineY, heldHead, 0.001f, "누르는 동안 머리 = 판정선");
         Assert.AreEqual(gear.JudgeLineY, heldBottom, 0.001f, "누르는 동안 몸통 아래 끝 = 판정선");

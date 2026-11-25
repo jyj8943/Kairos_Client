@@ -10,7 +10,7 @@ using UnityEngine;
 ///   판정(키로 친 것)되거나 화면 아래로 벗어나면 돌려놓는다. 플레이 중 Instantiate·Destroy와 매 프레임 할당이 없다.
 /// - 롱노트 (롱노트 판정 세부 규칙 4)
 ///   - 머리(숏노트 모양) + 몸통(76px 띠)이다 (LongNoteView). 머리(시작)·꼬리(끝) y를 시작·끝 시간의 스크롤 거리로 각각 구해 넘기면,
-///     몸통은 머리 가운데 ~ 끝 시각 y − LongNoteEndInsetPx(숏노트 높이의 절반)를 채운다 (꼬리는 따로 그리지 않는다, 11/25).
+///     몸통은 머리 가운데 ~ 끝 시각 y − LongNoteEndInsetPx(지금 0)를 채운다 (꼬리는 따로 그리지 않는다, 11/25).
 ///   - 누르는 동안(Held): 머리를 판정선에 고정해 계속 보이고, 몸통 위 끝만 내려오며 점점 짧아진다 (NoteShape.ResolveLongNoteY).
 ///   - 끝 판정이 나면(Done) 바로 돌려놓는다. 시작 MISS(Missed)면 회색으로 바꿔 꼬리가 화면 아래로 벗어나면 돌려놓는다.
 /// - 풀은 Init에서 채보를 보고 동시에 보일 최대 수만큼 미리 만든다 (롱노트는 끝까지 화면에 남는 시간을 넣어 센다).
@@ -206,7 +206,7 @@ public class NoteLayer : MonoBehaviour
             }
 
             float tailY = judgeLineY + (float)((scroll.PositionAt(note.EndTime) - songPosition) * ScrollSpeed);
-            // 몸통은 끝 시각보다 숏노트 반 칸 아래에서 끊는다. 누르는 동안 머리는 판정선에 붙어 보이고, 몸통 위 끝은 판정선 아래로 내려가지 않는다
+            // 몸통 위 끝 = 끝 시각 위치 − endInset(지금 0). 누르는 동안 머리는 판정선에 붙어 보이고, 몸통 위 끝은 판정선 아래로 내려가지 않는다
             NoteShape.ResolveLongNoteY(state, judgeLineY, endInset, ref headY, ref tailY);
             if (state != LongNoteState.Held && tailY < despawnY)
             {

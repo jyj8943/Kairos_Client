@@ -348,7 +348,7 @@ public class LongNoteEditorSceneTests
         Assert.Less(maxErrorMs, 1.0);
     }
 
-    /// <summary>E7: 롱노트 머리 가운데 = 시작 틱 y (숏노트와 같은 자리), 꼬리 끝 막대 위 끝 = 몸통 위 끝 = 끝 틱 y − 노트 높이 ÷ 2 (높이 6, 폭 = 몸통 폭, 11/25)</summary>
+    /// <summary>E7: 롱노트 머리 가운데 = 시작 틱 y (숏노트와 같은 자리), 꼬리 끝 막대 가운데 = 몸통 위 끝 = 끝 틱 y (높이 6, 폭 = 몸통 폭)</summary>
     [UnityTest]
     public IEnumerator E7_HeadTailPosition()
     {
@@ -368,16 +368,16 @@ public class LongNoteEditorSceneTests
             float endY = grid.BeatToLocalY(BeatGridMath.TickToBeat(note.EndTick));
             Vector2 head = Edges(view.HeadRect, view.RectTransform);
             Vector2 tail = Edges(view.TailRect, view.RectTransform);
-            float bodyTop = Mathf.Max(startY, endY - half);
+            float barHalf = GameConstants.Editor.EditorLongTailBarHeightPx * 0.5f;
             Debug.Log($"[LongNoteEditorTest] E7 라인{note.Lane} {note.Tick / (float)T}~{note.EndTick / (float)T}박: 머리 {head.x:0.00}~{head.y:0.00} / 시작 숏노트 {startY - half:0.00}~{startY + half:0.00}, " +
                       $"꼬리 막대 {tail.x:0.00}~{tail.y:0.00} / 끝 y {endY:0.00}, 몸통 {view.RectTransform.anchoredPosition.y:0.00} + {view.RectTransform.rect.height:0.00}");
 
             Assert.AreEqual(startY - half, head.x, 0.01, "머리 아래 = 시작 숏노트 아래");
             Assert.AreEqual(startY + half, head.y, 0.01, "머리 위 = 시작 숏노트 위");
-            Assert.AreEqual(bodyTop - GameConstants.Editor.EditorLongTailBarHeightPx, tail.x, 0.01, "막대 아래");
-            Assert.AreEqual(bodyTop, tail.y, 0.01, "막대 위 = 몸통 위 끝");
+            Assert.AreEqual(endY - barHalf, tail.x, 0.01, "막대 아래");
+            Assert.AreEqual(endY + barHalf, tail.y, 0.01, "막대 위");
             Assert.AreEqual(startY, view.RectTransform.anchoredPosition.y, 0.01, "몸통 아래 = 머리 가운데");
-            Assert.AreEqual(bodyTop - startY, view.RectTransform.rect.height, 0.01, "몸통 위 = 끝 틱 − 노트 높이 ÷ 2");
+            Assert.AreEqual(endY - startY, view.RectTransform.rect.height, 0.01, "몸통 위 = 끝 틱");
             Assert.AreEqual(view.RectTransform.rect.width, view.TailRect.rect.width, 0.01, "막대 폭 = 몸통 폭");
         }
     }
@@ -454,16 +454,15 @@ public class LongNoteEditorSceneTests
         yield return null;
 
         float barTopBeat = 6f;
-        float half = noteLayer.NoteHeight * 0.5f;
         var cases = new (string name, int lane, float beat, float yOffset, bool expectNote, int expectLane)[]
         {
             ("빈 칸", 0, 8f, 0f, false, -1),
             ("숏노트", 1, 4f, 0f, true, 1),
             ("롱노트 머리", 2, 4f, -5f, true, 2),
             ("롱노트 몸통", 2, 5f, 0f, true, 2),
-            ("롱노트 꼬리 막대", 2, barTopBeat, -half - 2f, true, 2),
-            ("롱노트 몸통 위 끝 바로 위", 2, barTopBeat, -half + 2f, false, -1),
+            ("롱노트 꼬리 막대 아래쪽 절반", 2, barTopBeat, -2f, true, 2),
             ("롱노트 끝 tick", 2, barTopBeat, 0f, false, -1),
+            ("롱노트 꼬리 막대 위쪽 절반 (끝 tick 칸)", 2, barTopBeat, 2f, false, -1),
         };
 
         int bothVisibleFrames = 0;
@@ -602,7 +601,7 @@ public class LongNoteEditorSceneTests
         Debug.Log("[LongNoteEditorTest] E10 드래그 미리 보기: " + info);
 
         Assert.AreEqual(grid.LaneWidth * 0.7f, preview.RectTransform.rect.width, 0.01);
-        Assert.AreEqual(grid.BeatToLocalY(6f) - grid.BeatToLocalY(4f) - noteLayer.NoteHeight * 0.5f, preview.RectTransform.rect.height, 0.01, "머리 가운데 ~ 끝 − 노트 높이 ÷ 2");
+        Assert.AreEqual(grid.BeatToLocalY(6f) - grid.BeatToLocalY(4f), preview.RectTransform.rect.height, 0.01, "머리 가운데 ~ 끝");
         Assert.AreEqual(theme.editorPreview, preview.BodyColor);
         Assert.AreEqual(0.22f, bottom, 1e-4f);
         Assert.AreEqual(0.22f, top, 1e-4f);
@@ -623,7 +622,8 @@ public class LongNoteEditorSceneTests
 
     /// <summary>
     /// E11: 롱노트(4~8박) 끝 8박에 이어 놓기 (11/25). 숏노트·롱노트 성공, 7.75박은 겹침으로 거부. 끝 tick 우클릭은 다음 노트만 지운다.
-    /// 그림: 몸통 위 끝 = 꼬리 막대 위 끝 = 다음 노트 아래 끝. 저장 → 다시 열어도 노트가 그대로다.
+    /// 그림: 몸통 위 끝 = 꼬리 막대 가운데 = 끝 tick y. 커서 대상: 끝 tick 칸 = 다음 노트(없으면 놓을 자리), 꼬리 막대 아래쪽 · 몸통 = 이 롱노트.
+    /// 저장 → 다시 열어도 노트가 그대로다.
     /// </summary>
     [UnityTest]
     public IEnumerator E11_TouchingNextNote()
@@ -646,30 +646,69 @@ public class LongNoteEditorSceneTests
         // 그림
         grid.SetCurrentBeat(6f);
         yield return null;
-        System.Text.StringBuilder log = new System.Text.StringBuilder("[LongNoteEditorTest] E11 그림 (라인 | 몸통 위 끝 | 꼬리 막대 위 끝 | 다음 노트 아래 끝)\n");
+        System.Text.StringBuilder log = new System.Text.StringBuilder("[LongNoteEditorTest] E11 그림 (라인 | 몸통 위 끝 | 꼬리 막대 가운데 | 끝 tick y | 흰 테두리 범위 위 끝)\n");
         for (int lane = 0; lane < 2; lane++)
         {
             EditorNote first = new EditorNote(lane, T * 4, T * 8);
             Img_LongNote view = FindView(first);
             Assert.IsNotNull(view);
             float bodyTop = view.RectTransform.anchoredPosition.y + view.RectTransform.rect.height;
-            float tailTop = Edges(view.TailRect, view.RectTransform).y;
-            float nextBottom = noteLayer.GetNoteRect(lane == 0 ? nextShort : nextLong).yMin;
-            log.Append($"  라인 {lane} | {bodyTop:0.00} | {tailTop:0.00} | {nextBottom:0.00}\n");
-            Assert.AreEqual(nextBottom, bodyTop, 0.01, "몸통 위 끝 = 다음 노트 아래 끝");
-            Assert.AreEqual(bodyTop, tailTop, 0.01, "막대 위 끝 = 몸통 위 끝");
-            Assert.AreEqual(bodyTop, noteLayer.GetNoteRect(first).yMax, 0.01, "흰 테두리 범위 위 끝 = 몸통 위 끝");
+            Vector2 tail = Edges(view.TailRect, view.RectTransform);
+            float tailCenter = (tail.x + tail.y) * 0.5f;
+            float endY = grid.BeatToLocalY(8f);
+            float hoverTop = noteLayer.GetNoteRect(first).yMax;
+            log.Append($"  라인 {lane} | {bodyTop:0.00} | {tailCenter:0.00} | {endY:0.00} | {hoverTop:0.00}\n");
+            Assert.AreEqual(endY, bodyTop, 0.01, "몸통 위 끝 = 끝 tick y");
+            Assert.AreEqual(endY, tailCenter, 0.01, "꼬리 막대 가운데 = 끝 tick y");
+            Assert.AreEqual(tail.y, hoverTop, 0.01, "흰 테두리 범위 위 끝 = 꼬리 막대 위 끝");
         }
 
         // 끝 tick 자리의 대상은 다음 노트, 우클릭하면 다음 노트만 지운다
         Assert.IsTrue(placer.TryFindNoteAtScreen(ScreenPoint(0, 8f), out EditorNote target) && target.Tick == T * 8, "끝 tick = 다음 숏노트");
         Assert.IsTrue(placer.TryFindNoteAtScreen(ScreenPoint(1, 8f), out target) && target.Tick == T * 8, "끝 tick = 다음 롱노트");
         Assert.IsFalse(placer.TryFindNoteAtScreen(ScreenPoint(2, 8f), out _), "비어 있으면 대상 없음");
+
+        // 커서 위치별 대상 (라인 0 다음 숏노트, 1 다음 롱노트, 2 다음 노트 없음). y는 끝 tick 기준 px
+        float half = noteLayer.NoteHeight * 0.5f;
+        log.Append("  커서 (끝 tick 기준 px) | 다음 숏노트 | 다음 롱노트 | 다음 노트 없음\n");
+        foreach (var c in new (string name, float y, bool nextTarget, bool longIfEmpty)[]
+        {
+            ("끝 tick 칸 위쪽 +5", 5f, true, false),
+            ("꼬리 막대 위쪽 +2", 2f, true, false),
+            ("끝 tick 0", 0f, true, false),
+            ("꼬리 막대 아래쪽 −2", -2f, true, true),
+            ("다음 노트 아래쪽 −8", -8f, true, true),
+            ("몸통 −15", -half - 4f, false, true),
+            ("몸통 가운데 −200", -200f, false, true),
+        })
+        {
+            string[] cells = new string[3];
+            for (int lane = 0; lane < 3; lane++)
+            {
+                Vector2 screen = ScreenPoint(lane, 8f) + new Vector2(0f, c.y * ScreenPerLocal());
+                placer.PointerScreenOverride = screen;
+                yield return null;
+                bool hit = placer.TryFindNoteAtScreen(screen, out EditorNote found);
+                bool hasNext = lane < 2;
+                bool expectNext = hasNext && c.nextTarget;
+                bool expectLong = !expectNext && (hasNext || c.longIfEmpty);
+                cells[lane] = !hit ? $"놓을 자리({placer.CursorState})" : found.Tick == T * 8 ? "다음 노트" : "이 롱노트";
+                Assert.AreEqual(expectNext || expectLong, hit, $"{c.name} 라인 {lane}");
+                if (hit) Assert.AreEqual(expectNext ? T * 8 : T * 4, found.Tick, $"{c.name} 라인 {lane}");
+                Assert.AreEqual(hit ? EditorNotePlacer.CursorPreviewState.NoteHover : EditorNotePlacer.CursorPreviewState.Place, placer.CursorState, $"{c.name} 라인 {lane} 미리 보기");
+            }
+            log.Append($"  {c.name} | {string.Join(" | ", cells)}\n");
+        }
+        placer.PointerScreenOverride = null;
         RightClick(2, 8f);
         Assert.IsTrue(TryFind(2, T * 4, out _), "끝 tick 우클릭으로 롱노트가 지워지지 않는다");
         RightClick(0, 8f);
         Assert.IsFalse(TryFind(0, T * 8, out _), "다음 숏노트만 지워짐");
         Assert.IsTrue(TryFind(0, T * 4, out _), "앞 롱노트는 남음");
+        session.Undo();
+        Vector2 barPoint = ScreenPoint(2, 8f) - new Vector2(0f, 2f * ScreenPerLocal());
+        ExecuteEvents.Execute(placer.gameObject, Pointer(barPoint, PointerEventData.InputButton.Right), ExecuteEvents.pointerClickHandler);
+        Assert.IsFalse(TryFind(2, T * 4, out _), "꼬리 막대 아래쪽 우클릭은 그 롱노트를 지운다");
         session.Undo();
         yield return null;
 

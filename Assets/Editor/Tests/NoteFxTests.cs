@@ -371,7 +371,7 @@ public class NoteFxTests
 
         head = -2f; tail = judgeLine + 0.05f;
         NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, inset, ref head, ref tail);
-        Assert.AreEqual(judgeLine, tail, "끝 시각이 판정선 위 반 칸 안: 몸통 길이 0");
+        Assert.AreEqual(judgeLine, tail, "끝 시각이 판정선 위 inset 안: 몸통 길이 0");
 
         head = -2f; tail = -3.6f;
         NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, inset, ref head, ref tail);
@@ -387,22 +387,26 @@ public class NoteFxTests
 
             head = -4f; tail = -3.95f;
             NoteShape.ResolveLongNoteY(state, judgeLine, inset, ref head, ref tail);
-            Assert.AreEqual(head, tail, state + " 반 칸보다 짧으면 몸통 길이 0");
+            Assert.AreEqual(head, tail, state + " inset보다 짧으면 몸통 길이 0");
+        }
+
+        // 지금 값(inset 0): 내려오는 중 · 누르는 동안 · 시작 MISS 모두 몸통 위 끝 = 끝 시각 y
+        float gameInset = NoteShape.LongNoteEndInset(10f / 1080f);
+        foreach (LongNoteState state in new[] { LongNoteState.Waiting, LongNoteState.Held, LongNoteState.Missed })
+        {
+            head = -2f; tail = 0.5f;
+            NoteShape.ResolveLongNoteY(state, judgeLine, gameInset, ref head, ref tail);
+            Assert.AreEqual(0.5f, tail, 1e-6f, state + " 몸통 위 끝 = 끝 시각 y");
         }
     }
 
-    /// <summary>inset = 숏노트 높이의 절반 (인게임 22px → 11px). Note 프리팹의 실제 높이 절반과 1px 안</summary>
+    /// <summary>inset = 0 (11/25 결정 변경: 몸통 위 끝이 판정선에 닿는 때 = 끝 시각, 끝 키음과 박자를 맞춘다)</summary>
     [Test]
     public void LongNote_EndInset()
     {
         float px = 10f / 1080f;
-        Assert.AreEqual(GameConstants.Play.ShortNoteHeightPx * 0.5f, GameConstants.Play.LongNoteEndInsetPx, 1e-6f);
-        Assert.AreEqual(11f, GameConstants.Play.LongNoteEndInsetPx, 1e-6f);
-        Assert.AreEqual(11f * px, NoteShape.LongNoteEndInset(px), 1e-6f);
-
-        GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/InGameScene/Note.prefab");
-        float halfPx = prefab.GetComponent<SpriteRenderer>().size.y * 0.5f / px;
-        Assert.AreEqual(halfPx, GameConstants.Play.LongNoteEndInsetPx, 1f, "숏노트 실제 높이 절반과 1px 안");
+        Assert.AreEqual(0f, GameConstants.Play.LongNoteEndInsetPx);
+        Assert.AreEqual(0f, NoteShape.LongNoteEndInset(px));
     }
 
     /// <summary>가장 낮은 배속(x1.0)에서 빠른 곡의 1/4박 롱노트도 몸통 길이가 0 이상 (화면 위 끝 ~ 판정선 900px, 2.69초)</summary>
