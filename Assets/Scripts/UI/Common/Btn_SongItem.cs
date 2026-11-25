@@ -10,9 +10,9 @@ using UnityEngine.UI;
 /// - 키보드(↑↓)로 옮기거나 마우스로 클릭해 선택되면 곧바로 그 곡을 고른다.
 ///   마우스를 올리기만 해서는 고르지 않는다 (11/24: 곡 선택 목록 프리팹에서 UISelectOnHover를 뺐다).
 /// - 고른 곡은 배경·글자색을 바꾼다. 에디터 프리팹은 프리팹 색, 곡 선택 프리팹(useMenuTheme)은 UITheme 색
-///   (보통 = 패널 흰색 58% + 기본·보조 글자, 고름 = 포인트색 18% 바탕 + 왼쪽 막대).
+///   (보통 = 패널 흰색 58% + 기본·보조 글자, 고름 = 패널 + 난이도 색 16% 칠 + 왼쪽 막대).
 /// - 곡 선택 프리팹만 쓰는 칸 (비워 두면 쓰지 않는다, 기획서 3-3 ② 11/17):
-///   왼쪽 하늘색 막대(selectBar), 고르면 크게(높이·앨범·제목 크기), 둘째 줄 아티스트(showArtist),
+///   고르면 왼쪽 막대(selectBar)와 바탕 칠(rowTint 16%)이 지금 난이도 색(SetAccent, 11/25), 고르면 크게(높이·앨범·제목 크기), 둘째 줄 아티스트(showArtist),
 ///   오른쪽 난이도 칸 3개 (11/25): 레벨 숫자(고른 곡 24, 나머지 20), 기록이 있으면 숫자 밑에 작은 랭크(높이 18). 채보가 없는 난이도는 빈칸.
 ///   고른 곡의 고른 난이도 숫자는 난이도 색 + 밑줄 2px. FC는 목록에 띄우지 않는다. BPM은 쓰지 않는다.
 /// </summary>
@@ -50,7 +50,9 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     [SerializeField] private bool useMenuTheme;
     [Tooltip("둘째 줄에 BPM·길이 대신 아티스트를 쓴다")]
     [SerializeField] private bool showArtist;
-    [Tooltip("고른 곡 왼쪽 하늘색 막대 (Img_SelectBar)")]
+    [Tooltip("고른 곡 바탕에 겹치는 난이도 색 칠 (Img_RowTint)")]
+    [SerializeField] private Image rowTint;
+    [Tooltip("고른 곡 왼쪽 난이도 색 막대 (Img_SelectBar)")]
     [SerializeField] private Image selectBar;
     [SerializeField] private LayoutElement layoutElement;
     [Tooltip("높이: 보통 / 고름 (0이면 바꾸지 않는다)")]
@@ -73,6 +75,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
 
     private Button button;
     private string chosenDifficulty;
+    private Color accent;
     private Color normalBackgroundColor;
     private Color normalTitleColor;
     private Color normalInfoColor;
@@ -169,12 +172,21 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         RefreshLevels();
     }
 
-    /// <summary>고른 난이도 (고른 곡일 때만 보인다): 숫자를 난이도 색 + 밑줄로. 없으면 null</summary>
-    public void SetChosenDifficulty(string difficulty)
+    /// <summary>
+    /// 고른 난이도와 강조 색 (곡 선택이 UITheme.GetChartAccent로 정해 넘긴다). 고른 곡일 때만 보인다: 왼쪽 막대 · 바탕 칠 · 고른 난이도 숫자 + 밑줄.
+    /// </summary>
+    /// <param name="difficulty">고른 난이도 이름 (없으면 null)</param>
+    public void SetAccent(string difficulty, Color accent)
     {
         chosenDifficulty = difficulty;
+        this.accent = accent;
+        if (useMenuTheme) UIThemePaint.SelectableRow(background, rowTint, selectBar, IsChosen, accent);
         RefreshLevels();
     }
+
+    /// <summary>강조 색이 칠해진 것 (확인용): 막대 · 바탕 칠</summary>
+    public Image SelectBar => selectBar;
+    public Image RowTint => rowTint;
 
     /// <summary>레벨 숫자 크기·색·밑줄을 고른 곡·고른 난이도에 맞춘다</summary>
     private void RefreshLevels()
@@ -188,13 +200,13 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
             bool marked = IsChosen && column.levelText.text.Length > 0 && !string.IsNullOrEmpty(chosenDifficulty)
                 && string.Equals(column.difficulty, chosenDifficulty, StringComparison.OrdinalIgnoreCase);
             if (normalLevelSize > 0f && chosenLevelSize > 0f) column.levelText.fontSize = IsChosen ? chosenLevelSize : normalLevelSize;
-            if (marked) column.levelText.color = UITheme.Current.GetDifficulty(column.difficulty);
+            if (marked) column.levelText.color = accent;
             else UIThemePaint.Text(column.levelText, IsChosen ? UITextLevel.Primary : UITextLevel.Description);
 
             if (column.underline == null) continue;
             column.underline.gameObject.SetActive(marked);
             if (!marked) continue;
-            column.underline.color = UITheme.Current.GetDifficulty(column.difficulty);
+            column.underline.color = accent;
             RectTransform line = column.underline.rectTransform;
             line.sizeDelta = new Vector2(column.levelText.GetPreferredValues(column.levelText.text).x + UnderlineExtraWidth, line.sizeDelta.y);
         }
@@ -209,7 +221,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         IsChosen = chosen;
         if (useMenuTheme)
         {
-            UIThemePaint.SelectableRow(background, selectBar, chosen);
+            UIThemePaint.SelectableRow(background, rowTint, selectBar, chosen, accent);
             UIThemePaint.Text(titleText, UITextLevel.Primary);
             UIThemePaint.Text(infoText, UITextLevel.Secondary);
         }

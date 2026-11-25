@@ -107,6 +107,9 @@ public class SongSelectLayoutPlayTests
                 }
             }
 
+            // 난이도 전환: 탭 · 패널 · 목록 줄 막대 · 줄 바탕 · 숫자 밑줄이 한 번에 같은 색 (HARD는 공식 채보가 없어 메모리 채보로 채운다)
+            CheckAccents(view, song, log);
+
             // BPM: Main / Range, TIME 위치 고정
             RectTransform time = Find(view, "Txt_Time");
             float timeY = Center(time).y;
@@ -153,6 +156,16 @@ public class SongSelectLayoutPlayTests
             Assert.IsTrue(name.IsScrolling, "긴 채보 이름은 흐른다");
             Assert.AreEqual("148.2", view.BpmText, "그 채보의 구간 중 150.61과 가까운 148.2");
             CheckAll(view, "나만의 채보", log);
+            Btn_MyChartItem row = null;
+            foreach (Btn_MyChartItem item in view.MyChartRows)
+            {
+                Assert.AreEqual(item.IsChosen, item.RowTint.gameObject.activeSelf && item.SelectBar.gameObject.activeSelf, "고른 채보 줄만 강조");
+                if (item.IsChosen) row = item;
+            }
+            string custom = Hex(UITheme.Current.difficultyCustom);
+            log.Append($"| 나만의 채보 | 위 줄 {Hex(view.MyChartTopLineColor)} · 레벨 {Hex(view.MyChartLevelColor)} · 머리 칠 {Hex(view.MyChartHeaderTintColor)} | 패널 {Hex(view.RecordTintColor)} | 막대 {Hex(row.SelectBar.color)} | 바탕 {Hex(row.RowTint.color)} |\n");
+            foreach (Color color in new[] { view.MyChartTopLineColor, view.MyChartLevelColor, row.SelectBar.color }) Assert.AreEqual(custom, Hex(color), "CUSTOM 보라");
+            foreach (Color color in new[] { view.MyChartHeaderTintColor, view.RecordTintColor, row.RowTint.color }) Assert.AreEqual(Hex(UITheme.WithAlpha(UITheme.Current.difficultyCustom, 0.16f)), Hex(color), "CUSTOM 보라 16%");
 
             // ── 새 채보 생성
             int addRow = view.MyChartNavigator.AddRowOfGroup(view.ChosenStop.Group);
@@ -165,6 +178,7 @@ public class SongSelectLayoutPlayTests
             StringAssert.IsMatch(@"^곡 \d\d / \d\d · 새 채보 생성$", view.MyChartCountText.text);
             Assert.AreEqual("새 채보 생성", view.StartLabel);
             Rect newCard = CardRect(view, "Img_NewChartCard", "Img_NewChartCard");
+            Assert.AreEqual(Hex(UITheme.WithAlpha(UITheme.Current.difficultyCustom, 0.08f)), Hex(view.NewChartCardColor), "새 채보 카드 칠 8%");
             CheckAll(view, "새 채보 생성", log);
 
             log.Append("| 상태 | 위끝 | 아래끝 | x | 폭 |\n|---|---|---|---|---|\n");
@@ -211,6 +225,46 @@ public class SongSelectLayoutPlayTests
     }
 
     // ───── 검사 ─────
+
+    private static string Hex(Color color) => "#" + ColorUtility.ToHtmlStringRGBA(color);
+
+    /// <summary>EASY → NORMAL → HARD로 ←→ 이동하며 강조 색이 모두 같은지 표로 남긴다. 끝나면 NORMAL로 되돌린다</summary>
+    private static void CheckAccents(Canvas_SongSelect view, SongData song, StringBuilder log)
+    {
+        UITheme theme = UITheme.Current;
+        Btn_SongItem item = null;
+        foreach (Btn_SongItem candidate in view.SongItems) if (candidate.IsChosen) item = candidate;
+        List<ChartData> charts = new List<ChartData>(ChartRepository.GetCharts(song.SongId, ChartType.Official));
+        if (!charts.Exists(c => c.difficulty == GameConstants.Chart.DifficultyHard))
+            charts.Add(new ChartData { chartId = "memory_hard", songId = song.SongId, type = ChartData.TypeOfficial, difficulty = GameConstants.Chart.DifficultyHard, level = 11 });
+        item.SetDifficulties(charts, null);
+        foreach (Btn_Difficulty button in view.DifficultyButtons)
+            if (button.Chart == null) button.SetChart(charts.Find(c => c.difficulty == button.Difficulty), null);
+
+        MethodInfo move = typeof(Canvas_SongSelect).GetMethod("MoveChart", Private);
+        move.Invoke(view, new object[] { -1 });
+        log.Append("| 난이도 | 탭 (위 줄 · 레벨 · 칠) | 패널 칠 | 줄 막대 | 줄 바탕 | 숫자 · 밑줄 |\n|---|---|---|---|---|---|\n");
+        Color[] expected = { theme.difficultyEasy, theme.difficultyNormal, theme.difficultyHard };
+        for (int i = 0; i < expected.Length; i++)
+        {
+            if (i > 0) move.Invoke(view, new object[] { 1 });
+            Btn_Difficulty tab = view.DifficultyButtons[i];
+            Assert.IsTrue(tab.IsChosen, tab.Difficulty);
+            Btn_SongItem.DifficultyColumn column = null;
+            foreach (Btn_SongItem.DifficultyColumn c in item.DifficultyColumns)
+            {
+                Assert.AreEqual(c.difficulty == tab.Difficulty, c.underline.gameObject.activeSelf, $"{tab.Difficulty}: 고른 난이도만 밑줄");
+                if (c.difficulty == tab.Difficulty) column = c;
+            }
+            log.Append($"| {tab.Difficulty} | {Hex(tab.TopLineColor)} · {Hex(tab.LevelColor)} · {Hex(tab.TintColor)} | {Hex(view.RecordTintColor)} | {Hex(item.SelectBar.color)} | {Hex(item.RowTint.color)} | {Hex(column.levelText.color)} · {Hex(column.underline.color)} |\n");
+            foreach (Color color in new[] { tab.TopLineColor, tab.LevelColor, item.SelectBar.color, column.levelText.color, column.underline.color })
+                Assert.AreEqual(Hex(expected[i]), Hex(color), tab.Difficulty);
+            foreach (Color color in new[] { tab.TintColor, view.RecordTintColor, item.RowTint.color })
+                Assert.AreEqual(Hex(UITheme.WithAlpha(expected[i], 0.16f)), Hex(color), tab.Difficulty + " 16%");
+        }
+        move.Invoke(view, new object[] { -1 });
+        Assert.IsTrue(view.DifficultyButtons[1].IsChosen);
+    }
 
     /// <summary>Canvas 안 · 글자 넘침 · 세로 가운데를 모두 검사하고 표로 남긴다</summary>
     private static void CheckAll(Canvas_SongSelect view, string state, StringBuilder log)

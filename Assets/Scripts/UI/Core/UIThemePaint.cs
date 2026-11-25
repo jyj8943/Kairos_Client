@@ -17,7 +17,7 @@ public enum PopupButtonStyle
 
 /// <summary>
 /// UITheme 색으로 자주 칠하는 것 모음 (메뉴 화면 공용 함수). 화면·항목 스크립트의 Init·선택 표시에서 부른다.
-/// - Text: 글자 단계 · Panel: 패널(흰색 58%) · SelectableRow: 목록 항목 선택 표시(포인트색 18% 바탕 + 왼쪽 막대)
+/// - Text: 글자 단계 · Panel: 패널(흰색 58%) · SelectableRow: 목록 항목 선택 표시(강조 색 16% 칠 + 왼쪽 막대)
 /// - Badge: 뱃지 바탕 + 흰 글자 (랭크·FC는 이미지라 여기서 칠하지 않는다: Img_Rank · Img_FullCombo)
 /// - PopupButton: 팝업 버튼 (기본 · 강조 · 위험)
 /// - JudgeText: 판정 글자 (단색 / PERFECT 가로 그라데이션)
@@ -75,15 +75,21 @@ public static class UIThemePaint
     }
 
     /// <summary>
-    /// 목록 항목 선택 표시: 고르면 포인트색 18% 바탕 + 왼쪽 포인트색 막대, 아니면 패널 바탕·막대 없음.
+    /// 곡 선택 목록 항목 선택 표시 (11/25): 바탕은 항상 패널, 고르면 그 위에 강조 색 16% 칠(기록 패널과 같은 칠) + 왼쪽 강조 색 막대.
     /// </summary>
-    public static void SelectableRow(Graphic background, Graphic bar, bool selected)
+    /// <param name="accent">강조 색 (UITheme.GetChartAccent: 난이도 색 / CUSTOM 보라)</param>
+    public static void SelectableRow(Graphic background, Graphic tint, Graphic bar, bool selected, Color accent)
     {
         UITheme theme = UITheme.Current;
-        if (background != null) background.color = selected ? theme.SelectedBackground : theme.panel;
+        if (background != null) background.color = theme.panel;
+        if (tint != null)
+        {
+            tint.color = UITheme.WithAlpha(accent, theme.difficultyTintChosenAlpha);
+            tint.gameObject.SetActive(selected);
+        }
         if (bar != null)
         {
-            bar.color = theme.accent;
+            bar.color = accent;
             bar.gameObject.SetActive(selected);
         }
     }

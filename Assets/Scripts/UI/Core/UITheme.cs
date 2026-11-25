@@ -87,12 +87,10 @@ public class UITheme : ScriptableObject
     [Range(0f, 1f)] public float difficultyTintChosenAlpha = 0.16f;
     [Tooltip("곡 선택: 고르지 않은 난이도 탭에 겹쳐 칠하는 난이도 색 농도 (7%)")]
     [Range(0f, 1f)] public float difficultyTintAlpha = 0.07f;
-    [Tooltip("곡 선택: 새 채보 생성 줄 · 카드에 칠하는 CUSTOM 보라 농도 (12%)")]
+    [Tooltip("곡 선택: 목록의 새 채보 생성 줄에 칠하는 CUSTOM 보라 농도 (12%)")]
     [Range(0f, 1f)] public float newChartFillAlpha = 0.12f;
-
-    [Header("나만의 채보 탭 (기획서 3-3 「나만의 채보 탭 (11/17, 11/18 개정)」)")]
-    [Tooltip("지금 고른 곡의 머리 줄 곡 이름 (#2F7FC8)")]
-    public Color myChartChosenSongTitle = new Color32(0x2F, 0x7F, 0xC8, 0xFF);
+    [Tooltip("곡 선택: 왼쪽 새 채보 생성 카드에 칠하는 CUSTOM 보라 농도 (8%)")]
+    [Range(0f, 1f)] public float newChartCardFillAlpha = 0.08f;
 
     [Header("랭크 빈 자리 (기획서 3-3 「랭크·FC 표시 (11/18 개정)」, 기록이 없는 채보의 기록 카드 랭크 칸)")]
     [Tooltip("빈 자리 바탕 Img_RankEmpty (흰색 55%)")]
@@ -378,6 +376,16 @@ public class UITheme : ScriptableObject
             case GameConstants.Chart.DifficultyHard: return difficultyHard;
             default: return difficultyCustom;
         }
+    }
+
+    /// <summary>
+    /// 곡 선택의 강조 색 한 곳 (11/25): 난이도 탭 · 채보 머리 · 기록 패널 · 목록 줄(막대 · 바탕) · 고른 난이도 숫자가 모두 이 색을 받는다.
+    /// 나만의 채보는 CUSTOM 보라, 공식은 고른 채보의 난이도 색, 고른 채보가 없으면(공식 채보 0개 곡) 흐린 글자색.
+    /// </summary>
+    public Color GetChartAccent(ChartType type, ChartData chart)
+    {
+        if (type == ChartType.Custom) return difficultyCustom;
+        return chart != null ? GetDifficulty(chart.difficulty) : textMuted;
     }
 
     /// <summary>

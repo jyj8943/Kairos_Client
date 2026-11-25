@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 곡 선택 나만의 채보 탭의 채보 줄 하나 (기획서 3-3 「나만의 채보 탭 (11/17, 11/18 개정)」, Prefabs/SongSelect/Btn_MyChartItem).
 /// - CUSTOM 뱃지 · 채보 이름 · Lv · 최고 랭크 이미지 (높이 26, 기록이 없으면 빈칸 11/25, FC는 띄우지 않음).
-/// - 키보드·마우스로 선택되면 곧바로 그 채보를 고른다 (SetSelectCallback). 고른 채보는 왼쪽 하늘색 막대(selectBar)와 포인트색 18% 바탕 (UITheme).
+/// - 키보드·마우스로 선택되면 곧바로 그 채보를 고른다 (SetSelectCallback). 고른 채보는 왼쪽 막대(selectBar)와 바탕 칠(rowTint 16%)이 CUSTOM 보라 (SetAccent, 11/25).
 /// - ↑↓는 EventSystem의 Navigate(이동 이벤트)를 받아 넘긴다 (SetMoveCallback): 정지점에 + 줄이 끼어 있고 + 줄은 하나를 옮겨 쓰므로
 ///   Selectable 내비게이션 대신 곡 선택이 MyChartListNavigator로 다음 정지점을 정한다. ←→ 이동 이벤트는 무시한다 (곡 묶음 이동은 SongSelect 맵 액션).
 /// </summary>
@@ -20,7 +20,9 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
     [SerializeField] private UIMarqueeText chartNameMarquee;
     [Tooltip("레벨 (\"Lv. 6\")")]
     [SerializeField] private TMP_Text chartInfoText;
-    [Tooltip("고른 채보 왼쪽 하늘색 막대 (Img_SelectBar)")]
+    [Tooltip("고른 채보 바탕에 겹치는 CUSTOM 보라 칠 (Img_RowTint)")]
+    [SerializeField] private Image rowTint;
+    [Tooltip("고른 채보 왼쪽 CUSTOM 보라 막대 (Img_SelectBar)")]
     [SerializeField] private Image selectBar;
     [Tooltip("최고 랭크 이미지 (Img_Rank, 기록이 없으면 빈칸)")]
     [SerializeField] private Img_Rank rank;
@@ -31,6 +33,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
     private Action<ChartData> onSelected;
     private Action<int> onMove;
     private bool isChosen;
+    private Color accent;
 
     /// <summary>버튼 (내비게이션·클릭)</summary>
     public Button Button => button;
@@ -67,6 +70,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
 
         button.onClick.RemoveListener(OnClick);
         button.onClick.AddListener(OnClick);
+        accent = UITheme.Current.GetChartAccent(ChartType.Custom, chart);
         SetChosen(false);
     }
 
@@ -99,16 +103,27 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
     public UIMarqueeText ChartNameMarquee => chartNameMarquee;
 
     /// <summary>
-    /// 고른 채보 표시를 켜거나 끈다: 포인트색 18% 바탕 + 왼쪽 막대 (UIThemePaint.SelectableRow). EventSystem 선택이 풀려도 남는다.
+    /// 고른 채보 표시를 켜거나 끈다: 강조 색 16% 칠 + 왼쪽 막대 (UIThemePaint.SelectableRow). EventSystem 선택이 풀려도 남는다.
     /// </summary>
     public void SetChosen(bool chosen)
     {
         isChosen = chosen;
-        UIThemePaint.SelectableRow(background, selectBar, chosen);
+        UIThemePaint.SelectableRow(background, rowTint, selectBar, chosen, accent);
         UIThemePaint.Text(chartNameText, UITextLevel.Primary);
         UIThemePaint.Text(chartInfoText, UITextLevel.Primary);
         if (chartNameMarquee != null) chartNameMarquee.SetPlaying(chosen);
     }
+
+    /// <summary>강조 색 (곡 선택이 UITheme.GetChartAccent로 정해 넘긴다, 나만의 채보는 CUSTOM 보라)</summary>
+    public void SetAccent(Color accent)
+    {
+        this.accent = accent;
+        UIThemePaint.SelectableRow(background, rowTint, selectBar, isChosen, accent);
+    }
+
+    /// <summary>강조 색이 칠해진 것 (확인용): 막대 · 바탕 칠</summary>
+    public Image SelectBar => selectBar;
+    public Image RowTint => rowTint;
 
     public void OnSelect(BaseEventData eventData)
     {

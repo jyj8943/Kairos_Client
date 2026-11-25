@@ -13,7 +13,7 @@ using UnityEngine.UI;
 /// - 색: 메뉴 화면 톤 UITheme 한 곳 (기획서 3장 UI 톤 · 라벤더 안개). 고정 그래픽은 UIThemeColor 역할, 바뀌는 색(탭·목록 선택·난이도·랭크)은 UIThemePaint.
 /// - 공통(왼쪽, 11/25): 곡 영역(앨범 + 제목 · 아티스트 · BPM · TIME + 배속 줄) → 난이도 줄(높이 30 고정) → 난이도 탭 / 채보 머리(높이 60) + 기록 패널(높이 176).
 ///   BPM은 고른 채보의 구간을 곡의 방식대로 표기한다 (BpmDisplayRules). 기록 패널은 BEST SCORE · RATE / MAX COMBO "최고 / 최대"(+ FC) · RANK이고,
-///   기록이 없으면 칸은 그대로 두고 NOT PLAYED · ― · "― / 최대 콤보" · 점선 빈칸으로 값만 바꾼다. 탭·머리·패널은 난이도 색(나만의 채보는 CUSTOM 보라)을 엷게 겹친다.
+///   기록이 없으면 칸은 그대로 두고 NOT PLAYED · ― · "― / 최대 콤보" · 점선 빈칸으로 값만 바꾼다. 탭·머리·패널·목록의 고른 줄은 강조 색 하나(난이도 색, 나만의 채보는 CUSTOM 보라)를 같이 쓴다 (ApplyAccent).
 ///   하단 바: 키 안내 + 시작 버튼(Enter).
 /// - 공식 채보 탭(OfficialPanel): 난이도 탭 3개 + 오른쪽 곡 목록(Btn_SongItem). ↑↓ 곡(EventSystem 내비게이션), ←→ 난이도.
 /// - 나만의 채보 탭(MyChartPanel): 모든 곡을 묶음으로 보여 준다. 곡 머리 줄(SongGroupHeader, 채보가 없으면 NO CHART) 아래 채보 줄(Btn_MyChartItem),
@@ -259,6 +259,17 @@ public class Canvas_SongSelect : UIBase
     /// <summary>기록 패널 난이도 색 칠 (확인용)</summary>
     public Color RecordTintColor => recordTint != null ? recordTint.color : Color.clear;
 
+    /// <summary>채보 머리 칠 · 위 줄 · 레벨 숫자 색 (확인용)</summary>
+    public Color MyChartHeaderTintColor => myChartHeaderTint.color;
+    public Color MyChartTopLineColor => myChartTopLine.color;
+    public Color MyChartLevelColor => myChartLevelText.color;
+
+    /// <summary>난이도 탭 (확인용)</summary>
+    public IReadOnlyList<Btn_Difficulty> DifficultyButtons => difficultyButtons;
+
+    /// <summary>새 채보 생성 카드 칠 (확인용)</summary>
+    public Color NewChartCardColor => newChartCard.color;
+
     /// <summary>시작 버튼 이름 (확인용)</summary>
     public string StartLabel => startLabelText != null ? startLabelText.text : null;
 
@@ -375,9 +386,9 @@ public class Canvas_SongSelect : UIBase
         rankLabelText.text = GameConstants.SongSelect.RankLabel;
         myChartLevelLabelText.text = GameConstants.SongSelect.LevelLabel;
 
-        // 새 채보 생성 카드 · 채보 머리는 항상 CUSTOM 보라
+        // 새 채보 생성 카드는 항상 CUSTOM 보라 (채보 머리 · 기록 패널 · 목록 줄은 ApplyAccent)
         UITheme theme = UITheme.Current;
-        newChartCard.color = UITheme.WithAlpha(theme.difficultyCustom, theme.newChartFillAlpha);
+        newChartCard.color = UITheme.WithAlpha(theme.difficultyCustom, theme.newChartCardFillAlpha);
         newChartCardDash.color = theme.difficultyCustom;
         newChartCardPlus.color = theme.difficultyCustom;
         newChartCardPlusText.text = GameConstants.SongSelect.NewChartRowPlus;
@@ -385,9 +396,6 @@ public class Canvas_SongSelect : UIBase
         newChartCardTitleText.text = GameConstants.SongSelect.NewChartCardTitle;
         newChartCardHintText.text = GameConstants.SongSelect.NewChartCardHint;
         newChartCardKeyText.text = KeyGuideBar.GetKeyText(KeyGuideKey.FromAction(startAction, GameConstants.KeyGuide.EnterKey));
-        myChartHeaderTint.color = UITheme.WithAlpha(theme.difficultyCustom, theme.difficultyTintChosenAlpha);
-        myChartTopLine.color = theme.difficultyCustom;
-        myChartLevelText.color = theme.difficultyCustom;
 
         // 곡 목록 열 이름 (난이도 색)
         for (int i = 0; i < columnNameTexts.Length && i < GameConstants.Chart.Difficulties.Length; i++)
@@ -817,10 +825,8 @@ public class Canvas_SongSelect : UIBase
 
     private void SetChosenDifficulty(Btn_Difficulty target)
     {
-        if (chosenDifficulty != null) chosenDifficulty.SetChosen(false);
+        if (chosenDifficulty != null) chosenDifficulty.SetUnchosen();
         chosenDifficulty = target;
-        if (chosenDifficulty != null) chosenDifficulty.SetChosen(true);
-        if (chosenItem != null) chosenItem.SetChosenDifficulty(chosenDifficulty != null ? chosenDifficulty.Difficulty : null);
         RefreshChosenChart();
     }
 
@@ -995,7 +1001,7 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
-    /// 고른 정지점 표시를 바꾼다: 채보 줄 강조, 곡 머리 줄 하늘색, + 줄을 고른 곡 묶음 끝(채보가 없는 곡은 머리 줄 바로 아래)으로 옮긴다.
+    /// 고른 정지점 표시를 바꾼다: 채보 줄 강조, + 줄을 고른 곡 묶음 끝(채보가 없는 곡은 머리 줄 바로 아래)으로 옮긴다.
     /// keepAnchor면 + 줄이 옮겨져도 목록이 튀지 않게, 새로 고른 줄(+ 줄이면 그 곡 머리 줄)의 화면 위치를 옮기기 전과 같게 둔다.
     /// </summary>
     private void SetChosenStop(int stop, bool keepAnchor)
@@ -1255,6 +1261,7 @@ public class Canvas_SongSelect : UIBase
         startButton.interactable = !isLeaving && (ChosenChart != null || addRow);
         recordPanel.SetActive(!addRow);
         ShowRecord(ChosenChart);
+        ApplyAccent();
         RefreshBpm();
         if (startLabelText != null) startLabelText.text = addRow ? GameConstants.SongSelect.NewChartStartLabel : GameConstants.SongSelect.StartLabel;
         if (startLabelEnText != null) startLabelEnText.text = addRow ? GameConstants.SongSelect.NewChartStartLabelEn : GameConstants.SongSelect.StartLabelEn;
@@ -1417,7 +1424,7 @@ public class Canvas_SongSelect : UIBase
     }
 
     /// <summary>
-    /// 기록 패널: 고른 채보(공식 난이도 / 나만의 채보)의 기록 (SongSelectRecordFormat)과 난이도 색 칠.
+    /// 기록 패널: 고른 채보(공식 난이도 / 나만의 채보)의 기록 (SongSelectRecordFormat). 난이도 색 칠은 ApplyAccent.
     /// 기록이 없으면 칸은 그대로 두고 NOT PLAYED · ― · "― / 최대 콤보" · 점선 빈칸으로 값만 바꾼다. 채보가 없으면(공식 채보 0개 곡) 모두 "―".
     /// </summary>
     private void ShowRecord(ChartData chart)
@@ -1436,10 +1443,31 @@ public class Canvas_SongSelect : UIBase
         UIThemePaint.Text(comboText, valueLevel);
         recordRank.Show(texts.HasRecord, texts.Rank);
         recordFullCombo.SetFullCombo(texts.HasRecord && texts.IsFullCombo);
+    }
 
-        Color color = currentTab == ChartType.Custom ? theme.difficultyCustom
-            : chart != null ? theme.GetDifficulty(chart.difficulty) : theme.textMuted;
-        recordTint.color = UITheme.WithAlpha(color, chart != null ? theme.difficultyTintChosenAlpha : theme.difficultyTintAlpha);
+    /// <summary>
+    /// 강조 색을 한 번 정해(UITheme.GetChartAccent) 지금 탭의 모든 곳에 넘긴다 (11/25): 기록 패널 칠,
+    /// 공식 = 고른 난이도 탭(위 줄 · 칠 · 레벨) + 고른 곡 줄(막대 · 바탕 · 고른 난이도 숫자 밑줄), 나만의 채보 = 채보 머리(위 줄 · 칠 · 레벨) + 고른 채보 줄(막대 · 바탕).
+    /// </summary>
+    private void ApplyAccent()
+    {
+        UITheme theme = UITheme.Current;
+        ChartData chart = ChosenChart;
+        Color accent = theme.GetChartAccent(currentTab, chart);
+        recordTint.color = UITheme.WithAlpha(accent, chart != null ? theme.difficultyTintChosenAlpha : theme.difficultyTintAlpha);
+
+        if (currentTab == ChartType.Official)
+        {
+            if (chosenDifficulty != null) chosenDifficulty.SetChosen(accent);
+            if (chosenItem != null) chosenItem.SetAccent(chosenDifficulty != null ? chosenDifficulty.Difficulty : null, accent);
+            return;
+        }
+
+        myChartHeaderTint.color = UITheme.WithAlpha(accent, theme.difficultyTintChosenAlpha);
+        myChartTopLine.color = accent;
+        myChartLevelText.color = accent;
+        MyChartStop stop = myChartNavigator.Get(chosenStop);
+        if (stop.Kind == MyChartStopKind.Chart && stop.ChartIndex >= 0 && stop.ChartIndex < myChartRows.Count) myChartRows[stop.ChartIndex].SetAccent(accent);
     }
 
     /// <summary>기록 패널 랭크 칸 · FC (확인용)</summary>

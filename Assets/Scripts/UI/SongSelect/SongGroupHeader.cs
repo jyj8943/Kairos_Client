@@ -5,7 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 나만의 채보 탭 목록의 곡 머리 줄 (기획서 3-3 「나만의 채보 탭 (11/17, 11/18 개정)」). 정렬용 루트(SongGroupHeader)에 붙는다.
 /// - 작은 앨범 · 제목 · 아티스트 · 채보 수 ("2 CHARTS", 채보가 없으면 "NO CHART")를 보여 준다. 모든 곡이 머리 줄을 가진다 (11/18).
-/// - 글자색은 UITheme (제목 기본 · 고른 곡이면 myChartChosenSongTitle, 아티스트·채보 수 설명), 가로선은 구분선 색(UIThemeColor). 앨범이 없으면 빈 앨범 색.
+/// - 글자색은 UITheme (제목 기본, 아티스트·채보 수 설명. 고른 곡이어도 제목 색은 그대로 11/25), 가로선은 구분선 색(UIThemeColor). 앨범이 없으면 빈 앨범 색.
 /// - 선택되지 않는 줄이다 (Selectable 없음, 정지점 아님). ↑↓는 채보 줄과 + 줄만 오간다.
 /// </summary>
 public class SongGroupHeader : MonoBehaviour
@@ -59,11 +59,11 @@ public class SongGroupHeader : MonoBehaviour
             : string.Format(GameConstants.SongSelect.GroupChartCountFormat, chartCount);
     }
 
-    /// <summary>지금 고른 곡이면 제목을 하늘색(#2F7FC8), 아니면 기본 글자색으로</summary>
+    /// <summary>지금 고른 곡인지 기억한다. 제목 색은 바꾸지 않는다 (고른 표시는 채보 줄 · + 줄이 한다, 11/25)</summary>
     public void SetChosen(bool chosen)
     {
         IsChosen = chosen;
-        titleText.color = chosen ? UITheme.Current.myChartChosenSongTitle : UITheme.Current.textPrimary;
+        UIThemePaint.Text(titleText, UITextLevel.Primary);
     }
 
     /// <summary>

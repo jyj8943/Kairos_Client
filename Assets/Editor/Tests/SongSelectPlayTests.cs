@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 곡 선택 화면 개편 실제 씬 확인 (기획서 3-3 곡 선택 화면 개편 11/17, EnterPlayMode 방식).
 /// - S1 마지막 선택이 Critical Velocity NORMAL이면 들어오자마자 그 곡·난이도 선택, 배경 RawImage에 텍스처가 있음 (처음은 페이드 없이).
-///   라벤더 톤(UITheme): 블러 채도·밝기, 덮는 색 텍스처, 고른 목록 항목 = 선택 색, 고른 탭·시작 버튼 = 포인트색
+///   라벤더 톤(UITheme): 블러 채도·밝기, 덮는 색 텍스처, 고른 목록 항목 = 난이도 색 칠·막대 (11/25), 고른 탭·시작 버튼 = 포인트색
 /// - S2 곡을 바꾸면 크로스페이드가 끝난 뒤 앞 RawImage만 보임, Enter → 인게임으로 넘어감 (곡 로딩 확인까지만)
 /// 마지막 선택은 메모리에서만 바꾸고 끝나면 되돌린다. S2는 Enter로 일반 플레이에 들어가 PlayerData.json에 마지막 선택을 저장하므로
 /// 끝나면 원래 값으로 되돌려 다시 저장한다.
@@ -74,7 +74,7 @@ public class SongSelectPlayTests
             Assert.AreEqual(1f, blur.FrontImage.color.a, 1e-4f, "처음은 페이드 없이 바로");
             Assert.IsFalse(blur.IsFading);
 
-            // 라벤더 톤 (UITheme): 블러 색 보정, 덮는 색 그라데이션, 고른 목록 항목 = 선택 색, 고른 탭·시작 버튼 = 포인트색
+            // 라벤더 톤 (UITheme): 블러 색 보정, 덮는 색 그라데이션, 고른 목록 항목 = 난이도 색, 고른 탭·시작 버튼 = 포인트색
             UITheme theme = UITheme.Current;
             Assert.AreEqual(new Vector2(theme.illustrationSaturation, theme.illustrationBrightness), blur.ColorGrade, "채도·밝기 = UITheme");
             MenuBackground menu = songSelect.GetComponentInChildren<MenuBackground>(true);
@@ -88,10 +88,15 @@ public class SongSelectPlayTests
             }
             Assert.AreEqual(TestCharts.OfficialSongId, chosen.Song.SongId);
             Image chosenBackground = chosen.GetComponent<Image>();
-            Assert.AreEqual((Color32)theme.SelectedBackground, (Color32)chosenBackground.color, "고른 목록 항목 = 포인트색 18%");
+            Assert.AreEqual((Color32)theme.panel, (Color32)chosenBackground.color, "고른 목록 항목 바탕 = 패널 (기록 패널과 같은 칠)");
+            Assert.AreEqual((Color32)UITheme.WithAlpha(theme.difficultyNormal, 0.16f), (Color32)chosen.RowTint.color, "고른 목록 항목 칠 = 난이도 색 16%");
+            Assert.IsTrue(chosen.RowTint.gameObject.activeInHierarchy && chosen.SelectBar.gameObject.activeInHierarchy);
+            Assert.AreEqual((Color32)theme.difficultyNormal, (Color32)chosen.SelectBar.color, "막대 = 난이도 색");
             foreach (Btn_SongItem item in songSelect.SongItems)
             {
-                if (item != chosen) Assert.AreEqual((Color32)theme.panel, (Color32)item.GetComponent<Image>().color, $"{item.Song.SongId}: 패널 바탕");
+                if (item == chosen) continue;
+                Assert.IsFalse(item.RowTint.gameObject.activeSelf || item.SelectBar.gameObject.activeSelf, $"{item.Song.SongId}: 칠 · 막대 없음");
+                Assert.AreEqual((Color32)theme.panel, (Color32)item.GetComponent<Image>().color, $"{item.Song.SongId}: 패널 바탕");
             }
             Assert.AreEqual((Color32)theme.accent, (Color32)songSelect.StartButtonColor, "시작 버튼 = 포인트색");
             Assert.AreEqual((Color32)theme.accent, (Color32)songSelect.GetTabColor(ChartType.Official), "고른 탭 = 포인트색");

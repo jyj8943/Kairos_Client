@@ -62,6 +62,8 @@ public class MyChartTabPlayTests
         Assert.AreEqual(saved, songSelect.ScrollMultiplier, 1e-4f, "진입 데이터가 저장된 배속을 덮어쓰지 않음");
         Assert.AreEqual(songSelect.SongItems.Count, songSelect.SongGroupHeaders.Count, "모든 곡이 묶음으로 나온다");
         StringAssert.StartsWith("곡 01 / ", songSelect.MyChartCountText.text);
+        foreach (SongGroupHeader header in songSelect.SongGroupHeaders)
+            Assert.AreEqual((Color32)UITheme.Current.textPrimary, (Color32)header.TitleText.color, "곡 머리 줄 제목은 고른 곡도 기본 글자색 (11/25)");
         Assert.IsTrue(songSelect.NewChartRow.gameObject.activeSelf, "고른 곡 묶음에 + 줄");
         yield return new ExitPlayMode();
     }

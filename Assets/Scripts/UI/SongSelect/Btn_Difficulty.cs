@@ -101,18 +101,27 @@ public class Btn_Difficulty : MonoBehaviour
         rank.Show(hasRecord, texts.Rank);
         if (hasRecord) ((RectTransform)rank.transform).anchoredPosition = new Vector2(-(SidePadding + rank.Size.x * 0.5f), 0f);
         notPlayedText.gameObject.SetActive(chart != null && !hasRecord);
-        SetChosen(false);
+        SetUnchosen();
     }
 
-    /// <summary>
-    /// 고른 난이도 표시를 켜거나 끈다. 채보가 없으면 켜지 않는다.
-    /// </summary>
-    public void SetChosen(bool chosen)
+    /// <summary>고르지 않은 탭: 자기 난이도 색 (채보가 없으면 흐린 색)</summary>
+    public void SetUnchosen()
+    {
+        Paint(false, UITheme.Current.GetChartAccent(ChartType.Official, chart));
+    }
+
+    /// <summary>고른 탭 (채보가 없으면 켜지 않는다)</summary>
+    /// <param name="accent">강조 색 (곡 선택이 UITheme.GetChartAccent로 정해 탭 · 패널 · 목록 줄에 같이 넘긴다)</param>
+    public void SetChosen(Color accent)
+    {
+        Paint(chart != null, accent);
+    }
+
+    private void Paint(bool chosen, Color color)
     {
         UITheme theme = UITheme.Current;
-        IsChosen = chosen && chart != null;
+        IsChosen = chosen;
 
-        Color color = chart != null ? theme.GetDifficulty(difficulty) : theme.textMuted;
         tint.color = UITheme.WithAlpha(color, IsChosen ? theme.difficultyTintChosenAlpha : theme.difficultyTintAlpha);
         topLine.color = color;
         topLine.gameObject.SetActive(IsChosen);
@@ -129,4 +138,8 @@ public class Btn_Difficulty : MonoBehaviour
 
     /// <summary>겹친 난이도 색 (확인용)</summary>
     public Color TintColor => tint != null ? tint.color : Color.clear;
+
+    /// <summary>위 3px 줄 · 레벨 숫자 색 (확인용)</summary>
+    public Color TopLineColor => topLine != null ? topLine.color : Color.clear;
+    public Color LevelColor => levelText != null ? levelText.color : Color.clear;
 }
