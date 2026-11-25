@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 
 /// <summary>
-/// ChartEditData 롱노트 규칙 EditMode 테스트: 최소 길이 1/4박, 같은 라인 겹침 금지(끝 tick이 같아도 겹침), 어느 부분이든 삭제, 구간 검색.
+/// ChartEditData 롱노트 규칙 EditMode 테스트: 최소 길이 1/4박, 같은 라인 겹침 금지(롱노트는 [시작, 끝), 끝 tick은 비어 있음), 어느 부분이든 삭제, 구간 검색.
 /// </summary>
 public class ChartEditDataLongNoteTests
 {
@@ -45,7 +45,28 @@ public class ChartEditDataLongNoteTests
         Assert.IsTrue(note.IsLong);
     }
 
-    /// <summary>같은 라인의 숏노트·롱노트와 겹치면 Overlap. 끝·시작 tick이 다른 노트 위치와 같아도 겹침, 다른 라인은 상관없음</summary>
+    /// <summary>
+    /// 겹침 규칙 (NoteOverlapRules): 롱노트 [시작, 끝), 숏노트 한 점. a·b 순서를 바꿔도 같다.
+    /// </summary>
+    [TestCase(0, 192, 192, 192, false)] // 롱노트 끝 = 숏노트
+    [TestCase(0, 192, 192, 240, false)] // 롱노트 끝 = 롱노트 시작
+    [TestCase(0, 192, 191, 191, true)]  // 끝 바로 앞
+    [TestCase(0, 192, 180, 180, true)]  // 3.75박
+    [TestCase(0, 192, 180, 240, true)]
+    [TestCase(0, 192, 0, 0, true)]      // 시작이 같음
+    [TestCase(0, 192, 0, 48, true)]
+    [TestCase(0, 192, 48, 96, true)]    // 통째로 품음
+    [TestCase(48, 48, 48, 48, true)]    // 숏노트끼리 같은 tick
+    [TestCase(48, 48, 49, 49, false)]
+    [TestCase(48, 48, 48, 96, true)]    // 숏노트에서 시작하는 롱노트
+    [TestCase(0, 192, 193, 193, false)]
+    public void OverlapRules(int startA, int endA, int startB, int endB, bool expected)
+    {
+        Assert.AreEqual(expected, NoteOverlapRules.Overlaps(startA, endA, startB, endB));
+        Assert.AreEqual(expected, NoteOverlapRules.Overlaps(startB, endB, startA, endA), "순서를 바꿔도 같다");
+    }
+
+    /// <summary>같은 라인의 숏노트·롱노트와 겹치면 Overlap. 롱노트 끝 tick이 다음 노트 시작과 같은 것은 된다. 다른 라인은 상관없음</summary>
     [Test]
     public void Overlap_SameLaneOnly()
     {
@@ -56,41 +77,52 @@ public class ChartEditDataLongNoteTests
         NoteEditError error;
         Assert.IsFalse(data.TryAddLong(0, T, T * 3, out error), "숏노트를 몸통에 품음");
         Assert.AreEqual(NoteEditError.Overlap, error);
-        Assert.IsFalse(data.TryAddLong(0, T, T * 2, out error), "끝이 숏노트 위치와 같은 tick");
+        Assert.IsFalse(data.TryAddLong(0, T, T * 2 + 1, out error), "끝이 숏노트 바로 뒤");
         Assert.AreEqual(NoteEditError.Overlap, error);
         Assert.IsFalse(data.TryAddLong(0, T * 2, T * 3, out error), "시작이 숏노트 위치와 같은 tick");
         Assert.AreEqual(NoteEditError.Overlap, error);
-        Assert.IsFalse(data.TryAddLong(0, T * 6, T * 7, out error), "시작이 앞 롱노트 끝과 같은 tick");
+        Assert.IsFalse(data.TryAddLong(0, T * 6 - 1, T * 7, out error), "시작이 앞 롱노트 끝 바로 앞");
         Assert.AreEqual(NoteEditError.Overlap, error);
-        Assert.IsFalse(data.TryAddLong(0, T * 3, T * 4, out error), "끝이 뒤 롱노트 시작과 같은 tick");
+        Assert.IsFalse(data.TryAddLong(0, T * 3, T * 4 + 1, out error), "끝이 뒤 롱노트 시작 바로 뒤");
         Assert.AreEqual(NoteEditError.Overlap, error);
         Assert.IsFalse(data.TryAddLong(0, T * 3, T * 8, out error), "다른 롱노트를 통째로 품음");
         Assert.AreEqual(NoteEditError.Overlap, error);
         Assert.IsFalse(data.TryAddLong(0, T * 4 + Min, T * 5, out error), "다른 롱노트 안");
         Assert.AreEqual(NoteEditError.Overlap, error);
 
-        Assert.IsTrue(data.TryAddLong(0, T * 6 + 1, T * 7, out _), "앞 롱노트 끝 바로 다음 tick부터는 된다");
+        Assert.IsTrue(data.TryAddLong(0, T, T * 2, out _), "끝이 숏노트 위치와 같은 tick은 된다");
+        Assert.IsTrue(data.TryAddLong(0, T * 3, T * 4, out _), "끝이 뒤 롱노트 시작과 같은 tick은 된다");
+        Assert.IsTrue(data.TryAddLong(0, T * 6, T * 7, out _), "시작이 앞 롱노트 끝과 같은 tick은 된다");
         Assert.IsTrue(data.TryAddLong(1, T, T * 8, out _), "다른 라인은 겹쳐도 된다");
         Assert.AreEqual(1, data.ShortCount);
-        Assert.AreEqual(3, data.LongCount);
+        Assert.AreEqual(5, data.LongCount);
     }
 
-    /// <summary>숏노트 TryAdd도 롱노트 구간(시작·몸통·끝) 안이면 Overlap</summary>
+    /// <summary>숏노트 TryAdd도 롱노트 구간(시작·몸통) 안이면 Overlap, 끝 tick은 된다. 끝 tick의 숏노트를 찾고 지워도 롱노트는 남는다</summary>
     [Test]
     public void ShortNote_InsideLong_Rejected()
     {
         ChartEditData data = CreateData();
         Assert.IsTrue(data.TryAddLong(1, T * 2, T * 4, out _));
 
-        foreach (int tick in new[] { T * 2, T * 3, T * 4 })
+        foreach (int tick in new[] { T * 2, T * 3, T * 4 - Min, T * 4 - 1 })
         {
             Assert.IsFalse(data.TryAdd(1, tick, out NoteEditError error), $"tick {tick}");
             Assert.AreEqual(NoteEditError.Overlap, error);
         }
         Assert.IsFalse(data.TryAdd(1, T * 3), "out 없는 TryAdd도 같은 규칙");
 
-        Assert.IsTrue(data.TryAdd(1, T * 4 + 1), "끝 바로 다음 tick");
+        Assert.IsTrue(data.TryAdd(1, T * 4), "끝 tick은 된다");
+        Assert.IsFalse(data.TryAdd(1, T * 4), "숏노트와 같은 tick은 안 된다");
+        Assert.IsFalse(data.TryAddLong(1, T * 4, T * 5, out _), "숏노트와 같은 tick에서 시작하는 롱노트도 안 된다");
         Assert.IsTrue(data.TryAdd(2, T * 3), "다른 라인");
+
+        Assert.IsTrue(data.TryFindAt(1, T * 4, out EditorNote found));
+        Assert.IsFalse(found.IsLong, "끝 tick의 노트는 이어지는 숏노트다");
+        Assert.IsTrue(data.TryRemove(1, T * 4));
+        Assert.AreEqual(1, data.LongCount, "롱노트는 남는다");
+        Assert.IsFalse(data.TryFindAt(1, T * 4, out _), "끝 tick은 비어 있다");
+        Assert.IsTrue(data.TryAddLong(1, T * 4, T * 5, out _), "끝 tick에서 시작하는 롱노트");
     }
 
     /// <summary>범위 밖(곡 끝을 넘음, 음수, 라인 밖)은 OutOfRange</summary>
@@ -107,7 +139,7 @@ public class ChartEditDataLongNoteTests
         Assert.IsTrue(data.TryAddLong(0, T * 99, T * 100, out _), "곡 끝 tick까지는 된다");
     }
 
-    /// <summary>시작·몸통·끝 어느 tick을 가리켜도 그 롱노트를 찾고 지운다</summary>
+    /// <summary>시작·몸통 어느 tick을 가리켜도(끝 바로 앞까지) 그 롱노트를 찾고 지운다. 끝 tick은 비어 있다</summary>
     [TestCase(0)]
     [TestCase(1)]
     [TestCase(2)]
@@ -116,7 +148,8 @@ public class ChartEditDataLongNoteTests
         ChartEditData data = CreateData();
         Assert.IsTrue(data.TryAddLong(3, T * 2, T * 4, out _));
         Assert.IsTrue(data.TryAdd(3, T * 5));
-        int tick = part == 0 ? T * 2 : part == 1 ? T * 3 + 7 : T * 4;
+        int tick = part == 0 ? T * 2 : part == 1 ? T * 3 + 7 : T * 4 - 1;
+        Assert.IsFalse(data.TryFindAt(3, T * 4, out _), "끝 tick은 비어 있다");
 
         Assert.IsTrue(data.TryFindAt(3, tick, out EditorNote found));
         Assert.AreEqual(T * 2, found.Tick);
@@ -167,14 +200,19 @@ public class ChartEditDataLongNoteTests
             new EditorNote(0, T * 2, T * 4),
             EditorNote.Short(0, T * 3),
             EditorNote.Short(0, T * 4),
+            EditorNote.Short(3, T * 3),
+            new EditorNote(3, T, T * 3),
+            new EditorNote(3, T * 6, T * 8),
+            new EditorNote(3, T * 8, T * 9),
+            new EditorNote(3, T * 9 - 1, T * 10),
             new EditorNote(1, 0, Min - 1),
             EditorNote.Short(1, T),
             EditorNote.Short(1, T),
             new EditorNote(2, T * 4 / 3, T * 8 / 3),
         });
 
-        Assert.AreEqual(4, skipped, "몸통 안 숏노트, 끝과 같은 tick 숏노트, 짧은 롱노트, 같은 자리 숏노트");
-        Assert.AreEqual(2, data.LongCount);
-        Assert.AreEqual(1, data.ShortCount);
+        Assert.AreEqual(4, skipped, "몸통 안 숏노트, 짧은 롱노트, 같은 자리 숏노트, 끝 바로 앞에서 시작하는 롱노트 (끝과 같은 tick은 남긴다)");
+        Assert.AreEqual(5, data.LongCount);
+        Assert.AreEqual(3, data.ShortCount);
     }
 }

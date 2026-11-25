@@ -499,8 +499,8 @@ public static class ChartRepository
     }
 
     /// <summary>
-    /// 같은 라인 노트끼리 겹치는지 검사한다. 노트 구간은 [beat, endBeat] (숏노트는 한 점)를 tick으로 반올림한 값이고,
-    /// 앞 노트의 끝과 같은 tick에서 시작해도 겹침으로 본다 (에디터 ChartEditData와 같은 규칙).
+    /// 같은 라인 노트끼리 겹치는지 검사한다. 위치는 beat·endBeat를 tick으로 반올림해 NoteOverlapRules로 본다 (에디터 ChartEditData와 같은 규칙).
+    /// 숏노트는 한 점, 롱노트는 [시작, 끝)이라 앞 롱노트의 끝과 같은 tick에서 시작하는 노트는 겹침이 아니다.
     /// lane·type은 미리 검사했다고 본다.
     /// </summary>
     /// <returns>겹치지 않으면 true. 겹치면 false와 error</returns>
@@ -516,6 +516,7 @@ public static class ChartRepository
         });
 
         int previousLane = -1;
+        int previousStart = -1;
         int previousEnd = -1;
         int previousIndex = -1;
         foreach (int index in order)
@@ -524,13 +525,14 @@ public static class ChartRepository
             int start = BeatGridMath.BeatToTick(note.beat);
             int end = note.type == NoteData.TypeLong ? BeatGridMath.BeatToTick(note.endBeat) : start;
 
-            if (note.lane == previousLane && start <= previousEnd)
+            if (note.lane == previousLane && NoteOverlapRules.Overlaps(previousStart, previousEnd, start, end))
             {
                 error = $"노트 {previousIndex}와 노트 {index}가 같은 라인({note.lane})에서 겹칩니다 (beat {notes[previousIndex].beat}, {note.beat}).";
                 return false;
             }
 
             previousLane = note.lane;
+            previousStart = start;
             previousEnd = end;
             previousIndex = index;
         }

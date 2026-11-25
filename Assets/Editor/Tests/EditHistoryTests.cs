@@ -132,7 +132,7 @@ public class EditHistoryTests
 
         Assert.IsFalse(session.AddNote(0, 5 * T, out NoteEditError overlap));
         Assert.AreEqual(NoteEditError.Overlap, overlap);
-        Assert.IsFalse(session.AddLongNote(0, 3 * T, 4 * T, out _), "끝이 다른 노트 시작과 겹침");
+        Assert.IsFalse(session.AddLongNote(0, 3 * T, 4 * T + 1, out _), "끝이 다른 노트 시작을 넘어 겹침");
         Assert.IsFalse(session.AddLongNote(1, 0, 4, out NoteEditError tooShort));
         Assert.AreEqual(NoteEditError.TooShort, tooShort);
         Assert.IsFalse(session.RemoveNote(2, 0), "없는 노트 삭제");

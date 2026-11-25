@@ -1300,6 +1300,7 @@ public class InGameScene : SceneBase
     /// 자동 플레이: 노트 시간이 된 라인에 키 입력과 같은 함수(OnLanePressed)로 입력을 넣어 판정·키음을 내고,
     /// 라인 빛남을 짧게(GameConstants.Play.AutoPlayGlowSeconds) 켠다. 입력 시각은 지금 곡 시간이라 오차는 1프레임 이내다.
     /// 롱노트는 끝 시간이 되면 OnLaneReleased로 떼고, 누르는 동안은 라인 빛남을 켜 둔다.
+    /// 같은 라인에서 롱노트 끝과 다음 노트 시작이 같은 시각이면 뗌을 먼저 처리하고 같은 프레임에 다음 노트를 누른다.
     /// </summary>
     private void RunAutoPlay(double songTime)
     {

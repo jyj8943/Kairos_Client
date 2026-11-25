@@ -358,27 +358,66 @@ public class NoteFxTests
         Assert.AreEqual(0f, top - bottom, "꼬리가 머리보다 아래면 높이 0");
     }
 
-    /// <summary>누르는 동안 머리 고정 · 위 끝만 내려옴, 판정 전 · 시작 MISS는 시간대로 지나감</summary>
+    /// <summary>누르는 동안 머리 고정 · 위 끝만 내려옴, 판정 전 · 시작 MISS는 시간대로 지나감. 몸통 위 끝 = 끝 시각 y − inset (11/25)</summary>
     [Test]
     public void LongNote_HeldHeadFixed_MissedPassesThrough()
     {
         const float judgeLine = -3.33f;
+        const float inset = 0.1f;
         float head = -4f, tail = 0.5f;
-        NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, ref head, ref tail);
+        NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, inset, ref head, ref tail);
         Assert.AreEqual(judgeLine, head, "누르는 동안 머리는 판정선");
-        Assert.AreEqual(0.5f, tail, "꼬리는 그대로 내려옴");
+        Assert.AreEqual(0.4f, tail, 1e-6f, "꼬리는 그대로 내려옴 (끝 시각 − inset)");
+
+        head = -2f; tail = judgeLine + 0.05f;
+        NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, inset, ref head, ref tail);
+        Assert.AreEqual(judgeLine, tail, "끝 시각이 판정선 위 반 칸 안: 몸통 길이 0");
 
         head = -2f; tail = -3.6f;
-        NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, ref head, ref tail);
+        NoteShape.ResolveLongNoteY(LongNoteState.Held, judgeLine, inset, ref head, ref tail);
+        Assert.AreEqual(judgeLine, head, "늦게 떼는 중: 머리는 뗄 때까지 판정선");
         Assert.AreEqual(judgeLine, tail, "늦게 떼는 중: 꼬리는 판정선 아래로 안 내려감");
 
         foreach (LongNoteState state in new[] { LongNoteState.Waiting, LongNoteState.Missed })
         {
             head = -4f; tail = -3.8f;
-            NoteShape.ResolveLongNoteY(state, judgeLine, ref head, ref tail);
+            NoteShape.ResolveLongNoteY(state, judgeLine, inset, ref head, ref tail);
             Assert.AreEqual(-4f, head, state + " 머리는 판정선에 고정하지 않음");
-            Assert.AreEqual(-3.8f, tail, state + " 꼬리 그대로");
+            Assert.AreEqual(-3.9f, tail, 1e-6f, state + " 꼬리 = 끝 시각 − inset");
+
+            head = -4f; tail = -3.95f;
+            NoteShape.ResolveLongNoteY(state, judgeLine, inset, ref head, ref tail);
+            Assert.AreEqual(head, tail, state + " 반 칸보다 짧으면 몸통 길이 0");
         }
+    }
+
+    /// <summary>inset = 숏노트 높이의 절반 (인게임 22px → 11px). Note 프리팹의 실제 높이 절반과 1px 안</summary>
+    [Test]
+    public void LongNote_EndInset()
+    {
+        float px = 10f / 1080f;
+        Assert.AreEqual(GameConstants.Play.ShortNoteHeightPx * 0.5f, GameConstants.Play.LongNoteEndInsetPx, 1e-6f);
+        Assert.AreEqual(11f, GameConstants.Play.LongNoteEndInsetPx, 1e-6f);
+        Assert.AreEqual(11f * px, NoteShape.LongNoteEndInset(px), 1e-6f);
+
+        GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/InGameScene/Note.prefab");
+        float halfPx = prefab.GetComponent<SpriteRenderer>().size.y * 0.5f / px;
+        Assert.AreEqual(halfPx, GameConstants.Play.LongNoteEndInsetPx, 1f, "숏노트 실제 높이 절반과 1px 안");
+    }
+
+    /// <summary>가장 낮은 배속(x1.0)에서 빠른 곡의 1/4박 롱노트도 몸통 길이가 0 이상 (화면 위 끝 ~ 판정선 900px, 2.69초)</summary>
+    [TestCase(150.61f)]
+    [TestCase(216f)]
+    [TestCase(400f)]
+    public void LongNote_QuarterBeatAtSlowest_BodyNotNegative(float bpm)
+    {
+        float px = 10f / 1080f;
+        float speed = ScrollSpeedRules.ScrollSpeed(900f * px, 1f);
+        float head = 0f, tail = 60f / bpm * 0.25f * speed;
+        NoteShape.ResolveLongNoteY(LongNoteState.Waiting, -3f, NoteShape.LongNoteEndInset(px), ref head, ref tail);
+        NoteShape.LongNoteBodyRange(head, tail, out float bottom, out float top);
+        Debug.Log($"[NoteFxTest] x1.0 1/4박 롱노트 몸통 ({bpm} BPM): {(top - bottom) / px:0.00}px");
+        Assert.GreaterOrEqual(top - bottom, 0f);
     }
 
     // ───── 7. 다시 하기 진입 데이터 ─────

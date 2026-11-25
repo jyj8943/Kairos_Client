@@ -217,7 +217,7 @@ public class ChartEditSession : MonoBehaviour
     }
 
     /// <summary>
-    /// 그 자리를 덮는 노트를 지운다 (롱노트는 시작·몸통·끝 어느 tick이든). 성공하면 수정 상태가 된다.
+    /// 그 자리를 차지하는 노트를 지운다 (롱노트는 시작·몸통 어느 tick이든, 끝 tick은 비어 있다). 성공하면 수정 상태가 된다.
     /// </summary>
     /// <returns>지웠으면 true. 그 자리에 노트가 없으면 false</returns>
     public bool RemoveNote(int lane, int tick)

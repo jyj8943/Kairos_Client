@@ -5,8 +5,8 @@ using System.Collections.Generic;
 /// 편집 중인 채보의 노트를 관리한다. 노트 데이터는 이 클래스 한곳에서만 바꾼다.
 /// - 노트 목록은 (tick, lane) 순으로 정렬해 두고, 찾기·구간 검색은 이진 탐색으로 한다.
 /// - 노트가 바뀌면 OnChanged를 보낸다. 표시(EditorNoteLayer)와 노트 수 표시는 이 이벤트를 구독한다.
-/// - 롱노트는 [시작 tick, 끝 tick] 구간을 차지한다 (양 끝 포함). 같은 라인에서 다른 노트와 구간이 겹치면 넣지 않는다.
-///   끝이 다른 노트 위치와 같은 tick이어도 겹침이다. 롱노트 최소 길이는 GameConstants.Editor.MinLongNoteTicks(1/4박).
+/// - 같은 라인 겹침은 NoteOverlapRules로 본다: 숏노트는 한 점, 롱노트는 [시작 tick, 끝 tick) 구간을 차지한다.
+///   롱노트 끝 tick은 비어 있어 그 자리에서 다음 노트를 시작할 수 있다. 롱노트 최소 길이는 GameConstants.Editor.MinLongNoteTicks(1/4박).
 /// </summary>
 public class ChartEditData
 {
@@ -42,7 +42,7 @@ public class ChartEditData
     }
 
     /// <summary>
-    /// 숏노트를 추가한다. 범위 밖이거나, 같은 라인에서 그 tick에 노트가 있거나 롱노트 구간 안이면 false.
+    /// 숏노트를 추가한다. 범위 밖이거나, 같은 라인에서 그 tick에 노트가 있거나 롱노트 구간 안이면 false (롱노트 끝 tick은 된다).
     /// </summary>
     public bool TryAdd(int lane, int tick)
     {
@@ -69,7 +69,8 @@ public class ChartEditData
     /// 롱노트를 추가한다. startTick·endTick은 어느 쪽이 커도 되고, 작은 쪽이 시작이 된다.
     /// - 범위(0 ~ 곡 끝) 밖이면 OutOfRange
     /// - 길이(끝 − 시작)가 MinLongNoteTicks(1/4박)보다 짧으면 TooShort
-    /// - 같은 라인에서 [시작, 끝] 구간이 다른 노트(숏노트 위치, 다른 롱노트 구간)와 겹치면 Overlap (끝 tick이 같아도 겹침)
+    /// - 같은 라인에서 [시작, 끝) 구간이 다른 노트(숏노트 위치, 다른 롱노트 구간)와 겹치면 Overlap.
+    ///   시작이 앞 롱노트 끝과 같거나, 끝이 다음 노트 시작과 같은 것은 겹침이 아니다 (NoteOverlapRules)
     /// </summary>
     public bool TryAddLong(int lane, int startTick, int endTick, out NoteEditError error)
     {
@@ -90,7 +91,7 @@ public class ChartEditData
     }
 
     /// <summary>
-    /// 같은 라인에서 tick을 덮는 노트를 찾는다 (숏노트는 그 tick, 롱노트는 시작·몸통·끝 어느 tick이든).
+    /// 같은 라인에서 tick을 차지하는 노트를 찾는다 (숏노트는 그 tick, 롱노트는 시작·몸통 어느 tick이든. 끝 tick은 비어 있다).
     /// </summary>
     /// <returns>찾았으면 true</returns>
     public bool TryFindAt(int lane, int tick, out EditorNote note)
@@ -101,7 +102,7 @@ public class ChartEditData
     }
 
     /// <summary>
-    /// 같은 라인에서 tick을 덮는 노트를 지운다. 롱노트는 시작·몸통·끝 어느 tick을 가리켜도 지운다. 없으면 false.
+    /// 같은 라인에서 tick을 차지하는 노트를 지운다. 롱노트는 시작·몸통 어느 tick을 가리켜도 지운다 (끝 tick은 비어 있다). 없으면 false.
     /// </summary>
     public bool TryRemove(int lane, int tick)
     {
@@ -118,7 +119,7 @@ public class ChartEditData
 
     /// <summary>
     /// 노트 전체를 한 번에 바꾼다 (채보 불러오기용). (tick, lane) 순으로 정렬하고 OnChanged는 한 번만 보낸다.
-    /// 범위 밖이거나, 1/4박보다 짧은 롱노트이거나, 같은 라인에서 앞 노트와 구간이 겹치는 노트는 넣지 않는다.
+    /// 범위 밖이거나, 1/4박보다 짧은 롱노트이거나, 같은 라인에서 앞 노트와 겹치는 노트(NoteOverlapRules)는 넣지 않는다.
     /// </summary>
     /// <returns>넣지 못한 노트 수</returns>
     public int ReplaceAll(IEnumerable<EditorNote> newNotes)
@@ -145,20 +146,22 @@ public class ChartEditData
 
         notes.Sort((a, b) => a.Tick != b.Tick ? a.Tick.CompareTo(b.Tick) : a.Lane.CompareTo(b.Lane));
 
-        // 정렬 순서대로 보며, 같은 라인에서 앞에 남긴 노트의 끝 tick 이하에서 시작하면 겹친 노트라 뺀다
+        // 정렬 순서대로 보며, 같은 라인에서 앞에 남긴 노트와 겹치면 뺀다 (앞 롱노트의 끝 tick에서 시작하는 노트는 남긴다)
+        int[] laneStart = new int[LaneCount];
         int[] laneEnd = new int[LaneCount];
-        for (int lane = 0; lane < LaneCount; lane++) laneEnd[lane] = -1;
+        for (int lane = 0; lane < LaneCount; lane++) laneStart[lane] = laneEnd[lane] = -1;
 
         int write = 0;
         for (int read = 0; read < notes.Count; read++)
         {
             EditorNote note = notes[read];
-            if (note.Tick <= laneEnd[note.Lane])
+            if (NoteOverlapRules.Overlaps(laneStart[note.Lane], laneEnd[note.Lane], note.Tick, note.EndTick))
             {
                 skipped++;
                 continue;
             }
 
+            laneStart[note.Lane] = note.Tick;
             laneEnd[note.Lane] = note.EndTick;
             notes[write++] = note;
             if (note.IsLong)
@@ -241,15 +244,15 @@ public class ChartEditData
     }
 
     /// <summary>
-    /// 같은 라인에서 [startTick, endTick] 구간과 겹치는 노트의 인덱스. 없으면 −1.
-    /// 노트 구간은 [Tick, EndTick] (숏노트는 한 점)이고, 양 끝이 같은 tick이어도 겹침으로 본다.
+    /// 같은 라인에서 시작 startTick · 끝 endTick인 노트(숏노트는 같은 값)와 겹치는 노트의 인덱스. 없으면 −1.
+    /// 겹침은 NoteOverlapRules로 본다 (숏노트는 한 점, 롱노트는 [시작, 끝)).
     /// </summary>
     private int FindOverlapIndex(int lane, int startTick, int endTick)
     {
         for (int i = LowerBound(startTick - maxLongLength); i < notes.Count && notes[i].Tick <= endTick; i++)
         {
             EditorNote note = notes[i];
-            if (note.Lane == lane && note.EndTick >= startTick) return i;
+            if (note.Lane == lane && NoteOverlapRules.Overlaps(note.Tick, note.EndTick, startTick, endTick)) return i;
         }
         return -1;
     }

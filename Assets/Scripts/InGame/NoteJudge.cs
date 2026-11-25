@@ -144,6 +144,7 @@ public readonly struct JudgeResult
 /// - 롱노트
 ///   - 시작 판정은 숏노트와 같다. PERFECT·GREAT·GOOD이면 그 라인은 "누르고 있는 롱노트" 상태가 되고, 그동안 그 라인의 다음 노트는 판정하지 않는다.
 ///   - 시작 MISS(MISS 범위에서 누름, 또는 +GOOD 범위를 지나도록 안 누름)면 바로 종합 MISS. 몸통이 끝까지 내려가는 동안(끝 시간 전) 그 라인 누름은 빈 타격이다.
+///     단, 다음 노트를 GOOD 이상으로 치는 누름은 막지 않는다 (끝 시각에 다음 노트가 이어질 때 조금 일찍 눌러도 판정, 11/25).
 ///   - 끝 판정 (뗀 시각 − 끝 시각, GameConstants.Play.LongReleaseMs = ±120ms, 경계 포함):
 ///     범위 안에서 떼면 끝 판정 = 시작 판정 (끝이 판정을 깎지도 올리지도 않는다). 아직 오지 않은 남은 틱도 모두 인정한다.
 ///     범위보다 일찍 떼면 끝 MISS (종합 MISS, 콤보 0, 남은 틱 인정 안 함). 끝 + 범위를 지나도록 누르고 있으면 그 순간 끝 GOOD (모든 틱 인정).
@@ -168,7 +169,7 @@ public class NoteJudge
     private readonly JudgeType[] heldStartType;
     private readonly int[] heldTickCursor;
 
-    /// <summary>라인별: 시작 MISS 롱노트의 끝 시간. 이 시각 전의 누름은 빈 타격이다</summary>
+    /// <summary>라인별: 시작 MISS 롱노트의 끝 시간. 이 시각 전의 누름은 빈 타격이다 (다음 노트를 GOOD 이상으로 치는 누름은 판정한다)</summary>
     private readonly double[] laneBlockedUntil;
 
     /// <summary>판정할 노트 (시간 순)</summary>
@@ -254,7 +255,7 @@ public class NoteJudge
 
     /// <summary>
     /// 키 누름을 판정한다. 라인의 다음 노트와 차이가 MISS 범위 밖이면 빈 타격으로 false.
-    /// 롱노트를 누르고 있는 라인, 시작 MISS 롱노트의 몸통이 내려오는 중인 라인도 빈 타격이다.
+    /// 롱노트를 누르고 있는 라인도 빈 타격이다. 시작 MISS 롱노트의 몸통이 내려오는 중인 라인은 다음 노트가 GOOD 이상일 때만 판정하고, 아니면 빈 타격이다.
     /// 롱노트 시작이 PERFECT·GREAT·GOOD이면 LongStart, MISS면 바로 LongFinal(MISS)을 돌려준다.
     /// </summary>
     /// <param name="inputTime">입력 시각 (곡 시간, 초)</param>
@@ -262,12 +263,15 @@ public class NoteJudge
     {
         result = default;
         if (lane < 0 || lane >= laneNotes.Length) return false;
-        if (heldNote[lane] >= 0 || inputTime < laneBlockedUntil[lane]) return false;
+        if (heldNote[lane] >= 0) return false;
         if (!TryPeekNext(lane, out int noteIndex)) return false;
 
         PlayNote note = notes[noteIndex];
         double deltaMs = (inputTime - note.Time) * 1000.0;
         if (!windows.TryJudge(deltaMs, out JudgeType type)) return false;
+
+        // 시작 MISS 롱노트의 몸통이 내려오는 중: 몸통을 누른 것은 빈 타격이지만, 다음 노트를 제대로 친 것까지 가로채지 않는다
+        if (inputTime < laneBlockedUntil[lane] && type == JudgeType.Miss) return false;
 
         laneCursor[lane]++;
         if (!note.IsLong)
@@ -401,7 +405,7 @@ public class NoteJudge
         return new JudgeResult(noteIndex, lane, finalType, deltaMs, isHit, JudgeKind.LongFinal, startType, endType);
     }
 
-    /// <summary>시작 MISS: 바로 종합 MISS로 끝내고, 몸통이 내려가는 동안(끝 시간 전) 그 라인 누름을 빈 타격으로 막는다.</summary>
+    /// <summary>시작 MISS: 바로 종합 MISS로 끝내고, 몸통이 내려가는 동안(끝 시간 전) 그 라인 누름을 빈 타격으로 막는다 (TryHit, 다음 노트를 GOOD 이상으로 치는 누름은 빼고).</summary>
     private JudgeResult MissLongAtStart(int lane, int noteIndex, double deltaMs, bool isHit)
     {
         laneBlockedUntil[lane] = Math.Max(laneBlockedUntil[lane], notes[noteIndex].EndTime);

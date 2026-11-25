@@ -501,6 +501,160 @@ public class LongNotePlayTests
     }
 
     /// <summary>
+    /// P14: 앞 롱노트 끝 = 다음 노트 시작(T) 판정 (11/25). 다음 노트가 숏노트(앞 박)·롱노트(뒤 박)인 경우를 같이 본다.
+    /// 라인 0: T − 30ms 뗌 · T + 10ms 누름 → PERFECT, 라인 1: T + 50ms 뗌 · T + 70ms 누름 → GREAT, 라인 2: 계속 누름 → 자동 GOOD · 다음 노트 MISS.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator P14_TouchingNextNote()
+    {
+        List<NoteData> notes = new List<NoteData>();
+        for (int lane = 0; lane < 3; lane++)
+        {
+            float start = 6f + lane * 0.5f;
+            notes.Add(Long(start, start + 2f, lane));
+            notes.Add(Short(start + 2f, lane));
+            notes.Add(Long(start + 5f, start + 7f, lane));
+            notes.Add(Long(start + 7f, start + 8f, lane));
+        }
+        yield return StartPlay(Chart(notes.ToArray()));
+
+        List<(double time, int lane, bool press)> inputs = new List<(double, int, bool)>();
+        for (int lane = 0; lane < 3; lane++)
+        {
+            for (int part = 0; part < 2; part++)
+            {
+                PlayNote first = judge.Notes[LongIndex(lane, part)];
+                PlayNote next = judge.Notes[part == 0 ? ShortIndex(lane) : LongIndex(lane, 2)];
+                Assert.AreEqual(first.EndTime, next.Time, 1e-9, "앞 롱노트 끝 = 다음 노트 시작");
+                inputs.Add((first.Time, lane, true));
+                if (lane == 2)
+                {
+                    inputs.Add((first.EndTime + 0.2, lane, false)); // 자동 GOOD 뒤에 뗌
+                    continue;
+                }
+                inputs.Add((first.EndTime + (lane == 0 ? -0.030 : 0.050), lane, false));
+                inputs.Add((next.Time + (lane == 0 ? 0.010 : 0.070), lane, true));
+                if (next.IsLong) inputs.Add((next.EndTime, lane, false));
+                else inputs.Add((next.Time + 0.2, lane, false));
+            }
+        }
+        inputs.Sort((x, y) => x.time.CompareTo(y.time));
+        foreach (var input in inputs)
+        {
+            if (input.press) yield return PressAt(input.lane, input.time);
+            else yield return ReleaseAt(input.lane, input.time);
+        }
+        for (int lane = 0; lane < 3; lane++) yield return WaitJudged(LongIndex(lane, 2));
+
+        StringBuilder table = new StringBuilder("[LongNoteTest] P14 이어지는 노트 (라인 | 다음 노트 | 앞 롱노트 종합 · 틱 | 다음 노트)\n");
+        for (int lane = 0; lane < 3; lane++)
+        {
+            for (int part = 0; part < 2; part++)
+            {
+                int a = LongIndex(lane, part), b = part == 0 ? ShortIndex(lane) : LongIndex(lane, 2);
+                table.Append($"  라인 {lane} | {(part == 0 ? "숏" : "롱")} | {Final(a).Type}({Final(a).DeltaMs:+0.0;-0.0}ms) 틱 {CountTicks(a)}/{judge.Notes[a].TickCount} | " +
+                             $"{Final(b).Type}({Final(b).DeltaMs:+0.0;-0.0}ms) 틱 {CountTicks(b)}/{judge.Notes[b].TickCount}\n");
+            }
+        }
+        table.Append($"  최대 콤보 {score.MaxCombo}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}");
+        Debug.Log(table.ToString());
+
+        JudgeType[] expectedFirst = { JudgeType.Perfect, JudgeType.Perfect, JudgeType.Good };
+        JudgeType[] expectedNext = { JudgeType.Perfect, JudgeType.Great, JudgeType.Miss };
+        for (int lane = 0; lane < 3; lane++)
+        {
+            for (int part = 0; part < 2; part++)
+            {
+                int a = LongIndex(lane, part), b = part == 0 ? ShortIndex(lane) : LongIndex(lane, 2);
+                string label = $"라인 {lane} {(part == 0 ? "숏" : "롱")}";
+                Assert.AreEqual(expectedFirst[lane], Final(a).Type, label + " 앞 롱노트");
+                Assert.AreEqual(judge.Notes[a].TickCount, CountTicks(a), label + " 앞 롱노트 틱 전부");
+                Assert.AreEqual(expectedNext[lane], Final(b).Type, label + " 다음 노트");
+                Assert.AreEqual(lane == 2 ? 0 : judge.Notes[b].TickCount, CountTicks(b), label + " 다음 노트 틱");
+                Assert.Less(judge.Notes[a].GetTickTime(judge.Notes[a].TickCount - 1), judge.Notes[b].Time - 0.05, label + " 마지막 틱은 다음 노트와 겹치지 않는다");
+            }
+        }
+        Assert.AreEqual(2, score.MissCount);
+    }
+
+    /// <summary>
+    /// P15: 끝에 숏노트가 이어진 롱노트의 그림 (11/25). 내려오는 중 · 누르는 동안 모두 몸통 위 끝 = 숏노트 아래 끝 (1px 이내),
+    /// 끝 시각 직전에는 몸통 길이 0, x1.0에서 1/4박 롱노트 몸통 길이 0 이상, 다음 노트 머리가 앞 몸통보다 앞에 그려진다.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator P15_TouchingNextNote_Drawing()
+    {
+        yield return StartPlay(Chart(Long(6f, 8f, 0), Short(8f, 0), Long(7.5f, 7.75f, 1), Short(7.75f, 1)));
+        int n = LongIndex(0), s = ShortIndex(0), q = LongIndex(1);
+        PlayNote note = judge.Notes[n];
+        NoteLayer layer = Get<NoteLayer>(scene, "noteLayer");
+        GearView gear = Get<GearView>(scene, "gear");
+        LongNoteView[] longViews = Get<LongNoteView[]>(layer, "longViewByNote");
+        NoteView[] shortViews = Get<NoteView[]>(layer, "viewByNote");
+        layer.SetScrollMultiplier(1f);
+        yield return WaitSongTime(note.Time - 0.5);
+        yield return null;
+
+        float px = gear.UnitsPerReferencePx;
+        float GapPx() => (shortViews[s].transform.localPosition.y - shortViews[s].GetComponent<SpriteRenderer>().size.y * 0.5f - longViews[n].TopY) / px;
+        float fallingGap = GapPx();
+        float fallingInset = (gear.JudgeLineY + (float)(note.EndTime - layer.LastRefreshSongTime) * layer.ScrollSpeed - longViews[n].TopY) / px;
+        float quarterBody = longViews[q].Body.size.y / px;
+        int bodyOrder = longViews[n].Body.sortingOrder, headOrder = shortViews[s].GetComponent<SpriteRenderer>().sortingOrder;
+
+        yield return PressAt(0, note.Time);
+        yield return WaitSongTime(note.Time + 0.3);
+        yield return null;
+        float heldGap = GapPx(), heldHead = longViews[n].HeadY, heldBottom = longViews[n].BottomY;
+
+        // 끝 + 20ms ~ : 위 끝이 판정선보다 내려왔으므로 몸통 길이 0, 머리는 뗄 때까지 남는다
+        yield return WaitSongTime(note.EndTime + 0.02);
+        yield return null;
+        bool stillHeld = judge.GetLongState(n) == LongNoteState.Held;
+        float endBody = longViews[n] != null ? longViews[n].Body.size.y / px : -1f;
+        float endHead = longViews[n] != null ? longViews[n].HeadY : float.NaN;
+        scene.TestRelease(0, note.EndTime + 0.05);
+
+        Debug.Log($"[LongNoteTest] P15 그림 (x1.0): 숏노트 아래 끝 − 몸통 위 끝 = 내려오는 중 {fallingGap:0.000}px · 누르는 동안 {heldGap:0.000}px, 끝 시각 − 몸통 위 끝 {fallingInset:0.000}px, " +
+                  $"1/4박 롱노트 몸통 {quarterBody:0.00}px, 끝 + 20ms 몸통 {endBody:0.00}px(누르는 중 {stillHeld}), 순서 몸통 {bodyOrder} < 머리 {headOrder}");
+
+        Assert.AreEqual(0f, fallingGap, 1f, "내려오는 중");
+        Assert.AreEqual(0f, heldGap, 1f, "누르는 동안");
+        Assert.AreEqual(GameConstants.Play.LongNoteEndInsetPx, fallingInset, 0.05f, "끝 시각보다 11px 아래");
+        Assert.GreaterOrEqual(quarterBody, 0f, "1/4박 롱노트 몸통 길이");
+        Assert.AreEqual(gear.JudgeLineY, heldHead, 0.001f, "누르는 동안 머리 = 판정선");
+        Assert.AreEqual(gear.JudgeLineY, heldBottom, 0.001f, "누르는 동안 몸통 아래 끝 = 판정선");
+        Assert.IsTrue(stillHeld, "늦게 떼는 중");
+        Assert.AreEqual(0f, endBody, 0.001f, "몸통 길이 0");
+        Assert.AreEqual(gear.JudgeLineY, endHead, 0.001f, "머리는 뗄 때까지 판정선");
+        Assert.Less(bodyOrder, headOrder, "다음 노트 머리가 앞 몸통보다 앞");
+    }
+
+    /// <summary>P16: 이어지는 노트 패턴 자동 플레이 → MISS 0, 최대 콤보 = 가능한 최대 콤보 (같은 시각 뗌 먼저, 누름 나중)</summary>
+    [UnityTest]
+    public IEnumerator P16_AutoPlayTouching()
+    {
+        yield return StartPlay(Chart(
+            Long(6f, 7f, 0), Short(7f, 0), Short(7.5f, 0),
+            Long(6f, 7f, 1), Long(7f, 8f, 1), Long(8f, 8.25f, 1), Long(8.25f, 8.5f, 1), Short(8.5f, 1),
+            Long(6.5f, 7f + 1f / 3f, 2), Long(7f + 1f / 3f, 9f, 2), Short(9f, 2),
+            Long(7f, 9f, 3), Long(9f, 10f, 3)), true);
+        float deadline = TestSpeed.Deadline(20f);
+        while (!judge.AllJudged)
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "자동 플레이 대기 시간 초과");
+            yield return null;
+        }
+        yield return null;
+
+        Debug.Log($"[LongNoteTest] P16 이어지는 노트 자동 플레이: 노트 {judge.TotalCount}, 틱 {judge.TotalTicks}, P/G/Go/M {score.PerfectCount}/{score.GreatCount}/{score.GoodCount}/{score.MissCount}, " +
+                  $"최대 콤보 {score.MaxCombo}/{score.MaxPossibleCombo}");
+        Assert.AreEqual(0, score.MissCount);
+        Assert.AreEqual(judge.TotalCount + judge.TotalTicks, score.MaxPossibleCombo);
+        Assert.AreEqual(score.MaxPossibleCombo, score.MaxCombo);
+    }
+
+    /// <summary>
     /// P12: 숏노트만 있는 채보 자동 플레이 (롱노트 작업 전 숏노트 동작과 같은지).
     /// 공식 채보는 Critical Velocity EASY 하나뿐이고 롱노트가 있으므로, 그 채보를 불러와 롱노트를 뺀 숏노트만의 채보를 테스트 안에서 만든다
     /// (공식 채보 파일은 고치지 않는다). 기대값은 남긴 숏노트 수에서 계산한다: 판정 수 = 최대 콤보 = 숏노트 수, 1,000,000점, ALL PERFECT.

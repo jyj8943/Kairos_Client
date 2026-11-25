@@ -270,7 +270,14 @@ public static class GameConstants
         public const float NoteShineTopInsetPx = 2f;
         /// <summary>숏노트 광택 두께 (px)</summary>
         public const float NoteShineHeightPx = 4f;
-        /// <summary>롱노트 몸통 폭 (px, 라인 x+16 ~ x+92). 숏노트(머리)보다 좁은 평평한 띠이고, 꼬리는 따로 그리지 않는다 (몸통 위 끝 = 꼬리)</summary>
+        /// <summary>인게임 숏노트 높이 (px)</summary>
+        public const float ShortNoteHeightPx = 22f;
+        /// <summary>
+        /// 롱노트 몸통 위 끝을 끝 시각 위치보다 이만큼(px) 아래에서 끊는다 = 숏노트 높이의 절반 (11/25, DJMAX · PLATiNA::LAB식).
+        /// 끝 시각에 이어지는 다음 노트가 몸통 위에 올라앉아 보인다. 그림만 바꾸고 판정 시각(EndTime)은 그대로다. 배속과 상관없이 같은 px이다.
+        /// </summary>
+        public const float LongNoteEndInsetPx = ShortNoteHeightPx / 2f;
+        /// <summary>롱노트 몸통 폭 (px, 라인 x+16 ~ x+92). 숏노트(머리)보다 좁은 평평한 띠이고, 꼬리는 따로 그리지 않는다 (몸통 위 끝 = 끝 시각 − LongNoteEndInsetPx)</summary>
         public const float LongNoteBodyWidthPx = 76f;
         /// <summary>롱노트 몸통 가운데 흰 선 폭 (px)</summary>
         public const float LongNoteCenterLineWidthPx = 2f;
@@ -1436,7 +1443,7 @@ public static class GameConstants
         /// <summary>에디터 롱노트 몸통 폭 = 라인 폭 × 이 비율 (인게임 몸통 76px ÷ 라인 108px ≈ 0.70, 11/20)</summary>
         public const float EditorLongBodyWidthRatio = 0.70f;
 
-        /// <summary>에디터 롱노트 꼬리 끝 막대 (에디터만): 몸통 폭 × 높이 6px, 모서리 3px, 끝 틱에 가운데</summary>
+        /// <summary>에디터 롱노트 꼬리 끝 막대 (에디터만): 몸통 폭 × 높이 6px, 모서리 3px, 막대 위 끝 = 몸통 위 끝 (끝 틱 − 에디터 숏노트 높이 ÷ 2)</summary>
         public const float EditorLongTailBarHeightPx = 6f;
         public const float EditorLongTailBarRadiusPx = 3f;
 

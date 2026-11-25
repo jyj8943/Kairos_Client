@@ -131,6 +131,7 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
     /// 그리드 로컬 좌표(왼쪽 아래 기준)에 있는 노트를 찾는다. 우클릭 삭제와 마우스 흰 테두리가 같이 쓴다 (테두리가 보이는 노트 = 우클릭하면 지워지는 노트).
     /// 순서: 화면에 그려진 노트(EditorNoteLayer.TryFindNoteAtLocalY, 노트가 스냅 선 간격보다 커도 가장자리에서 찾게)
     /// → 스냅 선 위치(숏노트를 누른 자리) → 가리킨 tick 그대로(롱노트 몸통 중간).
+    /// 롱노트는 그려진 위 끝(몸통 위 끝)보다 위를 가리키면 대상이 아니다: 끝 tick 자리는 다음 노트의 자리이고, 비어 있으면 놓을 자리 미리 보기다.
     /// </summary>
     public bool TryFindNoteAt(float x, float y, out EditorNote note)
     {
@@ -141,10 +142,21 @@ public class EditorNotePlacer : MonoBehaviour, IPointerDownHandler, IDragHandler
         if (noteLayer != null && noteLayer.TryFindNoteAtLocalY(lane, y, out note)) return true;
 
         int snappedTick = BeatGridMath.SnapBeatToTick(grid.LocalYToBeat(y), grid.SnapDivision);
-        if (IsTickInSong(snappedTick) && session.Data.TryFindAt(lane, snappedTick, out note)) return true;
+        if (TryFindAtTick(lane, snappedTick, y, out note)) return true;
 
         int rawTick = BeatGridMath.BeatToTick(grid.LocalYToBeat(y));
-        return IsTickInSong(rawTick) && session.Data.TryFindAt(lane, rawTick, out note);
+        return TryFindAtTick(lane, rawTick, y, out note);
+    }
+
+    /// <summary>tick을 차지하는 노트를 찾는다. 롱노트의 그려진 위 끝보다 위(y)를 가리키면 없는 것으로 본다.</summary>
+    private bool TryFindAtTick(int lane, int tick, float y, out EditorNote note)
+    {
+        note = default;
+        if (!IsTickInSong(tick) || !session.Data.TryFindAt(lane, tick, out EditorNote found)) return false;
+        if (found.IsLong && noteLayer != null && y > noteLayer.GetNoteRect(found).yMax) return false;
+
+        note = found;
+        return true;
     }
 
     /// <summary>화면 좌표로 TryFindNoteAt을 부른다 (확인용 · 테스트용)</summary>

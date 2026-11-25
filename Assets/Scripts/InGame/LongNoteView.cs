@@ -4,7 +4,7 @@ using UnityEngine;
 /// 인게임 롱노트 하나 (LongNote 프리팹). NoteLayer가 풀에서 꺼내 Init()과 SetLayout()을 호출한다.
 /// 모양 (11/20 정정, 기획서 3-4 「노트 · 판정 이펙트」, README 1-1 · 06_롱노트_구조_전체):
 /// - Body: Square 스프라이트(흰 4×4, Draw Mode Sliced, 테두리 없음)를 폭 76px(라인 x+16 ~ x+92) 평평한 띠로 늘린다.
-///   세로는 머리 y(가운데) ~ 꼬리 y(끝 시각). 위 끝이 곧 꼬리이고 꼬리는 따로 그리지 않는다. 높이는 localScale이 아니라 size로 바꾼다.
+///   세로는 머리 y(가운데) ~ 끝 시각 y − LongNoteEndInsetPx(숏노트 높이의 절반, 11/25). 위 끝이 곧 꼬리이고 꼬리는 따로 그리지 않는다. 높이는 localScale이 아니라 size로 바꾼다.
 /// - CenterLine: LongNoteCenterLine(흰색 78%, 폭 2px, 라인 가운데 x+53 ~ x+55)을 몸통과 같은 길이로 늘린다.
 /// - Head: 숏노트와 같은 모양 (ShortNote 100×22 라인 색 + 자식 Shine 광택), 머리 y에 가운데.
 /// - 누르는 동안: NoteLayer가 머리 y를 판정선에 고정해 넘기므로 머리는 판정선 위에 계속 보이고, 몸통 아래 끝도 판정선에 붙는다.
@@ -84,7 +84,7 @@ public class LongNoteView : MonoBehaviour
     }
 
     /// <summary>
-    /// 라인 x와 머리(시작)·꼬리(끝)의 y를 받아 몸통·가운데 선·머리를 놓는다 (NoteShape.LongNoteBodyRange: 머리 y ~ 꼬리 y).
+    /// 라인 x와 머리(시작)·꼬리(몸통 위 끝)의 y를 받아 몸통·가운데 선·머리를 놓는다 (NoteShape.LongNoteBodyRange: 머리 y ~ 꼬리 y).
     /// 누르는 동안의 머리 고정은 NoteLayer가 headY에 판정선 y를 넘겨 처리한다.
     /// </summary>
     public void SetLayout(float x, float headY, float tailY)

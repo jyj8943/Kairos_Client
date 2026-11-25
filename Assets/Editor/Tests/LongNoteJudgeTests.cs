@@ -394,6 +394,114 @@ public class LongNoteJudgeTests
         Assert.AreEqual(JudgeType.Perfect, next.Type);
     }
 
+    // ───── 앞 롱노트 끝 = 다음 노트 시작 (11/25, 떼고 바로 누르기) ─────
+
+    /// <summary>롱노트(1~3박, 60 BPM)와 끝 시각 3초에 이어지는 다음 노트. nextLong이면 롱노트(3~4박), 아니면 숏노트</summary>
+    private static NoteJudge Touching(bool nextLong)
+    {
+        PlayNote next = nextLong ? Long(Slow, 0, 3, 4) : new PlayNote(0, Slow.BeatToSeconds(3));
+        return new NoteJudge(new[] { next, Long(Slow, 0, 1, 3) }, 4, DefaultWindows());
+    }
+
+    /// <summary>실제 게임과 같은 순서(입력 → 프레임 CollectTimeouts)로 releaseMs에 떼고 pressMs에 다시 누른다. 결과는 앞 롱노트 종합, 틱 수, 다음 노트 첫 판정</summary>
+    [TestCase(false, -30.0, 10.0, JudgeType.Perfect)]  // 1. 조금 일찍 떼고 바로 누름
+    [TestCase(true, -30.0, 10.0, JudgeType.Perfect)]
+    [TestCase(false, 50.0, 70.0, JudgeType.Great)]     // 2. 늦게 떼고 늦게 누름
+    [TestCase(true, 50.0, 70.0, JudgeType.Great)]
+    [TestCase(false, -60.0, -20.0, JudgeType.Perfect)] // 일찍 떼고 일찍 누름
+    [TestCase(false, 100.0, 115.0, JudgeType.Good)]
+    public void Touching_ReleaseThenPress(bool nextLong, double releaseMs, double pressMs, JudgeType expectedNext)
+    {
+        NoteJudge judge = Touching(nextLong);
+        ScoreCalculator score = new ScoreCalculator(judge.TotalCount, judge.TotalTicks);
+        List<JudgeResult> results = new List<JudgeResult>();
+        double end = judge.Notes[0].EndTime;
+        Assert.AreEqual(end, judge.Notes[1].Time, "끝 = 다음 시작");
+        Assert.AreEqual(end - 0.25, judge.Notes[0].GetTickTime(judge.Notes[0].TickCount - 1), 1e-9, "5. 마지막 틱 = 끝 − 1/4박");
+        if (nextLong) Assert.AreEqual(end + 0.25, judge.Notes[1].GetTickTime(0), 1e-9, "다음 롱노트 첫 틱 = 시작 + 1/4박");
+
+        Assert.IsTrue(judge.TryHit(0, judge.Notes[0].Time, out JudgeResult start));
+        score.Apply(start);
+        judge.CollectTimeouts(end + releaseMs / 1000.0 - 0.001, results);
+        int ticks = results.FindAll(r => r.Kind == JudgeKind.Tick).Count;
+        foreach (JudgeResult r in results) score.Apply(r);
+
+        results.Clear();
+        Assert.IsTrue(judge.TryRelease(0, end + releaseMs / 1000.0, results));
+        ticks += results.FindAll(r => r.Kind == JudgeKind.Tick).Count;
+        foreach (JudgeResult r in results) score.Apply(r);
+        Assert.AreEqual(JudgeType.Perfect, results[results.Count - 1].Type, "앞 롱노트 끝 정상");
+        Assert.AreEqual(7, ticks, "앞 롱노트 틱 전부");
+
+        judge.CollectTimeouts(end + pressMs / 1000.0 - 0.001, results);
+        Assert.IsEmpty(results, "다음 노트는 아직 MISS가 아니다");
+        Assert.IsTrue(judge.TryHit(0, end + pressMs / 1000.0, out JudgeResult next));
+        score.Apply(next);
+        Assert.AreEqual(1, next.NoteIndex, "다음 노트를 판정한다");
+        Assert.AreEqual(expectedNext, next.Type);
+        Assert.AreEqual(nextLong ? JudgeKind.LongStart : JudgeKind.Short, next.Kind);
+        Assert.AreEqual(1 + 7 + 1, score.Combo, "콤보 = 시작 + 틱 7 + 다음 노트");
+    }
+
+    /// <summary>3. 떼지 않고 계속 누름: 앞 롱노트는 끝 + LongReleaseMs에 자동 GOOD, 다음 노트는 누름이 없어 MISS (롱노트면 시작 MISS). 도중 누름은 빈 타격</summary>
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Touching_HoldThrough_NextIsMiss(bool nextLong)
+    {
+        NoteJudge judge = Touching(nextLong);
+        ScoreCalculator score = new ScoreCalculator(judge.TotalCount, judge.TotalTicks);
+        List<JudgeResult> results = new List<JudgeResult>();
+        double end = judge.Notes[0].EndTime;
+
+        Assert.IsTrue(judge.TryHit(0, judge.Notes[0].Time, out JudgeResult start));
+        score.Apply(start);
+        judge.CollectTimeouts(end + 0.12, results);
+        foreach (JudgeResult r in results) score.Apply(r);
+        Assert.AreEqual(7, results.Count, "틱만 나온다");
+        Assert.AreEqual(8, score.Combo);
+        Assert.IsFalse(judge.TryHit(0, end, out _), "누르고 있는 동안은 다음 노트를 판정하지 않는다");
+
+        judge.CollectTimeouts(end + 0.121, results);
+        foreach (JudgeResult r in results) score.Apply(r);
+        Assert.AreEqual(2, results.Count);
+        Assert.AreEqual(JudgeKind.LongFinal, results[0].Kind);
+        Assert.AreEqual(0, results[0].NoteIndex);
+        Assert.AreEqual(JudgeType.Good, results[0].Type, "앞 롱노트 자동 GOOD");
+        Assert.AreEqual(1, results[1].NoteIndex);
+        Assert.AreEqual(JudgeType.Miss, results[1].Type, "다음 노트 MISS");
+        Assert.AreEqual(nextLong ? LongNoteState.Missed : LongNoteState.Done, judge.GetLongState(1));
+        Assert.AreEqual(0, score.Combo);
+        Assert.IsTrue(judge.AllJudged);
+    }
+
+    /// <summary>
+    /// 시작 MISS 롱노트(회색 몸통)의 끝에 이어지는 노트: 끝 시각보다 조금 일찍 눌러도 다음 노트로 판정한다 (회색 몸통이 가로채지 않음).
+    /// 다음 노트의 GOOD 범위 밖 누름은 지금처럼 빈 타격이다.
+    /// </summary>
+    [TestCase(-30.0, true, JudgeType.Perfect)]
+    [TestCase(-70.0, true, JudgeType.Great)]
+    [TestCase(-120.0, true, JudgeType.Good)]
+    [TestCase(-130.0, false, JudgeType.Miss)]
+    [TestCase(-800.0, false, JudgeType.Miss)]
+    [TestCase(30.0, true, JudgeType.Perfect)]
+    public void Touching_AfterStartMiss_EarlyPressHitsNext(double pressMs, bool expectedHit, JudgeType expected)
+    {
+        NoteJudge judge = Touching(false);
+        List<JudgeResult> results = new List<JudgeResult>();
+        judge.CollectTimeouts(judge.Notes[0].Time + 0.121, results);
+        Assert.AreEqual(LongNoteState.Missed, judge.GetLongState(0));
+
+        bool hit = judge.TryHit(0, judge.Notes[1].Time + pressMs / 1000.0, out JudgeResult next);
+        Assert.AreEqual(expectedHit, hit);
+        if (!hit)
+        {
+            Assert.IsFalse(judge.IsJudged(1), "빈 타격: 다음 노트는 그대로");
+            return;
+        }
+        Assert.AreEqual(1, next.NoteIndex);
+        Assert.AreEqual(expected, next.Type);
+    }
+
     /// <summary>누르는 동안 같은 라인의 다음 노트는 판정하지 않는다 (다른 라인은 그대로)</summary>
     [Test]
     public void WhileHeld_SameLaneNextNoteNotJudged()

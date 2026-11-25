@@ -382,7 +382,33 @@ public class ChartRepositoryTests
         }
     }
 
-    /// <summary>검증: 1/4박보다 짧은 롱노트, 같은 라인 겹침(끝과 같은 박 포함)은 저장이 실패한다. 다른 라인은 겹쳐도 된다</summary>
+    /// <summary>앞 롱노트 끝과 같은 박에서 시작하는 숏노트·롱노트: 저장 → 다시 불러오기 → 에디터 정리까지 노트가 그대로다 (빠지지 않음)</summary>
+    [Test]
+    public void TouchingLongEnd_RoundTrip()
+    {
+        ChartData chart = CreateChart("my_test_touch");
+        chart.notes.Add(Long(0f, 4f, 0));
+        chart.notes.Add(Short(4f, 0));
+        chart.notes.Add(Long(0f, 4f, 1));
+        chart.notes.Add(Long(4f, 4f + 4f / 3f, 1));
+        chart.notes.Add(Short(4f + 4f / 3f, 1));
+        Assert.IsTrue(ChartRepository.TrySave(chart, out string error), error);
+        Assert.IsTrue(ChartRepository.TryLoad(TestSongId, "my_test_touch", ChartType.Custom, out ChartData loaded, out error), error);
+        Assert.AreEqual(5, loaded.notes.Count);
+
+        List<EditorNote> notes = new List<EditorNote>();
+        foreach (NoteData note in loaded.notes)
+        {
+            int start = BeatGridMath.BeatToTick(note.beat);
+            notes.Add(new EditorNote(note.lane, start, note.type == NoteData.TypeLong ? BeatGridMath.BeatToTick(note.endBeat) : start));
+        }
+        ChartEditData data = new ChartEditData(GameConstants.Editor.TicksPerBeat * 100, GameConstants.Editor.LaneCount);
+        Assert.AreEqual(0, data.ReplaceAll(notes), "정리 단계에서 빠지는 노트 없음");
+        Assert.AreEqual(3, data.LongCount);
+        Assert.AreEqual(2, data.ShortCount);
+    }
+
+    /// <summary>검증: 1/4박보다 짧은 롱노트, 같은 라인 겹침(몸통 안, 끝 바로 앞)은 저장이 실패한다. 끝과 같은 박은 된다. 다른 라인은 겹쳐도 된다</summary>
     [Test]
     public void InvalidLongNotes_Rejected()
     {
@@ -404,7 +430,13 @@ public class ChartRepositoryTests
         ChartData touchingEnd = CreateChart("my_test_longoverlap2");
         touchingEnd.notes.Add(Short(3f, 0));
         touchingEnd.notes.Add(Long(1f, 3f, 0));
-        Assert.IsFalse(ChartRepository.TrySave(touchingEnd, out error), "끝과 같은 박의 노트도 겹침");
+        Assert.IsTrue(ChartRepository.TrySave(touchingEnd, out error), error);
+
+        ChartData beforeEnd = CreateChart("my_test_longoverlap4");
+        beforeEnd.notes.Add(Short(3f - 1f / 48f, 0));
+        beforeEnd.notes.Add(Long(1f, 3f, 0));
+        Assert.IsFalse(ChartRepository.TrySave(beforeEnd, out error), "끝 바로 앞의 노트는 겹침");
+        StringAssert.Contains("겹칩니다", error);
 
         ChartData longs = CreateChart("my_test_longoverlap3");
         longs.notes.Add(Long(1f, 3f, 2));
