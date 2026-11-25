@@ -83,6 +83,12 @@ public class UITheme : ScriptableObject
     public Color difficultyHard = new Color32(0xC2, 0x45, 0x7E, 0xFF);
     public Color difficultyCustom = new Color32(0x8B, 0x7F, 0xD1, 0xFF);
     public Color onDifficultyText = Color.white;
+    [Tooltip("곡 선택: 고른 난이도 탭 · 채보 머리 · 기록 패널에 겹쳐 칠하는 난이도 색 농도 (16%)")]
+    [Range(0f, 1f)] public float difficultyTintChosenAlpha = 0.16f;
+    [Tooltip("곡 선택: 고르지 않은 난이도 탭에 겹쳐 칠하는 난이도 색 농도 (7%)")]
+    [Range(0f, 1f)] public float difficultyTintAlpha = 0.07f;
+    [Tooltip("곡 선택: 새 채보 생성 줄 · 카드에 칠하는 CUSTOM 보라 농도 (12%)")]
+    [Range(0f, 1f)] public float newChartFillAlpha = 0.12f;
 
     [Header("나만의 채보 탭 (기획서 3-3 「나만의 채보 탭 (11/17, 11/18 개정)」)")]
     [Tooltip("지금 고른 곡의 머리 줄 곡 이름 (#2F7FC8)")]

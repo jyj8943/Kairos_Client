@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 곡 선택 나만의 채보 탭의 채보 줄 하나 (기획서 3-3 「나만의 채보 탭 (11/17, 11/18 개정)」, Prefabs/SongSelect/Btn_MyChartItem).
-/// - CUSTOM 뱃지 · 채보 이름 · Lv · 최고 랭크 이미지 (높이 26, FC는 띄우지 않음, 11/18).
+/// - CUSTOM 뱃지 · 채보 이름 · Lv · 최고 랭크 이미지 (높이 26, 기록이 없으면 빈칸 11/25, FC는 띄우지 않음).
 /// - 키보드·마우스로 선택되면 곧바로 그 채보를 고른다 (SetSelectCallback). 고른 채보는 왼쪽 하늘색 막대(selectBar)와 포인트색 18% 바탕 (UITheme).
 /// - ↑↓는 EventSystem의 Navigate(이동 이벤트)를 받아 넘긴다 (SetMoveCallback): 정지점에 + 줄이 끼어 있고 + 줄은 하나를 옮겨 쓰므로
 ///   Selectable 내비게이션 대신 곡 선택이 MyChartListNavigator로 다음 정지점을 정한다. ←→ 이동 이벤트는 무시한다 (곡 묶음 이동은 SongSelect 맵 액션).
@@ -22,7 +22,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
     [SerializeField] private TMP_Text chartInfoText;
     [Tooltip("고른 채보 왼쪽 하늘색 막대 (Img_SelectBar)")]
     [SerializeField] private Image selectBar;
-    [Tooltip("최고 랭크 이미지 (Img_Rank, 기록이 없으면 Txt_RankEmpty \"—\")")]
+    [Tooltip("최고 랭크 이미지 (Img_Rank, 기록이 없으면 빈칸)")]
     [SerializeField] private Img_Rank rank;
 
     private Button button;
@@ -82,7 +82,7 @@ public class Btn_MyChartItem : MonoBehaviour, ISelectHandler, IMoveHandler
         this.onMove = onMove;
     }
 
-    /// <summary>최고 랭크 이미지를 채운다. 기록이 없으면 "—".</summary>
+    /// <summary>최고 랭크 이미지를 채운다. 기록이 없으면 빈칸.</summary>
     public void SetRecord(ChartRecordData record)
     {
         RecordTexts texts = SongSelectRecordFormat.Build(record);

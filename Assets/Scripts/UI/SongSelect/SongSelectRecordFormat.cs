@@ -51,6 +51,13 @@ public static class SongSelectRecordFormat
         return combo.ToString(CultureInfo.InvariantCulture);
     }
 
+    /// <summary>MAX COMBO 칸: "최고 콤보 / 최대 콤보" (분모는 작고 연한 색). 기록이 없으면 best에 "―"를 넘긴다</summary>
+    /// <param name="totalColorHex">분모 색 (RRGGBB)</param>
+    public static string FormatComboOfMax(string best, int maxCombo, string totalColorHex)
+    {
+        return string.Format(CultureInfo.InvariantCulture, GameConstants.SongSelect.ComboFormat, best, maxCombo, totalColorHex);
+    }
+
     /// <summary>RATE: 소수 둘째 자리까지 버림 + "%" (예: 95.3449 → "95.34%")</summary>
     public static string FormatRate(double accuracy)
     {

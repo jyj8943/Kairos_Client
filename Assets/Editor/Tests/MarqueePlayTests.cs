@@ -141,6 +141,11 @@ public class MarqueePlayTests
         Assert.AreEqual(TextOverflowModes.Ellipsis, longItem.TitleMarquee.Text.overflowMode, "고르지 않은 칸은 …");
         Assert.AreEqual(shortItem.TitleMarquee.Text.preferredHeight, ((RectTransform)shortItem.TitleMarquee.transform).rect.height, 0.5f, "칸 높이 = 글자 선호 높이 (레이아웃 그대로)");
 
+        // 11/25 개편으로 제목 칸이 548로 넓어져 이 제목이 들어간다 → 흐름을 보려고 칸을 예전 폭(460)으로 줄인다
+        Assert.AreEqual(548f, big.CellWidth, 0.5f, "곡 정보 칸 폭");
+        RectTransform bigCell = (RectTransform)big.transform;
+        bigCell.sizeDelta = new Vector2(460f, bigCell.sizeDelta.y);
+
         // 긴 제목 곡으로 바꿈
         EventSystem.current.SetSelectedGameObject(longItem.gameObject);
         yield return null;

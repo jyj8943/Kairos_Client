@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-/// <summary>나만의 채보 탭 정지점 종류: 채보 줄 / "+ 새 채보 만들기" 줄</summary>
+/// <summary>나만의 채보 탭 정지점 종류: 채보 줄 / "+ 새 채보 생성" 줄</summary>
 public enum MyChartStopKind
 {
     Chart,

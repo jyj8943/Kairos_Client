@@ -11,7 +11,8 @@ using UnityEngine;
 /// - 공식 채보: Assets/Resources/Data/OfficialCharts/{songId}/{난이도}.json (난이도 = EASY / NORMAL / HARD)
 ///   읽기는 Resources.LoadAll, 저장은 같은 파일에 쓴다 (Unity 에디터에서만 저장. 빌드에서는 읽기 전용)
 /// - 나만의 채보 파일 이름은 chartId만 쓴다. 채보 이름은 파일 이름에 쓰지 않는다.
-/// - 저장은 임시 파일({chartId}.json.tmp)에 먼저 쓰고 다 쓰면 원래 파일과 바꿔치기한다.
+/// - 저장은 임시 파일({chartId}.json.tmp)에 먼저 쓰고 다 쓰면 원래 파일과 바꿔치기한다. 저장할 때 updatedAt(마지막 수정 시각)을 쓴다.
+/// - 읽을 때 최대 콤보(maxCombo)를 한 번 계산해 둔다 (PlayNoteBuilder, 인게임과 같은 함수).
 /// - 읽을 때 공식·나만의 채보 모두 같은 검사(TryParseChart)를 쓴다.
 ///   나만의 채보는 JSON이 깨진 파일을 .broken으로 이름을 바꿔 백업하고, 공식 채보(Resources)는 경고만 한다.
 /// - 곡 검사는 호출하는 쪽에서 GameManager.Songs로 한다 (이 클래스는 파일만 다룬다).
@@ -110,6 +111,7 @@ public static class ChartRepository
             ? GetOfficialChartPath(chart.songId, chart.difficulty)
             : GetChartPath(chart.songId, chart.chartId, type);
         string tempPath = path + GameConstants.Chart.TempExtension;
+        chart.updatedAt = ChartTimeRules.ToText(DateTime.UtcNow);
 
         try
         {
@@ -128,6 +130,16 @@ public static class ChartRepository
 
         error = string.Empty;
         return true;
+    }
+
+    /// <summary>
+    /// 나만의 채보의 마지막 수정 시각 (UTC). updatedAt이 없는 예전 채보는 채보 파일의 수정 시각, 파일도 없으면 null.
+    /// </summary>
+    public static DateTime? GetUpdatedAtUtc(ChartData chart)
+    {
+        if (chart == null) return null;
+        string path = GetChartPath(chart.songId, chart.chartId, ChartType.Custom);
+        return ChartTimeRules.Resolve(chart.updatedAt, File.Exists(path) ? File.GetLastWriteTimeUtc(path) : (DateTime?)null);
     }
 
     /// <summary>
@@ -381,6 +393,7 @@ public static class ChartRepository
         }
 
         SortNotes(parsed.notes);
+        parsed.maxCombo = PlayNoteBuilder.GetMaxCombo(parsed);
         chart = parsed;
         error = string.Empty;
         return true;

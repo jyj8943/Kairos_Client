@@ -5,33 +5,29 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 나만의 채보 탭의 "+ 새 채보 만들기" 줄 (기획서 3-3 「나만의 채보 탭 (11/18 개정)」, Prefabs/SongSelect/Btn_NewChart).
+/// 나만의 채보 탭의 "+ 새 채보 생성" 줄 (기획서 3-3 「나만의 채보 탭」, 11/25, Prefabs/SongSelect/Btn_NewChart).
 /// - 곡 선택은 이 줄 하나를 만들어 지금 고른 곡 묶음의 끝(채보가 없는 곡은 머리 줄 바로 아래)으로 옮겨 쓴다.
-/// - 평소: 높이 46, 하늘색 점선 테두리(Img_Dash, 곡 선택의 점선 빈 자리와 같은 타일 방식) / 골랐을 때: 높이 60, 하늘색 실선(Img_Border) + 선택 바탕,
-///   오른쪽에 "Enter 이름 · 레벨 입력" 힌트(Hint). 색은 UITheme (포인트색 · 선택 바탕).
+/// - 높이 64, CUSTOM 보라 2px 점선 테두리(Img_Dash, 점선 스프라이트 타일). 골랐을 때만 보라 12% 칠과 오른쪽 Enter 키(Hint)가 보인다
+///   (고르지 않았을 때 Enter는 채보 시작이라 키를 숨긴다). 색은 UITheme (difficultyCustom · newChartFillAlpha).
 /// - 선택(키보드·마우스 올림) = 이 줄을 고르기, 클릭 = 새 채보 팝업. ↑↓는 EventSystem 이동 이벤트를 곡 선택에 넘긴다 (Btn_MyChartItem과 같다).
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_NewChart : MonoBehaviour, ISelectHandler, IMoveHandler
 {
     [SerializeField] private Image background;
-    [Tooltip("평소 점선 테두리 (Img_Dash)")]
+    [Tooltip("보라 2px 점선 테두리 (Img_Dash)")]
     [SerializeField] private Image dashBorder;
-    [Tooltip("골랐을 때 실선 테두리 (Img_Border)")]
-    [SerializeField] private Image solidBorder;
     [Tooltip("+ 원 (Img_Plus) · + 글자")]
     [SerializeField] private Image plusImage;
     [SerializeField] private TMP_Text plusText;
     [SerializeField] private TMP_Text labelText;
-    [Tooltip("골랐을 때만 보이는 오른쪽 힌트 (Hint: Img_EnterKey/Txt_EnterKey + Txt_Hint)")]
+    [Tooltip("골랐을 때만 보이는 오른쪽 Enter 키 (Hint: Img_EnterKey/Txt_EnterKey)")]
     [SerializeField] private GameObject hint;
     [SerializeField] private TMP_Text enterKeyText;
-    [SerializeField] private TMP_Text hintText;
     [SerializeField] private LayoutElement layoutElement;
 
-    /// <summary>평소 · 골랐을 때 높이</summary>
-    public const float NormalHeight = 46f;
-    public const float ChosenHeight = 60f;
+    /// <summary>줄 높이 (고르거나 말거나 같다)</summary>
+    public const float Height = 64f;
 
     private Button button;
     private Action onSelected;
@@ -61,7 +57,7 @@ public class Btn_NewChart : MonoBehaviour, ISelectHandler, IMoveHandler
         labelText.text = GameConstants.SongSelect.NewChartRowLabel;
         if (plusText != null) plusText.text = GameConstants.SongSelect.NewChartRowPlus;
         if (enterKeyText != null) enterKeyText.text = enterKey;
-        if (hintText != null) hintText.text = GameConstants.SongSelect.NewChartRowHint;
+        if (layoutElement != null) layoutElement.preferredHeight = Height;
         button.navigation = new Navigation { mode = Navigation.Mode.None };
         button.onClick.RemoveListener(OnClick);
         button.onClick.AddListener(OnClick);
@@ -69,29 +65,18 @@ public class Btn_NewChart : MonoBehaviour, ISelectHandler, IMoveHandler
     }
 
     /// <summary>
-    /// 골랐을 때 / 평소 모양: 높이 60 · 실선 · 선택 바탕 · 힌트 / 높이 46 · 점선.
+    /// 골랐을 때 / 평소 모양: 보라 12% 칠 + Enter 키 / 점선만.
     /// </summary>
     public void SetChosen(bool chosen)
     {
         IsChosen = chosen;
         UITheme theme = UITheme.Current;
-        if (background != null) background.color = chosen ? theme.SelectedBackground : UITheme.WithAlpha(theme.accent, 0f);
-        if (dashBorder != null)
-        {
-            dashBorder.color = theme.accent;
-            dashBorder.gameObject.SetActive(!chosen);
-        }
-        if (solidBorder != null)
-        {
-            solidBorder.color = theme.accent;
-            solidBorder.gameObject.SetActive(chosen);
-        }
-        if (plusImage != null) plusImage.color = theme.accent;
+        if (background != null) background.color = UITheme.WithAlpha(theme.difficultyCustom, chosen ? theme.newChartFillAlpha : 0f);
+        if (dashBorder != null) dashBorder.color = theme.difficultyCustom;
+        if (plusImage != null) plusImage.color = theme.difficultyCustom;
         if (plusText != null) plusText.color = theme.onAccentText;
-        labelText.color = theme.accent;
+        labelText.color = theme.textPrimary;
         if (hint != null) hint.SetActive(chosen);
-        if (hintText != null) hintText.color = theme.textDescription;
-        if (layoutElement != null) layoutElement.preferredHeight = chosen ? ChosenHeight : NormalHeight;
     }
 
     public void OnSelect(BaseEventData eventData)

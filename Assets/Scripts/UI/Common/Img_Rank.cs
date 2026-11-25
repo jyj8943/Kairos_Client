@@ -7,18 +7,18 @@ using UnityEngine.UI;
 /// - 이미지는 RankSprites (Rank_AP · Rank_S ~ Rank_F). 색은 칠하지 않는다 (이미지 그대로, 흰색).
 /// - 크기: 높이(height)에 맞추고 가로는 비율대로 → S~F는 정사각형, AP는 같은 높이로 가로로 길다.
 ///   가로가 랭크 칸 폭(maxWidth)을 넘으면 비율을 지키며 칸 폭에 맞게 줄인다.
-/// - 기록이 없으면 이미지를 숨기고 빈 자리(emptyMark: 기록 카드는 점선 빈 자리 Img_RankEmpty, 목록은 "—" 글자 Txt_RankEmpty)를 켠다.
+/// - 기록이 없으면 이미지를 숨기고 빈 자리(emptyMark: 기록 패널은 점선 빈 자리 Img_RankEmpty)를 켠다. 곡 선택 목록·난이도 탭은 빈 자리 없이 숨기기만 한다 (11/25).
 ///   빈 자리가 글자면 "—"(GameConstants.SongSelect.EmptyValue)를 흐린 글자색으로 쓴다.
 /// - RectTransform 앵커는 한 점(가운데 등)으로 둔다 (sizeDelta = 실제 크기).
 /// </summary>
 [RequireComponent(typeof(Image))]
 public class Img_Rank : MonoBehaviour
 {
-    [Tooltip("이미지 높이 (기록 카드 62 · 목록 26 · 결과 150)")]
+    [Tooltip("이미지 높이 (기록 패널 84 · 난이도 탭 32 · 곡 목록 18 · 나만의 채보 목록 26 · 결과 150)")]
     [Min(1f)] [SerializeField] private float height = 62f;
     [Tooltip("랭크 칸 폭. 가로가 이보다 길면 비율을 지키며 줄인다 (0이면 제한 없음)")]
     [Min(0f)] [SerializeField] private float maxWidth;
-    [Tooltip("기록이 없을 때 대신 켤 것 (기록 카드 Img_RankEmpty · 목록 Txt_RankEmpty). 비우면 숨기기만 한다")]
+    [Tooltip("기록이 없을 때 대신 켤 것 (기록 패널 Img_RankEmpty). 비우면 숨기기만 한다")]
     [SerializeField] private GameObject emptyMark;
 
     private Image image;

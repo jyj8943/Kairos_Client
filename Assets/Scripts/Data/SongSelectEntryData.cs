@@ -15,7 +15,7 @@ public class SongSelectEntryData
 
     /// <summary>
     /// 고를 채보. 공식 탭은 없으면 가장 낮은 난이도.
-    /// 나만의 채보 탭은 있으면 그 채보 줄, 없으면 그 곡의 "+ 새 채보 만들기" 줄 (songId도 없으면 첫 줄).
+    /// 나만의 채보 탭은 있으면 그 채보 줄, 없으면 그 곡의 "+ 새 채보 생성" 줄 (songId도 없으면 첫 줄).
     /// </summary>
     public string chartId;
 

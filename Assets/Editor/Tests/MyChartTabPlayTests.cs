@@ -117,10 +117,14 @@ public class MyChartTabPlayTests
             yield return null;
         }
         Assert.IsTrue(songSelect.IsNewChartRowChosen, "+ 줄을 고름");
-        Assert.IsTrue(songSelect.NewChartRow.IsChosen && songSelect.NewChartRow.Hint.activeSelf, "고른 + 줄: 높이 60 · 힌트");
+        Assert.IsTrue(songSelect.NewChartRow.IsChosen && songSelect.NewChartRow.Hint.activeSelf, "고른 + 줄: Enter 키");
+        Assert.AreEqual(Btn_NewChart.Height, ((RectTransform)songSelect.NewChartRow.transform).rect.height, 0.5f, "+ 줄 높이 64");
         Assert.IsTrue(songSelect.IsVisibleInList((RectTransform)songSelect.NewChartRow.transform), "+ 줄이 보이게 스크롤");
         Assert.IsTrue(songSelect.IsNewChartCardShown, "왼쪽 점선 새 채보 카드");
-        Assert.AreEqual(GameConstants.SongSelect.NewChartRecordAlpha, songSelect.RecordCardAlpha, 1e-4f, "최고 기록 카드 흐리게");
+        Assert.IsFalse(songSelect.IsRecordPanelShown, "기록 패널은 숨김");
+        Assert.AreEqual("MY CHART · 새 채보 생성", songSelect.DifficultyHeader);
+        Assert.IsFalse(songSelect.IsDifficultyKeysShown, "←→ 숨김");
+        StringAssert.EndsWith("· 새 채보 생성", songSelect.MyChartCountText.text);
         Assert.AreEqual(GameConstants.SongSelect.NewChartStartLabel, songSelect.StartLabel);
         Assert.IsFalse(songSelect.KeyGuide.Describe().Exists(line => line.EndsWith(GameConstants.KeyGuide.Edit)), "+ 줄에서는 E 편집 안내 없음");
 

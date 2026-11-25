@@ -47,6 +47,12 @@ public class ChartData
     /// <summary>노트 목록 (beat, lane 순)</summary>
     public List<NoteData> notes = new List<NoteData>();
 
+    /// <summary>마지막 수정 시각 (ISO 8601 UTC, ChartTimeRules). 에디터에서 저장할 때 ChartRepository.TrySave가 쓴다. 예전 채보는 빈 값</summary>
+    public string updatedAt = string.Empty;
+
+    /// <summary>낼 수 있는 최대 콤보 (롱노트 유지 틱 포함). 저장하지 않고 채보를 불러올 때 한 번 계산한다 (PlayNoteBuilder.GetMaxCombo, 인게임과 같은 값)</summary>
+    [NonSerialized] public int maxCombo;
+
     /// <summary>
     /// enum을 JSON에 쓰는 문자열로 바꾼다.
     /// </summary>

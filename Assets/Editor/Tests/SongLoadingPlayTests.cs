@@ -262,7 +262,7 @@ public class SongLoadingPlayTests
         float until = Time.realtimeSinceStartup + GameConstants.SongLoading.OpenSeconds + 0.1f;
         while (Time.realtimeSinceStartup < until) yield return null;
 
-        // 곡 선택 큰 앨범과 같은 자리 · 크기
+        // 곡 선택 큰 앨범과 같은 자리 · 크기 (11/25 곡 선택 개편: x 80, y 168, 440×440)
         RectTransform cover = (RectTransform)Object.FindFirstObjectByType<Canvas_SongSelect>().transform.Find("Img_Cover");
         Rect coverRect = TopLeft(cover, (RectTransform)cover.root);
         Rect albumRect = TopLeft(overlay.AlbumRect, root);
@@ -272,6 +272,9 @@ public class SongLoadingPlayTests
         Assert.AreEqual(coverRect.y, albumRect.y, 0.5f, "앨범 y");
         Assert.AreEqual(coverRect.width, albumRect.width, 0.5f);
         Assert.AreEqual(coverRect.height, albumRect.height, 0.5f);
+        Rect panelRect = TopLeft((RectTransform)overlay.transform.Find("Panel"), root);
+        sb.AppendLine($"  정보 판: x {panelRect.x:0.0} y {panelRect.y:0.0} {panelRect.width:0.0}×{panelRect.height:0.0}");
+        Assert.AreEqual(albumRect.y, panelRect.y, 0.5f, "정보 판 위끝 = 앨범 위끝");
 
         SongData song = GameManager.Songs.Find(Song);
         ChartData official = new ChartData { chartId = "x", type = ChartData.TypeOfficial, difficulty = "NORMAL", level = 7 };

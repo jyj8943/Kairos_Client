@@ -1442,7 +1442,7 @@ public class InGameScene : SceneBase
 
     /// <summary>
     /// 채보 노트를 시간(초)으로 바꾼다. 에디터와 같은 TimingMap 변환 (곡 offsetMs + 사용자 판정 오프셋, timingPoints 전체 구간).
-    /// 롱노트는 끝 시간과 유지 틱 시간(LongNoteTicks, 시작 + 1/4박 ~ 끝 − 1/4박 이하)도 같이 계산한다.
+    /// 롱노트는 끝 시간과 유지 틱 시간도 같이 계산한다 (PlayNoteBuilder, 곡 선택의 최대 콤보와 같은 함수).
     /// 테스트 플레이면 시작 박 앞의 노트(시작이 앞인 롱노트 포함)는 건너뛴다 (전체 노트 수에도 넣지 않는다).
     /// </summary>
     private List<PlayNote> BuildNotes(out int longCount, out int skippedBefore)
@@ -1456,19 +1456,6 @@ public class InGameScene : SceneBase
             source = filtered;
         }
 
-        List<PlayNote> notes = new List<PlayNote>(source.Count);
-        longCount = 0;
-        foreach (NoteData note in source)
-        {
-            if (note.type == NoteData.TypeLong)
-            {
-                longCount++;
-                notes.Add(new PlayNote(note.lane, timing.BeatToSeconds(note.beat), timing.BeatToSeconds(note.endBeat),
-                    LongNoteTicks.GetTickTimes(timing, note.beat, note.endBeat)));
-                continue;
-            }
-            notes.Add(new PlayNote(note.lane, timing.BeatToSeconds(note.beat)));
-        }
-        return notes;
+        return PlayNoteBuilder.Build(source, timing, out longCount);
     }
 }

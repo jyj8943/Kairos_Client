@@ -16,6 +16,9 @@ MonoBehaviour:
   title: D Minor Descent
   artist: Kairos
   bpm: 216
+  timingPoints: []
+  bpmDisplay: 0
+  promptBpm: 216
   offsetMs: 120
   clip: {fileID: 8300000, guid: 8d5ae56aee5e3614e8779fdd075df729, type: 3}
   cover: {fileID: 21300000, guid: 7195c36e7136d084dbc8a4f7583726d5, type: 3}

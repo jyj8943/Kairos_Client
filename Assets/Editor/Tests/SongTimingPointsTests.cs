@@ -79,7 +79,8 @@ public class SongTimingPointsTests
         Assert.AreEqual(0f, song.TimingPoints[0].beat);
         Assert.AreEqual(216f, song.TimingPoints[0].bpm);
         Assert.AreEqual(216f, song.StartBpm);
-        Assert.AreEqual(216f, song.DisplayBpm, "displayBpm 0 → 시작 BPM 표시");
+        Assert.AreEqual(216f, song.PromptBpm, "promptBpm 0 → 시작 BPM 기준");
+        Assert.AreEqual("216", BpmDisplayRules.Format(song, null));
 
         GameObject owner = new GameObject("ChartEditSession_SongTiming");
         created.Add(owner);
@@ -179,8 +180,9 @@ public class SongTimingPointsTests
             Assert.AreEqual(chart.timingPoints[i].bpm, song.TimingPoints[i].bpm, $"{i}번 구간 float 값 그대로");
 
         Assert.IsTrue(SongManager.ValidateTimingPoints(song.TimingPoints, new List<string>(), new List<string>()));
-        Assert.AreEqual(150.61f, song.DisplayBpm, "표시 BPM 150.61 유지");
-        Assert.AreEqual("150.61", SongData.FormatBpm(song.DisplayBpm));
+        Assert.AreEqual(150.61f, song.PromptBpm, "promptBpm 150.61 (예전 displayBpm에서 옮김)");
+        Assert.AreEqual(SongBpmDisplay.Main, song.BpmDisplay, "기본은 대표");
+        Assert.AreEqual("150.68", BpmDisplayRules.Format(song, chart), "대표 = 150.61과 가장 가까운 실제 구간 값");
         Assert.AreEqual(song.TimingPoints[0].bpm, song.StartBpm);
         Assert.AreEqual(169, song.OffsetMs);
     }

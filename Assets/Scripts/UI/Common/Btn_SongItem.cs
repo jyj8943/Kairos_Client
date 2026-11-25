@@ -13,7 +13,8 @@ using UnityEngine.UI;
 ///   (보통 = 패널 흰색 58% + 기본·보조 글자, 고름 = 포인트색 18% 바탕 + 왼쪽 막대).
 /// - 곡 선택 프리팹만 쓰는 칸 (비워 두면 쓰지 않는다, 기획서 3-3 ② 11/17):
 ///   왼쪽 하늘색 막대(selectBar), 고르면 크게(높이·앨범·제목 크기), 둘째 줄 아티스트(showArtist),
-///   오른쪽 난이도 칸(위 E · N · H 레벨, 아래 난이도별 최고 랭크 이미지만 높이 26, 기록이 없으면 —. FC는 목록에 띄우지 않는다, 11/18).
+///   오른쪽 난이도 칸 3개 (11/25): 레벨 숫자(고른 곡 24, 나머지 20), 기록이 있으면 숫자 밑에 작은 랭크(높이 18). 채보가 없는 난이도는 빈칸.
+///   고른 곡의 고른 난이도 숫자는 난이도 색 + 밑줄 2px. FC는 목록에 띄우지 않는다. BPM은 쓰지 않는다.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class Btn_SongItem : MonoBehaviour, ISelectHandler
@@ -25,9 +26,10 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     public class DifficultyColumn
     {
         public string difficulty;
-        public Image levelTag;
         public TMP_Text levelText;
-        [Tooltip("최고 랭크 이미지 (Img_Rank, 기록이 없으면 Txt_RankEmpty \"—\")")]
+        [Tooltip("고른 난이도 숫자 밑줄 2px (Img_LevelUnderline)")]
+        public Image underline;
+        [Tooltip("최고 랭크 이미지 (Img_Rank, 기록이 없으면 빈칸)")]
         public Img_Rank rank;
     }
 
@@ -60,10 +62,17 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     [Tooltip("제목 글자 크기: 보통 / 고름 (0이면 바꾸지 않는다)")]
     [SerializeField] private float normalTitleSize;
     [SerializeField] private float chosenTitleSize;
+    [Tooltip("레벨 숫자 크기: 보통 / 고름 (0이면 바꾸지 않는다)")]
+    [SerializeField] private float normalLevelSize;
+    [SerializeField] private float chosenLevelSize;
     [Tooltip("난이도 칸 (EASY · NORMAL · HARD)")]
     [SerializeField] private DifficultyColumn[] difficultyColumns = new DifficultyColumn[0];
 
+    /// <summary>밑줄이 숫자보다 긴 폭 (px)</summary>
+    private const float UnderlineExtraWidth = 10f;
+
     private Button button;
+    private string chosenDifficulty;
     private Color normalBackgroundColor;
     private Color normalTitleColor;
     private Color normalInfoColor;
@@ -120,8 +129,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         }
         else
         {
-            string bpmText = song.DisplayBpm > 0f ? SongData.FormatBpm(song.DisplayBpm) : "-";
-            infoText.text = $"BPM {bpmText} · {song.GetLengthText()}";
+            infoText.text = $"BPM {BpmDisplayRules.Format(song, null)} · {song.GetLengthText()}";
         }
 
         cover.sprite = song.Cover;
@@ -131,7 +139,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
     }
 
     /// <summary>
-    /// 난이도 칸을 채운다 (곡 선택 화면). 채보 없는 난이도는 레벨·랭크 모두 "—", 기록이 없으면 랭크 "—".
+    /// 난이도 칸을 채운다 (곡 선택 화면). 채보 없는 난이도는 빈칸, 기록이 없으면 랭크 빈칸.
     /// </summary>
     /// <param name="charts">이 곡의 공식 채보</param>
     /// <param name="findRecord">chartId → 기록 (없으면 null)</param>
@@ -154,23 +162,41 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
                 }
             }
 
-            string initial = string.IsNullOrEmpty(column.difficulty) ? string.Empty : column.difficulty.Substring(0, 1);
-            Color difficultyColor = UITheme.Current.GetDifficulty(column.difficulty);
-            if (column.levelText != null)
-            {
-                column.levelText.text = string.Format(GameConstants.SongSelect.ListLevelFormat, initial,
-                    chart != null ? chart.level.ToString() : GameConstants.SongSelect.EmptyValue);
-                column.levelText.color = difficultyColor;
-            }
-            if (column.levelTag != null)
-            {
-                Color tag = difficultyColor;
-                tag.a = UITheme.Current.selectedAlpha;
-                column.levelTag.color = tag;
-            }
-
+            if (column.levelText != null) column.levelText.text = chart != null ? chart.level.ToString() : string.Empty;
             RecordTexts record = SongSelectRecordFormat.Build(chart != null ? findRecord?.Invoke(chart.chartId) : null);
             if (column.rank != null) column.rank.Show(record.HasRecord, record.Rank);
+        }
+        RefreshLevels();
+    }
+
+    /// <summary>고른 난이도 (고른 곡일 때만 보인다): 숫자를 난이도 색 + 밑줄로. 없으면 null</summary>
+    public void SetChosenDifficulty(string difficulty)
+    {
+        chosenDifficulty = difficulty;
+        RefreshLevels();
+    }
+
+    /// <summary>레벨 숫자 크기·색·밑줄을 고른 곡·고른 난이도에 맞춘다</summary>
+    private void RefreshLevels()
+    {
+        if (difficultyColumns == null) return;
+
+        foreach (DifficultyColumn column in difficultyColumns)
+        {
+            if (column == null || column.levelText == null) continue;
+
+            bool marked = IsChosen && column.levelText.text.Length > 0 && !string.IsNullOrEmpty(chosenDifficulty)
+                && string.Equals(column.difficulty, chosenDifficulty, StringComparison.OrdinalIgnoreCase);
+            if (normalLevelSize > 0f && chosenLevelSize > 0f) column.levelText.fontSize = IsChosen ? chosenLevelSize : normalLevelSize;
+            if (marked) column.levelText.color = UITheme.Current.GetDifficulty(column.difficulty);
+            else UIThemePaint.Text(column.levelText, IsChosen ? UITextLevel.Primary : UITextLevel.Description);
+
+            if (column.underline == null) continue;
+            column.underline.gameObject.SetActive(marked);
+            if (!marked) continue;
+            column.underline.color = UITheme.Current.GetDifficulty(column.difficulty);
+            RectTransform line = column.underline.rectTransform;
+            line.sizeDelta = new Vector2(column.levelText.GetPreferredValues(column.levelText.text).x + UnderlineExtraWidth, line.sizeDelta.y);
         }
     }
 
@@ -210,6 +236,7 @@ public class Btn_SongItem : MonoBehaviour, ISelectHandler
         if (normalTitleSize > 0f && chosenTitleSize > 0f)
             titleText.fontSize = chosen ? chosenTitleSize : normalTitleSize;
         if (titleMarquee != null) titleMarquee.SetPlaying(chosen);
+        RefreshLevels();
     }
 
     /// <summary>

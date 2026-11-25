@@ -8,9 +8,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 새 채보 팝업 (기획서 3-7 ④ 「새 채보 팝업 (Popup_NewChart, 11/18)」). SongSelectScene의 Canvas_SongSelect 아래에 두고, 곡 선택이 Init(SongData, …)을 부른 뒤 Open한다.
-/// - 언제: 나만의 채보 탭에서 "+ 새 채보 만들기" 줄을 고르고 Enter(또는 클릭).
+/// - 언제: 나만의 채보 탭에서 "+ 새 채보 생성" 줄을 고르고 Enter(또는 클릭).
 /// - 모양: 가로 600, 화면 가운데, 공용 팝업 톤 (PopupBackdrop 블러 6 + 덮개 42%, 패널 86% · 모서리 20 · 그림자).
-///   위에서부터 제목 "새 채보 만들기 NEW CHART" + 하늘색 밑줄 → 곡 카드(작은 앨범 · 제목 · 아티스트 · BPM · 길이)
+///   위에서부터 제목 "새 채보 생성 NEW CHART" + 하늘색 밑줄 → 곡 카드(작은 앨범 · 제목 · 아티스트 · BPM · 길이)
 ///   → 채보 이름(Input_ChartName, 높이 52) + 레벨 ◀ 7 ▶ (1~15, 와이어프레임대로 한 줄) → 오류 글자(빨강) → 취소 · 만들기(하늘색, 높이 56) → 키 안내 줄.
 /// - 조작: ↑↓ 항목 (이름 → 레벨 → 버튼), ←→ 레벨 바꾸기(Btn_Level의 UINavigateStepper) / 버튼 고르기, Enter 결정 (입력칸에서 Enter도 만들기).
 ///   ESC는 UIManager가 받는다: 입력 중이면 입력만 끝내고(글자 유지, Restore Original Text On Escape 끔), 아니면 OnCancelRequested → 닫고 + 줄을 다시 고른다.
@@ -122,7 +122,8 @@ public class Popup_NewChart : UIPopup
             albumImage.color = song.Cover != null ? Color.white : theme.emptyCover;
             songTitleText.text = song.Title;
             string artist = string.IsNullOrEmpty(song.Artist) ? GameConstants.SongSelect.EmptyValue : song.Artist;
-            string bpm = song.DisplayBpm > 0f ? SongData.FormatBpm(song.DisplayBpm) : GameConstants.SongSelect.EmptyValue;
+            // 아직 채보가 없으므로 곡의 BPM 구간(새 채보가 시작할 구간)으로 표기한다
+            string bpm = BpmDisplayRules.Format(song, null);
             songInfoText.text = string.Format(GameConstants.SongSelect.NewChartSongInfoFormat, artist, bpm, song.GetLengthText());
         }
 

@@ -582,7 +582,6 @@ public static class GameConstants
         public const string Difficulty = "난이도";
         public const string Chart = "채보";
         public const string Tab = "탭";
-        public const string Speed = "배속";
         public const string Start = "시작";
         public const string ToTitle = "타이틀";
         public const string Resume = "계속";
@@ -1006,8 +1005,11 @@ public static class GameConstants
         /// <summary>난이도 카드 레벨: {0} 레벨</summary>
         public const string LevelFormat = "Lv. {0}";
 
-        /// <summary>곡 정보 줄: {0} BPM, {1} 곡 길이</summary>
-        public const string SongInfoFormat = "BPM {0} · {1}";
+        /// <summary>곡 정보 칸 라벨</summary>
+        public const string BpmLabel = "BPM";
+        public const string TimeLabel = "TIME";
+        /// <summary>BPM 범위: {0} 최소, {1} 최대, {2} ~ 글자 색 (RRGGBB)</summary>
+        public const string BpmRangeFormat = "{0} <color=#{2}>~</color> {1}";
 
         /// <summary>배속 표시: {0} 배속 (소수 첫째 자리까지)</summary>
         public const string SpeedFormat = "x{0:0.0}";
@@ -1028,62 +1030,73 @@ public static class GameConstants
         public const string DifficultyHeader = "DIFFICULTY · 난이도";
         public const string MyChartHeader = "MY CHART · 고른 채보";
         /// <summary>+ 줄을 골랐을 때 고른 채보 자리 머리글</summary>
-        public const string NewChartHeader = "NEW CHART · 새 채보";
+        public const string NewChartHeader = "MY CHART · 새 채보 생성";
         public const string SongListHeader = "SONGS · 곡 목록";
         public const string MyChartListHeader = "MY CHARTS · 곡별 나만의 채보";
-        public const string SpeedLabel = "SPEED · 배속";
+        /// <summary>배속 줄 라벨 두 줄</summary>
+        public const string SpeedLabel = "SPEED";
+        public const string SpeedLabelKo = "배속";
 
         /// <summary>목록 위쪽 숫자: {0} 지금 순번, {1} 전체 수 (두 자리)</summary>
         public const string SongCountFormat = "{0:00} / {1:00}";
         /// <summary>나만의 채보 탭 위쪽 숫자: {0} 지금 고른 곡 순번, {1} 전체 곡 수, {2} 전체 채보 수 (예: "곡 02 / 08 · 채보 5")</summary>
         public const string MyChartCountFormat = "곡 {0:00} / {1:00} · 채보 {2}";
+        /// <summary>+ 줄을 골랐을 때 위쪽 숫자: {0} 지금 고른 곡 순번, {1} 전체 곡 수 (예: "곡 01 / 08 · 새 채보 생성")</summary>
+        public const string NewChartCountFormat = "곡 {0:00} / {1:00} · 새 채보 생성";
 
         /// <summary>나만의 채보 곡 머리 줄 채보 수: {0} 채보 수 (1이면 단수, 0이면 NO CHART)</summary>
         public const string GroupChartCountFormat = "{0} CHARTS";
         public const string GroupChartCountOne = "1 CHART";
         public const string GroupNoChart = "NO CHART";
 
-        /// <summary>"+ 새 채보 만들기" 줄 (Btn_NewChart): 이름 · 고르면 오른쪽 Enter 키 힌트</summary>
-        public const string NewChartRowLabel = "새 채보 만들기";
+        /// <summary>"+ 새 채보 생성" 줄 (Btn_NewChart): 이름 · + 글자</summary>
+        public const string NewChartRowLabel = "새 채보 생성";
         public const string NewChartRowPlus = "+";
-        public const string NewChartRowHint = "이름 · 레벨 입력";
 
-        /// <summary>+ 줄을 골랐을 때 왼쪽 점선 카드 (고른 채보 카드 자리)</summary>
-        public const string NewChartCardTitle = "이 곡으로 새 채보를 만들어요";
-        public const string NewChartCardHint = "Enter를 누르면 이름·레벨을 넣는 창이 열려요";
-
-        /// <summary>+ 줄을 골랐을 때 최고 기록 카드 불투명도 (값은 비우고 흐리게)</summary>
-        public const float NewChartRecordAlpha = 0.35f;
-
-        /// <summary>목록 항목의 난이도 레벨 표시: {0} 난이도 첫 글자, {1} 레벨 (예: "E 3")</summary>
-        public const string ListLevelFormat = "{0} {1}";
+        /// <summary>+ 줄을 골랐을 때 왼쪽 점선 카드 (채보 머리 + 기록 패널 자리). 힌트 앞에 Enter 키 모양이 붙는다</summary>
+        public const string NewChartCardTitle = "새 채보 생성";
+        public const string NewChartCardHint = "채보 이름 · 레벨 입력  →  에디터";
 
         /// <summary>나만의 채보 항목·카드의 레벨: {0} 레벨</summary>
         public const string MyChartLevelFormat = "Lv. {0}";
 
-        /// <summary>고른 채보 카드 아랫줄: {0} 노트 수, {1} 롱노트 수, {2} 마지막 수정일 (MM/dd)</summary>
-        public const string MyChartStatsFormat = "노트 <b>{0}</b>    롱노트 <b>{1}</b>    마지막 수정 <b>{2}</b>";
-        public const string ModifiedDateFormat = "MM/dd";
+        /// <summary>채보 머리 오른쪽: {0} 마지막 수정 시각</summary>
+        public const string MyChartModifiedFormat = "마지막 수정 <b>{0}</b>";
+        /// <summary>마지막 수정 시각 형식 (지역 시간)</summary>
+        public const string ModifiedTimeFormat = "MM/dd HH:mm";
 
         /// <summary>최고 기록 카드 이름</summary>
         public const string BestScoreLabel = "BEST SCORE";
         public const string RateLabel = "RATE";
-        public const string ComboLabel = "COMBO";
+        public const string ComboLabel = "MAX COMBO";
+        public const string RankLabel = "RANK";
+        /// <summary>난이도 탭 · 채보 머리의 레벨 라벨</summary>
+        public const string LevelLabel = "LEVEL";
+        /// <summary>기록이 없을 때 (난이도 탭 오른쪽 · 기록 패널 점수 자리)</summary>
+        public const string NotPlayed = "NOT PLAYED";
+        /// <summary>MAX COMBO 칸: {0} 최고 콤보, {1} 최대 콤보, {2} 분모 색 (RRGGBB). 분모 16</summary>
+        public const string ComboFormat = "{0} <size=16><color=#{2}>/ {1}</color></size>";
+        /// <summary>기록 패널 점수 글자 크기: 점수 / NOT PLAYED</summary>
+        public const float ScoreFontSize = 56f;
+        public const float NotPlayedFontSize = 38f;
+        /// <summary>시작 버튼 최소 폭 · 좌우 여백 합 (이름이 길면 글자에 맞춰 넓어진다)</summary>
+        public const float StartButtonMinWidth = 230f;
+        public const float StartButtonPadding = 50f;
 
         /// <summary>RATE 표시: 소수 둘째 자리 % (반올림하지 않고 버림, InvariantCulture)</summary>
         public const string RateFormat = "{0:0.00}%";
 
-        /// <summary>시작 버튼 (하단 바 오른쪽 끝). + 줄을 고르면 "새 채보 / NEW"</summary>
+        /// <summary>시작 버튼 (하단 바 오른쪽 끝). + 줄을 고르면 "새 채보 생성 / NEW"</summary>
         public const string StartLabel = "시작";
         public const string StartLabelEn = "START";
-        public const string NewChartStartLabel = "새 채보";
+        public const string NewChartStartLabel = "새 채보 생성";
         public const string NewChartStartLabelEn = "NEW";
 
         /// <summary>빈 상태 문구</summary>
         public const string OfficialEmpty = "공식 채보가 없습니다";
 
         /// <summary>새 채보 팝업 (Popup_NewChart, 기획서 3-7 ④)</summary>
-        public const string NewChartTitle = "새 채보 만들기";
+        public const string NewChartTitle = "새 채보 생성";
         public const string NewChartTitleEn = "NEW CHART";
         public const string NewChartNameLabel = "채보 이름";
         public const string NewChartLevelLabelFormat = "레벨 ({0}~{1})";

@@ -79,7 +79,10 @@ public class RankDisplayPlayTests
             Assert.IsFalse(songSelect.RecordFullCombo.IsShown, "기록 없음 → FC 없음");
             Img_Rank listRank = NormalColumnRank(songSelect);
             Assert.IsFalse(listRank.gameObject.activeSelf, "목록: 기록 없음 → 랭크 이미지 숨김");
-            Assert.IsTrue(listRank.EmptyMark.activeInHierarchy, "목록: 기록 없음 → —");
+            Assert.IsNull(listRank.EmptyMark, "목록: 기록 없음 → 빈칸 (— 없음)");
+            Assert.AreEqual(GameConstants.SongSelect.NotPlayed, songSelect.ScoreText, "기록 없음 → NOT PLAYED");
+            StringAssert.StartsWith(GameConstants.SongSelect.EmptyValue, songSelect.ComboText, "MAX COMBO ― / 최대 콤보");
+            StringAssert.Contains($"/ {songSelect.ChosenChart.maxCombo}", songSelect.ComboText);
 
             // AP 기록
             PutRecord(book, apRecord, records.Count);
@@ -89,15 +92,14 @@ public class RankDisplayPlayTests
             Assert.IsTrue(cardRank.gameObject.activeInHierarchy, "AP 기록 → Img_Rank 보임");
             Assert.IsFalse(cardRank.EmptyMark.activeSelf, "AP 기록 → 빈 자리 숨김");
             Assert.AreEqual("Rank_AP", cardRank.Sprite.name);
-            Assert.AreEqual(94f, cardRank.Size.x, SizeTolerance, "AP는 랭크 칸 폭 94에 맞춤");
-            Assert.LessOrEqual(cardRank.Size.y, 62f + SizeTolerance);
+            Assert.AreEqual(116f, cardRank.Size.x, SizeTolerance, "AP는 랭크 칸 폭 116에 맞춤");
+            Assert.LessOrEqual(cardRank.Size.y, 84f + SizeTolerance);
             Assert.IsTrue(songSelect.RecordFullCombo.IsShown, "AP면 FC도 보임");
             Assert.AreEqual(30f, songSelect.RecordFullCombo.Size.x, SizeTolerance, "FC 폭 30");
             listRank = NormalColumnRank(songSelect);
             Assert.IsTrue(listRank.gameObject.activeInHierarchy, "목록 AP 랭크 보임");
             Assert.AreEqual("Rank_AP", listRank.Sprite.name);
-            Assert.AreEqual(26f, listRank.Size.y, SizeTolerance, "목록 랭크 높이 26");
-            Assert.IsFalse(listRank.EmptyMark.activeSelf);
+            Assert.AreEqual(18f, listRank.Size.y, SizeTolerance, "목록 랭크 높이 18");
 
             Debug.Log($"[RankDisplayPlayTest] K1 기록 카드 AP {cardRank.Size.x:0.0}×{cardRank.Size.y:0.0}, FC {songSelect.RecordFullCombo.Size.x:0.0}×{songSelect.RecordFullCombo.Size.y:0.0}, 목록 AP {listRank.Size.x:0.0}×{listRank.Size.y:0.0}");
         }
