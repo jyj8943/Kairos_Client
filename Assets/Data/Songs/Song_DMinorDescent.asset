@@ -15,6 +15,7 @@ MonoBehaviour:
   songId: d_minor_descent
   title: D Minor Descent
   artist: Kairos
+  emotionKeyword: "\uACA9\uC815"
   bpm: 216
   timingPoints: []
   bpmDisplay: 0

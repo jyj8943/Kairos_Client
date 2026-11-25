@@ -817,8 +817,36 @@ public static class GameConstants
         public const float RankFlashBoost = 0.8f;
         public const float RankFlashHalfWidth = 0.2f;
 
-        /// <summary>연출 끝 (일반 입력 받기)</summary>
-        public const float EndSeconds = 3.90f;
+        /// <summary>카이로스 입 전환 (Idle → Talk) · 대화창 (11/25): 랭크 도장이 끝나고 KairosTalkDelay 뒤(t0 = KairosTalkStart)</summary>
+        public const float KairosTalkDelay = 0.2f;
+        public const float KairosTalkStart = RankStart + RankDuration + KairosTalkDelay;
+        /// <summary>Talk 알파 0 → 1</summary>
+        public const float KairosTalkFade = 0.08f;
+        /// <summary>카이로스가 위로 KairosBouncePx 갔다 오는 시간 (10 · sin(π · q))</summary>
+        public const float KairosBounce = 0.3f;
+        public const float KairosBouncePx = 10f;
+        /// <summary>대화창 알파 0 → 1, 크기 DialogStartScale → 1 (ease-out cubic)</summary>
+        public const float DialogDuration = 0.25f;
+        public const float DialogStartScale = 0.92f;
+
+        /// <summary>결과 값 연출 끝 (카이로스를 뺀 나머지)</summary>
+        public const float ValuesEndSeconds = 3.90f;
+        /// <summary>카이로스 입 전환이 끝나는 시각 (t0 + 튐)</summary>
+        public const float KairosEndSeconds = KairosTalkStart + KairosBounce;
+
+        /// <summary>연출 끝 (일반 입력 받기) = 결과 값 · 카이로스 중 늦은 쪽</summary>
+        public const float EndSeconds = KairosEndSeconds > ValuesEndSeconds ? KairosEndSeconds : ValuesEndSeconds;
+    }
+
+    /// <summary>결과 화면 대화창의 랭크별 멘트 (11/25). 고르는 규칙은 ResultLineRules</summary>
+    public static class ResultLines
+    {
+        public const string AllPerfect = "완벽한 연주였어! 전부 다 기록했어.";
+        /// <summary>S ~ A</summary>
+        public const string High = "가슴이 뛰는 노래였어. 이 느낌, 꼭 기록해 둘게!";
+        /// <summary>B ~ D</summary>
+        public const string Middle = "좋은 노래야. 조금씩 기억이 돌아오고 있어.";
+        public const string Failed = "괜찮아, 다시 해 보자. 노래는 어디 안 가니까.";
     }
 
     public static class Result
@@ -826,6 +854,13 @@ public static class GameConstants
         /// <summary>화면 이름 (곡 선택 "SONG SELECT"와 같은 형식)</summary>
         public const string ScreenName = "RESULT";
         public const string ScreenNameKo = "결과";
+
+        /// <summary>카이로스 일러스트 (Resources.Load 경로): 입 다묾 · 입 벌림 (입 주변 말고 같은 그림)</summary>
+        public const string KairosIdleSpritePath = "Images/Result/Kairos_Result_Idle";
+        public const string KairosTalkSpritePath = "Images/Result/Kairos_Result_Talk";
+
+        /// <summary>카이로스 대화창 첫 줄 (둘째 줄은 곡의 감정 키워드, 셋째 줄은 ResultLines)</summary>
+        public const string DialogLabel = "이 곡에서 되찾은 감정";
 
         public const string ScoreLabel = "SCORE";
         public const string RateLabel = "RATE";

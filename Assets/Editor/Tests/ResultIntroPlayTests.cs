@@ -18,7 +18,8 @@ using UnityEngine.UI;
 /// - I1 암전 로딩으로 들어가 걷히는 동안 값 요소 숨김 → OnEnter부터 단계 시작 시각 · t별 값 · 끝 상태 최종 글자 (NEW RECORD 3개 · FC 있음)
 /// - I2 NEW RECORD · FC 없는 판: 같은 단계 시작 시각이 I1과 같음 (밀리지 않음)
 /// - I3 연출 중 Enter · Esc · F5 · Enter 버튼 · 다시 하기 버튼 → 건너뛰기만 (씬 그대로) → 다음 입력에 이동 · 다시 하기. 같은 프레임 Enter + Esc는 한 번만
-/// - I4 테스트 플레이 결과: Init 직후 끝 상태, 첫 Enter에 돌아가기
+/// - I4 테스트 플레이 결과: Init 직후 끝 상태 (카이로스 Talk · 대화창도), 첫 Enter에 돌아가기
+/// - I7 카이로스 · 대화창 (11/25): 배치(Canvas 안 · 겹침) · 글자 넘침, 4.1초에 건너뛰기 → 튐 없이 끝 상태 → 다음 Enter에 이동
 /// - I5 스위치: 꺼짐이면 테스트 플레이 · 자동 테스트 끝 → Result 로드 0회로 에디터, 켜짐이면 결과(연출 없음) → Enter로 에디터. 저장값 유지 · 설명 줄 배치
 /// </summary>
 public class ResultIntroPlayTests
@@ -255,6 +256,8 @@ public class ResultIntroPlayTests
         foreach (float a in ValueAlphas(canvas)) Assert.AreEqual(1f, a, 1e-5f, "끝: 모두 보임");
         Assert.AreEqual(Vector3.one, canvas.RankImage.transform.localScale, "랭크 크기 1");
         Assert.IsFalse(Get<Image>(canvas, "rankFlashImage").enabled, "번쩍임 없음");
+        AssertKairosFinished(canvas, "끝");
+        Assert.GreaterOrEqual(canvas.IntroTime, GameConstants.ResultIntro.EndSeconds - 1e-4f, "연출 끝 4.3초");
     }
 
     [UnityTest]
@@ -291,14 +294,16 @@ public class ResultIntroPlayTests
             yield return LoadResult(CvNormalResult(false), s => scene = s);
             Canvas_Result canvas = scene.Canvas;
             Assert.IsTrue(canvas.IsIntroPlaying, kind + ": 연출 중");
-            float wait = Time.realtimeSinceStartup + 0.8f;
-            while (Time.realtimeSinceStartup < wait) yield return null;
+            float skipAt = kind == "Enter" ? 2f : 0.8f; // 카이로스 입 전환 도중(4.1초)은 I7
+            float wait = Time.realtimeSinceStartup + 10f;
+            while (canvas.IntroTime < skipAt && Time.realtimeSinceStartup < wait) yield return null;
             int retry0 = canvas.TestRetryCount, return0 = canvas.TestReturnCount;
             float skippedAt = canvas.IntroTime;
 
             yield return SendInput(kind, canvas);
             Assert.IsFalse(canvas.IsIntroPlaying, kind + ": 건너뜀");
             Assert.IsTrue(canvas.IntroFrame.IsFinished, kind + ": 끝 상태");
+            AssertKairosFinished(canvas, kind);
             Assert.AreEqual(SongSelectRecordFormat.FormatScore(Get<ResultData>(scene, "result").score), Get<TMP_Text>(canvas, "scoreText").text, kind + ": 최종 점수");
             Assert.AreEqual(retry0, canvas.TestRetryCount, kind + ": 다시 하기 안 함");
             Assert.AreEqual(return0, canvas.TestReturnCount, kind + ": 돌아가기 안 함");
@@ -324,6 +329,125 @@ public class ResultIntroPlayTests
         Debug.Log("[ResultIntroPlayTest] 건너뛰기: " + string.Join(" / ", log));
     }
 
+    private static void AssertKairosFinished(Canvas_Result canvas, string label)
+    {
+        Assert.AreEqual(1f, canvas.KairosTalkImage.color.a, label + ": Talk 알파 1");
+        Assert.AreEqual(canvas.KairosBasePosition, canvas.KairosRect.anchoredPosition, label + ": 튐 없음");
+        Assert.AreEqual(1f, canvas.Dialog.Alpha, label + ": 대화창 알파 1");
+        Assert.AreEqual(1f, canvas.Dialog.Scale, label + ": 대화창 크기 1");
+    }
+
+    /// <summary>Canvas 왼쪽 위 기준 사각형 (y 아래로)</summary>
+    private static Rect CanvasRect(Canvas_Result canvas, RectTransform target)
+    {
+        RectTransform root = (RectTransform)canvas.transform;
+        Vector3[] c = new Vector3[4];
+        target.GetWorldCorners(c);
+        Vector2 min = root.InverseTransformPoint(c[0]);
+        Vector2 max = root.InverseTransformPoint(c[2]);
+        return new Rect(min.x - root.rect.xMin, root.rect.yMax - max.y, max.x - min.x, max.y - min.y);
+    }
+
+    private static Vector2 Overlap(Rect a, Rect b)
+    {
+        return new Vector2(Mathf.Max(0f, Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin)), Mathf.Max(0f, Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin)));
+    }
+
+    /// <summary>I7: 카이로스 · 대화창 처음 상태 → 배치 · 글자 → 4.1초(입 전환 도중) Enter는 건너뛰기만 → 다음 Enter에 돌아가기</summary>
+    [UnityTest]
+    public IEnumerator I7_Kairos_Layout_SkipDuringTalk()
+    {
+        ResultData data = CvNormalResult(false);
+        data.emotionKeyword = "해방감";
+        ResultScene scene = null;
+        yield return LoadResult(data, s => scene = s);
+        Canvas_Result canvas = scene.Canvas;
+        Img_Dialog dialog = canvas.Dialog;
+        Assert.AreEqual(0f, canvas.KairosTalkImage.color.a, "처음 Talk 숨김");
+        Assert.AreEqual(1f, canvas.KairosIdleImage.color.a, "처음 Idle 보임");
+        Assert.AreEqual(0f, dialog.Alpha, "처음 대화창 숨김");
+
+        // 배치
+        RectTransform root = (RectTransform)canvas.transform;
+        Rect full = new Rect(0f, 0f, root.rect.width, root.rect.height);
+        Rect area = CanvasRect(canvas, (RectTransform)canvas.KairosRect.parent);
+        Rect kairos = CanvasRect(canvas, canvas.KairosRect);
+        Vector3 hidden = dialog.transform.localScale;
+        dialog.transform.localScale = Vector3.one;
+        Rect box = CanvasRect(canvas, (RectTransform)dialog.transform);
+        dialog.transform.localScale = hidden;
+        Rect panel = CanvasRect(canvas, (RectTransform)canvas.transform.Find("Img_ResultPanel"));
+        Rect bar = CanvasRect(canvas, (RectTransform)canvas.transform.Find("Img_BottomBar"));
+        Rect retry = CanvasRect(canvas, (RectTransform)Get<Button>(canvas, "retryButton").transform);
+        Rect back = CanvasRect(canvas, (RectTransform)Get<Button>(canvas, "returnButton").transform);
+        StringBuilder table = new StringBuilder($"[ResultIntroPlayTest] I7 배치 (Canvas {full.width:0.##}×{full.height:0.##}): 카이로스 {kairos}, 자르는 영역 {area}, 대화창 {box}\n");
+        foreach ((string name, Rect r) other in new[] { ("결과 패널", panel), ("하단 바", bar), ("다시 하기", retry), ("돌아가기", back) })
+            table.Append($"| {other.name} | 카이로스 {Overlap(kairos, other.r)} | 보이는 카이로스 {Overlap(area, other.r)} | 대화창 {Overlap(box, other.r)} |\n");
+        Debug.Log(table.ToString());
+        foreach (Rect r in new[] { panel, bar, retry, back })
+        {
+            Vector2 visible = Overlap(area, r);
+            Assert.AreEqual(0f, visible.x * visible.y, 0.5f, "보이는 카이로스와 겹치지 않음");
+            Vector2 boxed = Overlap(box, r);
+            Assert.AreEqual(0f, boxed.x * boxed.y, 0.5f, "대화창과 겹치지 않음");
+        }
+        Assert.IsTrue(box.xMin >= 0f && box.yMin >= 0f && box.xMax <= full.width && box.yMax <= full.height, "대화창은 Canvas 안");
+        Assert.IsTrue(area.xMin >= 0f && area.yMin >= 0f && area.xMax <= full.width + 0.01f && area.yMax <= full.height, "보이는 카이로스는 Canvas 안");
+        Assert.Greater(dialog.transform.GetSiblingIndex(), canvas.KairosRect.parent.GetSiblingIndex(), "대화창이 카이로스 앞");
+        Assert.Greater(canvas.transform.Find("Img_BottomBar").GetSiblingIndex(), dialog.transform.GetSiblingIndex(), "하단 바가 맨 위");
+
+        // 글자: 멘트 네 개 · 키워드 세 개 · 라벨
+        float lineY = dialog.LineText.rectTransform.anchoredPosition.y;
+        string[] lines = { GameConstants.ResultLines.AllPerfect, GameConstants.ResultLines.High, GameConstants.ResultLines.Middle, GameConstants.ResultLines.Failed };
+        string[] keywords = { "설렘", "해방감", "격정", "" };
+        StringBuilder texts = new StringBuilder("[ResultIntroPlayTest] I7 글자\n");
+        for (int i = 0; i < lines.Length; i++)
+        {
+            dialog.Init(keywords[i], lines[i]);
+            Assert.AreEqual(keywords[i].Length > 0, dialog.KeywordText.gameObject.activeSelf, "키워드 줄 표시");
+            Assert.AreEqual(lineY, dialog.LineText.rectTransform.anchoredPosition.y, "멘트 줄 위치 그대로");
+            foreach (TMP_Text text in new[] { dialog.LabelText, dialog.KeywordText, dialog.LineText })
+            {
+                if (!text.gameObject.activeSelf) continue;
+                text.ForceMeshUpdate();
+                Assert.AreEqual(1, text.textInfo.lineCount, text.text + " 한 줄");
+                Assert.IsFalse(text.isTextOverflowing, text.text + " 넘치지 않음");
+                Assert.LessOrEqual(text.preferredWidth, text.rectTransform.rect.width, text.text + " 폭");
+                texts.Append($"| {text.name} | {text.text} | 폭 {text.preferredWidth:0}/{text.rectTransform.rect.width:0} | 높이 {text.preferredHeight:0}/{text.rectTransform.rect.height:0} | 줄 {text.textInfo.lineCount} | 넘침 {text.isTextOverflowing} |\n");
+            }
+        }
+        Debug.Log(texts.ToString());
+        dialog.Init(data.emotionKeyword, ResultLineRules.Pick(data.rank));
+
+        // 4.1초: 입 전환 도중 Enter → 건너뛰기만
+        float deadline = Time.realtimeSinceStartup + 20f;
+        while (canvas.IntroTime < 4.1f && canvas.IsIntroPlaying)
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "4.1초 대기 시간 초과");
+            yield return null;
+        }
+        Assert.IsTrue(canvas.IsIntroPlaying, "4.3초 전이라 아직 연출 중");
+        float at = canvas.IntroTime;
+        float bounce = canvas.KairosRect.anchoredPosition.y - canvas.KairosBasePosition.y;
+        Assert.Greater(bounce, 0f, "튀는 중");
+        Assert.Greater(dialog.Alpha, 0f, "대화창 나타나는 중");
+        foreach (Graphic graphic in dialog.GetComponentsInChildren<Graphic>()) Assert.IsFalse(graphic.canvasRenderer.cull, graphic.name + " 그려짐 (마스크에 통째로 잘리지 않음)");
+        int return0 = canvas.TestReturnCount;
+        yield return Tap(Key.Enter);
+        AssertKairosFinished(canvas, "4.1초 건너뛰기");
+        Assert.AreEqual(return0, canvas.TestReturnCount, "건너뛰기만");
+        Assert.IsFalse(GameManager.Scene.IsLoading, "씬 그대로");
+        yield return Tap(Key.Enter);
+        Assert.AreEqual(return0 + 1, canvas.TestReturnCount, "다음 Enter에 돌아가기");
+        deadline = Time.realtimeSinceStartup + 20f;
+        while (GameManager.Scene.IsLoading || SceneManager.GetActiveScene().name == GameConstants.Scenes.Result)
+        {
+            Assert.Less(Time.realtimeSinceStartup, deadline, "이동 대기 시간 초과");
+            yield return null;
+        }
+        Debug.Log($"[ResultIntroPlayTest] I7: {at:0.000}초(튐 {bounce:0.0}px)에 Enter → 끝 상태 · 튐 0 · 씬 그대로 → 다음 Enter → {SceneManager.GetActiveScene().name}");
+    }
+
     private static IEnumerator SendInput(string kind, Canvas_Result canvas)
     {
         switch (kind)
@@ -345,6 +469,7 @@ public class ResultIntroPlayTests
         Canvas_Result canvas = scene.Canvas;
         Assert.IsFalse(canvas.IsIntroPlaying, "테스트 플레이는 연출 없음");
         Assert.IsTrue(canvas.IntroFrame.IsFinished, "Init 직후 끝 상태");
+        AssertKairosFinished(canvas, "테스트 플레이 Init 직후");
         foreach (float a in ValueAlphas(canvas)) Assert.AreEqual(1f, a, 1e-5f);
         int return0 = canvas.TestReturnCount;
         string label = canvas.ReturnLabel;
@@ -431,6 +556,8 @@ public class ResultIntroPlayTests
                     Assert.AreEqual(1, resultLoads, "켜짐: 결과");
                     ResultScene result = Object.FindFirstObjectByType<ResultScene>();
                     Assert.IsTrue(result.Canvas.IntroFrame.IsFinished, "켜짐: 결과 연출 없음");
+                    AssertKairosFinished(result.Canvas, "켜짐");
+                    Assert.AreEqual("해방감", result.Canvas.Dialog.KeywordText.text, "나만의 채보도 곡의 키워드");
                     yield return Tap(Key.Enter);
                     float deadline = Time.realtimeSinceStartup + 20f;
                     while (GameManager.Scene.IsLoading || SceneManager.GetActiveScene().name != GameConstants.Scenes.Editor || !GameManager.Scene.Current.IsEntered)

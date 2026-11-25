@@ -66,6 +66,11 @@ MonoBehaviour:
   songLoadingClock: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 1}
   songLoadingBubble: {r: 1, g: 1, b: 1, a: 0.82}
   songLoadingBubbleBorder: {r: 1, g: 1, b: 1, a: 1}
+  resultDialogFill: {r: 1, g: 1, b: 1, a: 0.94}
+  resultDialogBorder: {r: 0.70588235, g: 0.65098039, b: 1, a: 1}
+  resultDialogLabel: {r: 0.47058824, g: 0.43137255, b: 0.58823529, a: 1}
+  resultDialogKeyword: {r: 0.2745098, g: 0.23529412, b: 0.43137255, a: 1}
+  resultDialogLine: {r: 0.31372549, g: 0.28235294, b: 0.43137255, a: 1}
   inGamePanel: {r: 0.95686275, g: 0.94509804, b: 0.972549, a: 1}
   inGamePanelBorder: {r: 1, g: 1, b: 1, a: 1}
   inGameStatBox: {r: 1, g: 1, b: 1, a: 1}

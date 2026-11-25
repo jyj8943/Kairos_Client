@@ -15,6 +15,7 @@ MonoBehaviour:
   songId: send_my_love_tonight
   title: Send My Love Tonight
   artist: Kairos
+  emotionKeyword: "\uC124\uB818"
   bpm: 156
   timingPoints:
   - beat: 0

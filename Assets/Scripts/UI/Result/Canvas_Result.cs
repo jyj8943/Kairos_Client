@@ -17,16 +17,19 @@ using UnityEngine.UI;
 ///   → ④ 판정별 개수(이름은 판정 이미지) + FAST/SLOW 막대 / ⑥ RATE · ⑤ MAX COMBO (왼쪽 최대 / 전체, 오른쪽 ⑦ FC 이미지 폭 78 → 그 아래 NEW RECORD).
 ///   FC가 아니면 FC 이미지만 숨긴다 (NEW RECORD 자리는 그대로). AP면 FC도 함께 띄운다.
 ///   ③ NEW RECORD는 SCORE · RATE 값 오른쪽, MAX COMBO는 FC 아래. 그 항목이 신기록일 때만 (테스트 플레이는 띄우지 않음).
-/// - 오른쪽 x 1300~1860은 카이로스 일러스트 자리로 비워 둔다 (KairosSlot).
+/// - 오른쪽 카이로스 일러스트 (11/25): KairosArea(RectMask2D, 하단 바 위 y 992에서 자름) └ Kairos(빈 부모, 튐) └ Img_KairosIdle · Img_KairosTalk(위).
+///   627×940, 왼쪽 위 (1300, 100). 하단 바가 반투명이라 순서만으로는 비쳐서 KairosArea로 자른다. 스프라이트는 Init에서 Resources로 읽는다.
+/// - 카이로스 대화창 Img_Dialog: "이 곡에서 되찾은 감정" / 곡 키워드(없으면 숨김) / 랭크 멘트(ResultLineRules). 카이로스 앞, 하단 바와 겹치지 않음.
 /// - 하단 바: 키 안내 "F5 다시 하기 · Enter ESC 곡 선택으로"(테스트 플레이면 "에디터로") + 오른쪽 끝 버튼 2개 (다시 하기 · 곡 선택으로/에디터로).
 /// - 키 (기획서 2-6): F5 다시 하기(Result/Retry), Enter 돌아가기(Result/Return), ESC 돌아가기(UIManager → ResultScene.OnBack). 팝업이 열려 있으면 무시.
 ///   Enter가 선택된 버튼에 따라 바뀌지 않게 버튼은 키보드 선택을 받지 않는다 (Navigation None, 처음 선택 없음).
-/// - 등장 연출 (11/20, 기획서 3-5 「결과」 등장 연출 · 🔧, 시간표 ResultIntroTimeline): 일반 플레이 결과만. 화면 이름 · 패널 바탕 · 카이로스 자리 · 하단 바는 처음부터 보이고
+/// - 등장 연출 (11/20, 기획서 3-5 「결과」 등장 연출 · 🔧, 시간표 ResultIntroTimeline): 일반 플레이 결과만. 화면 이름 · 패널 바탕 · 카이로스(Idle) · 하단 바는 처음부터 보이고
 ///   패널 안의 값만 차례로 나타난다. ResultScene이 Init에서 PrepareIntro로 0초 상태(또는 테스트 플레이면 끝 상태)를 만들고, OnEnter에서 PlayIntro를 부른다.
 ///   알파는 요소마다 CanvasGroup, 위치는 패널 바로 아래 자식의 anchoredPosition(레이아웃 그룹 안의 뱃지는 크기 · 알파만), 숫자는 지금 표시 형식 그대로 올라간다.
 ///   숫자가 늘어나며 옆 뱃지가 밀리지 않게 점수 · RATE · MAX COMBO 칸 폭을 최종 글자 폭으로 고정한다 (LayoutElement.preferredWidth).
 ///   랭크 번쩍임: 랭크 이미지와 같은 스프라이트를 겹친 Img_RankFlash(Additive UI 머티리얼 Kairos/UIAdditive, 색 = 흰색 × 밝기 더할 양)로 밝기를 더한다.
 ///   AP면 Img_Rank가 Clear_AP 이미지를 쓰므로 번쩍임도 같은 이미지다.
+///   랭크 도장이 끝나고 0.2초 뒤 카이로스 Talk가 나타나며(0.08초) 위로 10px 튀고(0.3초) 대화창이 뜬다(0.25초).
 /// - 건너뛰기: 버튼 클릭 · F5 · Enter는 먼저 consumeSkip(ResultScene.TryConsumeSkip)을 거친다. 연출 중이면 끝 상태로 두고 이동하지 않는다.
 /// </summary>
 public class Canvas_Result : UIBase
@@ -120,6 +123,15 @@ public class Canvas_Result : UIBase
     [Tooltip("랭크 번쩍임 (Img_Rank/Img_RankFlash, 같은 스프라이트 · Additive UI 머티리얼)")]
     [SerializeField] private Image rankFlashImage;
 
+    [Header("카이로스 · 대화창 (11/25)")]
+    [Tooltip("카이로스 그림 두 장의 부모 (Kairos). 입이 열릴 때 위로 튄다")]
+    [SerializeField] private RectTransform kairosRect;
+    [Tooltip("입 다묾 (Img_KairosIdle, 아래)")]
+    [SerializeField] private Image kairosIdleImage;
+    [Tooltip("입 벌림 (Img_KairosTalk, 위)")]
+    [SerializeField] private Image kairosTalkImage;
+    [SerializeField] private Img_Dialog dialog;
+
     private Action onRetry;
     private Action onReturn;
     private Func<bool> consumeSkip;
@@ -133,6 +145,8 @@ public class Canvas_Result : UIBase
     private float introTime;
     private readonly List<IntroPart> introParts = new List<IntroPart>();
     private RectTransform rankRect;
+    private Vector2 kairosBasePosition;
+    private bool hasKairosBase;
     private readonly List<string> introStageLog = new List<string>();
     private readonly Dictionary<string, float> introStageTimes = new Dictionary<string, float>();
     private bool scoreCueDone;
@@ -148,7 +162,7 @@ public class Canvas_Result : UIBase
         public Func<ResultIntroFrame, ResultIntroElement> Pick;
     }
 
-    /// <summary>등장 연출이 재생 중이면 true (0 ~ 3.9초)</summary>
+    /// <summary>등장 연출이 재생 중이면 true (0 ~ EndSeconds)</summary>
     public bool IsIntroPlaying => isIntroPlaying;
 
     /// <summary>등장 연출을 OnEnter에서 시작할 차례면 true (Init에서 0초 상태를 만들어 둠)</summary>
@@ -200,6 +214,7 @@ public class Canvas_Result : UIBase
         ShowScoreAndRank(result);
         ShowJudges(result);
         ShowRateAndCombo(result);
+        ShowKairos(result);
         InitButtons(result.isTestPlay);
         InitKeyGuide(result.isTestPlay);
         BuildIntroParts();
@@ -378,6 +393,10 @@ public class Canvas_Result : UIBase
             if (part.CanMove) part.Rect.anchoredPosition = part.BasePosition + e.Offset;
         }
 
+        if (kairosTalkImage != null) kairosTalkImage.color = new Color(1f, 1f, 1f, f.KairosTalkAlpha);
+        if (kairosRect != null) kairosRect.anchoredPosition = kairosBasePosition + new Vector2(0f, f.KairosOffsetY);
+        if (dialog != null) dialog.SetState(f.Dialog.Alpha, f.Dialog.Scale);
+
         ResultData r = shownResult;
         if (r == null) return;
         if (scoreText != null) scoreText.text = SongSelectRecordFormat.FormatScore(ResultIntroTimeline.CountInt(r.score, f.ScoreCount));
@@ -530,6 +549,30 @@ public class Canvas_Result : UIBase
         newComboBadge.SetActive(ResultFormat.ShowNewRecord(result.isNewMaxCombo, result.isTestPlay));
     }
 
+    /// <summary>카이로스 그림 두 장(Idle 위에 Talk)과 대화창 글자. Talk 알파 · 튐 · 대화창 알파는 등장 연출(ApplyIntro)이 정한다</summary>
+    private void ShowKairos(ResultData result)
+    {
+        SetKairosSprite(kairosIdleImage, GameConstants.Result.KairosIdleSpritePath);
+        SetKairosSprite(kairosTalkImage, GameConstants.Result.KairosTalkSpritePath);
+        if (kairosRect != null && !hasKairosBase)
+        {
+            kairosBasePosition = kairosRect.anchoredPosition;
+            hasKairosBase = true;
+        }
+        if (dialog != null) dialog.Init(result.emotionKeyword, ResultLineRules.Pick(result.rank));
+    }
+
+    private void SetKairosSprite(Image target, string path)
+    {
+        if (target == null) return;
+        Sprite sprite = Resources.Load<Sprite>(path);
+        if (sprite == null) Debug.LogWarning($"[Canvas_Result] Resources/{path} 카이로스 이미지가 없습니다.", this);
+        target.sprite = sprite;
+        target.enabled = sprite != null;
+        target.preserveAspect = true;
+        target.raycastTarget = false;
+    }
+
     // ───── 버튼 · 키 안내 ─────
 
     private void InitButtons(bool isTestPlay)
@@ -584,6 +627,13 @@ public class Canvas_Result : UIBase
     /// <summary>랭크 이미지 · FC 이미지 (확인용)</summary>
     public Img_Rank RankImage => rankImage;
     public Img_FullCombo FullComboImage => fullComboImage;
+
+    /// <summary>카이로스 부모 · 그림 두 장 · 대화창 (확인용)</summary>
+    public RectTransform KairosRect => kairosRect;
+    public Vector2 KairosBasePosition => kairosBasePosition;
+    public Image KairosIdleImage => kairosIdleImage;
+    public Image KairosTalkImage => kairosTalkImage;
+    public Img_Dialog Dialog => dialog;
 
     /// <summary>FAST 막대 비율 (빈 막대면 -1, 확인용)</summary>
     public float FastRatio { get; private set; }

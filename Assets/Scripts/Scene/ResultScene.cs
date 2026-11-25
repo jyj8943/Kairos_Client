@@ -9,7 +9,7 @@ using UnityEngine;
 /// - 다시 하기: 같은 InGameEntryData로 곡 선택 시작과 같은 경로(InGameLauncher.Start)로 인게임에 들어간다 (테스트 플레이면 같은 시작 위치).
 /// - 키: F5 다시 하기 · Enter 돌아가기는 Canvas_Result가, ESC 돌아가기는 OnBack이 받는다 (기획서 2-6).
 /// - 돌아가기: ResultData의 돌아갈 곳(씬 이름·데이터)대로 이동한다. 이 씬은 에디터·곡 선택 씬을 직접 알지 않는다.
-/// - 등장 연출 (11/20, 기획서 3-5): 일반 플레이 결과만. Init에서 0초 상태(값 요소 숨김)를 만들고, 암전 로딩이 다 걷힌 OnEnter에서 시작한다 (3.9초).
+/// - 등장 연출 (11/20, 기획서 3-5): 일반 플레이 결과만. Init에서 0초 상태(값 요소 숨김)를 만들고, 암전 로딩이 다 걷힌 OnEnter에서 시작한다 (4.3초 = GameConstants.ResultIntro.EndSeconds, 끝에 카이로스 입 전환 · 대화창).
 ///   테스트 플레이 · 자동 테스트 결과는 연출 없이 Init에서 바로 끝 상태다 (구분은 ResultData.isTestPlay, 진입 데이터로 넘어온 값).
 ///   연출 중 Enter · Esc · F5 · 버튼 클릭은 건너뛰기만 한다 (TryConsumeSkip). 건너뛴 프레임의 다른 입력도 쓰지 않는다 (다시 눌러야 이동).
 /// - 씬을 직접 실행하면(진입 데이터 없음) 인스펙터의 가짜 결과로 화면을 확인한다.
@@ -22,6 +22,7 @@ public class ResultScene : SceneBase
     [SerializeField] private string testSongTitle = "Critical Velocity";
     [SerializeField] private string testChartName = "테스트 채보";
     [SerializeField] private int testLevel = 7;
+    [SerializeField] private string testEmotionKeyword = "해방감";
     [Tooltip("PERFECT · GREAT · GOOD · MISS 개수")]
     [SerializeField] private int[] testJudgeCounts = { 6, 1, 0, 0 };
     [SerializeField] private bool testIsTestPlay;
@@ -33,7 +34,7 @@ public class ResultScene : SceneBase
 
 #if UNITY_EDITOR
     /// <summary>
-    /// 테스트 전용 (Unity 에디터): true면 일반 플레이 결과도 등장 연출 없이 끝 상태로 시작한다 (결과에 들를 때마다 3.9초 늘지 않게).
+    /// 테스트 전용 (Unity 에디터): true면 일반 플레이 결과도 등장 연출 없이 끝 상태로 시작한다 (결과에 들를 때마다 4.3초 늘지 않게).
     /// TestSpeedRunCallback이 테스트 실행 동안 켜고, 결과 등장 연출 테스트만 끈다.
     /// </summary>
     public static bool SkipResultIntroForTests;
@@ -191,6 +192,7 @@ public class ResultScene : SceneBase
 
         ResultData data = ResultData.FromScore(score);
         data.songTitle = testSongTitle;
+        data.emotionKeyword = testEmotionKeyword;
         data.chartName = testChartName;
         data.chartType = ChartType.Custom;
         data.level = testLevel;

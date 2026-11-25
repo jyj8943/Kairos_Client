@@ -150,6 +150,18 @@ public class UITheme : ScriptableObject
     [Tooltip("말풍선 테두리 (흰색)")]
     public Color songLoadingBubbleBorder = Color.white;
 
+    [Header("결과 · 카이로스 대화창 (11/25, Img_Dialog)")]
+    [Tooltip("대화창 · 꼬리 바탕 (흰색 94%)")]
+    public Color resultDialogFill = new Color(1f, 1f, 1f, 0.94f);
+    [Tooltip("대화창 · 꼬리 테두리 2px (라벤더 #B4A6FF)")]
+    public Color resultDialogBorder = new Color32(0xB4, 0xA6, 0xFF, 0xFF);
+    [Tooltip("첫 줄 \"이 곡에서 되찾은 감정\" (120, 110, 150)")]
+    public Color resultDialogLabel = new Color32(120, 110, 150, 255);
+    [Tooltip("둘째 줄 감정 키워드 (70, 60, 110)")]
+    public Color resultDialogKeyword = new Color32(70, 60, 110, 255);
+    [Tooltip("셋째 줄 랭크 멘트 (80, 72, 110)")]
+    public Color resultDialogLine = new Color32(80, 72, 110, 255);
+
     [Header("인게임 왼쪽 패널 (11/19 라벤더 불투명: 곡 정보 카드 · 판정 패널 · 배속·밝기 카드, 밝기와 상관없이 고정. 글자는 메뉴용 색)")]
     [Tooltip("패널 바탕 (라벤더 불투명 #F4F1F8, 뒤 흐림 없음)")]
     public Color inGamePanel = new Color32(0xF4, 0xF1, 0xF8, 0xFF);

@@ -65,6 +65,20 @@ public class UIThemeTests
         Assert.IsNotNull(UITheme.Current);
     }
 
+    /// <summary>결과 카이로스 대화창 색 (11/25): 기본값과 에셋 값</summary>
+    [Test]
+    public void ResultDialog_Colors()
+    {
+        foreach (UITheme t in new[] { theme, Resources.Load<UITheme>(UITheme.ResourcePath) })
+        {
+            AssertHex("FFFFFF", 0.94f, t.resultDialogFill, "대화창 바탕");
+            AssertHex("B4A6FF", 1f, t.resultDialogBorder, "대화창 테두리");
+            AssertHex("786E96", 1f, t.resultDialogLabel, "라벨 (120,110,150)");
+            AssertHex("463C6E", 1f, t.resultDialogKeyword, "키워드 (70,60,110)");
+            AssertHex("50486E", 1f, t.resultDialogLine, "멘트 (80,72,110)");
+        }
+    }
+
     [Test]
     public void RankEmpty_FillAndDashColors()
     {

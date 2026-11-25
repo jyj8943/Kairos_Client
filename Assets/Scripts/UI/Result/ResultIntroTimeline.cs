@@ -30,6 +30,11 @@ public struct ResultIntroFrame
     /// <summary>랭크 도장 (알파 · 크기)과 번쩍임 세기 (0 ~ RankFlashBoost, 밝기에 더하는 양)</summary>
     public ResultIntroElement Rank;
     public float RankFlash;
+    /// <summary>카이로스: Talk(입 벌림) 알파 · 위로 튀는 오프셋 (px, +y 위)</summary>
+    public float KairosTalkAlpha;
+    public float KairosOffsetY;
+    /// <summary>카이로스 대화창 (알파 · 크기)</summary>
+    public ResultIntroElement Dialog;
     /// <summary>연출이 끝났으면 true (t ≥ EndSeconds)</summary>
     public bool IsFinished;
 
@@ -39,7 +44,7 @@ public struct ResultIntroFrame
 
 /// <summary>
 /// 결과 화면 등장 연출 시간표 (기획서 3-5 「결과」 등장 연출 · 🔧 시간표, README 2절). 상태가 없는 순수 함수라 EditMode 테스트로 검사한다.
-/// - t = OnEnter부터 지난 unscaled 시간 (초). 이징은 모두 easeOutCubic (UIEasing.OutCubic). 시간 상수는 GameConstants.ResultIntro.
+/// - t = OnEnter부터 지난 unscaled 시간 (초). 이징은 easeOutCubic (UIEasing.OutCubic), 카이로스 Talk 알파만 직선 · 튐은 sin. 시간 상수는 GameConstants.ResultIntro.
 /// - 단계를 빼는 판단(NEW RECORD · FC가 없음)은 화면이 한다. 시간표는 그 단계가 있든 없든 같은 값을 낸다 (뒤 단계가 당겨지지 않는다).
 /// - Finished = 모든 요소 끝 상태 (최종값 · 크기 1 · 번쩍임 없음). 건너뛰기와 테스트 플레이 결과가 쓴다.
 /// </summary>
@@ -52,7 +57,7 @@ public static class ResultIntroTimeline
         ("SCORE", C.ScoreStart), ("점수 숫자", C.ScoreCountStart), ("NEW RECORD 점수", C.NewScoreStart), ("BEST", C.BestStart),
         ("PERFECT 줄", JudgeRowStart(0)), ("GREAT 줄", JudgeRowStart(1)), ("GOOD 줄", JudgeRowStart(2)), ("MISS 줄", JudgeRowStart(3)),
         ("FAST/SLOW", C.FastSlowStart), ("RATE", C.RateStart), ("NEW RECORD RATE", C.NewRateStart), ("MAX COMBO", C.ComboStart),
-        ("FC", C.FullComboStart), ("NEW RECORD 콤보", C.NewComboStart), ("랭크", C.RankStart), ("끝", C.EndSeconds)
+        ("FC", C.FullComboStart), ("NEW RECORD 콤보", C.NewComboStart), ("랭크", C.RankStart), ("카이로스 · 대화창", C.KairosTalkStart), ("끝", C.EndSeconds)
     };
 
     /// <summary>판정 줄 시작 시각 (줄 번호 0 = PERFECT)</summary>
@@ -111,6 +116,23 @@ public static class ResultIntroTimeline
         return C.RankFlashBoost * Mathf.Clamp01(k);
     }
 
+    /// <summary>카이로스 Talk 알파: t0부터 KairosTalkFade 동안 0 → 1 (직선)</summary>
+    public static float KairosTalkAlpha(float t) => Progress(t, C.KairosTalkStart, C.KairosTalkFade);
+
+    /// <summary>카이로스 튐: t0부터 KairosBounce 동안 위로 KairosBouncePx · sin(π · q). 시작 전 · 끝난 뒤는 정확히 0</summary>
+    public static float KairosOffsetY(float t)
+    {
+        float q = Progress(t, C.KairosTalkStart, C.KairosBounce);
+        return q <= 0f || q >= 1f ? 0f : C.KairosBouncePx * Mathf.Sin(Mathf.PI * q);
+    }
+
+    /// <summary>카이로스 대화창: t0부터 DialogDuration 동안 알파 0 → 1, 크기 DialogStartScale → 1</summary>
+    public static ResultIntroElement Dialog(float t)
+    {
+        float e = Eased(t, C.KairosTalkStart, C.DialogDuration);
+        return new ResultIntroElement { Alpha = e, Offset = Vector2.zero, Scale = Mathf.Lerp(C.DialogStartScale, 1f, e) };
+    }
+
     /// <summary>t초의 모든 요소 값</summary>
     public static ResultIntroFrame Evaluate(float t)
     {
@@ -155,6 +177,9 @@ public static class ResultIntroTimeline
 
         f.Rank = Stamp(t);
         f.RankFlash = RankFlash(t);
+        f.KairosTalkAlpha = KairosTalkAlpha(t);
+        f.KairosOffsetY = KairosOffsetY(t);
+        f.Dialog = Dialog(t);
         f.IsFinished = false;
         return f;
     }
@@ -171,7 +196,8 @@ public static class ResultIntroTimeline
                 Album = s, Title = s, Artist = s, ChartLine = s, Score = s, NewScore = s, Best = s,
                 Judge0 = s, Judge1 = s, Judge2 = s, Judge3 = s, JudgeCount0 = 1f, JudgeCount1 = 1f, JudgeCount2 = 1f, JudgeCount3 = 1f,
                 FastSlow = s, FastSlowProgress = 1f, Rate = s, NewRate = s, Combo = s, FullCombo = s, NewCombo = s,
-                ScoreCount = 1f, RateValue = 1f, ComboValue = 1f, Rank = s, RankFlash = 0f, IsFinished = true
+                ScoreCount = 1f, RateValue = 1f, ComboValue = 1f, Rank = s, RankFlash = 0f,
+                KairosTalkAlpha = 1f, KairosOffsetY = 0f, Dialog = s, IsFinished = true
             };
         }
     }

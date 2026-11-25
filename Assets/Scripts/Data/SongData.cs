@@ -17,6 +17,8 @@ public class SongData : ScriptableObject
     [SerializeField] private string songId;
     [SerializeField] private string title;
     [SerializeField] private string artist;
+    [Tooltip("결과 화면 대화창의 감정 키워드 (예: 해방감). 비어 있으면 키워드 줄을 숨긴다")]
+    [SerializeField] private string emotionKeyword;
     [Tooltip("곡 시작 BPM (BPM 구간 목록이 비어 있을 때만 기준). 목록이 있으면 목록 첫 구간 값으로 자동으로 맞춘다")]
     [SerializeField] private float bpm;
     [Tooltip("BPM 구간 (채보 timingPoints와 같은 형식, beat 오름차순, 첫 구간은 0박). 비어 있으면 bpm 하나를 쓴다. 새 커스텀 채보가 이 구간으로 시작한다")]
@@ -53,6 +55,10 @@ public class SongData : ScriptableObject
 
     public string Title => title;
     public string Artist => artist;
+
+    /// <summary>이 곡에서 되찾은 감정 (결과 화면 대화창. 나만의 채보도 곡의 값을 쓴다). 없으면 빈 문자열</summary>
+    public string EmotionKeyword => emotionKeyword ?? string.Empty;
+
     /// <summary>
     /// BPM 구간 목록 (beat 순, 첫 구간은 0박). 목록이 비어 있으면 { (0박, bpm) } 하나를 돌려준다.
     /// BPM 구간이 필요한 곳은 항상 이것만 쓴다. 돌려준 항목은 고치지 않는다 (F1 곡 조정은 SerializedObject로 쓴다).

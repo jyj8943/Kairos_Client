@@ -48,6 +48,9 @@ public class ResultData
     public string songId;
     public string songTitle;
     public string artist;
+
+    /// <summary>곡의 감정 키워드 (SongData.EmotionKeyword, 나만의 채보도 곡의 값). 비어 있으면 대화창 키워드 줄을 숨긴다</summary>
+    public string emotionKeyword;
     public Sprite cover;
     public Sprite background;
 

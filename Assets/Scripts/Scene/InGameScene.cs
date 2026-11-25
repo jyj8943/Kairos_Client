@@ -943,6 +943,7 @@ public class InGameScene : SceneBase
         result.songId = song.SongId;
         result.songTitle = song.Title;
         result.artist = song.Artist;
+        result.emotionKeyword = song.EmotionKeyword;
         result.cover = song.Cover;
         result.background = song.Background;
         result.chartType = entry.chartType;

@@ -15,6 +15,7 @@ MonoBehaviour:
   songId: critical_velocity
   title: Critical Velocity
   artist: Kairos
+  emotionKeyword: "\uD574\uBC29\uAC10"
   bpm: 150.07
   timingPoints:
   - beat: 0

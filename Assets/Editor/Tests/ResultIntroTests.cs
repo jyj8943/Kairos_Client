@@ -13,11 +13,53 @@ public class ResultIntroTests
     [Test]
     public void Stages_MatchReadmeTable()
     {
-        float[] expected = { 0f, 0.06f, 0.14f, 0.22f, 0.45f, 0.50f, 1.25f, 1.25f, 1.45f, 1.57f, 1.69f, 1.81f, 1.95f, 2.30f, 2.70f, 2.80f, 3.20f, 3.30f, 3.45f, 3.90f };
+        float[] expected = { 0f, 0.06f, 0.14f, 0.22f, 0.45f, 0.50f, 1.25f, 1.25f, 1.45f, 1.57f, 1.69f, 1.81f, 1.95f, 2.30f, 2.70f, 2.80f, 3.20f, 3.30f, 3.45f, 4.00f, 4.30f };
         Assert.AreEqual(expected.Length, ResultIntroTimeline.Stages.Length);
         for (int i = 0; i < expected.Length; i++)
             Assert.AreEqual(expected[i], ResultIntroTimeline.Stages[i].Start, Eps, ResultIntroTimeline.Stages[i].Name);
-        Assert.AreEqual(3.9f, GameConstants.ResultIntro.EndSeconds, Eps);
+        Assert.AreEqual(4.3f, GameConstants.ResultIntro.EndSeconds, Eps);
+    }
+
+    /// <summary>카이로스 시각은 랭크 도장에서 계산한다: t0 = 도장 끝 + 0.2, 끝 = max(값 연출 끝 3.90, t0 + 튐)</summary>
+    [Test]
+    public void Kairos_TimesAreDerived()
+    {
+        Assert.AreEqual(GameConstants.ResultIntro.RankStart + GameConstants.ResultIntro.RankDuration + GameConstants.ResultIntro.KairosTalkDelay, GameConstants.ResultIntro.KairosTalkStart, Eps);
+        Assert.AreEqual(4.0f, GameConstants.ResultIntro.KairosTalkStart, Eps, "t0");
+        Assert.AreEqual(Mathf.Max(GameConstants.ResultIntro.ValuesEndSeconds, GameConstants.ResultIntro.KairosTalkStart + GameConstants.ResultIntro.KairosBounce), GameConstants.ResultIntro.EndSeconds, Eps);
+        Assert.LessOrEqual(GameConstants.ResultIntro.KairosTalkStart + GameConstants.ResultIntro.DialogDuration, GameConstants.ResultIntro.EndSeconds, "대화창은 연출 끝 안");
+    }
+
+    [Test]
+    public void Kairos_Timeline_TalkBounceDialog()
+    {
+        (float t, float talk, float y, float dialog)[] table =
+        {
+            (0f, 0f, 0f, 0f),
+            (3.9f, 0f, 0f, 0f),
+            (4.0f, 0f, 0f, 0f),
+            (4.04f, 0.5f, 10f * Mathf.Sin(Mathf.PI * 0.04f / 0.3f), E(0.04f / 0.25f)),
+            (4.08f, 1f, 10f * Mathf.Sin(Mathf.PI * 0.08f / 0.3f), E(0.08f / 0.25f)),
+            (4.15f, 1f, 10f, E(0.15f / 0.25f)),
+            (4.25f, 1f, 10f * Mathf.Sin(Mathf.PI * 0.25f / 0.3f), 1f),
+            (4.30f, 1f, 0f, 1f)
+        };
+        System.Text.StringBuilder log = new System.Text.StringBuilder("[ResultIntroTest] 카이로스\n");
+        foreach ((float t, float talk, float y, float dialog) row in table)
+        {
+            ResultIntroFrame f = ResultIntroTimeline.Evaluate(row.t);
+            Assert.AreEqual(row.talk, f.KairosTalkAlpha, 1e-3f, $"{row.t}초 Talk 알파");
+            Assert.AreEqual(row.y, f.KairosOffsetY, 1e-3f, $"{row.t}초 y 오프셋");
+            Assert.AreEqual(row.dialog, f.Dialog.Alpha, 1e-3f, $"{row.t}초 대화창 알파");
+            Assert.AreEqual(Mathf.Lerp(0.92f, 1f, row.dialog), f.Dialog.Scale, 1e-3f, $"{row.t}초 대화창 크기");
+            log.Append($"| {row.t:0.00} | Talk {f.KairosTalkAlpha:0.000} | y {f.KairosOffsetY:+0.000;-0.000;0.000} | 대화창 a{f.Dialog.Alpha:0.000} s{f.Dialog.Scale:0.0000} | 끝 {f.IsFinished} |\n");
+        }
+        Assert.IsFalse(ResultIntroTimeline.Evaluate(4.29f).IsFinished, "4.3초 전에는 건너뛰기만");
+        Assert.AreEqual(0f, ResultIntroTimeline.Finished.KairosOffsetY, "끝 상태 튐 없음");
+        Assert.AreEqual(1f, ResultIntroTimeline.Finished.KairosTalkAlpha);
+        Assert.AreEqual(1f, ResultIntroTimeline.Finished.Dialog.Alpha);
+        Assert.AreEqual(1f, ResultIntroTimeline.Finished.Dialog.Scale);
+        Debug.Log(log.ToString());
     }
 
     [Test]
@@ -117,9 +159,10 @@ public class ResultIntroTests
     }
 
     [Test]
-    public void At39_Finished()
+    public void At43_Finished()
     {
-        ResultIntroFrame f = ResultIntroTimeline.Evaluate(3.9f);
+        Assert.IsFalse(ResultIntroTimeline.Evaluate(3.9f).IsFinished, "값 연출 끝에는 아직 카이로스가 남아 있다");
+        ResultIntroFrame f = ResultIntroTimeline.Evaluate(4.3f);
         Assert.IsTrue(f.IsFinished);
         Assert.AreEqual(1f, f.Rank.Scale);
         Assert.AreEqual(0f, f.RankFlash);
@@ -128,14 +171,14 @@ public class ResultIntroTests
         Assert.IsTrue(ResultIntroTimeline.Finished.IsFinished);
         Assert.AreEqual(945936, ResultIntroTimeline.CountInt(945936, 1f));
         Assert.AreEqual(93.74, ResultIntroTimeline.CountDouble(93.74, 1f), 1e-9);
-        Log(3.9f, f);
+        Log(4.3f, f);
     }
 
     /// <summary>NEW RECORD · FC가 없어도 시간표는 같다 (화면이 그 요소만 숨긴다): 뒤 단계 값이 단계 유무와 상관없다</summary>
     [Test]
     public void MissingStages_DoNotShiftTimes()
     {
-        for (float t = 0f; t <= 3.9f; t += 0.05f)
+        for (float t = 0f; t <= GameConstants.ResultIntro.EndSeconds; t += 0.05f)
         {
             ResultIntroFrame f = ResultIntroTimeline.Evaluate(t);
             Assert.AreEqual(ResultIntroTimeline.Stamp(t).Scale, f.Rank.Scale, Eps, "랭크는 언제나 3.45 시작");
