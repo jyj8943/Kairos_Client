@@ -299,14 +299,14 @@ public class MarqueePlayTests
         yield return Check(log, loading.TitleMarquee, ShortTitle, false);
         yield return Check(log, loading.TitleMarquee, LongTitle);
         yield return Check(log, loading.TitleMarquee, VeryLongTitle, true);
-        loading.ChartRow.SetActive(true);
-        yield return Check(log, loading.ChartNameMarquee, "연습", false);
-        yield return Check(log, loading.ChartNameMarquee, VeryLongTitle + VeryLongTitle, true);
+        loading.ChartMarquee.gameObject.SetActive(true);
+        yield return Check(log, loading.ChartMarquee, "연습", false);
+        yield return Check(log, loading.ChartMarquee, VeryLongTitle + VeryLongTitle, true);
         yield return Wait(1.8f);
-        Assert.Greater(loading.ChartNameMarquee.CurrentOffset, 0f);
+        Assert.Greater(loading.ChartMarquee.CurrentOffset, 0f);
         loading.Open(entry);
         Assert.AreEqual(0f, loading.TitleMarquee.CurrentOffset, "다시 열면 처음 상태");
-        Assert.AreEqual(0f, loading.ChartNameMarquee.CurrentOffset);
+        Assert.AreEqual(0f, loading.ChartMarquee.CurrentOffset);
         yield return loading.CloseRoutine();
 
         yield return LoadAndWait(GameConstants.Scenes.Editor, new EditorEntryData { songId = TestCharts.OfficialSongId, chartName = "제목 흐름 확인", level = 1 });

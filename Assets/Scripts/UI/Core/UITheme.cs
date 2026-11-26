@@ -136,19 +136,31 @@ public class UITheme : ScriptableObject
     [Tooltip("불러오는 중 시계 · 켜진 점 (보라 #7B6BD8)")]
     public Color loadingClock = new Color32(0x7B, 0x6B, 0xD8, 0xFF);
 
-    [Header("곡 로딩 (기획서 3-8 「곡 로딩」, Canvas_SongLoading. 글자·포인트·난이도·판 바탕은 위 공용 값)")]
-    [Tooltip("정보 판 흰 테두리 (흰색 80%)")]
-    public Color songLoadingPanelBorder = new Color(1f, 1f, 1f, 0.8f);
-    [Tooltip("기록 3칸 바탕 (흰색 70%)")]
-    public Color songLoadingRecordCell = new Color(1f, 1f, 1f, 0.7f);
-    [Tooltip("배경의 시계 원 문양 (보라 #7B6BD8, 16%)")]
-    public Color songLoadingClockPattern = new Color(0x7B / 255f, 0x6B / 255f, 0xD8 / 255f, 0.16f);
-    [Tooltip("불러오는 중 작은 시계 (보라 #7B6BD8)")]
-    public Color songLoadingClock = new Color32(0x7B, 0x6B, 0xD8, 0xFF);
-    [Tooltip("말풍선 바탕 (흰색 82%)")]
-    public Color songLoadingBubble = new Color(1f, 1f, 1f, 0.82f);
-    [Tooltip("말풍선 테두리 (흰색)")]
-    public Color songLoadingBubbleBorder = Color.white;
+    [Header("곡 로딩 · 시계 (11/26 개편, Canvas_SongLoading. 뱃지는 위 난이도 색 · onDifficultyText)")]
+    [Tooltip("곡 배경 위 덮개 Img_Dim (40, 30, 70) 59%")]
+    public Color songLoadingDim = new Color(40f / 255f, 30f / 255f, 70f / 255f, 0.59f);
+    [Tooltip("시곗바늘 호 Img_ClockArc (#7CC4FA)")]
+    public Color songLoadingArc = new Color32(0x7C, 0xC4, 0xFA, 0xFF);
+    [Tooltip("시계 눈금 Img_ClockTicks (그림의 흰색 그대로)")]
+    public Color songLoadingTicks = Color.white;
+    [Tooltip("바늘 끝 점 Img_ClockDot (흰색)")]
+    public Color songLoadingDot = Color.white;
+    [Tooltip("12시 반짝 Img_ClockSpark (흰색)")]
+    public Color songLoadingSpark = Color.white;
+    [Tooltip("앨범 뒤 빛 Img_Glow (210, 232, 255)")]
+    public Color songLoadingGlow = new Color32(210, 232, 255, 255);
+    [Tooltip("앨범 등장 번쩍 Img_AlbumFlash (흰색)")]
+    public Color songLoadingFlash = Color.white;
+    [Tooltip("곡 제목 · Lv 글자 (250, 248, 255)")]
+    public Color songLoadingTitle = new Color32(250, 248, 255, 255);
+    [Tooltip("아티스트 · CHART 채보 이름 (210, 204, 230)")]
+    public Color songLoadingSub = new Color32(210, 204, 230, 255);
+    [Tooltip("SD가 앉는 막대 Img_SdLine (흰색 59%)")]
+    public Color songLoadingSdLine = new Color(1f, 1f, 1f, 0.59f);
+    [Tooltip("LOADING 글자 (235, 232, 250)")]
+    public Color songLoadingText = new Color32(235, 232, 250, 255);
+    [Tooltip("끝 암전 Img_Blackout (검정)")]
+    public Color songLoadingBlackout = Color.black;
 
     [Header("결과 · 카이로스 대화창 (11/25, Img_Dialog)")]
     [Tooltip("대화창 · 꼬리 바탕 (흰색 94%)")]

@@ -1001,39 +1001,87 @@ public static class GameConstants
         public const int SortOrder = 220;
     }
 
-    /// <summary>곡 로딩 오버레이 (기획서 3-8 「곡 로딩」, Canvas_SongLoading)</summary>
+    /// <summary>
+    /// 곡 로딩 오버레이 (기획서 3-8 「곡 로딩」) · 시계 (11/26 개편, 와이어프레임 21_SongLoading_Clock). 시간은 모두 초 (unscaled, 열기 연출 0초 = Open 다음 프레임).
+    /// 시간표 계산은 SongLoadingClockTimeline이 한다.
+    /// </summary>
     public static class SongLoading
     {
-        /// <summary>열기 연출이 화면을 다 덮는 시각 (초). 이 뒤에 지금 씬을 떠나고 다음 씬을 불러온다</summary>
-        public const float CoverSeconds = 0.35f;
-
-        /// <summary>최소 불러오기 시간 (초, 열기 연출이 끝난 뒤부터). 불러오기가 빨리 끝나도 닫기 연출은 이만큼 지난 뒤에 시작한다</summary>
-        public const float MinLoadSeconds = 2f;
-
-        /// <summary>열기 연출 길이 (초, 말풍선이 다 나오는 시각)</summary>
-        public const float OpenSeconds = 1.1f;
-
-        /// <summary>닫기 연출 길이 (초). 끝나면 다음 씬 OnEnter</summary>
-        public const float CloseSeconds = 0.64f;
-
         /// <summary>정렬 순서 (Canvas_Overlay 팝업 100보다 위)</summary>
         public const int SortOrder = 200;
 
-        public const string ScreenName = "LOADING";
-        public const string ScreenNameKo = "인게임으로 이동";
-        public const string Phrase = "플레이 준비";
+        // ───── 열기 ─────
+        /// <summary>곡 배경 + Dim 페이드인 0 ~ 0.25</summary>
+        public const float BackgroundFadeSeconds = 0.25f;
+        /// <summary>앨범 알파 0 → 1, 크기 0.9 → 1 (OutCubic) 0.1 ~ 0.45</summary>
+        public const float AlbumStart = 0.1f;
+        public const float AlbumSeconds = 0.35f;
+        public const float AlbumStartScale = 0.9f;
+        /// <summary>앨범 번쩍 알파 0.25 → 0, 0.1 ~ 0.24</summary>
+        public const float FlashStart = 0.1f;
+        public const float FlashSeconds = 0.14f;
+        public const float FlashAlpha = 0.25f;
+        /// <summary>앨범 뒤 빛 0.1 ~ 0.8: 크기 앨범의 1.05 → 1.5배, 알파 0 → 0.35 → 0 (sin)</summary>
+        public const float GlowStart = 0.1f;
+        public const float GlowSeconds = 0.7f;
+        public const float GlowStartScale = 1.05f;
+        public const float GlowEndScale = 1.5f;
+        public const float GlowMaxAlpha = 0.35f;
+        /// <summary>시계 링(눈금 · 호 · 점) 알파 0 → 1, 크기 1.15 → 1 (OutCubic) 0.3 ~ 0.7</summary>
+        public const float ClockStart = 0.3f;
+        public const float ClockSeconds = 0.4f;
+        public const float ClockStartScale = 1.15f;
+        /// <summary>제목 · 아티스트 · 뱃지 · 채보 이름 알파 0 → 1, 아래 10px에서 제자리 0.5 ~ 0.8</summary>
+        public const float InfoStart = 0.5f;
+        public const float InfoSeconds = 0.3f;
+        public const float InfoRise = 10f;
+        /// <summary>SD · 막대 · LOADING 알파 0 → 1 (0.25초), SD는 위 60px에서 내려와 앉음 (OutCubic 0.35초) 0.6 ~ 0.95</summary>
+        public const float SdStart = 0.6f;
+        public const float SdFadeSeconds = 0.25f;
+        public const float SdDropSeconds = 0.35f;
+        public const float SdDrop = 60f;
+        /// <summary>열기 연출 끝 (SD가 앉는 시각). 열기 중에는 로드하지 않고 이 뒤에 앞 씬 OnExit · 로드를 시작한다 (11/19)</summary>
+        public const float OpenSeconds = 0.95f;
+
+        // ───── 바늘 ─────
+        /// <summary>바늘 시작 · 한 바퀴 시간: fillAmount = min(EaseInOut((t − 0.8) / 1.6), 로딩 진행)</summary>
+        public const float HandStart = 0.8f;
+        public const float HandSeconds = 1.6f;
+        /// <summary>씬 로드(AsyncOperation.progress / 0.9)가 차지하는 로딩 진행 몫. 인게임 Init이 끝나면 1</summary>
+        public const float SceneLoadProgressWeight = 0.9f;
+        /// <summary>바늘 끝 점이 도는 원 반지름 (px, 시계 중심 기준)</summary>
+        public const float ClockRadius = 300f;
+
+        // ───── 끝 (T = 바늘이 12시에 닿은 순간) ─────
+        /// <summary>12시 반짝 알파 0 → 1 → 0 (sin), T ~ T+0.3</summary>
+        public const float SparkSeconds = 0.3f;
+        /// <summary>글자 · SD · 막대 · LOADING 알파 1 → 0, T ~ T+0.25</summary>
+        public const float EndFadeSeconds = 0.25f;
+        /// <summary>암전 알파 0 → 1 (InOutCubic), T+0.3 ~ T+0.65</summary>
+        public const float BlackoutStart = 0.3f;
+        public const float BlackoutSeconds = 0.35f;
+        /// <summary>검은 화면 유지 (정리 UnloadUnusedAssets · GC는 여기서). 정리가 더 걸리면 그만큼 늘린다</summary>
+        public const float BlackHoldSeconds = 0.15f;
+        /// <summary>오버레이 전체 알파 1 → 0, T+0.8 ~ T+1.15. 다 걷힌 뒤 다음 씬 OnEnter</summary>
+        public const float RevealSeconds = 0.35f;
+
+        /// <summary>암전이 끝나는 시각 (T 기준) = 0.65</summary>
+        public const float BlackedOutAt = BlackoutStart + BlackoutSeconds;
+        /// <summary>걷히기 시작하는 가장 이른 시각 (T 기준) = 0.8</summary>
+        public const float RevealStart = BlackedOutAt + BlackHoldSeconds;
+        /// <summary>가장 짧은 전체 시간 = 0.8 + 1.6 + 1.15 = 3.55</summary>
+        public const float MinTotalSeconds = HandStart + HandSeconds + RevealStart + RevealSeconds;
+
+        // ───── 배치 · 글자 ─────
+        /// <summary>곡 배경 흐림 (1920×1080 기준 px 표준편차, 블러 반지름 약 30px 상당)</summary>
+        public const float BlurSigmaPx = 30f;
+        /// <summary>곡 배경 흐림 반복 횟수</summary>
+        public const int BlurIterations = 2;
         /// <summary>레벨 ("Lv. 7")</summary>
         public const string LevelFormat = "Lv. {0}";
-        public const string SpeedLabel = "배속";
-        /// <summary>배속 ("x5.5")</summary>
-        public const string SpeedFormat = "x{0:0.0}";
-        public const string ChartLabel = "CHART";
-        public const string BestScoreLabel = "최고 점수";
-        public const string BestRankLabel = "최고 랭크";
-        public const string MaxComboLabel = "최대 콤보";
-        /// <summary>말풍선 대사 (임시, 대사는 나중에 정한다)</summary>
-        public const string Bubble = "이번 곡, 같이 들어 볼까?";
-        public const string Loading = "곡을 불러오는 중";
+        /// <summary>나만의 채보 줄 ("CHART  내가 만든 채보", 두 칸 띄움)</summary>
+        public const string ChartFormat = "CHART  {0}";
+        public const string LoadingText = "LOADING";
     }
 
     /// <summary>곡 미리 듣기 (곡 선택, 11/25). 시간은 모두 초</summary>

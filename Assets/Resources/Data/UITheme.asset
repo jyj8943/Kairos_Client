@@ -60,12 +60,18 @@ MonoBehaviour:
   loadingBand: {r: 0.95686275, g: 0.94509804, b: 0.972549, a: 0.85}
   loadingBandLine: {r: 1, g: 1, b: 1, a: 1}
   loadingClock: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 1}
-  songLoadingPanelBorder: {r: 1, g: 1, b: 1, a: 0.8}
-  songLoadingRecordCell: {r: 1, g: 1, b: 1, a: 0.7}
-  songLoadingClockPattern: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 0.16}
-  songLoadingClock: {r: 0.48235294, g: 0.41960785, b: 0.84705883, a: 1}
-  songLoadingBubble: {r: 1, g: 1, b: 1, a: 0.82}
-  songLoadingBubbleBorder: {r: 1, g: 1, b: 1, a: 1}
+  songLoadingDim: {r: 0.15686275, g: 0.11764706, b: 0.2745098, a: 0.59}
+  songLoadingArc: {r: 0.48627451, g: 0.76862745, b: 0.98039216, a: 1}
+  songLoadingTicks: {r: 1, g: 1, b: 1, a: 1}
+  songLoadingDot: {r: 1, g: 1, b: 1, a: 1}
+  songLoadingSpark: {r: 1, g: 1, b: 1, a: 1}
+  songLoadingGlow: {r: 0.82352941, g: 0.90980392, b: 1, a: 1}
+  songLoadingFlash: {r: 1, g: 1, b: 1, a: 1}
+  songLoadingTitle: {r: 0.98039216, g: 0.97254902, b: 1, a: 1}
+  songLoadingSub: {r: 0.82352941, g: 0.8, b: 0.90196078, a: 1}
+  songLoadingSdLine: {r: 1, g: 1, b: 1, a: 0.59}
+  songLoadingText: {r: 0.92156863, g: 0.90980392, b: 0.98039216, a: 1}
+  songLoadingBlackout: {r: 0, g: 0, b: 0, a: 1}
   resultDialogFill: {r: 1, g: 1, b: 1, a: 0.94}
   resultDialogBorder: {r: 0.70588235, g: 0.65098039, b: 1, a: 1}
   resultDialogLabel: {r: 0.47058824, g: 0.43137255, b: 0.58823529, a: 1}

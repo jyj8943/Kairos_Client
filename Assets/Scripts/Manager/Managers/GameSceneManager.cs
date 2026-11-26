@@ -37,7 +37,9 @@ public class LoadingFrameStats
 ///   4) 열기가 끝나 화면을 다 덮은 뒤 지금 씬 OnExit → 다음 씬 비동기 로드(Single) → 다음 씬 Init (판 시작은 아직) →
 ///      정리 (Resources.UnloadUnusedAssets · GC.Collect, 닫기 · 시작 메트로놈 중에 GC가 터지지 않게) →
 ///   5) 최소 시간 대기 → 6) 닫기 연출 → 7) 다음 씬 OnEnter (SceneBase.Enter).
-///   - 곡 로딩 (LoadWithSongLoading): 열기 1.1초, 최소 시간 = 열기 끝부터 2초 (GameConstants.SongLoading.MinLoadSeconds).
+///   - 곡 로딩 (LoadWithSongLoading, 11/26 시계): 열기 0.95초 뒤 로드. 로딩 진행(씬 로드 progress ÷ 0.9 × 0.9, Init 끝 = 1)을 오버레이에 알리고,
+///     "로딩 진행 = 1"과 "바늘 2.4초"가 모두 되어 바늘이 12시에 닿으면(T) 반짝 · 암전 → 검은 화면(T+0.65 ~)에서 정리 → 걷힘(T+0.8 이후, 정리가 길면 그만큼 늦게) →
+///     다 걷힌 뒤 OnEnter. 최소 시간 대기는 없다 (가장 짧을 때 3.55초, GameConstants.SongLoading.MinTotalSeconds).
 ///   - 일반 로딩 (LoadWithLoading): 들어오기 0.5초, 최소 시간 = 들어오기 0초부터 1.5초 (GameConstants.Loading.MinSeconds).
 ///   - 암전 로딩 (LoadWithFadeLoading, 인게임 → 결과): 열기 0.5초, 최소 시간 = 열기 끝부터 0.2초, 닫기 0.45초 (GameConstants.FadeLoading).
 ///   - 최소 시간과 그 기준(열기 0초 / 열기 끝)은 오버레이가 정한다 (ILoadingOverlay.MinSeconds · MinFromOpenEnd).
@@ -334,7 +336,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
 
     /// <summary>
     /// 곡 로딩 · 일반 로딩 · 암전 로딩 공용 흐름 (클래스 설명의 1~7). 최소 시간과 기준은 오버레이가 정한다
-    /// (MinFromOpenEnd면 열기 끝부터 — 곡 로딩 · 암전 로딩, 아니면 열기 0초부터 — 일반 로딩).
+    /// (MinFromOpenEnd면 열기 끝부터 — 암전 로딩, 아니면 열기 0초부터 — 일반 로딩). 곡 로딩은 5~6 대신 바늘 · 암전 · 걷힘 (클래스 설명).
     /// </summary>
     private IEnumerator OverlayLoadingRoutine(string sceneName, ILoadingOverlay overlay, System.Action open)
     {
@@ -361,13 +363,16 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         open();
         MarkLoading($"오버레이 Open 준비 ({watch.Elapsed.TotalMilliseconds:0.0}ms)");
         while (!overlay.HasOpenStarted) yield return null;
-        MarkLoading(overlay.OpenStartStep);
-        double openStartTime = Time.unscaledTimeAsDouble;
+        // 오버레이가 센 0초 그대로 남긴다 (이 루틴이 한 프레임 늦게 볼 수 있어서)
+        double openStartTime = Time.unscaledTimeAsDouble - overlay.OpenElapsed;
+        MarkLoadingAt(overlay.OpenStartStep, openStartTime);
 
         // 열기 연출 동안은 화면 말고는 아무것도 하지 않는다
         while (overlay.IsOpening) yield return null;
         MarkLoading(overlay.OpenEndStep);
         double openEndTime = Time.unscaledTimeAsDouble;
+
+        Canvas_SongLoading songOverlay = overlay as Canvas_SongLoading;
 
         // 4. 화면을 다 덮은 뒤: 앞 씬 OnExit → 다음 씬 비동기 로드(Single, 앞 씬은 함께 내려간다) → 다음 씬 Init
         string target = sceneName;
@@ -387,7 +392,12 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
             isWaitingInit = true;
             AsyncOperation operation = SceneManager.LoadSceneAsync(target);
             MarkLoading($"{target} 로드 시작 (호출 {watch.Elapsed.TotalMilliseconds:0.0}ms)");
-            while (operation != null && !operation.isDone) yield return null;
+            while (operation != null && !operation.isDone)
+            {
+                if (songOverlay != null) songOverlay.SetLoadProgress(SongLoadingClockTimeline.LoadProgress(true, operation.progress, false));
+                yield return null;
+            }
+            if (songOverlay != null) songOverlay.SetLoadProgress(SongLoadingClockTimeline.LoadProgress(true, 1f, false));
             MarkLoading($"{target} 로드 끝");
             while (deferredScene == null) yield return null;
             isWaitingInit = false;
@@ -400,32 +410,45 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
             redirectData = null;
         }
 
-        // 닫기 연출 · 시작 메트로놈 중에 GC가 터지지 않게 정리는 닫기 전에 끝낸다
-        watch.Restart();
-        AsyncOperation unload = Resources.UnloadUnusedAssets();
-        while (unload != null && !unload.isDone) yield return null;
-        double unloadMs = watch.Elapsed.TotalMilliseconds;
-        watch.Restart();
-        System.GC.Collect();
-        MarkLoading($"정리 끝 (UnloadUnusedAssets {unloadMs:0.0}ms, GC.Collect {watch.Elapsed.TotalMilliseconds:0.0}ms)");
-        // 정리(GC)가 든 긴 프레임에서 닫기를 시작하면 닫기 첫 화면이 그 프레임 길이만큼 건너뛴다 (암전 로딩은 최소 0.2초가 이미 지나 있다).
-        // 한 프레임 넘긴 뒤 닫기를 시작한다 (곡 로딩 · 일반 로딩은 아래 최소 시간 대기가 길어 시각이 바뀌지 않는다)
-        yield return null;
+        if (songOverlay != null)
+        {
+            // 곡 로딩: 진행 1 → 바늘 12시(T) → 암전 끝 → 검은 화면에서 정리 → 걷힘 (최소 시간 대기 없음)
+            songOverlay.SetLoadProgress(1f);
+            MarkLoading("로딩 진행 1");
+            while (!songOverlay.HasReachedTwelve) yield return null;
+            MarkLoadingAt($"바늘 12시 T (열기 시작 +{songOverlay.TwelveAt:0.000}초)", openStartTime + songOverlay.TwelveAt);
+            while (!songOverlay.IsBlackedOut) yield return null;
+            MarkLoading("암전 끝");
+            yield return CleanupRoutine(watch);
+            // 정리(GC)가 든 긴 프레임에서 걷히기 시작하면 첫 화면이 그 프레임 길이만큼 건너뛴다. 한 프레임 넘긴 뒤 걷는다
+            yield return null;
+            songOverlay.ReleaseBlackout();
+            yield return songOverlay.CloseRoutine();
+            MarkLoading($"걷힘 끝 (걷힘 시작 T+{songOverlay.RevealStart:0.000}초)");
+        }
+        else
+        {
+            // 닫기 연출 · 시작 메트로놈 중에 GC가 터지지 않게 정리는 닫기 전에 끝낸다
+            yield return CleanupRoutine(watch);
+            // 정리(GC)가 든 긴 프레임에서 닫기를 시작하면 닫기 첫 화면이 그 프레임 길이만큼 건너뛴다 (암전 로딩은 최소 0.2초가 이미 지나 있다).
+            // 한 프레임 넘긴 뒤 닫기를 시작한다 (일반 로딩은 아래 최소 시간 대기가 길어 시각이 바뀌지 않는다)
+            yield return null;
 
-        // 5. 최소 시간: 곡 로딩 · 암전 로딩은 열기 끝부터, 일반 로딩은 열기 0초부터 (오버레이가 정한다)
-        double minBase = overlay.MinFromOpenEnd ? openEndTime : openStartTime;
-        while (Time.unscaledTimeAsDouble - minBase < overlay.MinSeconds) yield return null;
+            // 5. 최소 시간: 암전 로딩은 열기 끝부터, 일반 로딩은 열기 0초부터 (오버레이가 정한다)
+            double minBase = overlay.MinFromOpenEnd ? openEndTime : openStartTime;
+            while (Time.unscaledTimeAsDouble - minBase < overlay.MinSeconds) yield return null;
 
-        // 6. 닫기 연출
-        MarkLoading("닫기 시작");
-        yield return overlay.CloseRoutine();
-        MarkLoading("닫기 끝");
+            // 6. 닫기 연출
+            MarkLoading("닫기 시작");
+            yield return overlay.CloseRoutine();
+            MarkLoading("닫기 끝");
+        }
 
         if (eventSystem != null) eventSystem.sendNavigationEvents = sentNavigation;
         EventSystem next = EventSystem.current;
         if (next != null && next != eventSystem) next.sendNavigationEvents = true;
 
-        // 7. 닫기 끝 → 다음 씬 OnEnter (인게임이면 판 시작 · 시작 메트로놈)
+        // 7. 닫기 끝(곡 로딩은 걷힘 끝) → 다음 씬 OnEnter (인게임이면 판 시작 · 시작 메트로놈)
         SceneBase scene = deferredScene;
         deferredScene = null;
         IsSongLoading = false;
@@ -441,10 +464,32 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         Debug.Log($"[GameSceneManager] {overlay.LogName} 프레임: {DescribeLoadingFrames()}", this);
     }
 
+    /// <summary>
+    /// 정리: Resources.UnloadUnusedAssets · GC.Collect (닫기 · 시작 메트로놈 중에 GC가 터지지 않게. 곡 로딩은 검은 화면 동안).
+    /// </summary>
+    private IEnumerator CleanupRoutine(System.Diagnostics.Stopwatch watch)
+    {
+        watch.Restart();
+        AsyncOperation unload = Resources.UnloadUnusedAssets();
+        while (unload != null && !unload.isDone) yield return null;
+        double unloadMs = watch.Elapsed.TotalMilliseconds;
+        watch.Restart();
+        System.GC.Collect();
+        double gcMs = watch.Elapsed.TotalMilliseconds;
+        // 프레임 시각은 이 프레임이 시작한 때라 GC.Collect 시간을 더해 실제로 끝난 때로 남긴다
+        MarkLoadingAt($"정리 끝 (UnloadUnusedAssets {unloadMs:0.0}ms, GC.Collect {gcMs:0.0}ms)", Time.unscaledTimeAsDouble + gcMs / 1000.0);
+    }
+
     /// <summary>로딩 단계를 지금 시각으로 남긴다</summary>
     public void MarkLoading(string step)
     {
         loadingSteps.Add(new LoadingStep(step, Time.unscaledTimeAsDouble - loadingStart));
+    }
+
+    /// <summary>로딩 단계를 주어진 시각(Time.unscaledTimeAsDouble 기준)으로 남긴다</summary>
+    private void MarkLoadingAt(string step, double realtime)
+    {
+        loadingSteps.Add(new LoadingStep(step, realtime - loadingStart));
     }
 
     /// <summary>로딩 단계 시각을 한 줄로 (기준 시각이 있으면 "기준 +x초"도 같이)</summary>

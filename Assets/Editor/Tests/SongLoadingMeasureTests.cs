@@ -97,4 +97,45 @@ public class SongLoadingMeasureTests
         yield return WaitSongLoading(sb, "결과 다시 하기");
         Debug.Log(sb.ToString());
     }
+
+    /// <summary>
+    /// 곡 3개 × 공식 채보 / 나만의 채보 곡 로딩 확인 (사용자가 요청할 때만, Explicit). 곡 선택 Enter → 곡 로딩 → 인게임마다
+    /// 단계 시각 표(전체 ≥ 3.55초, 로드 시작 ≥ 0.95초, OnEnter · 첫 클릭은 걷힘 끝 뒤)와 바늘 표 · 프레임 통계를 남긴다.
+    /// 공식 채보가 없는 곡은 건너뛰고 그렇다고 적는다. 나만의 채보는 그 곡의 첫 채보를 쓴다.
+    /// </summary>
+    [UnityTest, Explicit("사용자가 요청할 때만 (곡 3개 × 공식 / 나만의 채보 곡 로딩 확인)")]
+    public IEnumerator Verify_ThreeSongs_OfficialCustom()
+    {
+        StringBuilder sb = new StringBuilder("[SongLoadingMeasure] 곡 3개 × 공식 / 나만의 채보\n");
+        foreach (SongData song in GameManager.Songs.Songs)
+        {
+            if (song == null) continue;
+            foreach (ChartType type in new[] { ChartType.Official, ChartType.Custom })
+            {
+                System.Collections.Generic.List<ChartData> charts = ChartRepository.GetCharts(song.SongId, type);
+                // 공식 채보는 Critical Velocity NORMAL을 먼저 (테스트 기준 채보)
+                ChartData chart = null;
+                foreach (ChartData c in charts) if (c.chartId == TestCharts.OfficialChartId) chart = c;
+                if (chart == null && charts.Count > 0) chart = charts[0];
+                string title = $"{song.SongId} · {type}";
+                if (chart == null)
+                {
+                    sb.AppendLine($"[{title}] 채보 없음 → 건너뜀");
+                    continue;
+                }
+                yield return LoadAndWait(GameConstants.Scenes.SongSelect, new SongSelectEntryData
+                {
+                    songId = song.SongId, chartType = type, chartId = chart.chartId, scrollMultiplier = LastSpeed
+                });
+                Canvas_SongSelect songSelect = Object.FindFirstObjectByType<Canvas_SongSelect>();
+                typeof(Canvas_SongSelect).GetMethod("StartGame", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(songSelect, null);
+                Canvas_SongLoading overlay = GameManager.UI.SongLoading;
+                StringBuilder log = new StringBuilder($"[{title} '{chart.chartName}' {chart.difficulty} Lv{chart.level}] 뱃지 {overlay.Info.BadgeText} {overlay.Info.LevelText} CHART줄 {overlay.Info.ShowChartName} '{overlay.Info.ChartText}'\n");
+                yield return SongLoadingPlayTests.FollowSongLoading(GameConstants.Scenes.SongSelect, null, log, false);
+                SongLoadingPlayTests.CheckSteps(GameConstants.Scenes.SongSelect, log);
+                sb.Append(log);
+            }
+        }
+        Debug.Log(sb.ToString());
+    }
 }
