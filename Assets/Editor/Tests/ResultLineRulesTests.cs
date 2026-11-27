@@ -36,7 +36,7 @@ public class ResultLineRulesTests
     {
         SongDatabase database = AssetDatabase.LoadAssetAtPath<SongDatabase>("Assets/Data/Songs/SongDatabase.asset");
         Assert.IsNotNull(database);
-        (string id, string keyword)[] expected = { ("send_my_love_tonight", "설렘"), ("critical_velocity", "해방감"), ("d_minor_descent", "격정") };
+        (string id, string keyword)[] expected = { ("send_my_love_tonight", "설렘"), ("critical_velocity", "해방감"), ("lux_aeterna", "환희") };
         foreach ((string id, string keyword) row in expected)
         {
             SongData song = null;
