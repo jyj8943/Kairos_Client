@@ -1,6 +1,6 @@
 ﻿/// <summary>
 /// 테스트가 쓰는 곡·공식 채보 ID 한 곳 모음 (CLAUDE.md 작업 확인 규칙).
-/// - 공식 채보로 테스트할 때는 Critical Velocity NORMAL만 쓴다. 공식 채보는 이 밖에 Critical Velocity EASY·HARD(Lv.12), Send My Love Tonight EASY·NORMAL(Lv.5)이 있다
+/// - 공식 채보로 테스트할 때는 Critical Velocity NORMAL만 쓴다. 공식 채보는 이 밖에 Critical Velocity EASY·HARD(Lv.12), Send My Love Tonight EASY·NORMAL(Lv.5)·HARD(Lv.7)가 있다
 ///   (Assets/Resources/Data/OfficialCharts/critical_velocity/NORMAL.json, 노트 420, Lv.7, BPM 150.61. 11/14 EASY Lv.3을 고쳐 NORMAL로 옮김).
 /// - 공식 채보가 추가되거나 지워지면 이 값과 CLAUDE.md를 같이 고친다. TestChartsTests가 먼저 실패해 알려 준다.
 /// - 특정 노트 구성(숏노트만, BPM 여러 구간 등)이 필요하면 공식 채보를 고치지 말고 테스트 안에서 채보를 만든다.
