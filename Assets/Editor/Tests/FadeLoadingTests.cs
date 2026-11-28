@@ -32,6 +32,9 @@ public class FadeLoadingTests
     {
         Assert.AreEqual(0.5f, GameConstants.FadeLoading.OpenSeconds);
         Assert.AreEqual(0.2f, GameConstants.FadeLoading.MinSeconds);
+        Assert.AreEqual(0.4f, GameConstants.FadeLoading.RestartMinSeconds, "재시작 암전 최소 0.4초 (덮기 끝부터)");
+        Assert.AreEqual(1.35f, GameConstants.FadeLoading.OpenSeconds + GameConstants.FadeLoading.RestartMinSeconds + GameConstants.FadeLoading.CloseSeconds, 1e-5f,
+            "재시작 암전 가장 짧을 때 약 1.35초");
         Assert.AreEqual(0.45f, GameConstants.FadeLoading.CloseSeconds);
         Assert.AreEqual(2.5, GameConstants.Play.FadeStartSeconds, 1e-9, "3.0 − 0.5");
         Assert.AreEqual(GameConstants.Play.ResultDelaySeconds, GameConstants.Play.FadeStartSeconds + GameConstants.FadeLoading.OpenSeconds, 1e-9, "곡 끝 → 결과는 3초 그대로");

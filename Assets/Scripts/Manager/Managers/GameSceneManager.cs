@@ -41,12 +41,13 @@ public class LoadingFrameStats
 ///     "로딩 진행 = 1"과 "바늘 2.4초"가 모두 되어 바늘이 12시에 닿으면(T) 반짝 · 암전 → 검은 화면(T+0.65 ~)에서 정리 → 걷힘(T+0.8 이후, 정리가 길면 그만큼 늦게) →
 ///     다 걷힌 뒤 OnEnter. 최소 시간 대기는 없다 (가장 짧을 때 3.55초, GameConstants.SongLoading.MinTotalSeconds).
 ///   - 일반 로딩 (LoadWithLoading): 들어오기 0.5초, 최소 시간 = 들어오기 0초부터 1.5초 (GameConstants.Loading.MinSeconds).
-///   - 암전 로딩 (LoadWithFadeLoading, 인게임 → 결과): 열기 0.5초, 최소 시간 = 열기 끝부터 0.2초, 닫기 0.45초 (GameConstants.FadeLoading).
+///   - 암전 로딩 (LoadWithFadeLoading, 인게임 → 결과 · 인게임 재시작): 열기 0.5초, 최소 시간 = 열기 끝부터 0.2초 (재시작은 0.4초, 인자로 이번 한 번만),
+///     닫기 0.45초 (GameConstants.FadeLoading).
 ///   - 최소 시간과 그 기준(열기 0초 / 열기 끝)은 오버레이가 정한다 (ILoadingOverlay.MinSeconds · MinFromOpenEnd).
 ///   - 단계 시각은 Enter 기준이고, 기준 시각(예: 마지막 판정)을 함께 넘기면 그 기준으로 다시 잰 값도 로그에 적는다 (LoadingOriginName · LoadingOriginOffset).
 ///   - 다음 씬이 Init 중에 Load를 부르면 (예: 에디터가 채보를 못 읽어 곡 선택으로) 같은 오버레이 아래에서 그 씬으로 이어서 간다.
 ///   - 단계 시각(LoadingSteps)과 단계별 프레임 통계(LoadingFrames)를 두 로딩 모두 로그로 남긴다.
-/// - 일반 Load는 지금 동작 그대로다 (인게임 재시작 등).
+/// - 일반 Load는 지금 동작 그대로다 (오버레이를 건너뛸 때의 인게임 재시작 등).
 /// - 테스트(Unity 에디터): SkipLoadingOverlayForTests가 켜져 있으면 오버레이를 건너뛰고 바로 Load한다.
 /// </summary>
 public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
@@ -86,6 +87,12 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     /// TestSpeedRunCallback이 테스트 실행 동안 켜고, 곡 로딩 · 일반 로딩 테스트만 잠깐 끈다.
     /// </summary>
     public static bool SkipLoadingOverlayForTests;
+
+    /// <summary>
+    /// 테스트 전용 (Unity 에디터): 0보다 크면 오버레이 로딩에서 다음 씬 Init 끝 뒤 이만큼(초, unscaled) 더 기다린다 (불러오기가 오래 걸린 경우 확인용).
+    /// 쓰는 테스트가 끝나면 0으로 되돌린다.
+    /// </summary>
+    public static double TestExtraLoadSeconds;
 #endif
 
     /// <summary>오버레이를 건너뛸지 (테스트 실행 중)</summary>
@@ -284,13 +291,15 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
     }
 
     /// <summary>
-    /// 암전 로딩 오버레이를 거쳐 씬을 불러온다 (인게임 → 결과). 오버레이가 없거나 테스트 실행 중 건너뛰기면 false를 돌려주고 아무것도 하지 않는다
-    /// (부르는 쪽이 지금처럼 ResultDelaySeconds에 Load한다).
+    /// 암전 로딩 오버레이를 거쳐 씬을 불러온다 (인게임 → 결과, 인게임 재시작). 오버레이가 없거나 테스트 실행 중 건너뛰기면 false를 돌려주고 아무것도 하지 않는다
+    /// (부르는 쪽이 지금처럼 바로 Load한다).
     /// </summary>
     /// <param name="originRealtime">단계 로그의 기준 시각 (Time.unscaledTimeAsDouble, 예: 마지막 판정). NaN이면 기준 없음</param>
     /// <param name="originName">기준 시각 이름 (로그용)</param>
+    /// <param name="minSeconds">이번 한 번의 최소 시간 (열기 끝부터 초). 결과로는 기본값 MinSeconds 0.2, 재시작은 RestartMinSeconds 0.4</param>
     /// <returns>암전 로딩을 시작했으면 true</returns>
-    public bool LoadWithFadeLoading(string sceneName, object data, double originRealtime = double.NaN, string originName = null)
+    public bool LoadWithFadeLoading(string sceneName, object data, double originRealtime = double.NaN, string originName = null,
+        double minSeconds = GameConstants.FadeLoading.MinSeconds)
     {
         Canvas_FadeLoading overlay = UIManager.HasInstance ? GameManager.UI.FadeLoading : null;
         if (overlay == null || IsOverlaySkipped)
@@ -303,7 +312,7 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
         IsFadeLoading = true;
         pendingOriginRealtime = originRealtime;
         pendingOriginName = originName;
-        StartOverlayLoading(sceneName, data, overlay, overlay.OpenFade);
+        StartOverlayLoading(sceneName, data, overlay, () => overlay.OpenFade(minSeconds));
         return true;
     }
 
@@ -409,6 +418,16 @@ public class GameSceneManager : MonoSingleton<GameSceneManager>, IGameModule
             redirectScene = null;
             redirectData = null;
         }
+
+#if UNITY_EDITOR
+        // 테스트 전용: 불러오기가 오래 걸린 경우를 흉내 낸다 (Init 끝 뒤 이만큼 더 기다린다)
+        if (TestExtraLoadSeconds > 0)
+        {
+            double delayStart = Time.unscaledTimeAsDouble;
+            while (Time.unscaledTimeAsDouble - delayStart < TestExtraLoadSeconds) yield return null;
+            MarkLoading($"테스트 지연 끝 ({TestExtraLoadSeconds:0.###}초)");
+        }
+#endif
 
         if (songOverlay != null)
         {

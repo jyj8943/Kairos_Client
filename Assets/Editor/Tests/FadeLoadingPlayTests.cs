@@ -184,6 +184,7 @@ public class FadeLoadingPlayTests
         double fadeCalled = Time.unscaledTimeAsDouble - origin;
         Assert.AreEqual(2.5, fadeCalled, 0.05, "모든 노트 판정 뒤 2.5초에 암전 시작");
         Assert.IsTrue(scene.IsFadingToResult);
+        Assert.AreEqual(GameConstants.FadeLoading.MinSeconds, fade.MinSeconds, 1e-6, "결과로 가는 암전은 최소 0.2초 그대로 (재시작 0.4초가 남지 않음)");
         float speedBefore = layer.ScrollMultiplier;
         int brightnessBefore = scene.BackgroundBrightness;
         bool musicWasPlaying = GameManager.Sound.IsMusicSourcePlaying;

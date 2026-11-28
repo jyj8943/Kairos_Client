@@ -994,6 +994,9 @@ public static class GameConstants
         /// <summary>최소 시간 (초, 열기 끝부터). 결과 씬이 빨리 준비돼도 검은 화면을 이만큼 둔다</summary>
         public const float MinSeconds = 0.2f;
 
+        /// <summary>인게임 재시작(F5 · 일시정지 → 다시 하기) 암전의 최소 시간 (초, 열기 끝부터). 결과로 가는 암전(MinSeconds)보다 검은 화면을 조금 더 둔다</summary>
+        public const float RestartMinSeconds = 0.4f;
+
         /// <summary>닫기 길이 (초): 알파 1 → 0, ease-out 1 − (1 − t)². 끝나면 결과 OnEnter</summary>
         public const float CloseSeconds = 0.45f;
 

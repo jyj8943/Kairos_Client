@@ -27,6 +27,7 @@ using UnityEngine.InputSystem;
 ///   자동 플레이 중에는 사용자의 라인 키를 무시한다 (ESC 일시정지는 그대로).
 ///   일반 플레이(곡 선택에서 들어옴)는 진입 데이터에 testPlay가 없어 자동 플레이를 켤 수 없다.
 /// - F5(Gameplay/Restart): 확인 없이 즉시 다시 하기 (일시정지 메뉴 재시작과 같은 경로, QuickRestartRules). 일시정지 메뉴가 맨 위일 때도 받는다.
+///   재시작은 암전 로딩을 쓴다 (11/28, Restart): 덮기 0.5초 → 검은 화면(불러오기 · 덮기 끝부터 최소 0.4초) → 걷기 0.45초 → 새 판 OnEnter.
 /// - 배속: 1 / 2 키(Gameplay/SpeedDown·SpeedUp)로 플레이 중에도 0.1배씩 바꾼다 (누르고 있으면 0.4초 뒤부터 0.08초마다 반복).
 ///   팝업(일시정지·확인)이 열려 있으면 받지 않고, 재개 카운트다운 중에는 받는다. 바꾼 배속은 진입 데이터(entry.scrollMultiplier)에 남겨
 ///   재시작·다시 하기·곡 선택·에디터 복귀로 이어 넘긴다 (싱글톤에 남기지 않는다).
@@ -1142,9 +1143,27 @@ public class InGameScene : SceneBase
             GameConstants.Confirm.RestartIsDanger);
     }
 
+    /// <summary>
+    /// 재시작 (F5 · 일시정지 → 다시 하기 확인 · 오프셋 재시작 확인, 11/28): 암전 로딩으로 같은 진입 데이터의 인게임을 다시 불러온다.
+    /// - 암전 로딩을 먼저 연다 (열 때 노래가 재생 중인지 보고, 재생 중이면 덮기 0.5초 동안 음악 계수 1 → 0. 일시정지 중이면 멈춘 채로 둔다).
+    /// - 그 뒤 판은 바로 멈춘다 (StopForLeave, 음악은 끄지 않음): 판정 · 노트 움직임 · 레인 키 · F5 · 1/2 · PgUp/PgDn (isFinished · isPlaying).
+    ///   ESC는 UIManager가 씬 로딩 중이라 무시한다. 시작 메트로놈의 아직 안 울린 클릭은 바로 취소한다. 노래는 OnExit(덮기 끝 뒤)에서 멈춘다.
+    /// - 일시정지 팝업은 덮는 동안 그대로 두고(암전이 위), 씬이 바뀔 때 닫힌다. 검은 화면은 덮기 끝부터 최소 0.4초 (RestartMinSeconds).
+    /// - 오버레이가 없거나 테스트 실행 중 건너뛰기면 지금처럼 바로 Load한다.
+    /// </summary>
     private void Restart()
     {
         if (isFinished) return;
+
+        if (GameManager.Scene.LoadWithFadeLoading(GameConstants.Scenes.InGame, entry.CloneForRetry(), Time.unscaledTimeAsDouble, "다시 하기",
+                GameConstants.FadeLoading.RestartMinSeconds))
+        {
+            StopForLeave(false);
+            Debug.Log($"[InGameScene] 재시작 (암전 로딩): 곡 시간 {GameManager.Sound.SongTime:0.###}초, 일시정지 {isPaused}, " +
+                      $"음악 줄임 {(UIManager.HasInstance && GameManager.UI.FadeLoading != null && GameManager.UI.FadeLoading.FadesMusic)}", this);
+            SaveLastScrollMultiplier();
+            return;
+        }
 
         StopForLeave();
         Debug.Log("[InGameScene] 재시작", this);
@@ -1258,13 +1277,14 @@ public class InGameScene : SceneBase
     /// <summary>
     /// 씬을 떠나기 전에 플레이를 끝내고 노래를 멈춘다 (이후 ESC·버튼·포커스 이벤트를 무시한다).
     /// </summary>
-    private void StopForLeave()
+    /// <param name="stopMusic">false면 노래는 두고(암전 로딩이 덮기 동안 줄이고 OnExit에서 멈춘다) 판만 멈춘다 (재시작 암전)</param>
+    private void StopForLeave(bool stopMusic = true)
     {
         isFinished = true;
         isPlaying = false;
         StopCountdown();
         input.DisableInput();
-        GameManager.Sound.StopMusic();
+        if (stopMusic) GameManager.Sound.StopMusic();
         GameManager.Sound.CancelScheduledSfx();
     }
 

@@ -3,13 +3,13 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 암전 로딩 오버레이 (기획서 3-10 「암전 로딩」 · 🔧 연출 상세, 와이어프레임 15_InGame_ResultFade). 인게임 → 결과 씬 이동만 덮는다.
+/// 암전 로딩 오버레이 (기획서 3-10 「암전 로딩」 · 🔧 연출 상세, 와이어프레임 15_InGame_ResultFade). 인게임 → 결과, 인게임 재시작(F5 · 일시정지 → 다시 하기, 11/28) 씬 이동을 덮는다.
 /// - Managers_DontDestroy/UIManager 아래에 있어 씬이 바뀌어도 살아 있다. 정렬 순서는 다른 로딩보다 위(GameConstants.FadeLoading.SortOrder).
 /// - 자식: 전체 화면 검은 Image Img_Fade 하나 (맨 앞, raycastTarget 켬 → 뒤 화면 마우스를 막는다). 색은 UITheme.fadeColor.
 /// - Bootstrapper가 전역 매니저 Init 때 Init()을 한 번 부르고 숨겨 둔다.
 /// - 흐름은 GameSceneManager.LoadWithFadeLoading(오버레이 로딩 공용 루틴)이 정한다:
 ///   OpenFade() → 다음 프레임부터 열기 0.5초 (알파 0 → 1 t², 곡 음악 계수 1 → 0 같은 곡선) → (지금 씬 OnExit · 결과 씬 로드 · Init · 정리 ·
-///   열기 끝부터 0.2초) → CloseRoutine() 닫기 0.45초 (알파 1 → 0 ease-out) → 결과 OnEnter.
+///   열기 끝부터 최소 시간 — 결과로 0.2초 · 재시작 0.4초, OpenFade 인자로 이번 한 번만) → CloseRoutine() 닫기 0.45초 (알파 1 → 0 ease-out) → 다음 씬 OnEnter.
 /// - 음악: SoundManager.MusicFadeMultiplier만 바꾼다 (설정 음량은 그대로). 노래는 DontDestroy 쪽 SoundManager가 재생하므로
 ///   인게임 OnExit의 StopMusic이 멈추고 계수를 1로 되돌린다. 닫을 때도 1로 되돌려 결과 · 다음 곡에 0이 남지 않게 한다.
 ///   열 때 노래가 재생 중이 아니면(곡이 이미 끝남) 계수를 건드리지 않는다.
@@ -27,6 +27,7 @@ public class Canvas_FadeLoading : UIBase, ILoadingOverlay
     private bool openStarted;
     private bool fadesMusic;
     private double openStart;
+    private double minSeconds = GameConstants.FadeLoading.MinSeconds;
     private Coroutine openRoutine;
 
     public override UILayer Layer => UILayer.Overlay;
@@ -37,7 +38,8 @@ public class Canvas_FadeLoading : UIBase, ILoadingOverlay
     public string OpenEndStep => "열기 끝";
     public string OpeningPhase => "열기 0~0.5초";
     public string ClosingPhase => "닫기";
-    public double MinSeconds => GameConstants.FadeLoading.MinSeconds;
+    /// <summary>이번 열기의 최소 시간 (열기 끝부터, OpenFade가 정한다. 숨기면 기본 MinSeconds로 돌아간다)</summary>
+    public double MinSeconds => minSeconds;
     public bool MinFromOpenEnd => true;
 
     public bool IsShown => isShown;
@@ -73,9 +75,11 @@ public class Canvas_FadeLoading : UIBase, ILoadingOverlay
     /// <summary>
     /// 보이기 시작한다 (Enter 프레임, 알파 0). 열기 0초는 그다음 프레임부터 센다.
     /// </summary>
-    public void OpenFade()
+    /// <param name="minSecondsFromOpenEnd">이번 한 번의 최소 시간 (열기 끝부터 초). 결과로 = MinSeconds 0.2, 재시작 = RestartMinSeconds 0.4. 숨기면 기본값으로 돌아간다</param>
+    public void OpenFade(double minSecondsFromOpenEnd = GameConstants.FadeLoading.MinSeconds)
     {
         CacheComponents();
+        minSeconds = minSecondsFromOpenEnd;
         isShown = true;
         isClosing = false;
         openStarted = false;
@@ -139,6 +143,7 @@ public class Canvas_FadeLoading : UIBase, ILoadingOverlay
         isShown = false;
         isClosing = false;
         openStarted = false;
+        minSeconds = GameConstants.FadeLoading.MinSeconds;
         RestoreMusic();
         SetAlpha(0f);
         if (fade != null) fade.raycastTarget = false;
